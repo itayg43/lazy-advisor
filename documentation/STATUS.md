@@ -12,6 +12,10 @@
 - [x] 1.7 — withRetry utility + tests (4 passing)
 - [x] 1.8 — ESLint flat config (strict type-checked) + Prettier
 
+## Notes
+
+- Server will be Dockerized in Section 7 (Task 7.1b) — Dockerfile.dev, develop.watch, tsx hot reload inside container
+
 ## Up Next
 
 ### Section 2: Database Layer
