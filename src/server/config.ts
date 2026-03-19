@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { cleanEnv, port, str, url } from "envalid";
+import { cleanEnv, str, url } from "envalid";
 
 export const config = cleanEnv(process.env, {
   DATABASE_URL: url(),
@@ -8,5 +8,4 @@ export const config = cleanEnv(process.env, {
   OPENAI_API_KEY: str(),
   TAVILY_API_KEY: str(),
   API_KEY: str(),
-  PORT: port(),
 });
