@@ -175,6 +175,7 @@ Other validation:
 
 After each section, run:
 - `npm run type-check` — no type errors
+- `npm run lint` — no lint errors
 - `npm run test` — all tests pass
 
 Full E2E: `docker compose up -d && npm run dev:server` in one terminal, CLI in another.
