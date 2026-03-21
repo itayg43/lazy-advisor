@@ -27,11 +27,11 @@
 ### Section 2: Database Layer
 - [x] 2.1 — Prisma schema (Plan + Step models, PlanStatus enum, cascade delete, prisma.config.ts)
 - [x] 2.2 — Domain types (re-exported from Prisma client, PlanWithSteps via PlanGetPayload)
+- [x] 2.3 — Plan repository (createPlan, getPlanWithSteps, updatePlan), Prisma client singleton, UpdatePlanParams type
 
 ## Up Next
 
 ### Section 2: Database Layer
-- [ ] 2.3 — Plan repository
 - [ ] 2.4 — Step repository
 - [ ] 2.5 — Plan service
 - [ ] 2.6 — Step service

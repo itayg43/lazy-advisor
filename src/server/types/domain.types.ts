@@ -7,3 +7,5 @@ export type PlanWithSteps = Prisma.PlanGetPayload<{
     steps: true;
   };
 }>;
+
+export type UpdatePlanParams = Pick<Prisma.PlanUpdateInput, "goal" | "status">;

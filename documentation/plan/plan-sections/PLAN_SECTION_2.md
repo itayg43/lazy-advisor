@@ -14,7 +14,7 @@
 |------|------|-------|------------|
 | 2.1 | Prisma schema: `Plan` + `Step` models with `Int` auto-increment IDs, `PlanStatus` enum (`draft` — just created, `active` — pipeline running, `completed` — finalized), `Step.description` as `@db.Text`, unique constraint on `(planId, sortOrder)`, cascade delete on steps, column names mapped to snake_case, table names mapped to lowercase plural | `prisma/schema.prisma` | 1.5 |
 | 2.2 | Domain types re-exported from `@prisma/client` (`Plan`, `Step`, `PlanStatus`), `PlanWithSteps` via `Prisma.PlanGetPayload` | `src/server/types/domain.types.ts` | 2.1 |
-| 2.3 | Plan repository: `createPlan`, `getPlan`, `getPlanWithSteps`, `updatePlan`, `markComplete` | `src/server/repositories/plan/plan.repository.ts` | 2.2 |
+| 2.3 | Plan repository: `createPlan`, `getPlanWithSteps`, `updatePlan`. `UpdatePlanParams` type alias (`Prisma.PlanUpdateInput`) added to `domain.types.ts`. Prisma client singleton in `clients/prisma.client.ts` | `src/server/clients/prisma.client.ts`, `src/server/types/domain.types.ts`, `src/server/repositories/plan/plan.repository.ts` | 2.2 |
 | 2.4 | Step repository: `createStep`, `updateStep`, `removeStep`, `getStepsByPlan` | `src/server/repositories/step/step.repository.ts` | 2.2 |
 | 2.5 | Plan service: business logic wrapping plan repository | `src/server/services/plan/plan.service.ts` | 2.3 |
 | 2.6 | Step service: business logic wrapping step repository | `src/server/services/step/step.service.ts` | 2.4 |
