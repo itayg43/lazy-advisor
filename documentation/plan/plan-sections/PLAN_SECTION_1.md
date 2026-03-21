@@ -4,7 +4,7 @@
 
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
-| 1.1 | Init repo, package.json, tsconfig (`strict`, `ES2022`, `NodeNext`), `type-check` script (`tsc --noEmit`) | `package.json`, `tsconfig.json` | — |
+| 1.1 | Init repo, package.json, tsconfig (`strict`, `ES2022`, `ESNext`, `moduleResolution: "bundler"`), `type-check` script (`tsc --noEmit`) | `package.json`, `tsconfig.json` | — |
 | 1.2 | Vitest setup | `vitest.config.ts` | 1.1 |
 | 1.3 | Folder skeleton + placeholder entry points, `dev:server` script with `tsx` | All dirs, `src/server/server.ts`, `src/server/app.ts`, `src/cli/cli.ts`, `src/cli/app.ts` | 1.1 |
 | 1.4 | Docker Compose (Postgres 16 + Redis 7), `.env.example`, `.gitignore` | `docker-compose.yml`, `.env.example`, `.gitignore` | 1.1 |

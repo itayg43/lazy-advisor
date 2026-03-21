@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { withRetry, type RetryContext, type RetryOptions } from "./with-retry.js";
+import { withRetry, type RetryContext, type RetryOptions } from "./with-retry";
 
 describe("withRetry", () => {
   const mockContext: RetryContext = {

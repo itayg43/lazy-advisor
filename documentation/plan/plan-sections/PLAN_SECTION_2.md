@@ -16,7 +16,7 @@
 | 2.2 | Domain types re-exported from `@prisma/client` (`Plan`, `Step`, `PlanStatus`), `PlanWithSteps` via `Prisma.PlanGetPayload` | `src/server/types/domain.types.ts` | 2.1 |
 | 2.3 | Plan repository: `createPlan`, `getPlanWithSteps`, `updatePlan`. `UpdatePlanParams` type alias (`Prisma.PlanUpdateInput`) added to `domain.types.ts`. Prisma client singleton in `clients/prisma.client.ts` | `src/server/clients/prisma.client.ts`, `src/server/types/domain.types.ts`, `src/server/repositories/plan/plan.repository.ts` | 2.2 |
 | 2.4 | Step repository: `createStep(prisma, params: CreateStepParams)`, `updateStep(prisma, stepId, params: UpdateStepParams)`, `removeStep(prisma, stepId)`. `CreateStepParams` and `UpdateStepParams` added to `domain.types.ts`. No `getStepsByPlan` — steps are already fetched via `getPlanWithSteps` | `src/server/types/domain.types.ts`, `src/server/repositories/step/step.repository.ts` | 2.2 |
-| 2.5 | Plan service: business logic wrapping plan repository | `src/server/services/plan/plan.service.ts` | 2.3 |
+| 2.5 | Plan service: business logic wrapping plan repository. Also creates error classes (`BaseError`, `NotFoundError`, and the rest from conventions) in `src/server/errors/index.ts` | `src/server/errors/index.ts`, `src/server/services/plan/plan.service.ts` | 2.3 |
 | 2.6 | Step service: business logic wrapping step repository | `src/server/services/step/step.service.ts` | 2.4 |
 | 2.7 | Repository + service unit tests (CRUD, cascade, ordering) | `src/server/repositories/plan/plan.repository.test.ts`, `src/server/repositories/step/step.repository.test.ts`, `src/server/services/plan/plan.service.test.ts`, `src/server/services/step/step.service.test.ts` | 2.3-2.6 |
 
