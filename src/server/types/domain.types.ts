@@ -9,3 +9,13 @@ export type PlanWithSteps = Prisma.PlanGetPayload<{
 }>;
 
 export type UpdatePlanParams = Pick<Prisma.PlanUpdateInput, "goal" | "status">;
+
+export type CreateStepParams = Pick<
+  Prisma.StepUncheckedCreateInput,
+  "planId" | "title" | "description" | "sortOrder"
+>;
+
+export type UpdateStepParams = Pick<
+  Prisma.StepUpdateInput,
+  "title" | "description" | "sortOrder"
+>;
