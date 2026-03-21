@@ -24,10 +24,12 @@
 ### Section 2: Database Layer (Prerequisite)
 - [x] 2.0a — Path aliases (`#shared/*`, `#server/*`) via Node.js subpath imports
 
+### Section 2: Database Layer
+- [x] 2.1 — Prisma schema (Plan + Step models, PlanStatus enum, cascade delete, prisma.config.ts)
+
 ## Up Next
 
 ### Section 2: Database Layer
-- [ ] 2.1 — Prisma schema (Plan + Step models)
 - [ ] 2.2 — Domain types
 - [ ] 2.3 — Plan repository
 - [ ] 2.4 — Step repository

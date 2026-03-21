@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// draft: plan just created, no pipeline activity yet
+// active: pipeline is currently running
+// completed: plan finalized, pipeline finished
+enum PlanStatus {
+  draft
+  active
+  completed
+}
+
+model Plan {
+  id        Int        @id @default(autoincrement())
+  goal      String
+  status    PlanStatus @default(draft)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  steps Step[]
+
+  @@map("plans")
+}
+
+model Step {
+  id          Int      @id @default(autoincrement())
+  planId      Int      @map("plan_id")
+  title       String
+  description String   @db.Text
+  sortOrder   Int      @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, sortOrder])
+  @@index([planId])
+  @@map("steps")
+}
