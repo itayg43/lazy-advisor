@@ -12,6 +12,11 @@
 - [x] 1.7 — withRetry utility + tests (4 passing)
 - [x] 1.8 — ESLint flat config (strict type-checked) + Prettier
 
+### CI & Branch Protection
+- [x] GitHub Actions CI pipeline (lint, format check, type-check, tests) on PRs to main
+- [x] Branch protection ruleset: PRs required, CI must pass, branch must be up to date
+- [x] `format:check` script added to package.json
+
 ## Notes
 
 - Server will be Dockerized in Section 7 (Task 7.1b) — Dockerfile.dev, develop.watch, tsx hot reload inside container
