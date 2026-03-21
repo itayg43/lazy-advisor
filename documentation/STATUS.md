@@ -21,6 +21,16 @@
 
 - Server will be Dockerized in Section 7 (Task 7.1b) — Dockerfile.dev, develop.watch, tsx hot reload inside container
 
+### Section 2: Database Layer (Prerequisite)
+- [x] 2.0a — Path aliases (`#shared/*`, `#server/*`) via Node.js subpath imports
+
 ## Up Next
 
 ### Section 2: Database Layer
+- [ ] 2.1 — Prisma schema (Plan + Step models)
+- [ ] 2.2 — Domain types
+- [ ] 2.3 — Plan repository
+- [ ] 2.4 — Step repository
+- [ ] 2.5 — Plan service
+- [ ] 2.6 — Step service
+- [ ] 2.7 — Repository + service tests
