@@ -12,7 +12,7 @@
 
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
-| 2.1 | Prisma schema: Plan + Step models, relations, cascade delete | `prisma/schema.prisma` | 1.5 |
+| 2.1 | Prisma schema: `Plan` + `Step` models with `Int` auto-increment IDs, `PlanStatus` enum (`draft` — just created, `active` — pipeline running, `completed` — finalized), `Step.description` as `@db.Text`, unique constraint on `(planId, sortOrder)`, cascade delete on steps, column names mapped to snake_case, table names mapped to lowercase plural | `prisma/schema.prisma` | 1.5 |
 | 2.2 | Domain types (decoupled from Prisma): `Plan`, `Step`, `PlanWithSteps` | `src/server/types/domain.types.ts` | 2.1 |
 | 2.3 | Plan repository: `createPlan`, `getPlan`, `getPlanWithSteps`, `updatePlan`, `markComplete` | `src/server/repositories/plan/plan.repository.ts` | 2.2 |
 | 2.4 | Step repository: `createStep`, `updateStep`, `removeStep`, `getStepsByPlan` | `src/server/repositories/step/step.repository.ts` | 2.2 |
