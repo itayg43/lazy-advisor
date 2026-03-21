@@ -26,13 +26,20 @@
 
 ### Section 2: Database Layer
 - [x] 2.1 — Prisma schema (Plan + Step models, PlanStatus enum, cascade delete, prisma.config.ts)
-- [x] 2.2 — Domain types (re-exported from Prisma client, PlanWithSteps via PlanGetPayload)
-- [x] 2.3 — Plan repository (createPlan, getPlanWithSteps, updatePlan), Prisma client singleton, UpdatePlanParams type
+- [x] 2.2 — Domain types (re-exported from Prisma client, PlanWithSteps via PlanGetPayload, PlanStatus as value export)
+- [x] 2.3 — Plan repository (createPlan, getPlanWithSteps, updatePlan), Prisma client with PrismaPg adapter, UpdatePlanParams type
 - [x] 2.4 — Step repository (createStep, updateStep, removeStep), CreateStepParams + UpdateStepParams types
 - [x] 2.5 — Plan service (createPlan, getPlanWithSteps, updatePlan), error classes (BaseError, NotFoundError, etc.)
 - [x] 2.6 — Step service (createStep, updateStep, removeStep), wrapping step repository
+- [x] 2.7 — Repository + service tests (22 passing: 11 unit, 11 integration)
+
+### Infrastructure (during 2.7)
+- [x] Prisma 7 migration: `prisma.config.ts` moved to project root, added `dotenv/config` import
+- [x] Prisma client updated to use `PrismaPg` driver adapter (`@prisma/adapter-pg`)
+- [x] Separate Vitest config for repository tests (`vitest.config.repositories.ts`, `fileParallelism: false`)
+- [x] `test:repositories` script: resets test DB (`prisma db push --force-reset`) then runs repo tests, using `dotenv-cli` to load `.env.test`
+- [x] Separate test database (`lazy_advisor_test`), configured via `.env.test` (`.env.test.example` provided)
 
 ## Up Next
 
-### Section 2: Database Layer
-- [ ] 2.7 — Repository + service tests
+### Section 3: Stage 1 — Clarify
