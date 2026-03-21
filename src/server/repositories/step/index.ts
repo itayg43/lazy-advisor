@@ -1,1 +1,1 @@
-export { createStep, updateStep, removeStep } from "./step.repository.js";
+export { createStep, updateStep, removeStep } from "./step.repository";

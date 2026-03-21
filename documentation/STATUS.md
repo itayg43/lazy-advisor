@@ -3,7 +3,7 @@
 ## Completed
 
 ### Section 1: Project Setup
-- [x] 1.1 — package.json + tsconfig.json (strict, ES2022, NodeNext, ESM)
+- [x] 1.1 — package.json + tsconfig.json (strict, ES2022, ESNext, bundler module resolution)
 - [x] 1.2 — Vitest setup
 - [x] 1.3 — Folder skeleton + placeholder entry points
 - [x] 1.4 — Docker Compose (Postgres 16 + Redis 7), .env.example, .env, .gitignore
@@ -29,10 +29,10 @@
 - [x] 2.2 — Domain types (re-exported from Prisma client, PlanWithSteps via PlanGetPayload)
 - [x] 2.3 — Plan repository (createPlan, getPlanWithSteps, updatePlan), Prisma client singleton, UpdatePlanParams type
 - [x] 2.4 — Step repository (createStep, updateStep, removeStep), CreateStepParams + UpdateStepParams types
+- [x] 2.5 — Plan service (createPlan, getPlanWithSteps, updatePlan), error classes (BaseError, NotFoundError, etc.)
 
 ## Up Next
 
 ### Section 2: Database Layer
-- [ ] 2.5 — Plan service
 - [ ] 2.6 — Step service
 - [ ] 2.7 — Repository + service tests

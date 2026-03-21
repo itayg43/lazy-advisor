@@ -1,10 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
-import type {
-  Plan,
-  PlanWithSteps,
-  UpdatePlanParams,
-} from "#server/types/domain.types.js";
+import type { Plan, PlanWithSteps, UpdatePlanParams } from "#server/types/domain.types";
 
 export const createPlan = async (prisma: PrismaClient, goal: string): Promise<Plan> => {
   return prisma.plan.create({

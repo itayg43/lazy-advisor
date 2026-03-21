@@ -27,6 +27,7 @@
   - `ServiceUnavailableError` (503)
   - `BadRequestError` (400)
   - `UnauthorizedError` (401)
+  - `NotFoundError` (404)
   - `TooManyRequestsError` (429)
 - No class per feature — use the right HTTP error with a descriptive message
 - All error classes live in `src/server/errors/index.ts`
@@ -58,3 +59,4 @@
 - Order: Node built-ins, then external packages, then internal (blank line between groups)
 - Use `#shared/*` for imports from `src/shared/` and `#server/*` for imports from `src/server/` (Node.js subpath imports via `package.json` `imports` field)
 - Prefer subpath imports over relative paths for cross-folder imports
+- No `.js` extensions in imports — `moduleResolution: "bundler"` resolves `.ts` files directly

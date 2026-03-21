@@ -4,7 +4,7 @@ import type {
   CreateStepParams,
   Step,
   UpdateStepParams,
-} from "#server/types/domain.types.js";
+} from "#server/types/domain.types";
 
 export const createStep = async (
   prisma: PrismaClient,
