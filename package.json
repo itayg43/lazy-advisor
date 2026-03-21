@@ -8,7 +8,8 @@
     "test:watch": "vitest",
     "dev:server": "tsx watch src/server/server.ts",
     "lint": "eslint src/",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "repository": {
     "type": "git",
