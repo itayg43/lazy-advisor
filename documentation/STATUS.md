@@ -30,9 +30,9 @@
 - [x] 2.3 — Plan repository (createPlan, getPlanWithSteps, updatePlan), Prisma client singleton, UpdatePlanParams type
 - [x] 2.4 — Step repository (createStep, updateStep, removeStep), CreateStepParams + UpdateStepParams types
 - [x] 2.5 — Plan service (createPlan, getPlanWithSteps, updatePlan), error classes (BaseError, NotFoundError, etc.)
+- [x] 2.6 — Step service (createStep, updateStep, removeStep), wrapping step repository
 
 ## Up Next
 
 ### Section 2: Database Layer
-- [ ] 2.6 — Step service
 - [ ] 2.7 — Repository + service tests
