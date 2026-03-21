@@ -17,6 +17,7 @@
 - Pure functions where possible
 - Dependency injection via function parameters (not classes), except where the plan explicitly uses classes (e.g., `Session`)
 - Async functions return typed `Promise<T>`, no bare `any`
+- More than 3 domain params → group them into a typed object. Infrastructure dependencies (e.g., `prisma`) and identifiers (e.g., `planId`) stay positional — they are not counted
 
 ## Error Handling
 
