@@ -6,7 +6,7 @@
 
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
-| 2.0a | **Path alias for shared imports.** Add `#shared/*` subpath import in `package.json` `imports` field (maps `#shared/*` → `./src/shared/*`). Add matching `paths` entry in `tsconfig.json` so the TS compiler resolves it. Update `vitest.config.ts` `resolve.alias` so Vitest resolves it. Update the conventions doc imports section to document the alias. Update any existing relative imports from `shared/` to use `#shared/` instead | `package.json`, `tsconfig.json`, `vitest.config.ts`, `documentation/CONVENTIONS.md`, any files with `../shared/` imports | — |
+| 2.0a | **Path aliases for subpath imports.** Add `#shared/*` and `#server/*` subpath imports in `package.json` `imports` field (`#shared/*` → `./src/shared/*`, `#server/*` → `./src/server/*`). Add matching `paths` entries in `tsconfig.json` so the TS compiler resolves them. Update `vitest.config.ts` `resolve.alias` so Vitest resolves them. Update the conventions doc imports section to document the aliases. Update any existing relative imports to use the aliases where appropriate | `package.json`, `tsconfig.json`, `vitest.config.ts`, `documentation/CONVENTIONS.md`, any files with cross-folder imports | — |
 
 ### Database
 

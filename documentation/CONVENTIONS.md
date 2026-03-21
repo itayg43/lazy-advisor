@@ -55,3 +55,5 @@
 ## Imports
 
 - Order: Node built-ins, then external packages, then internal (blank line between groups)
+- Use `#shared/*` for imports from `src/shared/` and `#server/*` for imports from `src/server/` (Node.js subpath imports via `package.json` `imports` field)
+- Prefer subpath imports over relative paths for cross-folder imports

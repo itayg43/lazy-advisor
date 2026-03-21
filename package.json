@@ -19,6 +19,10 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "imports": {
+    "#shared/*": "./src/shared/*",
+    "#server/*": "./src/server/*"
+  },
   "bugs": {
     "url": "https://github.com/itayg43/lazy-advisor/issues"
   },
