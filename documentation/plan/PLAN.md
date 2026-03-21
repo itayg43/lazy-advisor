@@ -14,7 +14,10 @@ lazy-advisor/
 ├── package.json
 ├── tsconfig.json
 ├── vitest.config.ts
+├── vitest.config.repositories.ts
+├── prisma.config.ts
 ├── .env.example
+├── .env.test.example
 ├── prisma/
 │   ├── schema.prisma
 │   └── migrations/
@@ -92,6 +95,7 @@ lazy-advisor/
 │   │   │       ├── step.service.test.ts
 │   │   │       └── index.ts
 │   │   ├── clients/
+│   │   │   ├── prisma.client.ts         # Prisma client singleton (PrismaPg adapter)
 │   │   │   ├── openai.client.ts         # OpenAI client wrapper + retry
 │   │   │   └── tavily.client.ts         # Tavily client wrapper + retry
 │   │   ├── mocks/
@@ -176,6 +180,7 @@ Other validation:
 After each section, run:
 - `npm run type-check` — no type errors
 - `npm run lint` — no lint errors
-- `npm run test` — all tests pass
+- `npm run test` — all unit/service tests pass
+- `npm run test:repositories` — all repository tests pass (requires Docker with Postgres running)
 
 Full E2E: `docker compose up -d && npm run dev:server` in one terminal, CLI in another.

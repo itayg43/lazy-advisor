@@ -11,12 +11,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ["src/**/*.test.ts"],
-    exclude: ["src/**/repositories/**/*.test.ts"],
-    coverage: {
-      provider: "v8",
-      include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/index.ts"],
-    },
+    include: ["src/**/repositories/**/*.test.ts"],
+    fileParallelism: false,
   },
 });

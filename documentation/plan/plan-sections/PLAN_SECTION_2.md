@@ -20,4 +20,4 @@
 | 2.6 | Step service: business logic wrapping step repository | `src/server/services/step/step.service.ts` | 2.4 |
 | 2.7 | Repository + service unit tests (CRUD, cascade, ordering) | `src/server/repositories/plan/plan.repository.test.ts`, `src/server/repositories/step/step.repository.test.ts`, `src/server/services/plan/plan.service.test.ts`, `src/server/services/step/step.service.test.ts` | 2.3-2.6 |
 
-**Runnable after**: `npx prisma migrate dev`, repository tests pass, plans/steps in Postgres
+**Runnable after**: `npx prisma db push`, repository tests pass (`npm run test:repositories`), plans/steps in Postgres
