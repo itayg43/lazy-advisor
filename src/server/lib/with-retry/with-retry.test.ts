@@ -1,16 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { withRetry, type RetryContext } from "./with-retry.js";
+import { withRetry, type RetryContext, type RetryOptions } from "./with-retry.js";
 
 describe("withRetry", () => {
-  const context: RetryContext = {
+  const mockContext: RetryContext = {
     operation: "test",
   };
 
   it("returns the result on first success", async () => {
     const fn = vi.fn().mockResolvedValue("ok");
 
-    const result = await withRetry(fn, context);
+    const result = await withRetry(fn, mockContext);
 
     expect(result).toBe("ok");
   });
@@ -20,11 +20,11 @@ describe("withRetry", () => {
       .fn()
       .mockRejectedValueOnce(new Error("fail"))
       .mockResolvedValueOnce("ok");
-    const options = {
+    const options: RetryOptions = {
       baseDelayMs: 0,
     };
 
-    const result = await withRetry(fn, context, options);
+    const result = await withRetry(fn, mockContext, options);
 
     expect(result).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(2);
@@ -32,23 +32,23 @@ describe("withRetry", () => {
 
   it("throws after all attempts are exhausted", async () => {
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
-    const options = {
+    const options: RetryOptions = {
       attempts: 3,
       baseDelayMs: 0,
     };
 
-    await expect(withRetry(fn, context, options)).rejects.toThrow("fail");
+    await expect(withRetry(fn, mockContext, options)).rejects.toThrow("fail");
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
   it("respects custom attempt count", async () => {
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
-    const options = {
+    const options: RetryOptions = {
       attempts: 2,
       baseDelayMs: 0,
     };
 
-    await expect(withRetry(fn, context, options)).rejects.toThrow("fail");
+    await expect(withRetry(fn, mockContext, options)).rejects.toThrow("fail");
     expect(fn).toHaveBeenCalledTimes(2);
   });
 });

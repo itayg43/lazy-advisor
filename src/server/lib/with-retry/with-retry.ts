@@ -1,5 +1,4 @@
-import { MAX_RETRY_ATTEMPTS } from "../../../shared/constants/constants.js";
-
+const MAX_RETRY_ATTEMPTS = 3;
 const DEFAULT_BASE_DELAY_MS = 500;
 
 export type RetryContext = {

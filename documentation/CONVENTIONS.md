@@ -35,8 +35,8 @@
 - Co-located test files (next to source files, not in a separate `tests/` directory)
 - Tests use `describe`/`it` blocks with clear descriptions
 - Mock external services (OpenAI, Tavily), real DB for repository tests
-- Use proper types for mock data (e.g., `RetryContext` not plain object)
-- Define shared mocks as typed `const` inside the `describe` block
+- Use proper types for all mock data and options objects (e.g., `const options: RetryOptions = { ... }`, not untyped object literals)
+- Define shared mocks as typed `const` inside the `describe` block, prefixed with `mock` (e.g., `mockContext`, `mockUser`)
 - Each `it` block creates its own context/options variables — no inline objects
 - Don't spy on `console.warn`/`console.log` — test logging through the real logger instead
 - Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work — for consistency

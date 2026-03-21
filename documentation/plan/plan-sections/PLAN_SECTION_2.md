@@ -2,6 +2,14 @@
 
 **Goal**: Prisma schema, migrations, CRUD repositories for plans and steps with tests against real Postgres.
 
+### Prerequisite: Setup Refactor
+
+| Task | What | Files | Depends on |
+|------|------|-------|------------|
+| 2.0a | **Path alias for shared imports.** Add `#shared/*` subpath import in `package.json` `imports` field (maps `#shared/*` → `./src/shared/*`). Add matching `paths` entry in `tsconfig.json` so the TS compiler resolves it. Update `vitest.config.ts` `resolve.alias` so Vitest resolves it. Update the conventions doc imports section to document the alias. Update any existing relative imports from `shared/` to use `#shared/` instead | `package.json`, `tsconfig.json`, `vitest.config.ts`, `documentation/CONVENTIONS.md`, any files with `../shared/` imports | — |
+
+### Database
+
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
 | 2.1 | Prisma schema: Plan + Step models, relations, cascade delete | `prisma/schema.prisma` | 1.5 |
