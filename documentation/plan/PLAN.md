@@ -6,6 +6,8 @@ Building `lazy-advisor` from scratch — an agentic investment planning CLI for 
 
 Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis, OpenAI API, Tavily API.
 
+When writing or finalizing a plan section, add a `### Design Decisions` block documenting non-obvious architectural choices and their reasoning. Discuss these decisions with the user before documenting them.
+
 ## Folder Structure
 
 ```
