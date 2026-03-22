@@ -8,7 +8,10 @@ import type {
 
 import { openaiClient } from "#server/clients/openai.client";
 import { InternalError, ServiceUnavailableError } from "#server/errors";
+import { createLogger } from "#server/lib/logger";
 import { withRetry } from "#server/lib/with-retry";
+
+const logger = createLogger("openaiService");
 
 export type OpenAIResponse<T> = {
   id: string;
@@ -19,10 +22,12 @@ export type OpenAIResponse<T> = {
 const logTokenUsage = (operation: string, usage: ResponseUsage | undefined): void => {
   if (!usage) return;
 
-  // TODO: replace with structured logger (Section 10)
-  console.log(
-    `[${operation}] Tokens — input: ${String(usage.input_tokens)}, output: ${String(usage.output_tokens)}, total: ${String(usage.total_tokens)}`,
-  );
+  logger.info(`${operation} token usage`, {
+    operation,
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    totalTokens: usage.total_tokens,
+  });
 };
 
 const validateResponseStatus = (status: ResponseStatus | undefined): void => {

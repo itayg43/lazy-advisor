@@ -1,3 +1,7 @@
+import { createLogger } from "#server/lib/logger";
+
+const logger = createLogger("withRetry");
+
 const MAX_RETRY_ATTEMPTS = 3;
 const DEFAULT_BASE_DELAY_MS = 500;
 
@@ -28,10 +32,11 @@ export const withRetry = async <T>(
 
       if (attempt === attempts) break;
 
-      // TODO: replace with structured logger (Section 10)
-      console.warn(
-        `[${context.operation}] Attempt ${String(attempt)}/${String(attempts)} failed, retrying...`,
-      );
+      logger.warn("Attempt failed, retrying", {
+        operation: context.operation,
+        attempt,
+        maxAttempts: attempts,
+      });
 
       const delayMs = baseDelayMs * 2 ** (attempt - 1);
       await new Promise((resolve) => setTimeout(resolve, delayMs));

@@ -4,7 +4,7 @@
 
 Building `lazy-advisor` from scratch — an agentic investment planning CLI for beginner ETF investors. This is a portfolio project demonstrating agentic workflows with multi-turn conversation and WebSocket streaming. The developer is a junior dev, so tasks are broken into small, independently completable units.
 
-Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis, OpenAI API, Tavily API.
+Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis, OpenAI API (including built-in web search).
 
 When writing or finalizing a plan section, add a `### Design Decisions` block documenting non-obvious architectural choices and their reasoning. Discuss these decisions with the user before documenting them.
 
@@ -70,7 +70,6 @@ lazy-advisor/
 │   │   │   │       └── index.ts
 │   │   │   ├── tools/
 │   │   │   │   ├── ask-user.tool.ts
-│   │   │   │   ├── search.tool.ts
 │   │   │   │   ├── create-step.tool.ts
 │   │   │   │   ├── update-step.tool.ts
 │   │   │   │   ├── remove-step.tool.ts
@@ -105,11 +104,9 @@ lazy-advisor/
 │   │   │       └── index.ts
 │   │   ├── clients/
 │   │   │   ├── prisma.client.ts         # Prisma client singleton (PrismaPg adapter)
-│   │   │   ├── openai.client.ts         # OpenAI client singleton
-│   │   │   └── tavily.client.ts         # Tavily client wrapper + retry
+│   │   │   └── openai.client.ts         # OpenAI client singleton
 │   │   ├── mocks/
-│   │   │   ├── openai.service.mock.ts   # OpenAI service mock helpers (shared across stage tests)
-│   │   │   └── tavily.mock.ts           # Mock Tavily test helper
+│   │   │   └── openai.service.mock.ts   # OpenAI service mock helpers (shared across stage tests)
 │   │   ├── errors/
 │   │   │   └── index.ts                 # Custom error classes
 │   │   ├── observability/
@@ -119,6 +116,9 @@ lazy-advisor/
 │   │       └── with-retry/
 │   │           ├── with-retry.ts        # Generic retry with exponential backoff
 │   │           ├── with-retry.test.ts
+│   │           └── index.ts
+│   │       └── logger/
+│   │           ├── logger.ts            # createLogger factory (human-readable dev logging)
 │   │           └── index.ts
 │   ├── cli/
 │   │   ├── cli.ts                      # CLI initialization (parse args, start, shutdown)
