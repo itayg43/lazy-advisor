@@ -48,5 +48,5 @@
 - [ ] 3.3 — Mock OpenAI test helpers (`createMockToolCallResult`, `createMockTextResult`, `mockTokenUsage`)
 - [ ] 3.4 — `ask_user` tool (flat Responses API tool definition + callback-based handler)
 - [ ] 3.5 — Tool registry (stage → `ResponseTool[]` mapping)
-- [ ] 3.6 — Clarify stage (system prompt, tool-calling loop with `function_call`/`function_call_output`, profile extraction via `callOpenAIParsed` with `temperature: 0`, stage cap)
+- [ ] 3.6 — Clarify stage (system prompt, tool-calling loop via `previous_response_id` chaining, profile extraction via `callOpenAIParsed` with `temperature: 0`, stage cap)
 - [ ] 3.7 — Clarify stage tests (detailed/minimal/contradictory input, extraction failure, cap)
