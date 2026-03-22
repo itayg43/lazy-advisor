@@ -3,50 +3,50 @@
 ## Completed
 
 ### Section 1: Project Setup
-- [x] 1.1 — package.json + tsconfig.json (strict, ES2022, ESNext, bundler module resolution)
+- [x] 1.1 — package.json + tsconfig.json
 - [x] 1.2 — Vitest setup
 - [x] 1.3 — Folder skeleton + placeholder entry points
-- [x] 1.4 — Docker Compose (Postgres 16 + Redis 7), .env.example, .env, .gitignore
-- [x] 1.5 — Config module (dotenv + envalid)
-- [x] 1.6 — Shared constants + event types (discriminated unions)
-- [x] 1.7 — withRetry utility + tests (4 passing)
-- [x] 1.8 — ESLint flat config (strict type-checked) + Prettier
+- [x] 1.4 — Docker Compose + env config
+- [x] 1.5 — Config module
+- [x] 1.6 — Shared constants + event types
+- [x] 1.7 — withRetry utility (4 tests passing)
+- [x] 1.8 — ESLint + Prettier
 
 ### CI & Branch Protection
-- [x] GitHub Actions CI pipeline (lint, format check, type-check, tests) on PRs to main
-- [x] Branch protection ruleset: PRs required, CI must pass, branch must be up to date
-- [x] `format:check` script added to package.json
+- [x] GitHub Actions CI pipeline
+- [x] Branch protection ruleset
+- [x] `format:check` script
 
 ## Notes
 
-- Server will be Dockerized in Section 7 (Task 7.1b) — Dockerfile.dev, develop.watch, tsx hot reload inside container
+- Server will be Dockerized in Section 7 (Task 7.1b)
 
 ### Section 2: Database Layer (Prerequisite)
-- [x] 2.0a — Path aliases (`#shared/*`, `#server/*`) via Node.js subpath imports
+- [x] 2.0a — Path aliases via Node.js subpath imports
 
 ### Section 2: Database Layer
-- [x] 2.1 — Prisma schema (Plan + Step models, PlanStatus enum, cascade delete, prisma.config.ts)
-- [x] 2.2 — Domain types (re-exported from Prisma client, PlanWithSteps via PlanGetPayload, PlanStatus as value export)
-- [x] 2.3 — Plan repository (createPlan, getPlanWithSteps, updatePlan), Prisma client with PrismaPg adapter, UpdatePlanParams type
-- [x] 2.4 — Step repository (createStep, updateStep, removeStep), CreateStepParams + UpdateStepParams types
-- [x] 2.5 — Plan service (createPlan, getPlanWithSteps, updatePlan), error classes (BaseError, NotFoundError, etc.)
-- [x] 2.6 — Step service (createStep, updateStep, removeStep), wrapping step repository
+- [x] 2.1 — Prisma schema
+- [x] 2.2 — Domain types
+- [x] 2.3 — Plan repository + Prisma client
+- [x] 2.4 — Step repository
+- [x] 2.5 — Plan service + error classes
+- [x] 2.6 — Step service
 - [x] 2.7 — Repository + service tests (22 passing: 11 unit, 11 integration)
 
 ### Infrastructure (during 2.7)
-- [x] Prisma 7 migration: `prisma.config.ts` moved to project root, added `dotenv/config` import
-- [x] Prisma client updated to use `PrismaPg` driver adapter (`@prisma/adapter-pg`)
-- [x] Separate Vitest config for repository tests (`vitest.config.repositories.ts`, `fileParallelism: false`)
-- [x] `test:repositories` script: resets test DB (`prisma db push --force-reset`) then runs repo tests, using `dotenv-cli` to load `.env.test`
-- [x] Separate test database (`lazy_advisor_test`), configured via `.env.test` (`.env.test.example` provided)
+- [x] Prisma 7 migration
+- [x] Prisma client PrismaPg driver adapter
+- [x] Separate Vitest config for repository tests
+- [x] `test:repositories` script
+- [x] Separate test database
 
 ## Up Next
 
 ### Section 3: Stage 1 — Clarify
-- [x] 3.1 — UserProfileSchema Zod 3 schema (enums: Currency USD/ILS, RiskTolerance conservative/moderate/aggressive, KnowledgeLevel beginner/intermediate/advanced; fields: goal, currency, monthlyBudget, riskTolerance, investmentHorizon, knowledgeLevel; `UserProfile` type in `pipeline.types.ts`)
-- [ ] 3.2 — OpenAI client wrapper (Responses API: `callOpenAI` via `responses.create` + `callOpenAIParsed` via `responses.parse`/`zodTextFormat`, status + output_parsed validation, retry, token logging, models: gpt-5.4-mini / gpt-5.4-nano)
-- [ ] 3.3 — Mock OpenAI test helpers (`createMockToolCallResult`, `createMockTextResult`, `mockTokenUsage`)
-- [ ] 3.4 — `ask_user` tool (flat Responses API tool definition + callback-based handler)
-- [ ] 3.5 — Tool registry (stage → `ResponseTool[]` mapping)
-- [ ] 3.6 — Clarify stage (system prompt, tool-calling loop via `previous_response_id` chaining, profile extraction via `callOpenAIParsed` with `temperature: 0`, stage cap)
-- [ ] 3.7 — Clarify stage tests (detailed/minimal/contradictory input, extraction failure, cap)
+- [x] 3.1 — UserProfileSchema Zod schema
+- [x] 3.2 — OpenAI client singleton + service (9 tests passing)
+- [ ] 3.3 — Mock OpenAI test helpers
+- [ ] 3.4 — `ask_user` tool
+- [ ] 3.5 — Tool registry
+- [ ] 3.6 — Clarify stage
+- [ ] 3.7 — Clarify stage tests
