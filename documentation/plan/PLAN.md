@@ -8,6 +8,8 @@ Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis,
 
 When writing or finalizing a plan section, add a `### Design Decisions` block documenting non-obvious architectural choices and their reasoning. Discuss these decisions with the user before documenting them.
 
+When a design decision is used by 2+ sections, promote it to `CONVENTIONS.md` and replace the original entry with a cross-reference (e.g., "See [CONVENTIONS.md — Error Handling](../../CONVENTIONS.md#error-handling)").
+
 ## Folder Structure
 
 ```
@@ -93,13 +95,17 @@ lazy-advisor/
 │   │   │   │   ├── plan.service.ts      # Plan business logic
 │   │   │   │   ├── plan.service.test.ts
 │   │   │   │   └── index.ts
-│   │   │   └── step/
-│   │   │       ├── step.service.ts      # Step business logic
-│   │   │       ├── step.service.test.ts
+│   │   │   ├── step/
+│   │   │   │   ├── step.service.ts      # Step business logic
+│   │   │   │   ├── step.service.test.ts
+│   │   │   │   └── index.ts
+│   │   │   └── openai/
+│   │   │       ├── openai.service.ts    # callOpenAI + callOpenAIParsed (retry, validation, token logging)
+│   │   │       ├── openai.service.test.ts
 │   │   │       └── index.ts
 │   │   ├── clients/
 │   │   │   ├── prisma.client.ts         # Prisma client singleton (PrismaPg adapter)
-│   │   │   ├── openai.client.ts         # OpenAI client wrapper + retry
+│   │   │   ├── openai.client.ts         # OpenAI client singleton
 │   │   │   └── tavily.client.ts         # Tavily client wrapper + retry
 │   │   ├── mocks/
 │   │   │   ├── openai.mock.ts           # Mock OpenAI test helper
