@@ -43,3 +43,10 @@
 ## Up Next
 
 ### Section 3: Stage 1 — Clarify
+- [x] 3.1 — UserProfileSchema Zod 3 schema (enums: Currency USD/ILS, RiskTolerance conservative/moderate/aggressive, KnowledgeLevel beginner/intermediate/advanced; fields: goal, currency, monthlyBudget, riskTolerance, investmentHorizon, knowledgeLevel; `UserProfile` type in `pipeline.types.ts`)
+- [ ] 3.2 — OpenAI client wrapper (Responses API: `callOpenAI` via `responses.create` + `callOpenAIParsed` via `responses.parse`/`zodTextFormat`, status + output_parsed validation, retry, token logging, models: gpt-5.4-mini / gpt-5.4-nano)
+- [ ] 3.3 — Mock OpenAI test helpers (`createMockToolCallResult`, `createMockTextResult`, `mockTokenUsage`)
+- [ ] 3.4 — `ask_user` tool (flat Responses API tool definition + callback-based handler)
+- [ ] 3.5 — Tool registry (stage → `ResponseTool[]` mapping)
+- [ ] 3.6 — Clarify stage (system prompt, tool-calling loop with `function_call`/`function_call_output`, profile extraction via `callOpenAIParsed` with `temperature: 0`, stage cap)
+- [ ] 3.7 — Clarify stage tests (detailed/minimal/contradictory input, extraction failure, cap)
