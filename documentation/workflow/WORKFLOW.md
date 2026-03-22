@@ -32,7 +32,6 @@ Backend Service (single Express app)
   ├── Plan domain                        → CRUD, Prisma → PostgreSQL
   ├── Gateway                            → auth, rate limiting
   ├── OpenAI API                         → LLM calls with tools
-  ├── Tavily API                         → search tool execution
   └── Redis                              → rate limiting
 ```
 
@@ -44,7 +43,7 @@ A single Express app that handles everything: client connections, pipeline execu
 
 **Gateway layer**: Auth, rate limiting, session lifecycle, WebSocket connection management.
 
-**Pipeline engine**: Runs the staged pipeline (Clarify → Research → Plan → Iterate) in-process. Each stage calls OpenAI and Tavily directly. Tool calls like `create_step` and `ask_user` are direct function calls — no HTTP or message passing between services.
+**Pipeline engine**: Runs the staged pipeline (Clarify → Research → Plan → Iterate) in-process. Each stage calls OpenAI directly (including built-in web search). Tool calls like `create_step` and `ask_user` are direct function calls — no HTTP or message passing between services.
 
 **Plan domain**: Owns plan/step CRUD and persistence via Prisma/PostgreSQL. Each tool call persists immediately — steps exist in the DB as soon as the LLM creates them.
 
@@ -208,7 +207,7 @@ The agent does NOT ask a fixed list. It analyzes the user's input, identifies wh
 
 The agent does the research, the human does the actions. Steps like "Research VGT vs QQQ" are the agent's job — not the user's.
 
-- **Research/analysis** → agent does this NOW via search tool, synthesizes findings
+- **Research/analysis** → agent does this NOW via built-in web search, synthesizes findings
 - **Human action items** → become steps, enriched with research as context
 
 Steps should be specific, opinionated, and informed.
@@ -308,7 +307,7 @@ Each handoff between stages is validated with a Zod schema: user profile (Stage 
 - `ask_user(questions)` — ask adaptive questions, wait for response
 
 **Stage 2 (RESEARCH):**
-- `search(query)` — web search for current financial data (Tavily or similar). Stage-level cap on searches (in-memory counter). If the ceiling is hit, the agent builds the research summary from what it has — this is a graceful constraint, not an error.
+- OpenAI built-in `web_search` tool — the model searches for current financial data autonomously. No custom search tool handler needed.
 
 **Stage 3 (PLAN):**
 - `create_step(action, reasoning, phase)` — add a step to the plan
@@ -316,7 +315,7 @@ Each handoff between stages is validated with a Zod schema: user profile (Stage 
 
 **Stage 4 (ITERATE):**
 - `ask_user(questions)` — ask follow-up question for `clarify` classification. Wait for response, then re-classify.
-- `search(query)` — if the user's feedback requires new research. Same stage-level search cap and graceful ceiling as Stage 2.
+- OpenAI built-in `web_search` tool — if the user's feedback requires new research. Same built-in tool as Stage 2.
 - `create_step(action, reasoning, phase)` — add a new step to the plan
 - `update_step(step_id, action?, reasoning?, phase?)` — modify an existing step (any field). Used for `adjust` feedback like changing allocations or swapping ETFs within existing research.
 - `remove_step(step_id)` — remove a step from the plan. Used for `adjust` feedback like "skip bonds" or "drop emerging markets."
@@ -443,7 +442,7 @@ The user profile passed as a structured object between stages already implements
 - Uses `openai.chat.completions.create` with `tools`
 - **Backend Service**: Single Express app with WebSocket endpoint. Gateway layer (auth, rate limiting, session lifecycle) + pipeline engine (stages, tool-calling, feedback classification) + plan domain (CRUD, persistence). PostgreSQL via Prisma.
 - **Redis**: Rate limiting only. Session state is in-memory (upgrade path to Redis documented for horizontal scaling/reconnection).
-- External dependency: Tavily API (search) — ~$0.01/search, free tier available
+- Web search via OpenAI's built-in `web_search` tool (no external search API dependency)
 - CLI: Node.js, minimal — WebSocket client to the backend + stdin handling
 - **One cap per stage** (prevents runaway loops). Each stage has a single reasonable cap on tool-call iterations. If hit, the orchestrator forces the stage to conclude with whatever it has:
   - **Stage 2 (Research)**: Build the research summary from searches completed so far (same graceful degradation as the search ceiling).

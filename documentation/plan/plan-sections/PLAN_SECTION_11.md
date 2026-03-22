@@ -10,6 +10,6 @@
 | 11.4 | Error handling tests (OpenAI failure at each stage, Zod validation failure) | `src/server/pipeline/orchestrator/orchestrator.integration.test.ts` | 11.1 |
 | 11.5 | Disclaimer display (CLI startup + first WS event) | `src/cli/cli.ts`, `src/server/ws/handler/handler.ts` | 8.6, 7.2 |
 | 11.6 | README (architecture, setup, run, test) | `README.md` | All |
-| 11.7 | Manual QA pass with real OpenAI + Tavily keys | Various | All |
+| 11.7 | Manual QA pass with real OpenAI key | Various | All |
 
 **Runnable after**: Complete project, all tests pass
