@@ -30,3 +30,4 @@ See [documentation/STATUS.md](documentation/STATUS.md)
 - Branch must be up to date with `main` before merging
 - No `Co-Authored-By` lines in commit messages
 - No "Generated with Claude Code" lines in PR descriptions
+- Commit messages and PR descriptions must be descriptive, detailed, and self-contained — no links to plan docs or external documents, as they can break over time
