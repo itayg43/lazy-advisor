@@ -77,7 +77,8 @@ lazy-advisor/
 │   │   ├── schemas/
 │   │   │   └── pipeline.schema.ts       # Zod schemas for all stage boundaries
 │   │   ├── types/
-│   │   │   └── domain.types.ts          # Domain types (Plan, Step, Phase)
+│   │   │   ├── domain.types.ts          # Domain types (Plan, Step, Phase)
+│   │   │   └── pipeline.types.ts        # Pipeline types inferred from Zod schemas
 │   │   ├── repositories/
 │   │   │   ├── plan/
 │   │   │   │   ├── plan.repository.ts   # Prisma CRUD for plans
