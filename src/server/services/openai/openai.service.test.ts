@@ -32,7 +32,7 @@ vi.mock("#server/lib/with-retry", () => ({
 }));
 
 describe("openaiService", () => {
-  const mockUsage: ResponseUsage = {
+  const mockTokenUsage: ResponseUsage = {
     input_tokens: 120,
     output_tokens: 45,
     total_tokens: 165,
@@ -63,7 +63,7 @@ describe("openaiService", () => {
         id: "resp_clarify_001",
         status: "completed",
         output: [mockFunctionCallOutput],
-        usage: mockUsage,
+        usage: mockTokenUsage,
         ...overrides,
       }) as Response;
 
@@ -77,7 +77,7 @@ describe("openaiService", () => {
       expect(result).toStrictEqual({
         id: mockResponse.id,
         output: mockResponse.output,
-        usage: mockUsage,
+        usage: mockTokenUsage,
       });
     });
 
@@ -126,7 +126,7 @@ describe("openaiService", () => {
         status: "completed",
         output: [],
         output_parsed: mockParsedOutput,
-        usage: mockUsage,
+        usage: mockTokenUsage,
         ...overrides,
       }) as ParsedResponse<UserProfile>;
 
@@ -140,7 +140,7 @@ describe("openaiService", () => {
       expect(result).toStrictEqual({
         id: mockResponse.id,
         output: mockParsedOutput,
-        usage: mockUsage,
+        usage: mockTokenUsage,
       });
     });
 

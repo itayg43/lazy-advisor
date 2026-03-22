@@ -108,7 +108,7 @@ lazy-advisor/
 │   │   │   ├── openai.client.ts         # OpenAI client singleton
 │   │   │   └── tavily.client.ts         # Tavily client wrapper + retry
 │   │   ├── mocks/
-│   │   │   ├── openai.mock.ts           # Mock OpenAI test helper
+│   │   │   ├── openai.service.mock.ts   # OpenAI service mock helpers (shared across stage tests)
 │   │   │   └── tavily.mock.ts           # Mock Tavily test helper
 │   │   ├── errors/
 │   │   │   └── index.ts                 # Custom error classes
