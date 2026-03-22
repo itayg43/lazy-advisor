@@ -2,6 +2,13 @@
 
 **Goal**: Prisma schema, migrations, CRUD repositories for plans and steps with tests against real Postgres.
 
+### Design Decisions
+
+- **Functional DI over classes** — stateless functions with dependencies passed as arguments. Simpler, testable (swap `prisma` without module mocking). Classes reserved for where they add value (errors: inheritance + `instanceof`)
+- **Domain types from Prisma** — `domain.types.ts` re-exports models, enums, and param types from `@prisma/client`. Single source of truth, no duplicate definitions, Prisma coupling contained to one file
+- **Repository + service layers** — repositories own data access, services own business rules. Thin today, but set up for the pipeline stages ahead (validation, status transitions, cross-entity coordination)
+- **Auto-increment over UUIDs** — simpler, more efficient, sufficient for a single-service project. Trade-off: IDs are guessable if exposed in an API, acceptable for current scope
+
 ### Prerequisite: Setup Refactor
 
 | Task | What | Files | Depends on |
