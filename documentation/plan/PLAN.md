@@ -66,13 +66,13 @@ lazy-advisor/
 │   │   │   │       ├── iterate.stage.ts
 │   │   │   │       ├── iterate.stage.test.ts
 │   │   │   │       └── index.ts
-│   │   │   ├── tools/
-│   │   │   │   ├── ask-user.tool.ts
-│   │   │   │   ├── create-step.tool.ts
-│   │   │   │   ├── update-step.tool.ts
-│   │   │   │   ├── remove-step.tool.ts
-│   │   │   │   └── finish-plan.tool.ts
-│   │   │   └── tool-registry.ts         # Maps tool names to handlers per stage
+│   │   │   └── tools/
+│   │   │       ├── index.ts               # Tool registry — maps stage names to allowed Tool[]
+│   │   │       ├── ask-user.tool.ts
+│   │   │       ├── create-step.tool.ts
+│   │   │       ├── update-step.tool.ts
+│   │   │       ├── remove-step.tool.ts
+│   │   │       └── finish-plan.tool.ts
 │   │   ├── schemas/
 │   │   │   └── pipeline.schema.ts       # Zod schemas for all stage boundaries
 │   │   ├── types/

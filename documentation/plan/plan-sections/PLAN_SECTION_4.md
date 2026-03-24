@@ -9,7 +9,7 @@
 
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
-| 4.1 | Register `web_search` built-in tool in registry for `research` and `iterate` stages | `src/server/pipeline/tool-registry.ts` | 3.5 |
+| 4.1 | Register `web_search` built-in tool in registry for `research` and `iterate` stages | `src/server/pipeline/tools/index.ts` | 3.5 |
 | 4.2 | Research stage: system prompt, `callOpenAI` with `web_search` tool, `callOpenAIParsed` for ResearchSummary extraction via Zod validation | `src/server/pipeline/stages/research/research.stage.ts` | 3.1, 3.2, 4.1 |
 | 4.3 | Research stage tests (happy path, validation failure, empty research content) | `src/server/pipeline/stages/research/research.stage.test.ts` | 3.3, 4.2 |
 

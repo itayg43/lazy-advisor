@@ -48,6 +48,6 @@
 - [x] 3.3 — OpenAI service mock helpers
 - [x] 3.4 — `ask_user` tool
 - [x] 3.4b — Logger utility (`createLogger`)
-- [ ] 3.5 — Tool registry
+- [x] 3.5 — Tool registry
 - [ ] 3.6 — Clarify stage
 - [ ] 3.7 — Clarify stage tests
