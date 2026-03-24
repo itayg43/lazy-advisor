@@ -59,4 +59,12 @@ See [TESTING.md](TESTING.md)
 - Order: Node built-ins, then external packages, then internal (blank line between groups)
 - Use `#shared/*` for imports from `src/shared/` and `#server/*` for imports from `src/server/` (Node.js subpath imports via `package.json` `imports` field)
 - Prefer subpath imports over relative paths for cross-folder imports
-- No `.js` extensions in imports — `moduleResolution: "bundler"` resolves `.ts` files directly
+- No `.js` or `.ts` extensions in imports — `moduleResolution: "bundler"` resolves `.ts` files directly
+
+```ts
+// correct
+import { planService } from "#server/services/plan/plan.service";
+
+// wrong — no file extensions in imports
+import { planService } from "#server/services/plan/plan.service.ts";
+```
