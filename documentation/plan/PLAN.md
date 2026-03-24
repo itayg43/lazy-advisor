@@ -2,9 +2,7 @@
 
 ## Context
 
-Building `lazy-advisor` from scratch — an agentic investment planning CLI for beginner ETF investors. This is a portfolio project demonstrating agentic workflows with multi-turn conversation and WebSocket streaming. The developer is a junior dev, so tasks are broken into small, independently completable units.
-
-Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis, OpenAI API (including built-in web search).
+Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis, OpenAI API (including built-in web search). Tasks are broken into small, independently completable units.
 
 When writing or finalizing a plan section, add a `### Design Decisions` block documenting non-obvious architectural choices and their reasoning. Discuss these decisions with the user before documenting them.
 
@@ -184,12 +182,3 @@ Other validation:
 - `src/server/config.ts` — env var validation (dotenv + envalid)
 - `src/server/ws/events.ts` — incoming WS message validation (Zod)
 
-## Verification
-
-After each section, run:
-- `npm run type-check` — no type errors
-- `npm run lint` — no lint errors
-- `npm run test` — all unit/service tests pass
-- `npm run test:repositories` — all repository tests pass (requires Docker with Postgres running)
-
-Full E2E: `docker compose up -d && npm run dev:server` in one terminal, CLI in another.
