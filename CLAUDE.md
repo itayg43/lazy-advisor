@@ -30,6 +30,7 @@
 - No `Co-Authored-By` lines in commit messages
 - No "Generated with Claude Code" lines in PR descriptions
 - Commit messages and PR descriptions must be descriptive, detailed, and self-contained — no links to plan docs or external documents, as they can break over time
+- No "Test plan" section in PR descriptions — CI already covers lint, format, type-check, and tests
 
 ### Before merging
 - CI (lint, format check, type-check, tests) must pass
