@@ -1,14 +1,6 @@
-# Decision: Lazy Advisor
+# Lazy Advisor — Architecture & Workflow
 
-## Project name: `lazy-advisor`
-
-Inspired by the Israeli "Lazy Investor" philosophy — invest in ETFs, set up monthly contributions, stick to the plan, don't overthink it. The agent helps beginners build the plan and then tells them to do nothing when they panic.
-
-**This is a separate project/repo**, not part of ai-task-assistant. Fresh architecture designed for what this actually needs. The two projects complement each other on a CV: ai-task-assistant shows async microservices with RabbitMQ; lazy-advisor shows agentic workflows with multi-turn conversation and WebSocket streaming.
-
-## What we're building
-
-An agentic investment planning CLI for beginner ETF investors. The agent asks smart questions, researches current ETF data, and produces an actionable plan with phased steps. Within a session, the user can iterate on the plan. Across sessions (stretch goal), the plan evolves as the user's situation changes.
+An agentic investment planning CLI for beginner ETF investors. Inspired by the Israeli "Lazy Investor" philosophy — invest in ETFs, set up monthly contributions, stick to the plan, don't overthink it. The agent asks smart questions, researches current ETF data, and produces an actionable plan with phased steps. Within a session, the user can iterate on the plan. Across sessions (stretch goal), the plan evolves as the user's situation changes.
 
 ## Disclaimer
 
@@ -81,7 +73,6 @@ A single Express app that handles everything: client connections, pipeline execu
 ### Why this architecture
 - **Single service, minimal coordination**: The pipeline runs in-process. Tool calls are function calls, not HTTP requests. `ask_user` resolves via an in-process Promise, not Pub/Sub. No race conditions, no distributed debugging.
 - **Separation of concerns via modules, not services**: Gateway, pipeline engine, and plan domain are distinct layers within the same process. Clean boundaries without the overhead of inter-service communication.
-- **Complements ai-task-assistant**: ai-task-assistant demonstrates async microservices with RabbitMQ. lazy-advisor demonstrates a different pattern — agentic workflows with real-time streaming. Two projects, two architectures, both production-informed.
 - **Right-sized for the workload**: A single session is one user, one pipeline, one WebSocket connection. There's no concurrent processing that would benefit from service separation. The interesting engineering is in the pipeline — stages, feedback classification, tool-calling loop — not in distributed coordination.
 
 ## MVP scope
@@ -347,40 +338,6 @@ Each handoff between stages is validated with a Zod schema: user profile (Stage 
 }
 ```
 
-## What makes this portfolio-worthy
-
-- **Agentic tool-calling loop**: Agent decides when to search, when to ask, when to create steps, when to stop
-- **WebSocket streaming**: Real-time bidirectional communication — user sends messages and sees searches happening and steps appearing live over a single connection
-- **Human-in-the-loop**: Agent asks clarifying questions, user iterates on the plan within the session
-- **Deliberate model selection**: Feedback classification uses a cheap/fast model for routing, full model for creative work — demonstrates choosing the right model for the task
-- **Domain-specialized system prompt**: Deep financial knowledge drives thorough research and opinionated recommendations
-- **Structured persistent output**: Plans with phases saved to PostgreSQL via Prisma, not throwaway chat text
-- **Feedback classification**: Agent classifies user feedback to determine whether to adjust locally or loop back for new research — a real architectural decision point
-
-**Stretch goals add:**
-- Multi-session state management (living plan that evolves)
-- Persistent user memory (agent gets smarter over time)
-- Adaptive verbosity (less explanation as user learns)
-
-## Positioning: CV and interview
-
-### CV line
-
-**Don't:** "Built an AI agent that creates investment plans using OpenAI"
-
-**Do:** "Built an agentic investment planning system — staged pipeline with Zod-validated handoffs, real-time WebSocket streaming, feedback classification that routes user input through different pipeline paths, and a code-level safety gate that prevents plan generation without verified research data. Separate from [ai-task-assistant project] to demonstrate both async microservice architecture and conversational agentic workflows."
-
-### Interview question: "What does this give you that ChatGPT doesn't?"
-
-> "It's not a ChatGPT competitor. It's a portfolio project that demonstrates I can build production agentic systems — tool-calling loops with human-in-the-loop, WebSocket streaming, structured persistent output, session state management. The investment planner is the vehicle, the engineering is the point."
-
-### Steering the conversation toward engineering
-
-The financial domain is compelling but can hijack interviews — an interviewer might spend 15 minutes debating ETF picks instead of asking about the architecture. Lead with engineering:
-- Demo and README should open with the architecture diagram, not the financial output
-- Frame demos as "watch how the pipeline stages hand off structured data" not "look at this investment plan"
-- If the conversation drifts into finance, redirect: "The recommendations come from the LLM + live search — the engineering challenge was making sure the pipeline won't produce a plan without verified research, which is why Stage 2 has a hard gate that physically prevents Stage 3 from running without validated search results."
-
 ## Observability
 
 Structured logging from the start, Prometheus metrics added incrementally — same patterns as ai-task-assistant, adapted for an agentic workflow.
@@ -412,13 +369,9 @@ JSON logs with consistent fields: `sessionId`, `stage`, `timestamp`, `event`. Ke
 - Search queries and result quality
 - Errors with full context (which stage, what failed, what was the pipeline state)
 
-### Why this matters for interviews
-
-Observability turns "it works in the demo" into "I can tell you exactly where the bottlenecks are." Starting with request latency, error rates, and token usage per stage — then adding pipeline-specific metrics as the system matures — is a concrete signal that you think about production readiness, not just happy-path functionality.
-
 ## Review decisions
 
-Reviewed against Dave Ebbelaar's (Datalumina) AI agent methodology. Full review in `CAPABILITY-REVIEW.md`.
+Reviewed against Dave Ebbelaar's (Datalumina) AI agent methodology.
 
 ### 1. Simplify safety caps — one per stage
 
@@ -436,16 +389,3 @@ Implement metrics that come free from existing middleware wrappers (request coun
 
 The user profile passed as a structured object between stages already implements Dave's Memory building block. Cross-session memory is correctly deferred. No action needed.
 
-## Technical notes
-
-- **Separate repo**: `lazy-advisor` — not part of ai-task-assistant
-- Uses `openai.chat.completions.create` with `tools`
-- **Backend Service**: Single Express app with WebSocket endpoint. Gateway layer (auth, rate limiting, session lifecycle) + pipeline engine (stages, tool-calling, feedback classification) + plan domain (CRUD, persistence). PostgreSQL via Prisma.
-- **Redis**: Rate limiting only. Session state is in-memory (upgrade path to Redis documented for horizontal scaling/reconnection).
-- Web search via OpenAI's built-in `web_search` tool (no external search API dependency)
-- CLI: Node.js, minimal — WebSocket client to the backend + stdin handling
-- **One cap per stage** (prevents runaway loops). Each stage has a single reasonable cap on tool-call iterations. If hit, the orchestrator forces the stage to conclude with whatever it has:
-  - **Stage 2 (Research)**: Build the research summary from searches completed so far (same graceful degradation as the search ceiling).
-  - **Stage 3 (Plan)**: Force `finish_plan` with steps created so far. Send a `message` event noting the plan may be less detailed than intended.
-  - **Stage 4 (Iterate)**: Same as Stage 3 — finalize with current state.
-  - **Stage 1 (Clarify)**: Proceed to Stage 2 with whatever profile information was gathered. The agent may ask fewer questions than ideal, but the pipeline continues.
