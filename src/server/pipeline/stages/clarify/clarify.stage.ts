@@ -17,7 +17,7 @@ import { handleAskUser } from "../../tools/ask-user.tool";
 
 const logger = createLogger("clarifyStage");
 
-const CLARIFY_MODEL = "gpt-5.4-mini";
+const CLARIFY_MODEL = "gpt-5.4-nano";
 
 const riskLevels = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
 const knowledgeLevels = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");
