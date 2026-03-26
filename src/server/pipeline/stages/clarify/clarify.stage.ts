@@ -160,7 +160,6 @@ export const runClarifyStage = async (
 
   const tools = getStageTools("clarify");
 
-  // Phase A: Initial call with the user's goal as input
   let response = await callOpenAI({
     model: "gpt-5.4-mini",
     instructions: CLARIFY_SYSTEM_PROMPT,
@@ -173,10 +172,6 @@ export const runClarifyStage = async (
 
   let toolCallCount = 0;
 
-  // Phase B: Tool-calling loop — ask clarifying questions until the model
-  // stops calling tools or we hit the stage cap.
-  // Instructions must be re-passed on each chained call because
-  // previous_response_id does NOT carry them forward.
   while (toolCallCount < MAX_STAGE_TOOL_CALLS) {
     const functionCalls = response.output.filter((item) => item.type === "function_call");
 
@@ -185,7 +180,17 @@ export const runClarifyStage = async (
     const toolOutputs = [];
 
     for (const functionCall of functionCalls) {
+      if (functionCall.name !== "ask_user") {
+        throw new InternalError(`Unexpected tool call: ${functionCall.name}`);
+      }
+
       toolCallCount++;
+
+      if (toolCallCount >= MAX_STAGE_TOOL_CALLS) {
+        throw new InternalError(
+          `Clarify stage failed to converge within ${String(MAX_STAGE_TOOL_CALLS)} tool calls`,
+        );
+      }
 
       logger.info("Tool call received", {
         toolCallCount,
@@ -227,15 +232,9 @@ export const runClarifyStage = async (
     });
   }
 
-  if (toolCallCount >= MAX_STAGE_TOOL_CALLS) {
-    throw new InternalError(
-      `Clarify stage failed to converge within ${String(MAX_STAGE_TOOL_CALLS)} tool calls`,
-    );
-  }
-
-  // Phase C: Extract structured UserProfile from the conversation
   logger.info("Extracting user profile from conversation");
 
+  // previous_response_id carries the full conversation; input: [] avoids duplicating context
   const { output: profile } = await callOpenAIParsed<UserProfile>({
     model: "gpt-5.4-mini",
     instructions: EXTRACTION_SYSTEM_PROMPT,

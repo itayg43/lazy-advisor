@@ -55,6 +55,6 @@ describe("clarifyStage", () => {
       runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
     ).rejects.toThrow(InternalError);
 
-    expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_STAGE_TOOL_CALLS);
+    expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_STAGE_TOOL_CALLS - 1);
   });
 });
