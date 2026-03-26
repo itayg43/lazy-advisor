@@ -71,31 +71,31 @@ Return exactly one of the following:
 # Examples
 
 ## Example 1 — vague timeline needs probing
-ask_user returned: "I'm 30, in Canada, moderate risk, beginner, $20k to invest, $300/month, no debt, have emergency fund, this is for long-term investing."
+ask_user returned: "I'm 30, in Israel, moderate risk, beginner, ₪70k to invest, ₪1,200/month, no debt, have emergency fund, this is for long-term investing."
 Field evaluation:
-- amount: $20k ✓
+- amount: ₪70k ✓
 - age: 30 ✓
 - risk tolerance: moderate ✓
 - timeline: "long-term" ✗ — not specific, needs a number of years or milestone
-- location: Canada ✓
+- location: Israel ✓
 - knowledge level: beginner ✓
 - emergency fund: yes ✓
 - debt: no ✓
-- monthly contribution: $300 ✓
+- monthly contribution: ₪1,200 ✓
 One field failed → call \`ask_user\`: "When you say long-term, roughly how many years are you thinking — 10, 20, or until retirement at a certain age?"
 
 ## Example 2 — all fields specific, done
-ask_user returned: "25, US, $10k, aggressive, 30 years, intermediate, $500/month, no debt, have emergency fund, use Fidelity."
+ask_user returned: "25, Israel, ₪35,000, aggressive, 30 years, intermediate, ₪1,500/month, no debt, have emergency fund, use Meitav."
 Field evaluation:
-- amount: $10k ✓
+- amount: ₪35,000 ✓
 - age: 25 ✓
 - risk tolerance: aggressive ✓
 - timeline: 30 years ✓
-- location: US ✓
+- location: Israel ✓
 - knowledge level: intermediate ✓
 - emergency fund: yes ✓
 - debt: no ✓
-- monthly contribution: $500 ✓
+- monthly contribution: ₪1,500 ✓
 All fields passed → respond: "Got it, I have everything I need to build your plan."`;
 
 const EXTRACTION_SYSTEM_PROMPT = `# Role and Objective
@@ -108,7 +108,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 
 # Field Rules
 - **goal**: preserve the user's original wording with enough context for downstream stages. Do not reduce to generic phrases like "start investing" — include the specifics the user mentioned.
-- **amount**: extract the exact number. Convert shorthand (e.g., "$15k" → 15000).
+- **amount**: extract the exact number. Convert shorthand (e.g., "₪55k" → 55000).
 - **age**: extract the exact number.
 - **riskTolerance**: map to ${riskLevels} based on what the user described.
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
@@ -122,25 +122,25 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 # Examples
 
 ## Example 1
-Conversation: User wants to invest $15k, is 28, moderate risk, plans to invest for about 20 years, US-based, beginner, has emergency fund, no debt, $500/month, no brokerage mentioned.
+Conversation: User wants to invest ₪55,000, is 28, moderate risk, plans to invest for about 20 years, Israel-based, beginner, has emergency fund, no debt, ₪1,800/month, no brokerage mentioned.
 Output:
-- goal: "invest $15k but have no idea where to begin"
-- amount: 15000
+- goal: "invest ₪55,000 but have no idea where to begin"
+- amount: 55000
 - age: 28
 - riskTolerance: "moderate"
 - timeline: "20 years"
-- location: "US"
+- location: "Israel"
 - knowledgeLevel: "beginner"
 - brokerage: "none"
 - hasEmergencyFund: true
 - hasDebt: false
-- monthlyContribution: 500
+- monthlyContribution: 1800
 
 ## Example 2
-Conversation: User has $50k inheritance, is 35, aggressive risk, investing until retirement at 65, lives in Israel, intermediate, no emergency fund, has student debt, can contribute $1000/month, uses Interactive Brokers.
+Conversation: User has ₪180,000 inheritance, is 35, aggressive risk, investing until retirement at 65, lives in Israel, intermediate, no emergency fund, has student debt, can contribute ₪3,500/month, uses Interactive Brokers.
 Output:
-- goal: "invest $50k inheritance for retirement"
-- amount: 50000
+- goal: "invest ₪180,000 inheritance for retirement"
+- amount: 180000
 - age: 35
 - riskTolerance: "aggressive"
 - timeline: "until retirement at 65"
@@ -149,7 +149,7 @@ Output:
 - brokerage: "Interactive Brokers"
 - hasEmergencyFund: false
 - hasDebt: true
-- monthlyContribution: 1000`;
+- monthlyContribution: 3500`;
 
 export const runClarifyStage = async (
   goal: string,

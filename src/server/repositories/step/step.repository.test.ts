@@ -33,8 +33,8 @@ describe("stepRepository", () => {
       });
       const params: CreateStepParams = {
         planId: plan.id,
-        title: "Research low-cost S&P 500 ETFs",
-        description: "Compare VOO, SPY, and IVV on expense ratio and tracking error",
+        title: "Research global equity ETFs",
+        description: "Compare VWRA and CSPX on expense ratio and tracking error",
         sortOrder: 1,
       };
 
@@ -58,12 +58,12 @@ describe("stepRepository", () => {
       const step = await createStep(prismaClient, {
         planId: plan.id,
         title: "Research bond ETFs",
-        description: "Look at BND and AGG for fixed-income allocation",
+        description: "Look at AGGU and IGLA for fixed-income allocation",
         sortOrder: 1,
       });
 
       const updatedTitle = "Compare bond ETF expense ratios";
-      const updatedDescription = "Focus on BND vs AGG total cost of ownership";
+      const updatedDescription = "Focus on AGGU vs IGLA total cost of ownership";
       const updated = await updateStep(prismaClient, step.id, {
         title: updatedTitle,
         description: updatedDescription,
@@ -129,13 +129,13 @@ describe("stepRepository", () => {
       await createStep(prismaClient, {
         planId: plan.id,
         title: "Buy energy sector ETF",
-        description: "Allocate 20% to XLE for energy exposure",
+        description: "Allocate 20% to IQQH for energy exposure",
         sortOrder: 1,
       });
       await createStep(prismaClient, {
         planId: plan.id,
         title: "Buy tech sector ETF",
-        description: "Allocate 30% to VGT for technology exposure",
+        description: "Allocate 30% to IUIT for technology exposure",
         sortOrder: 2,
       });
 

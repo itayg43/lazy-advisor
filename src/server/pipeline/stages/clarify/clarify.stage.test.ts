@@ -22,7 +22,7 @@ vi.mock("#server/services/openai", () => ({
 }));
 
 describe("clarifyStage", () => {
-  const mockGoal = "I have $15k and want to start investing in ETFs";
+  const mockGoal = "I have ₪55,000 and want to start investing in ETFs";
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
 
@@ -39,17 +39,17 @@ describe("clarifyStage", () => {
   };
 
   const mockProfile: UserProfile = {
-    goal: "invest $15k in ETFs as a beginner",
-    amount: 15_000,
+    goal: "invest ₪55,000 in ETFs as a beginner",
+    amount: 55_000,
     age: 28,
     riskTolerance: RiskTolerance.enum.moderate,
     timeline: "20 years",
-    location: "US",
+    location: "Israel",
     knowledgeLevel: KnowledgeLevel.enum.beginner,
     brokerage: "none",
     hasEmergencyFund: true,
     hasDebt: false,
-    monthlyContribution: 500,
+    monthlyContribution: 1_800,
   };
 
   const createAskUserResponse = (
@@ -124,7 +124,7 @@ describe("clarifyStage", () => {
   });
 
   it("asks user for clarification then returns extracted profile", async () => {
-    const mockUserResponse = "I'm 28, moderate risk, based in the US";
+    const mockUserResponse = "I'm 28, moderate risk, based in Israel";
     mockWaitForResponse.mockResolvedValue(mockUserResponse);
 
     mockedCallOpenAI

@@ -40,26 +40,26 @@ describe("clarifyStage evals", () => {
   // self-contained user responses and extract them correctly.
   it("story 1: extracts correct profile from a vague beginner goal", async () => {
     const responder = createScriptedResponder([
-      "I'm 28 years old, I have 6 months of emergency savings, no debt, this is for long-term investing, a 20% drop would stress me but I wouldn't sell, I'm in the US, and I can invest about $500 per month. I'm a complete beginner.",
+      "I'm 28 years old, I have 6 months of emergency savings, no debt, this is for long-term investing, a 20% drop would stress me but I wouldn't sell, I'm in Israel, and I can invest about ₪1,800 per month. I'm a complete beginner.",
       "I'd say about 20 years, maybe until I'm around 50.",
     ]);
 
     const profile = await runClarifyStage(
-      "I have $15k and I want to start investing but I have no idea where to begin",
+      "I have ₪55,000 and I want to start investing but I have no idea where to begin",
       responder.sendToUser,
       responder.waitForResponse,
     );
     assertValidProfile(profile);
-    expect(profile.amount).toBe(15_000);
+    expect(profile.amount).toBe(55_000);
     expect(profile.age).toBe(28);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
     expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.monthlyContribution).toBe(500);
-    expect(profile.location.toLowerCase()).toContain("us");
+    expect(profile.monthlyContribution).toBe(1_800);
+    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
-    expect(profile.goal.toLowerCase()).toContain("15k");
+    expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|₪/);
     expect(profile.brokerage).toBe("none");
   });
 });
