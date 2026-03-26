@@ -34,12 +34,15 @@ export const handleAskUser = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<string> => {
-  const { success, data } = AskUserArgsSchema.safeParse(JSON.parse(args));
+  // Parse outside the async flow so waitForResponse rejections don't get swallowed
+  let question: string;
 
-  if (!success) {
+  try {
+    ({ question } = AskUserArgsSchema.parse(JSON.parse(args)));
+  } catch {
     throw new InternalError(`Invalid ask_user arguments: ${args}`);
   }
 
-  sendToUser(data.question);
+  sendToUser(question);
   return waitForResponse();
 };

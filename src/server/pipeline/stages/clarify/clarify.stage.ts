@@ -1,11 +1,11 @@
 import { zodTextFormat } from "openai/helpers/zod";
-import { ResponseInputItem } from "openai/resources/responses/responses";
+import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { InternalError } from "#server/errors";
 import { createLogger } from "#server/lib/logger";
 import {
-  KnowledgeLevelEnum,
-  RiskToleranceEnum,
+  KnowledgeLevel,
+  RiskTolerance,
   UserProfileSchema,
 } from "#server/schemas/pipeline.schema";
 import { callOpenAI, callOpenAIParsed } from "#server/services/openai";
@@ -17,8 +17,10 @@ import { handleAskUser } from "../../tools/ask-user.tool";
 
 const logger = createLogger("clarifyStage");
 
-const riskLevels = RiskToleranceEnum.options.map((o) => `\`${o}\``).join(", ");
-const knowledgeLevels = KnowledgeLevelEnum.options.map((o) => `\`${o}\``).join(", ");
+const CLARIFY_MODEL = "gpt-5.4-mini";
+
+const riskLevels = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
+const knowledgeLevels = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");
 
 const CLARIFY_SYSTEM_PROMPT = `# Role and Objective
 You are the clarification stage of an investment advisor pipeline. Your sole responsibility is to collect any missing user information needed for a later recommendation stage. Do **not** provide investment advice, portfolio suggestions, fund names, or action plans.
@@ -161,7 +163,7 @@ export const runClarifyStage = async (
   const tools = getStageTools("clarify");
 
   let response = await callOpenAI({
-    model: "gpt-5.4-mini",
+    model: CLARIFY_MODEL,
     instructions: CLARIFY_SYSTEM_PROMPT,
     input: goal,
     tools,
@@ -172,7 +174,7 @@ export const runClarifyStage = async (
 
   let toolCallCount = 0;
 
-  while (toolCallCount < MAX_STAGE_TOOL_CALLS) {
+  while (toolCallCount <= MAX_STAGE_TOOL_CALLS) {
     const functionCalls = response.output.filter((item) => item.type === "function_call");
 
     if (functionCalls.length === 0) break;
@@ -186,7 +188,7 @@ export const runClarifyStage = async (
 
       toolCallCount++;
 
-      if (toolCallCount >= MAX_STAGE_TOOL_CALLS) {
+      if (toolCallCount > MAX_STAGE_TOOL_CALLS) {
         throw new InternalError(
           `Clarify stage failed to converge within ${String(MAX_STAGE_TOOL_CALLS)} tool calls`,
         );
@@ -221,7 +223,7 @@ export const runClarifyStage = async (
     }
 
     response = await callOpenAI({
-      model: "gpt-5.4-mini",
+      model: CLARIFY_MODEL,
       instructions: CLARIFY_SYSTEM_PROMPT,
       tools,
       previous_response_id: response.id,
@@ -236,7 +238,7 @@ export const runClarifyStage = async (
 
   // previous_response_id carries the full conversation; input: [] avoids duplicating context
   const { output: profile } = await callOpenAIParsed<UserProfile>({
-    model: "gpt-5.4-mini",
+    model: CLARIFY_MODEL,
     instructions: EXTRACTION_SYSTEM_PROMPT,
     input: [],
     previous_response_id: response.id,

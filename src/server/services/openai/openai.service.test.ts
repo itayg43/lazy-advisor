@@ -10,6 +10,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, ServiceUnavailableError } from "#server/errors";
+import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import type { UserProfile } from "#server/types/pipeline.types";
 import { callOpenAI, callOpenAIParsed } from "./openai.service";
 
@@ -113,10 +114,10 @@ describe("openaiService", () => {
       goal: "Build a diversified ETF portfolio for retirement",
       amount: 10000,
       age: 30,
-      riskTolerance: "moderate",
+      riskTolerance: RiskTolerance.enum.moderate,
       timeline: "10+ years",
       location: "United States",
-      knowledgeLevel: "beginner",
+      knowledgeLevel: KnowledgeLevel.enum.beginner,
       brokerage: "none",
       hasEmergencyFund: true,
       hasDebt: false,

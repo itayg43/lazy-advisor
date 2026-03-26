@@ -49,6 +49,11 @@
 - [x] 3.4 — `ask_user` tool
 - [x] 3.4b — Logger utility (`createLogger`)
 - [x] 3.5 — Tool registry
-- [x] 3.6 — Clarify stage (bug fixes: added missing `input: []` to Phase C; fixed Phase B not passing `instructions` via `previous_response_id`; prompt optimization with Field Validation section and dynamic enums; switched to `gpt-5.4-mini` with `reasoning: { effort: "low" }`; stage cap now throws `InternalError`; defensive hardening: Zod validation on `ask_user` args, tool name guard, strict cap enforcement inside inner loop)
-- [ ] 3.7 — Clarify stage unit tests (stage cap → InternalError done; remaining: detailed/minimal/contradictory input, extraction failure)
+- [x] 3.6 — Clarify stage
+  - Bug fixes: added missing `input: []` to Phase C; fixed Phase B not passing `instructions` via `previous_response_id`
+  - Prompt optimization: Field Validation section with dynamic enum injection
+  - Model: `gpt-5.4-mini` with `reasoning: { effort: "low" }`
+  - Stage cap throws `InternalError`
+  - Defensive hardening: Zod validation on `ask_user` args, tool name guard, strict cap enforcement inside inner loop
+- [ ] 3.7 — Clarify stage unit tests (4 passing: no clarification happy path, ask_user happy path, unexpected tool name, stage cap; remaining: detailed/minimal/contradictory input, extraction failure)
 - [x] 3.7b — Clarify stage level 1 evals (Story 1 with timeline probe assertion; remaining stories to be added incrementally)
