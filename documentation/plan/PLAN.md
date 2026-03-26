@@ -17,6 +17,7 @@ lazy-advisor/
 ├── tsconfig.json
 ├── vitest.config.ts
 ├── vitest.config.repositories.ts
+├── vitest.config.evals.ts
 ├── prisma.config.ts
 ├── .env.example
 ├── .env.test.example
@@ -53,6 +54,7 @@ lazy-advisor/
 │   │   │   │   ├── clarify/
 │   │   │   │   │   ├── clarify.stage.ts
 │   │   │   │   │   ├── clarify.stage.test.ts
+│   │   │   │   │   ├── clarify.stage.eval.ts
 │   │   │   │   │   └── index.ts
 │   │   │   │   ├── research/
 │   │   │   │   │   ├── research.stage.ts

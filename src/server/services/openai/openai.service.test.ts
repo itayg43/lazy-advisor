@@ -111,11 +111,16 @@ describe("openaiService", () => {
   describe("callOpenAIParsed", () => {
     const mockParsedOutput: UserProfile = {
       goal: "Build a diversified ETF portfolio for retirement",
-      currency: "USD",
-      monthlyBudget: 500,
+      amount: 10000,
+      age: 30,
       riskTolerance: "moderate",
-      investmentHorizon: "10+ years",
+      timeline: "10+ years",
+      location: "United States",
       knowledgeLevel: "beginner",
+      brokerage: "none",
+      hasEmergencyFund: true,
+      hasDebt: false,
+      monthlyContribution: 500,
     };
 
     const createMockParsedResponse = (

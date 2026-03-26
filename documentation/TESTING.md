@@ -30,3 +30,14 @@
 - Repository tests run via `npm run test:repositories` (separate Vitest config with `fileParallelism: false`); excluded from `npm test` / CI
 - Repository tests use a separate test database (`lazy_advisor_test`) loaded via `dotenv-cli -e .env.test`; the script resets the DB with `prisma db push --force-reset` before each run
 - Repository tests define `adapter` and `prismaClient` inside the top-level `describe` block — always name it `prismaClient`, not `prisma`
+
+## Evals
+
+Evals test actual LLM behavior against real OpenAI — they are not unit tests and should not be mocked.
+
+- **File convention**: `*.eval.ts` (not `*.test.ts`) — naturally excluded from `npm test` since the main Vitest config only includes `*.test.ts`
+- **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
+- **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
+- **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
+- **User simulation**: scripted self-contained responses via `createScriptedResponder`. Each response dumps ALL persona info regardless of what the LLM asked, making evals immune to question ordering changes. LLM-simulated users are a Level 2+ concern.
+- **Assertions**: grade outcomes, not paths — assert on final output fields (exact equality for numbers/booleans/enums, loose `toContain` for free-form strings). Do not assert on conversation flow (question count, ordering, grouping).
