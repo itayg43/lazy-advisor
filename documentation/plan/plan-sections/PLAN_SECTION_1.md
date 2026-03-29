@@ -10,7 +10,7 @@
 | 1.4 | Docker Compose (Postgres 16 + Redis 7), `.env.example`, `.gitignore` | `docker-compose.yml`, `.env.example`, `.gitignore` | 1.1 |
 | 1.5 | Config module with dotenv + envalid for env var validation | `src/server/config.ts` | 1.3 |
 | 1.6 | Shared constants (caps, timeouts) + event types (discriminated unions) | `src/shared/constants/constants.ts`, `src/shared/types/events.types.ts` | 1.3 |
-| 1.7 | Generic `withRetry` utility + unit tests | `src/server/lib/with-retry/with-retry.ts`, `src/server/lib/with-retry/with-retry.test.ts`, `src/server/lib/with-retry/index.ts` | 1.2 |
-| 1.8 | ESLint (flat config) + Prettier. Rules enforce project conventions: no `default` exports, no `any`, `camelCase` functions, `PascalCase` types, `UPPER_SNAKE_CASE` constants, import order (node → external → internal with blank lines), kebab-case filenames. Prettier for formatting. Add `lint` and `format` scripts | `eslint.config.js`, `.prettierrc`, `package.json` (scripts) | 1.1 |
+| 1.7 | Generic `withRetry` utility + unit tests. Skips non-transient errors (4xx except 429) immediately without retrying. Uses `BaseError` subclasses in tests. 8 tests: success, retry-then-success, exhaustion, custom attempts, 4xx immediate throw, 429 retry, 5xx retry, no-status retry | `src/server/lib/with-retry/with-retry.ts`, `src/server/lib/with-retry/with-retry.test.ts`, `src/server/lib/with-retry/index.ts` | 1.2 |
+| 1.8 | ESLint (flat config, `tseslint.configs.strict`) + Prettier. Rules enforce project conventions: no `default` exports, no `any`, `camelCase` functions, `PascalCase` types, `UPPER_SNAKE_CASE` constants, import order (node → external → internal with blank lines), kebab-case filenames, blank line before `return`/`throw`. Prettier for formatting. Add `lint` and `format` scripts | `eslint.config.js`, `.prettierrc`, `package.json` (scripts) | 1.1 |
 
 **Runnable after**: `npm run type-check`, `npm run lint`, `npm run test`, `docker compose up -d`

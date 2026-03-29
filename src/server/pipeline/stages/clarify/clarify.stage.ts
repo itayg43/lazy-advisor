@@ -3,6 +3,12 @@ import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { InternalError } from "#server/errors";
 import { createLogger } from "#server/lib/logger";
+import { getStageTools } from "#server/pipeline/tools";
+import {
+  handleAskUser,
+  type SendToUser,
+  type WaitForResponse,
+} from "#server/pipeline/tools/ask-user.tool";
 import {
   KnowledgeLevel,
   RiskTolerance,
@@ -11,9 +17,6 @@ import {
 import { callOpenAI, callOpenAIParsed } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
 import { MAX_STAGE_TOOL_CALLS } from "#shared/constants/constants";
-import { getStageTools } from "../../tools";
-import type { SendToUser, WaitForResponse } from "../../tools/ask-user.tool";
-import { handleAskUser } from "../../tools/ask-user.tool";
 
 const logger = createLogger("clarifyStage");
 
@@ -58,9 +61,12 @@ Call \`ask_user\` when any field value is:
 - A vague category instead of a number or concrete milestone
 
 ### Values That Are NOT Specific Enough
-- Timeline: \`long-term\`, \`short-term\`, \`a while\`, \`eventually\`, \`until retirement\` (without an age). These must be converted to a number of years or an age-based milestone.
+- Timeline: \`long-term\`, \`short-term\`, \`a while\`, \`eventually\`, \`until retirement\` (without an age). These must be converted to a number of years or an age-based milestone. Ranges like \`10-15 years\` or \`5-10 years\` ARE specific enough — do not ask the user to narrow further.
 - Amount: \`some money\`, \`a lot\`, \`not sure\`. Must be a number.
 - Monthly contribution: \`whatever I can\`, \`not much\`. Must be a number.
+
+### When to Stop Probing
+If the user has been asked about the same field twice and still has not provided a specific value, accept the best available answer and move on. Do not keep asking — users who say "that's all I have" or give vague repeated answers are signaling they cannot be more specific.
 
 # Output Format
 Return exactly one of the following:
@@ -96,6 +102,20 @@ Field evaluation:
 - emergency fund: yes ✓
 - debt: no ✓
 - monthly contribution: ₪1,500 ✓
+All fields passed → respond: "Got it, I have everything I need to build your plan."
+
+## Example 3 — range timeline is specific enough
+ask_user returned: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund."
+Field evaluation:
+- amount: ₪18,000 ✓
+- age: 24 ✓
+- risk tolerance: moderate ✓
+- timeline: "10-15 years" ✓ — a numeric range is specific enough
+- location: Israel ✓
+- knowledge level: beginner ✓
+- emergency fund: yes ✓
+- debt: no ✓
+- monthly contribution: ₪700 ✓
 All fields passed → respond: "Got it, I have everything I need to build your plan."`;
 
 const EXTRACTION_SYSTEM_PROMPT = `# Role and Objective
@@ -151,6 +171,37 @@ Output:
 - hasDebt: true
 - monthlyContribution: 3500`;
 
+// Production: pass `input: []` with `previousResponseId` — conversation context is carried
+// server-side by OpenAI's response chaining.
+// Extraction evals: pass the full conversation as `input` without `previousResponseId` —
+// allows testing extraction in isolation with deterministic, handwritten transcripts.
+type ExtractionParams = {
+  input: ResponseInputItem[];
+  previousResponseId?: string;
+};
+
+export const extractUserProfile = async (
+  params: ExtractionParams,
+): Promise<UserProfile> => {
+  const extractionResponse = await callOpenAIParsed<UserProfile>({
+    model: CLARIFY_MODEL,
+    instructions: EXTRACTION_SYSTEM_PROMPT,
+    input: params.input,
+    ...(params.previousResponseId && { previous_response_id: params.previousResponseId }),
+    text: {
+      format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
+    },
+  });
+
+  logger.info("Extraction complete", {
+    extractionResponseId: extractionResponse.id,
+    extractionUsage: extractionResponse.usage,
+    profile: extractionResponse.output,
+  });
+
+  return extractionResponse.output;
+};
+
 export const runClarifyStage = async (
   goal: string,
   sendToUser: SendToUser,
@@ -172,9 +223,15 @@ export const runClarifyStage = async (
     },
   });
 
+  logger.info("Initial clarify response", {
+    responseId: response.id,
+    usage: response.usage,
+  });
+
   let toolCallCount = 0;
 
-  while (toolCallCount <= MAX_STAGE_TOOL_CALLS) {
+  // Loop exits on break (model stops calling tools) or throw (tool call cap exceeded)
+  while (true) {
     const functionCalls = response.output.filter((item) => item.type === "function_call");
 
     if (functionCalls.length === 0) break;
@@ -190,7 +247,7 @@ export const runClarifyStage = async (
 
       if (toolCallCount > MAX_STAGE_TOOL_CALLS) {
         throw new InternalError(
-          `Clarify stage failed to converge within ${String(MAX_STAGE_TOOL_CALLS)} tool calls`,
+          `Clarify stage failed to converge within ${MAX_STAGE_TOOL_CALLS} tool calls`,
         );
       }
 
@@ -198,6 +255,8 @@ export const runClarifyStage = async (
         toolCallCount,
         tool: functionCall.name,
         callId: functionCall.call_id,
+      });
+      logger.debug("Tool call arguments", {
         arguments: functionCall.arguments,
       });
 
@@ -211,6 +270,8 @@ export const runClarifyStage = async (
         toolCallCount,
         tool: functionCall.name,
         callId: functionCall.call_id,
+      });
+      logger.debug("User response", {
         userResponse: result,
       });
 
@@ -232,24 +293,24 @@ export const runClarifyStage = async (
         effort: "low",
       },
     });
+
+    logger.info("Clarify follow-up response", {
+      responseId: response.id,
+      usage: response.usage,
+    });
   }
 
-  logger.info("Extracting user profile from conversation");
+  logger.info("Clarification complete, starting extraction", {
+    lastResponseId: response.id,
+  });
 
-  // previous_response_id carries the full conversation; input: [] avoids duplicating context
-  const { output: profile } = await callOpenAIParsed<UserProfile>({
-    model: CLARIFY_MODEL,
-    instructions: EXTRACTION_SYSTEM_PROMPT,
+  const profile = await extractUserProfile({
     input: [],
-    previous_response_id: response.id,
-    text: {
-      format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
-    },
+    previousResponseId: response.id,
   });
 
   logger.info("Clarify stage complete", {
     totalToolCalls: toolCallCount,
-    profile,
   });
 
   return profile;

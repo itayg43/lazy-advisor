@@ -1,10 +1,8 @@
-import type {
-  ResponseOutputItem,
-  ResponseUsage,
-} from "openai/resources/responses/responses";
+import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InternalError } from "#server/errors";
+import { InternalError, ServiceUnavailableError } from "#server/errors";
+import { mockTokenUsage } from "#server/mocks/openai.service.mock";
 import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import type { OpenAIResponse } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
@@ -25,18 +23,6 @@ describe("clarifyStage", () => {
   const mockGoal = "I have ₪55,000 and want to start investing in ETFs";
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
-
-  const mockUsage: ResponseUsage = {
-    input_tokens: 120,
-    output_tokens: 45,
-    total_tokens: 165,
-    input_tokens_details: {
-      cached_tokens: 0,
-    },
-    output_tokens_details: {
-      reasoning_tokens: 0,
-    },
-  };
 
   const mockProfile: UserProfile = {
     goal: "invest ₪55,000 in ETFs as a beginner",
@@ -67,7 +53,7 @@ describe("clarifyStage", () => {
         }),
       },
     ],
-    usage: mockUsage,
+    usage: mockTokenUsage,
   });
 
   const createTextResponse = (): OpenAIResponse<ResponseOutputItem[]> => ({
@@ -87,7 +73,7 @@ describe("clarifyStage", () => {
         ],
       },
     ],
-    usage: mockUsage,
+    usage: mockTokenUsage,
   });
 
   const createUnexpectedToolResponse = (): OpenAIResponse<ResponseOutputItem[]> => ({
@@ -103,7 +89,7 @@ describe("clarifyStage", () => {
         }),
       },
     ],
-    usage: mockUsage,
+    usage: mockTokenUsage,
   });
 
   beforeEach(() => {
@@ -157,7 +143,8 @@ describe("clarifyStage", () => {
     let callCount = 0;
     mockedCallOpenAI.mockImplementation(() => {
       callCount++;
-      return Promise.resolve(createAskUserResponse(`call_${String(callCount)}`));
+
+      return Promise.resolve(createAskUserResponse(`call_${callCount}`));
     });
 
     await expect(
@@ -165,5 +152,29 @@ describe("clarifyStage", () => {
     ).rejects.toThrow(InternalError);
 
     expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_STAGE_TOOL_CALLS);
+  });
+
+  it("propagates callOpenAI error from clarification phase", async () => {
+    mockedCallOpenAI.mockRejectedValue(
+      new ServiceUnavailableError("OpenAI API is unavailable"),
+    );
+
+    await expect(
+      runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
+    ).rejects.toThrow(ServiceUnavailableError);
+
+    expect(mockWaitForResponse).not.toHaveBeenCalled();
+    expect(mockedCallOpenAIParsed).not.toHaveBeenCalled();
+  });
+
+  it("propagates callOpenAIParsed error from extraction phase", async () => {
+    mockedCallOpenAI.mockResolvedValue(createTextResponse());
+    mockedCallOpenAIParsed.mockRejectedValue(new InternalError("Parsed output is null"));
+
+    await expect(
+      runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
+    ).rejects.toThrow(InternalError);
+
+    expect(mockWaitForResponse).not.toHaveBeenCalled();
   });
 });

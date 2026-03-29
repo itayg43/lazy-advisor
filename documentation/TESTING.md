@@ -14,6 +14,25 @@
 - Define shared mocks as typed `const` inside the top-level `describe` block, prefixed with `mock`/`mocked` (e.g., `mockContext`, `mockedCreatePlan`). For plain function modules, use `vi.mocked()` wrappers. For object methods (e.g., `openaiClient.responses.create`), use `vi.hoisted` to declare `vi.fn()` references and inject them in the `vi.mock` factory
 - Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work — for consistency
 - Define mock factories (e.g., `createMockResponse`) inside the `describe` block that uses them, not at the top level — shared data used across all blocks (e.g., `mockUsage`, `mockParams`) stays in the top-level `describe`
+- `vi.hoisted`/`vi.mock` blocks **cannot be exported** from shared files — they must stay inline in each test file. Only shared data (mock objects, response factories) can be imported from `src/server/mocks/` files
+
+### Import ordering with `vi.hoisted`/`vi.mock`
+
+All `import` statements must come **before** the `vi.hoisted` + `vi.mock` block. Vitest hoists the mock declaration but does not hoist surrounding imports — placing imports after `vi.mock` causes `SyntaxError: Cannot export hoisted variable` or undefined references.
+
+```ts
+// correct — imports first, then hoisted/mock
+import { describe, it, vi } from "vitest";
+import { mockTokenUsage } from "#server/mocks/openai.service.mock";
+
+const { mockedFn } = vi.hoisted(() => ({ mockedFn: vi.fn() }));
+vi.mock("#server/services/openai", () => ({ callOpenAI: mockedFn }));
+
+// wrong — imports after vi.mock
+const { mockedFn } = vi.hoisted(() => ({ mockedFn: vi.fn() }));
+vi.mock("#server/services/openai", () => ({ callOpenAI: mockedFn }));
+import { mockTokenUsage } from "#server/mocks/openai.service.mock"; // breaks
+```
 
 ## Test Data
 
@@ -39,5 +58,7 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
-- **User simulation**: scripted self-contained responses via `createScriptedResponder`. Each response dumps ALL persona info regardless of what the LLM asked, making evals immune to question ordering changes. LLM-simulated users are a Level 2+ concern.
-- **Assertions**: grade outcomes, not paths — assert on final output fields (exact equality for numbers/booleans/enums, loose `toContain` for free-form strings). Do not assert on conversation flow (question count, ordering, grouping).
+- **Two eval layers**:
+  - **Extraction-only** (`extractUserProfile` with handwritten `ResponseInputItem[]` transcripts): tests extraction prompt quality in isolation. Transcripts use the real OpenAI conversation structure (`function_call` + `function_call_output` items, not simplified user/assistant messages). Deterministic input — only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
+  - **Full-loop** (`runClarifyStage` with `createScriptedResponder`): tests conversation behavior end-to-end. Scripted responses are natural and focused (2-3 responses answering what the model is likely to ask), not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the goal string. Do not assert on conversation flow (question count, ordering).
+- LLM-simulated users are a Level 2+ concern.

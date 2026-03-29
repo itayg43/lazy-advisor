@@ -1,3 +1,4 @@
+import type { ResponseInputItem } from "openai/resources/responses/responses";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -6,7 +7,7 @@ import {
   UserProfileSchema,
 } from "#server/schemas/pipeline.schema";
 import type { SendToUser, WaitForResponse } from "../../tools/ask-user.tool";
-import { runClarifyStage } from "./clarify.stage";
+import { extractUserProfile, runClarifyStage } from "./clarify.stage";
 
 type ScriptedResponder = {
   sendToUser: SendToUser;
@@ -14,52 +15,324 @@ type ScriptedResponder = {
 };
 
 describe("clarifyStage evals", () => {
-  // Creates a deterministic user simulator from a queue of scripted responses.
-  // Each response is self-contained — it dumps ALL persona info regardless of
-  // what the LLM asked, making evals immune to question ordering changes.
-  const createScriptedResponder = (responses: string[]): ScriptedResponder => {
-    let responseIndex = 0;
-
-    return {
-      sendToUser: () => {},
-      waitForResponse: () => {
-        const response = responses[responseIndex] ?? "that's all I have";
-        responseIndex++;
-        return Promise.resolve(response);
-      },
-    };
-  };
-
   const assertValidProfile = (profile: unknown): void => {
     const result = UserProfileSchema.safeParse(profile);
     expect(result.success).toBe(true);
   };
 
-  // Story 1 from WORKFLOW_EXAMPLES.md — vague beginner with no details except amount.
-  // Tests that the stage can gather all required fields across multiple
-  // self-contained user responses and extract them correctly.
-  it("story 1: extracts correct profile from a vague beginner goal", async () => {
-    const responder = createScriptedResponder([
-      "I'm 28 years old, I have 6 months of emergency savings, no debt, this is for long-term investing, a 20% drop would stress me but I wouldn't sell, I'm in Israel, and I can invest about ₪1,800 per month. I'm a complete beginner.",
-      "I'd say about 20 years, maybe until I'm around 50.",
-    ]);
+  // --- Layer 1: Extraction-only evals ---
+  // Tests extraction prompt quality in isolation by feeding handwritten conversation
+  // transcripts directly to extractUserProfile. The conversation content is deterministic;
+  // only model extraction variance affects the output.
+  // Transcripts mirror the actual OpenAI conversation structure: user message → function_call
+  // → function_call_output → (repeat) → assistant confirmation.
+  describe("extraction", () => {
+    // Story 1 — vague beginner, 2-turn conversation.
+    // Tests baseline extraction: all fields present, risk mapped from behavioral description.
+    it("story 1: extracts profile from a 2-turn beginner conversation", async () => {
+      const transcript: ResponseInputItem[] = [
+        {
+          role: "user",
+          content:
+            "I have ₪55,000 and I want to start investing but I have no idea where to begin",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              "Great — you've got the amount. A few quick details so I can tailor the next step:\n1) How old are you?\n2) What country are you in?\n3) When do you want to use this money (roughly how many years, or until what age/milestone)?\n4) How would you describe your risk comfort — would you prefer lower ups/downs (conservative), a mix (moderate), or you're okay with bigger ups/downs for higher potential (aggressive)?\n5) Do you already have an emergency fund saved? (yes/no)\n6) Do you have any outstanding debt that you're paying regularly? (yes/no)\n7) How much can you add each month (in ₪)?\n8) What's your knowledge level about investing right now (beginner, intermediate, or advanced)?",
+          }),
+          call_id: "call_1",
+          id: "fc_1",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output:
+            "I'm 28 years old, I have 6 months of emergency savings, no debt, this is for long-term investing, a 20% drop would stress me but I wouldn't sell, I'm in Israel, and I can invest about ₪1,800 per month. I'm a complete beginner.",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              'Thanks — one last missing piece: when you say "long-term," roughly how many years is your investing timeline (e.g., 5, 10, 20+), or is it "until retirement at age X"?',
+          }),
+          call_id: "call_2",
+          id: "fc_2",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_2",
+          output: "I'd say about 20 years, maybe until I'm around 50.",
+        },
+      ];
 
-    const profile = await runClarifyStage(
-      "I have ₪55,000 and I want to start investing but I have no idea where to begin",
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    assertValidProfile(profile);
-    expect(profile.amount).toBe(55_000);
-    expect(profile.age).toBe(28);
-    expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
-    expect(profile.hasEmergencyFund).toBe(true);
-    expect(profile.hasDebt).toBe(false);
-    expect(profile.monthlyContribution).toBe(1_800);
-    expect(profile.location.toLowerCase()).toContain("israel");
-    expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
-    expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|₪/);
-    expect(profile.brokerage).toBe("none");
+      const profile = await extractUserProfile({
+        input: transcript,
+      });
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(55_000);
+      expect(profile.age).toBe(28);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.monthlyContribution).toBe(1_800);
+      expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
+      expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
+      expect(profile.brokerage).toBe("none");
+    });
+
+    // Story 2 — most info in the goal, 1-turn fill-the-gaps conversation.
+    // Tests extraction when fields are split between goal string and user response,
+    // and brokerage name extraction (IBI).
+    it("story 2: extracts profile with fields split between goal and response", async () => {
+      const transcript: ResponseInputItem[] = [
+        {
+          role: "user",
+          content: "I'm 35, ₪75,000, moderate risk, long-term retirement savings",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              'Good detail — just a few gaps:\n1) Do you have an emergency fund?\n2) Any debt?\n3) How much can you invest monthly going forward?\n4) Do you have a brokerage account?\n5) What country are you in?\n6) How long is "long-term" — roughly how many years or until what age?',
+          }),
+          call_id: "call_1",
+          id: "fc_1",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output:
+            "yes emergency fund, no debt, about ₪2,000/mo, yes I have IBI, I'm in Israel, about 30 years until retirement at 65. I'm a beginner.",
+        },
+      ];
+
+      const profile = await extractUserProfile({
+        input: transcript,
+      });
+
+      assertValidProfile(profile);
+      expect(profile.age).toBe(35);
+      expect(profile.amount).toBe(75_000);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.monthlyContribution).toBe(2_000);
+      expect(profile.brokerage.toLowerCase()).toContain("ibi");
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
+      expect(profile.timeline.toLowerCase()).toMatch(/30|65|retire/);
+      expect(profile.location.toLowerCase()).toContain("israel");
+    });
+
+    // Story 8 — contradictory input resolved through conversation.
+    // Tests that extraction picks up the resolved risk tolerance (moderate),
+    // not the contradictory initial signals.
+    it("story 8: extracts resolved risk tolerance from contradictory conversation", async () => {
+      const transcript: ResponseInputItem[] = [
+        {
+          role: "user",
+          content: "I want maximum returns but I can't afford to lose any money",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              "Those two goals pull in opposite directions — higher returns always come with higher risk of loss. To help me understand your comfort level: imagine you invest ₪40,000 and six months later it's worth ₪32,000. Would you:\nA) Sell immediately\nB) Feel sick but hold on and wait\nC) Buy more while it's cheap",
+          }),
+          call_id: "call_1",
+          id: "fc_1",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output:
+            "If my ₪40,000 dropped to ₪32,000 I'd feel sick but hold on and wait. I guess I'm moderate.",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              "Got it — moderate risk. A few more details I still need:\n1) How much are you investing?\n2) How old are you?\n3) What's your timeline (number of years or a milestone like retirement at age X)?\n4) Emergency fund in place? (yes/no)\n5) Any outstanding debt? (yes/no)\n6) How much can you invest monthly?\n7) Do you have a brokerage account?\n8) What country are you in?\n9) What's your knowledge level about investing (beginner, intermediate, advanced)?",
+          }),
+          call_id: "call_2",
+          id: "fc_2",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_2",
+          output:
+            "₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
+        },
+      ];
+
+      const profile = await extractUserProfile({
+        input: transcript,
+      });
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(45_000);
+      expect(profile.age).toBe(33);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.monthlyContribution).toBe(1_000);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
+      expect(profile.brokerage).toBe("none");
+      expect(profile.timeline.toLowerCase()).toMatch(/5/);
+      expect(profile.location.toLowerCase()).toContain("israel");
+    });
+
+    // Story 12 — advanced investor with existing brokerage.
+    // Tests knowledge level mapping (intermediate/advanced from described experience),
+    // "moderate-to-aggressive" risk mapping, and brokerage name extraction.
+    it("story 12: extracts profile from advanced investor conversation", async () => {
+      const transcript: ResponseInputItem[] = [
+        {
+          role: "user",
+          content: "I have ₪200,000 to invest, I already know the basics",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              "Great — a few questions to understand your situation:\n1) How old are you?\n2) What's your timeline?\n3) Risk tolerance?\n4) Emergency fund and debt status?\n5) How much can you invest monthly?\n6) Do you have a brokerage account?\n7) What's your investing experience?\n8) What country are you in?",
+          }),
+          call_id: "call_1",
+          id: "fc_1",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output:
+            "34, long-term 20+ years, moderate-to-aggressive, emergency fund yes, no debt, ₪5,000/mo, I have Interactive Brokers. I've been investing for a few years — I know about Irish ETFs, tax efficiency, the basics. I'm in Israel.",
+        },
+      ];
+
+      const profile = await extractUserProfile({
+        input: transcript,
+      });
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(200_000);
+      expect(profile.age).toBe(34);
+      expect([RiskTolerance.enum.moderate, RiskTolerance.enum.aggressive]).toContain(
+        profile.riskTolerance,
+      );
+      expect([KnowledgeLevel.enum.intermediate, KnowledgeLevel.enum.advanced]).toContain(
+        profile.knowledgeLevel,
+      );
+      expect(profile.monthlyContribution).toBe(5_000);
+      expect(profile.brokerage.toLowerCase()).toContain("interactive brokers");
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.timeline.toLowerCase()).toMatch(/20/);
+      expect(profile.location.toLowerCase()).toContain("israel");
+    });
+  });
+
+  // --- Layer 2: Full-loop evals ---
+  // Tests the full clarify stage end-to-end: conversation loop + extraction.
+  // Scripted responses are natural and focused (not info dumps), answering what the
+  // model is likely to ask. Assertions are looser since both conversation variance
+  // and extraction variance affect the output.
+  describe("full-loop", () => {
+    const createScriptedResponder = (responses: string[]): ScriptedResponder => {
+      let responseIndex = 0;
+
+      return {
+        sendToUser: () => {},
+        waitForResponse: () => {
+          const response = responses[responseIndex] ?? "that's all I have";
+          responseIndex++;
+
+          return Promise.resolve(response);
+        },
+      };
+    };
+
+    // Story 4 — unrealistic expectation ("double in 6 months").
+    // Tests that the stage redirects and still gathers a valid profile
+    // after the user pivots to a realistic timeline.
+    it("story 4: handles unrealistic expectations and extracts profile after redirect", async () => {
+      const responder = createScriptedResponder([
+        "ok fine, long term then, maybe 10-15 years, moderate risk",
+        "I'm 24, yes to emergency fund, no debt, maybe ₪700/mo, no brokerage, I'm in Israel, I'm a beginner",
+      ]);
+
+      const profile = await runClarifyStage(
+        "I have ₪18,000 and I want to double it in 6 months",
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(18_000);
+      expect(profile.age).toBe(24);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.monthlyContribution).toBe(700);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.brokerage).toBe("none");
+    });
+
+    // Story 7 — ultra-vague input ("invest") with gradual responses.
+    // Tests that the stage handles minimal input across multiple rounds.
+    it("story 7: gathers complete profile from ultra-vague input", async () => {
+      const responder = createScriptedResponder([
+        "I guess I have about ₪10,000, I'm 30, I'm in Israel, I'm a complete beginner",
+        "yeah I have savings for emergencies, no debt, maybe ₪300/mo, I'd say moderate risk, maybe 10 years or so, no brokerage",
+      ]);
+
+      const profile = await runClarifyStage(
+        "invest",
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(10_000);
+      expect(profile.age).toBe(30);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.monthlyContribution).toBe(300);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.brokerage).toBe("none");
+    });
+
+    // Story 8 — contradictory input ("maximum returns but can't lose money").
+    // Tests that the stage resolves the contradiction through conversation
+    // and produces a valid profile.
+    it("story 8: resolves contradictory input and extracts correct risk tolerance", async () => {
+      const responder = createScriptedResponder([
+        "If my ₪40,000 dropped to ₪32,000 I'd feel sick but hold on and wait. I guess I'm moderate.",
+        "₪45,000 to invest, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
+      ]);
+
+      const profile = await runClarifyStage(
+        "I want maximum returns but I can't afford to lose any money",
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(45_000);
+      expect(profile.age).toBe(33);
+      expect([RiskTolerance.enum.moderate, RiskTolerance.enum.conservative]).toContain(
+        profile.riskTolerance,
+      );
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+    });
   });
 });

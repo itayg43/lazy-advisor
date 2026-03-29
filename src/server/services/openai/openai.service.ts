@@ -13,6 +13,8 @@ import { withRetry } from "#server/lib/with-retry";
 
 const logger = createLogger("openaiService");
 
+export const OPENAI_REQUEST_FAILED_MESSAGE = "OpenAI request failed";
+
 export type OpenAIResponse<T> = {
   id: string;
   output: T;
@@ -32,9 +34,7 @@ const logTokenUsage = (operation: string, usage: ResponseUsage | undefined): voi
 
 const validateResponseStatus = (status: ResponseStatus | undefined): void => {
   if (status !== "completed") {
-    throw new ServiceUnavailableError(
-      `OpenAI response not completed: status=${String(status)}`,
-    );
+    throw new ServiceUnavailableError(`OpenAI response not completed: status=${status}`);
   }
 };
 
@@ -57,7 +57,12 @@ export const callOpenAI = async (
     };
   } catch (error) {
     if (error instanceof APIError) {
-      throw new ServiceUnavailableError(`OpenAI API error: ${error.message}`);
+      logger.error("OpenAI API error", {
+        status: error.status,
+        message: error.message,
+      });
+
+      throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
     }
 
     throw error;
@@ -92,7 +97,12 @@ export const callOpenAIParsed = async <T>(
     };
   } catch (error) {
     if (error instanceof APIError) {
-      throw new ServiceUnavailableError(`OpenAI API error: ${error.message}`);
+      logger.error("OpenAI API error", {
+        status: error.status,
+        message: error.message,
+      });
+
+      throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
     }
 
     throw error;

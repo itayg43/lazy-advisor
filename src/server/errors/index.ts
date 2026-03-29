@@ -1,12 +1,12 @@
 import { StatusCodes } from "http-status-codes";
 
 export class BaseError extends Error {
-  readonly statusCode: number;
+  readonly status: number;
 
-  constructor(message: string, statusCode: number) {
+  constructor(message: string, status: number) {
     super(message);
     this.name = this.constructor.name;
-    this.statusCode = statusCode;
+    this.status = status;
   }
 }
 

@@ -9,8 +9,8 @@
 - [x] 1.4 — Docker Compose + env config
 - [x] 1.5 — Config module
 - [x] 1.6 — Shared constants + event types
-- [x] 1.7 — withRetry utility (4 tests passing)
-- [x] 1.8 — ESLint + Prettier
+- [x] 1.7 — withRetry utility (8 tests passing)
+- [x] 1.8 — ESLint + Prettier (`tseslint.configs.strict`, `padding-line-between-statements` for return/throw)
 
 ### CI & Branch Protection
 - [x] GitHub Actions CI pipeline
@@ -50,10 +50,20 @@
 - [x] 3.4b — Logger utility (`createLogger`)
 - [x] 3.5 — Tool registry
 - [x] 3.6 — Clarify stage
-  - Bug fixes: added missing `input: []` to Phase C; fixed Phase B not passing `instructions` via `previous_response_id`
-  - Prompt optimization: Field Validation section with dynamic enum injection
-  - Model: `gpt-5.4-mini` with `reasoning: { effort: "low" }`
-  - Stage cap throws `InternalError`
-  - Defensive hardening: Zod validation on `ask_user` args, tool name guard, strict cap enforcement inside inner loop
-- [ ] 3.7 — Clarify stage unit tests (4 passing: no clarification happy path, ask_user happy path, unexpected tool name, stage cap; remaining: detailed/minimal/contradictory input, extraction failure)
-- [x] 3.7b — Clarify stage level 1 evals (Story 1 with timeline probe assertion; remaining stories to be added incrementally)
+- [x] 3.7 — Clarify stage unit tests (6 passing)
+- [x] 3.7b — Clarify stage evals (7 passing: 4 extraction-only + 3 full-loop)
+
+### Code Review Fixes (Sections 1-3)
+- [x] Off-by-one in clarify loop (`while(true)` with break/throw)
+- [x] Prisma client uses validated config
+- [x] Schema bounds (`max`) and brokerage default
+- [x] Relative imports → subpath imports in clarify stage
+- [x] withRetry skips non-transient errors (4xx except 429)
+- [x] OpenAI service — generic error messages, log real details
+- [x] Log redaction — PII to debug level in clarify stage
+- [x] Refactor clarify tests to shared mock (`mockTokenUsage`)
+- [x] `BaseError.statusCode` → `status` for consistency
+- [x] `ask_user` error message — no raw args in message
+- [x] ESLint `strictTypeChecked` → `strict`, removed all workarounds
+- [x] `padding-line-between-statements` rule for return/throw
+- [x] Updated CONVENTIONS.md and TESTING.md with new patterns

@@ -2,19 +2,8 @@ import type {
   ResponseOutputItem,
   ResponseUsage,
 } from "openai/resources/responses/responses";
-import { vi } from "vitest";
 
 import type { OpenAIResponse } from "#server/services/openai";
-
-export const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
-  mockedCallOpenAI: vi.fn(),
-  mockedCallOpenAIParsed: vi.fn(),
-}));
-
-vi.mock("#server/services/openai", () => ({
-  callOpenAI: mockedCallOpenAI,
-  callOpenAIParsed: mockedCallOpenAIParsed,
-}));
 
 export const mockTokenUsage: ResponseUsage = {
   input_tokens: 120,
