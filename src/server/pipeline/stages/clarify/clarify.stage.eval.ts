@@ -254,6 +254,7 @@ describe("clarifyStage evals", () => {
         waitForResponse: () => {
           const response = responses[responseIndex] ?? "that's all I have";
           responseIndex++;
+
           return Promise.resolve(response);
         },
       };

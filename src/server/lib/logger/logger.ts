@@ -67,6 +67,5 @@ function serializeError(error: unknown): string {
     return JSON.stringify(error, null, 2);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return String(error);
 }

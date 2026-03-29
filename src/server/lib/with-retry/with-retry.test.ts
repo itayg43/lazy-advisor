@@ -1,5 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import {
+  BadRequestError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+} from "#server/errors";
 import { withRetry, type RetryContext, type RetryOptions } from "./with-retry";
 
 describe("withRetry", () => {
@@ -49,6 +54,62 @@ describe("withRetry", () => {
     };
 
     await expect(withRetry(fn, mockContext, options)).rejects.toThrow("fail");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws immediately on non-retryable 4xx error", async () => {
+    const fn = vi.fn().mockRejectedValue(new BadRequestError("bad request"));
+    const options: RetryOptions = {
+      attempts: 3,
+      baseDelayMs: 0,
+    };
+
+    await expect(withRetry(fn, mockContext, options)).rejects.toThrow("bad request");
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries on 429 rate limit error", async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new TooManyRequestsError("rate limited"))
+      .mockResolvedValueOnce("ok");
+    const options: RetryOptions = {
+      baseDelayMs: 0,
+    };
+
+    const result = await withRetry(fn, mockContext, options);
+
+    expect(result).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries on 5xx server error", async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new ServiceUnavailableError("unavailable"))
+      .mockResolvedValueOnce("ok");
+    const options: RetryOptions = {
+      baseDelayMs: 0,
+    };
+
+    const result = await withRetry(fn, mockContext, options);
+
+    expect(result).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries on error without status property", async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce("ok");
+    const options: RetryOptions = {
+      baseDelayMs: 0,
+    };
+
+    const result = await withRetry(fn, mockContext, options);
+
+    expect(result).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(2);
   });
 });

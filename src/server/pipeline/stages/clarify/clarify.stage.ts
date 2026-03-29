@@ -3,6 +3,12 @@ import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { InternalError } from "#server/errors";
 import { createLogger } from "#server/lib/logger";
+import { getStageTools } from "#server/pipeline/tools";
+import {
+  handleAskUser,
+  type SendToUser,
+  type WaitForResponse,
+} from "#server/pipeline/tools/ask-user.tool";
 import {
   KnowledgeLevel,
   RiskTolerance,
@@ -11,9 +17,6 @@ import {
 import { callOpenAI, callOpenAIParsed } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
 import { MAX_STAGE_TOOL_CALLS } from "#shared/constants/constants";
-import { getStageTools } from "../../tools";
-import type { SendToUser, WaitForResponse } from "../../tools/ask-user.tool";
-import { handleAskUser } from "../../tools/ask-user.tool";
 
 const logger = createLogger("clarifyStage");
 
@@ -227,7 +230,8 @@ export const runClarifyStage = async (
 
   let toolCallCount = 0;
 
-  while (toolCallCount <= MAX_STAGE_TOOL_CALLS) {
+  // Loop exits on break (model stops calling tools) or throw (tool call cap exceeded)
+  while (true) {
     const functionCalls = response.output.filter((item) => item.type === "function_call");
 
     if (functionCalls.length === 0) break;
@@ -243,7 +247,7 @@ export const runClarifyStage = async (
 
       if (toolCallCount > MAX_STAGE_TOOL_CALLS) {
         throw new InternalError(
-          `Clarify stage failed to converge within ${String(MAX_STAGE_TOOL_CALLS)} tool calls`,
+          `Clarify stage failed to converge within ${MAX_STAGE_TOOL_CALLS} tool calls`,
         );
       }
 
@@ -251,6 +255,8 @@ export const runClarifyStage = async (
         toolCallCount,
         tool: functionCall.name,
         callId: functionCall.call_id,
+      });
+      logger.debug("Tool call arguments", {
         arguments: functionCall.arguments,
       });
 
@@ -264,6 +270,8 @@ export const runClarifyStage = async (
         toolCallCount,
         tool: functionCall.name,
         callId: functionCall.call_id,
+      });
+      logger.debug("User response", {
         userResponse: result,
       });
 

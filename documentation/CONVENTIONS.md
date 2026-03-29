@@ -27,7 +27,7 @@
 
 ## Error Handling
 
-- `BaseError` extends `Error`, adds `statusCode`
+- `BaseError` extends `Error`, adds `status`
 - HTTP-based error classes extend `BaseError`:
   - `InternalError` (500)
   - `ServiceUnavailableError` (503)
@@ -53,6 +53,10 @@ See [TESTING.md](TESTING.md)
 
 - Only when the logic is non-obvious
 - Never comment things the file name, function name, or plan already explain
+
+## ESLint
+
+The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict on our own code without fighting third-party `any` types from SDKs like OpenAI. If a suppression is ever needed, include a `-- reason` suffix: `// eslint-disable-next-line rule-name -- why`
 
 ## Imports
 

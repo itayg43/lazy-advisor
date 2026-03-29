@@ -11,7 +11,7 @@ export const getPlanWithSteps = async (planId: number): Promise<PlanWithSteps> =
   const plan = await planRepository.getPlanWithSteps(prismaClient, planId);
 
   if (!plan) {
-    throw new NotFoundError(`Plan with id ${String(planId)} not found`);
+    throw new NotFoundError(`Plan with id ${planId} not found`);
   }
 
   return plan;

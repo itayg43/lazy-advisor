@@ -14,6 +14,25 @@
 - Define shared mocks as typed `const` inside the top-level `describe` block, prefixed with `mock`/`mocked` (e.g., `mockContext`, `mockedCreatePlan`). For plain function modules, use `vi.mocked()` wrappers. For object methods (e.g., `openaiClient.responses.create`), use `vi.hoisted` to declare `vi.fn()` references and inject them in the `vi.mock` factory
 - Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work — for consistency
 - Define mock factories (e.g., `createMockResponse`) inside the `describe` block that uses them, not at the top level — shared data used across all blocks (e.g., `mockUsage`, `mockParams`) stays in the top-level `describe`
+- `vi.hoisted`/`vi.mock` blocks **cannot be exported** from shared files — they must stay inline in each test file. Only shared data (mock objects, response factories) can be imported from `src/server/mocks/` files
+
+### Import ordering with `vi.hoisted`/`vi.mock`
+
+All `import` statements must come **before** the `vi.hoisted` + `vi.mock` block. Vitest hoists the mock declaration but does not hoist surrounding imports — placing imports after `vi.mock` causes `SyntaxError: Cannot export hoisted variable` or undefined references.
+
+```ts
+// correct — imports first, then hoisted/mock
+import { describe, it, vi } from "vitest";
+import { mockTokenUsage } from "#server/mocks/openai.service.mock";
+
+const { mockedFn } = vi.hoisted(() => ({ mockedFn: vi.fn() }));
+vi.mock("#server/services/openai", () => ({ callOpenAI: mockedFn }));
+
+// wrong — imports after vi.mock
+const { mockedFn } = vi.hoisted(() => ({ mockedFn: vi.fn() }));
+vi.mock("#server/services/openai", () => ({ callOpenAI: mockedFn }));
+import { mockTokenUsage } from "#server/mocks/openai.service.mock"; // breaks
+```
 
 ## Test Data
 

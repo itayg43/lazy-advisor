@@ -5,7 +5,7 @@ import unicorn from "eslint-plugin-unicorn";
 
 export default tseslint.config(
   js.configs.recommended,
-  ...tseslint.configs.strictTypeChecked,
+  ...tseslint.configs.strict,
   {
     languageOptions: {
       parserOptions: {
@@ -55,6 +55,11 @@ export default tseslint.config(
         },
       ],
       "import-x/newline-after-import": "error",
+      "padding-line-between-statements": [
+        "error",
+        { blankLine: "always", prev: "*", next: "return" },
+        { blankLine: "always", prev: "*", next: "throw" },
+      ],
     },
   },
   {
