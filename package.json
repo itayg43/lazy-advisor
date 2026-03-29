@@ -7,6 +7,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:repositories": "dotenv -e .env.test -- npx prisma db push --force-reset --accept-data-loss && dotenv -e .env.test -- vitest run --config vitest.config.repositories.ts",
+    "test:evals": "dotenv -e .env.test -- vitest run --config vitest.config.evals.ts",
     "dev:server": "tsx watch src/server/server.ts",
     "lint": "eslint src/",
     "format": "prettier --write \"src/**/*.ts\"",

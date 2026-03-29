@@ -27,8 +27,8 @@ describe("stepService", () => {
   const mockStep: Step = {
     id: 1,
     planId: 1,
-    title: "Research low-cost S&P 500 ETFs",
-    description: "Compare VOO, SPY, and IVV on expense ratio and tracking error",
+    title: "Research global equity ETFs",
+    description: "Compare VWRA and CSPX on expense ratio and tracking error",
     sortOrder: 1,
     createdAt: new Date(),
     updatedAt: new Date(),

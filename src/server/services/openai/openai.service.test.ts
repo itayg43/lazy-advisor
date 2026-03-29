@@ -10,6 +10,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, ServiceUnavailableError } from "#server/errors";
+import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import type { UserProfile } from "#server/types/pipeline.types";
 import { callOpenAI, callOpenAIParsed } from "./openai.service";
 
@@ -111,11 +112,16 @@ describe("openaiService", () => {
   describe("callOpenAIParsed", () => {
     const mockParsedOutput: UserProfile = {
       goal: "Build a diversified ETF portfolio for retirement",
-      currency: "USD",
-      monthlyBudget: 500,
-      riskTolerance: "moderate",
-      investmentHorizon: "10+ years",
-      knowledgeLevel: "beginner",
+      amount: 10000,
+      age: 30,
+      riskTolerance: RiskTolerance.enum.moderate,
+      timeline: "10+ years",
+      location: "United States",
+      knowledgeLevel: KnowledgeLevel.enum.beginner,
+      brokerage: "none",
+      hasEmergencyFund: true,
+      hasDebt: false,
+      monthlyContribution: 500,
     };
 
     const createMockParsedResponse = (

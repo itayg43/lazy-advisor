@@ -1,4 +1,7 @@
 import type { FunctionTool } from "openai/resources/responses/responses";
+import { z } from "zod";
+
+import { InternalError } from "#server/errors";
 
 export type SendToUser = (message: string) => void;
 export type WaitForResponse = () => Promise<string>;
@@ -22,12 +25,24 @@ export const ASK_USER_TOOL: FunctionTool = {
   },
 };
 
+const AskUserArgsSchema = z.object({
+  question: z.string(),
+});
+
 export const handleAskUser = async (
   args: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<string> => {
-  const { question } = JSON.parse(args) as { question: string };
+  // Parse outside the async flow so waitForResponse rejections don't get swallowed
+  let question: string;
+
+  try {
+    ({ question } = AskUserArgsSchema.parse(JSON.parse(args)));
+  } catch {
+    throw new InternalError(`Invalid ask_user arguments: ${args}`);
+  }
+
   sendToUser(question);
   return waitForResponse();
 };
