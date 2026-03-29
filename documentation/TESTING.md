@@ -39,5 +39,7 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
-- **User simulation**: scripted self-contained responses via `createScriptedResponder`. Each response dumps ALL persona info regardless of what the LLM asked, making evals immune to question ordering changes. LLM-simulated users are a Level 2+ concern.
-- **Assertions**: grade outcomes, not paths — assert on final output fields (exact equality for numbers/booleans/enums, loose `toContain` for free-form strings). Do not assert on conversation flow (question count, ordering, grouping).
+- **Two eval layers**:
+  - **Extraction-only** (`extractUserProfile` with handwritten `ResponseInputItem[]` transcripts): tests extraction prompt quality in isolation. Transcripts use the real OpenAI conversation structure (`function_call` + `function_call_output` items, not simplified user/assistant messages). Deterministic input — only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
+  - **Full-loop** (`runClarifyStage` with `createScriptedResponder`): tests conversation behavior end-to-end. Scripted responses are natural and focused (2-3 responses answering what the model is likely to ask), not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the goal string. Do not assert on conversation flow (question count, ordering).
+- LLM-simulated users are a Level 2+ concern.

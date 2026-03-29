@@ -4,7 +4,7 @@ import type {
 } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InternalError } from "#server/errors";
+import { InternalError, ServiceUnavailableError } from "#server/errors";
 import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import type { OpenAIResponse } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
@@ -165,5 +165,29 @@ describe("clarifyStage", () => {
     ).rejects.toThrow(InternalError);
 
     expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_STAGE_TOOL_CALLS);
+  });
+
+  it("propagates callOpenAI error from clarification phase", async () => {
+    mockedCallOpenAI.mockRejectedValue(
+      new ServiceUnavailableError("OpenAI API is unavailable"),
+    );
+
+    await expect(
+      runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
+    ).rejects.toThrow(ServiceUnavailableError);
+
+    expect(mockWaitForResponse).not.toHaveBeenCalled();
+    expect(mockedCallOpenAIParsed).not.toHaveBeenCalled();
+  });
+
+  it("propagates callOpenAIParsed error from extraction phase", async () => {
+    mockedCallOpenAI.mockResolvedValue(createTextResponse());
+    mockedCallOpenAIParsed.mockRejectedValue(new InternalError("Parsed output is null"));
+
+    await expect(
+      runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
+    ).rejects.toThrow(InternalError);
+
+    expect(mockWaitForResponse).not.toHaveBeenCalled();
   });
 });

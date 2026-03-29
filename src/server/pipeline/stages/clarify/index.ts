@@ -1,1 +1,1 @@
-export { runClarifyStage } from "./clarify.stage";
+export { extractUserProfile, runClarifyStage } from "./clarify.stage";
