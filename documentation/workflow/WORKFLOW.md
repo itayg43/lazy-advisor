@@ -222,22 +222,11 @@ The agent is NOT one long LLM conversation. It's a pipeline of discrete stages, 
                                                               done ───────┴──► END
 ```
 
-### Stage 1: CLARIFY
-- **System prompt**: Focused on understanding the user — detect risk tolerance, timeline, amount, experience level, and boundaries (unrealistic expectations, out-of-scope requests)
-- **Input**: User's raw goal text
-- **Output**: Structured user profile (`{ amount, age, risk, timeline, location, brokerage, hasEmergencyFund, hasDebt, monthlyContribution, gaps_to_ask }`)
-- **Required profile fields**: `amount`, `age`, `risk`, `timeline`, `location`, `hasEmergencyFund`, `hasDebt`, `monthlyContribution`. The agent must gather all of these — either from the user's input or by asking. If the user provides enough detail upfront, skip questions for fields already covered. Never proceed to Stage 2 with missing required fields.
-- **Optional profile fields**: `brokerage`. If not provided, the agent recommends one based on location and needs.
-- **Behavior**: If input is detailed enough, skip questions. If contradictory, educate. If out of scope, redirect.
-- **Events**: `clarification` (questions to user), `message` (educational explanations)
+Each stage's contract (input/output, tools, behavior rules) is documented in its plan section file. See [plan sections](../plan/plan-sections/).
 
-### Stage 2: RESEARCH
-- **System prompt**: Focused on financial research — what to search, how to evaluate ETFs, what data points matter
-- **Input**: Structured user profile from stage 1
-- **Output**: Structured research summary (`{ recommended_etfs: [{ ticker, er, reasoning, risks, source_url }], brokerage_recommendation, allocation_rationale }`). Each recommendation includes a `source_url` so the user can verify the data. Research freshness is derived from the plan's `createdAt` in the DB — no separate timestamp needed.
-- **Key**: Raw search results are summarized and compressed here. Stage 3 never sees the raw HTML/text — only the structured summary. This is what keeps context clean.
-- **Search failure**: Searches use retry with exponential backoff (3 attempts). If all retries fail, the **pipeline stops at the code level** — Stage 3 never runs. The CLI receives an `error` event via WebSocket: "I wasn't able to retrieve current financial data right now. I don't want to build a plan without verified information — please try again in a few minutes." This is a code-level gate, not an LLM decision — no amount of prompt injection can make the agent skip research and proceed with unverified data. The pipeline physically won't advance without Stage 2's structured output (including `source_url`s).
-- **Events**: `search_progress` (✓ Searched "...")
+### Stage boundary validation
+
+Each handoff between stages is validated with a Zod schema: user profile (Stage 1 → 2), research summary (Stage 2 → 3), plan structure (Stage 3 → 4). If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed handoff means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help. The user starts a new session.
 
 ### OpenAI failure handling
 
@@ -249,68 +238,13 @@ All OpenAI API calls (every stage) use retry with exponential backoff (3 attempt
 
 Incremental persistence means the worst case is losing the current LLM invocation's remaining tool calls — never steps that were already created.
 
-### Stage 3: PLAN
-- **System prompt**: Focused on plan generation — explain concepts inline, be educational and opinionated, create phased steps with reasoning
-- **Input**: User profile + research summary (both structured, both small)
-- **Output**: Structured plan (phases, steps, reasoning, summary)
-- **Behavior**: Verbose and educational — every recommendation includes *why*
-- **Events**: `step_created` (steps appearing one by one), `plan_complete`
-
-### Stage 4: ITERATE (loop with feedback classification)
-
-Stage 4 is the decision point. Before acting on user feedback, the agent classifies it into one of three types. This classification determines whether the pipeline loops back for new research or handles the change locally.
-
-- **System prompt**: Two-step process. First: classify the feedback (cheap/fast model — this is a routing decision, not a creative task). Second: act on the classification (full model for `adjust`, or re-enter Stage 2 for `research_and_adjust`).
-- **Input**: Current plan + user profile + user's feedback message (NOT the full conversation history)
-- **Output**: Classification (cheap model) + updated plan or re-entry to Stage 2 (full model)
-
-**Feedback classification:**
-
-| Type | Trigger | Pipeline action | Example |
-|------|---------|----------------|---------|
-| **`adjust`** | Can be resolved with existing research | Stay in Stage 4, modify plan | "skip bonds, put it all in equities" / "make it 60/40" |
-| **`research_and_adjust`** | Introduces something the agent hasn't researched | Update profile, loop back to Stage 2 → 3 → 4 | "I want more tech" / "actually I'm in Israel" / "what about clean energy?" |
-| **`clarify`** | Ambiguous feedback or a question — not actionable yet | Ask follow-up question, wait for response, re-classify | "I'm not sure about the bonds part" / "what's the difference between VTI and VOO?" / "is that too risky?" |
-| **`done`** | User is satisfied | End session | "looks good" / "that's what I want" |
-
-- **Behavior**: Each iteration is a fresh LLM call with only the current plan + user profile + latest feedback. No context accumulation. For `clarify`, the agent asks a targeted follow-up (using `ask_user`) and re-classifies the user's response — this does not count toward the iteration limit since no plan change occurred. For `adjust`, the agent uses `update_step`/`remove_step`/`create_step` to modify the plan in place — no re-research needed. For `research_and_adjust`, the profile is updated before re-entering Stage 2, so the new research is scoped to what changed.
-- **Events**: `step_updated`, `step_removed`, `step_created`, `plan_complete`
-- **Persistence**: Steps are persisted incrementally — each `create_step`, `update_step`, and `remove_step` call writes to DB immediately. `finish_plan` marks the plan as complete. This means even if the session drops mid-loop, any steps already created are durable. The `done` classification simply ends the session — it doesn't trigger a save.
-- **Iteration limit**: Max 5 iterations in Stage 4. After that, the agent presents the current plan as final: "We've been through several rounds — here's your current plan. You can start a new session anytime to explore a different direction." Steps are already persisted incrementally, so nothing is lost.
-- **Exit**: User says they're satisfied, iteration limit reached, or session closes.
-
-### Stage boundary validation
-
-Each handoff between stages is validated with a Zod schema: user profile (Stage 1 → 2), research summary (Stage 2 → 3), plan structure (Stage 3 → 4). If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed handoff means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help. The user starts a new session.
-
 ### Why this matters
 
 1. **No context degradation** — each stage starts fresh with a focused prompt and minimal input
 2. **Search results don't pollute** — raw search text is summarized in stage 2 and discarded
 3. **Validated handoffs** — Zod schemas at every stage boundary catch malformed LLM output before it propagates downstream
-4. **Testable** — each stage can be tested independently (Story 3 tests clarify stage boundaries, Story 5 tests research stage honesty, Story 7 tests clarify stage education)
+4. **Testable** — each stage can be tested independently
 5. **Predictable** — the agent behaves consistently because no single prompt is trying to do everything
-6. **Better engineering story** — "staged pipeline with structured handoffs" > "one big system prompt"
-
-## Tools per stage
-
-**Stage 1 (CLARIFY):**
-- `ask_user(questions)` — ask adaptive questions, wait for response
-
-**Stage 2 (RESEARCH):**
-- OpenAI built-in `web_search` tool — the model searches for current financial data autonomously. No custom search tool handler needed.
-
-**Stage 3 (PLAN):**
-- `create_step(action, reasoning, phase)` — add a step to the plan
-- `finish_plan(summary)` — finalize the plan
-
-**Stage 4 (ITERATE):**
-- `ask_user(questions)` — ask follow-up question for `clarify` classification. Wait for response, then re-classify.
-- OpenAI built-in `web_search` tool — if the user's feedback requires new research. Same built-in tool as Stage 2.
-- `create_step(action, reasoning, phase)` — add a new step to the plan
-- `update_step(step_id, action?, reasoning?, phase?)` — modify an existing step (any field). Used for `adjust` feedback like changing allocations or swapping ETFs within existing research.
-- `remove_step(step_id)` — remove a step from the plan. Used for `adjust` feedback like "skip bonds" or "drop emerging markets."
-- `finish_plan(summary)` — finalize the updated plan
 
 ## Output model: plans and steps
 
@@ -368,24 +302,3 @@ JSON logs with consistent fields: `sessionId`, `stage`, `timestamp`, `event`. Ke
 - Feedback classification decisions (what type, why)
 - Search queries and result quality
 - Errors with full context (which stage, what failed, what was the pipeline state)
-
-## Review decisions
-
-Reviewed against Dave Ebbelaar's (Datalumina) AI agent methodology.
-
-### 1. Simplify safety caps — one per stage
-
-The original plan had overlapping caps (10 tool-call cap, 8 search cap, 5 iterate search cap, 5 iteration limit). Collapsed to **one reasonable cap per stage**. Zod validation at stage boundaries **stays hard-fail** — if the LLM output doesn't match the schema, something is genuinely wrong and garbage should not propagate.
-
-### 2. Feedback classification stays LLM-based
-
-Considered deterministic pattern-matching for simple feedback (e.g., "skip bonds" → `remove_step`). Rejected — natural language is too varied for regex/keyword matching to be reliable. The cheap-model classifier is already the right trade-off: fast, cheap, handles real user input. Revisit only if classifier latency becomes a bottleneck.
-
-### 3. Metrics — trivial ones only for MVP
-
-Implement metrics that come free from existing middleware wrappers (request counts, latency histograms, error rates). Defer any metrics requiring custom plumbing. Add incrementally as the system matures.
-
-### 4. Session memory — already implemented
-
-The user profile passed as a structured object between stages already implements Dave's Memory building block. Cross-session memory is correctly deferred. No action needed.
-

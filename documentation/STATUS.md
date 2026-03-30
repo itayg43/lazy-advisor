@@ -54,16 +54,4 @@
 - [x] 3.7b — Clarify stage evals (7 passing: 4 extraction-only + 3 full-loop)
 
 ### Code Review Fixes (Sections 1-3)
-- [x] Off-by-one in clarify loop (`while(true)` with break/throw)
-- [x] Prisma client uses validated config
-- [x] Schema bounds (`max`) and brokerage default
-- [x] Relative imports → subpath imports in clarify stage
-- [x] withRetry skips non-transient errors (4xx except 429)
-- [x] OpenAI service — generic error messages, log real details
-- [x] Log redaction — PII to debug level in clarify stage
-- [x] Refactor clarify tests to shared mock (`mockTokenUsage`)
-- [x] `BaseError.statusCode` → `status` for consistency
-- [x] `ask_user` error message — no raw args in message
-- [x] ESLint `strictTypeChecked` → `strict`, removed all workarounds
-- [x] `padding-line-between-statements` rule for return/throw
-- [x] Updated CONVENTIONS.md and TESTING.md with new patterns
+- [x] Hardened error handling, schemas, imports, tests, and ESLint config

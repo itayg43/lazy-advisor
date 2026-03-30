@@ -2,6 +2,15 @@
 
 **Goal**: Given UserProfile, uses OpenAI's built-in web search to gather current financial data, produces validated ResearchSummary.
 
+### Stage Contract
+
+- **System prompt**: Focused on financial research — what to search, how to evaluate ETFs, what data points matter
+- **Input**: Structured user profile from Stage 1
+- **Output**: Structured research summary (`{ recommended_etfs: [{ ticker, er, reasoning, risks, source_url }], brokerage_recommendation, allocation_rationale }`). Each recommendation includes a `source_url` so the user can verify the data. Research freshness is derived from the plan's `createdAt` in the DB — no separate timestamp needed
+- **Tools**: OpenAI built-in `web_search` — the model searches for current financial data autonomously. No custom search tool handler needed
+- **Key**: Raw search results are summarized and compressed here. Stage 3 never sees the raw HTML/text — only the structured summary. This is what keeps context clean
+- **Events**: `search_progress` (✓ Searched "...")
+
 ### Design Decisions
 
 - **Built-in web search over Tavily** — OpenAI's `{ type: "web_search" }` tool is passed alongside the stage's function tools. The model decides when and what to search autonomously. This eliminates the need for a separate Tavily client, mock, error class, and custom search tool handler. Trade-off: less control over search queries and result quality (black box). If research output quality is insufficient, Tavily is the documented fallback (see Section 3 design decisions)
