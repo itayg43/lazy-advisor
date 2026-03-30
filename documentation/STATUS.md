@@ -55,3 +55,9 @@
 
 ### Code Review Fixes (Sections 1-3)
 - [x] Hardened error handling, schemas, imports, tests, and ESLint config
+
+### Section 4: Stage 2 — Research
+- [x] 4.1 — ResearchSummary schema + web_search tool registration
+- [ ] 4.2 — Research stage implementation (two-phase: research + extraction)
+- [ ] 4.3 — Research stage unit tests
+- [ ] 4.4 — Research stage evals
