@@ -14,7 +14,7 @@
 - **Two-phase structure** (mirrors clarify): Phase A calls `callOpenAI` with `web_search` tool — model searches autonomously and writes a flowing synthesis. Phase B calls `callOpenAIParsed<ResearchSummary>` chained via `previous_response_id` to extract structured data. Keeps search and extraction concerns separated
 - **Models**: `gpt-5.4-mini` for Phase A (research + web search — nano doesn't support web search), `gpt-5.4-nano` for Phase B (extraction only, same as clarify)
 - **Built-in web search over Tavily** — OpenAI's `{ type: "web_search" }` tool. Model decides when and what to search. Eliminates Tavily client, mock, error class, and custom search tool handler. Trade-off: less control (black box). If quality is insufficient, Tavily is the documented fallback
-- **`user_location`**: Derived from `profile.location` via a country code map (e.g., "Israel" → `{ type: "approximate", country: "IL" }`), passed to the web_search tool for regional search relevance. If no mapping exists, omit `user_location`
+- **`user_location`**: Hardcoded to `IL` (Israel) on the `WEB_SEARCH_TOOL` definition for MVP. Country code mapping from `profile.location` deferred until global support is needed
 - **No tool loop**: Unlike clarify's `ask_user` loop, `web_search` is handled internally by OpenAI. One `callOpenAI` call, no loop
 - **No `emitEvent` yet**: `search_progress` events deferred to Section 7 (WebSocket layer). Keeps function signature simple
 - **`expenseRatio` as string without `%`**: e.g., `"0.22"` not `"0.22%"`. Trivially parseable to float, no symbol stripping
@@ -22,8 +22,6 @@
 - **Citation annotations**: Phase A response includes `url_citation` annotations with `url` and `title` on the message text. Phase B extracts these into the `sourceUrl` field via `previous_response_id` chaining
 
 ### Task 4.1 — ResearchSummary schema + web_search tool registration
-
-**Status**: Complete
 
 **Files modified:**
 - `src/server/schemas/pipeline.schema.ts` — added `RecommendedEtfSchema` and `ResearchSummarySchema`
@@ -53,71 +51,52 @@ export const ResearchSummarySchema = z.object({
 
 **Web search tool** (`tools/index.ts`):
 ```typescript
-export const WEB_SEARCH_TOOL: WebSearchTool = {
+const DEFAULT_COUNTRY_CODE = "IL";
+
+const WEB_SEARCH_TOOL: WebSearchTool = {
   type: "web_search",
   search_context_size: "medium",
+  user_location: { type: "approximate", country: DEFAULT_COUNTRY_CODE },
 };
 ```
-Exported so the research stage can merge `user_location` at call time.
+Location is baked into the tool definition (MVP: Israel-only). Stages access it via `getStageTools`.
 
 ### Task 4.2 — Research stage implementation
 
-**Files to create:**
+**Files created:**
 - `src/server/pipeline/stages/research/research.stage.ts`
 - `src/server/pipeline/stages/research/index.ts` (barrel export)
+- `src/server/pipeline/lib/build-profile-summary.ts` — shared `buildProfileSummary(profile)` utility (pipeline-level, used across stages)
+- `src/server/pipeline/lib/index.ts` (barrel export)
 
-**Country code mapping** (lives in `research.stage.ts`):
-```typescript
-const LOCATION_TO_COUNTRY_CODE: Record<string, string> = {
-  israel: "IL",
-  "united states": "US",
-  usa: "US",
-  "united kingdom": "GB",
-  uk: "GB",
-  germany: "DE",
-  canada: "CA",
-  australia: "AU",
-  france: "FR",
-};
+**Files modified:**
+- `src/server/pipeline/tools/index.ts` — `WEB_SEARCH_TOOL` now includes `user_location` with `DEFAULT_COUNTRY_CODE = "IL"` (MVP: Israel-only). Country code mapping deferred until global support is needed.
 
-const getCountryCode = (location: string): string | undefined =>
-  LOCATION_TO_COUNTRY_CODE[location.toLowerCase()];
-```
-
-**`buildWebSearchTool(location)`**: Takes profile location, looks up country code. If found, spreads `WEB_SEARCH_TOOL` with `user_location: { type: "approximate", country }`. If not found, returns base `WEB_SEARCH_TOOL` unchanged.
-
-**`buildProfileSummary(profile)`**: Formats all UserProfile fields as a readable text string for the model input.
+**`buildProfileSummary(profile)`**: Formats all UserProfile fields as a readable text string for model input. Lives in `pipeline/lib/` since multiple stages will use it.
 
 **`RESEARCH_SYSTEM_PROMPT`** — covers:
 - Role: financial researcher (not advisor) — gather data, don't create plans
-- Instructions: search 2-3 diverse queries, prefer authoritative sources, current year data
+- Instructions: search 2–3 diverse queries, prefer authoritative sources, current year data
 - What to research: ETFs (expense ratios, domicile, accumulating vs distributing), brokerages (skip if user has one), allocation strategies, tax efficiency
-- Location-specific guidance:
-  - Israeli investors: Irish accumulating ETFs (15% vs 25% withholding), קרנות מחקות, Meitav/IBI
-  - US investors: commission-free brokerages, tax-loss harvesting, IRA implications
-  - Others: local brokerages, tax treaty advantages
+- Location-specific guidance for Israel: Irish accumulating ETFs (15% vs 25% withholding), קרנות מחקות, Meitav/IBI
 - Output: flowing paragraphs (no markdown headers), covering each ETF with ticker/name/ER/reasoning/risks/source URL, brokerage recommendation, allocation rationale with percentages
 
 **`EXTRACTION_SYSTEM_PROMPT`** — covers:
 - Role: extract structured ResearchSummary from preceding research
-- Field rules:
-  - `expenseRatio`: number-only string, no `%` (e.g., `"0.22"`)
-  - `sourceUrl`: real URL from research — do not fabricate
+- Field rules: `expenseRatio` as number-only string (no `%`), `sourceUrl` must be real URL from research
 - Stay close to research text, don't add information not found
 
 **`runResearchStage(profile: UserProfile): Promise<ResearchSummary>`**:
-1. Build web search tool with `user_location` from profile
-2. Replace base web_search tool in stage tools with location-aware version
-3. Build profile summary string
-4. **Phase A**: `callOpenAI({ model: RESEARCH_MODEL, instructions: RESEARCH_SYSTEM_PROMPT, input: profileSummary, tools })`
-5. Log response ID and usage
-6. **Phase B**: `callOpenAIParsed<ResearchSummary>({ model: EXTRACTION_MODEL, instructions: EXTRACTION_SYSTEM_PROMPT, input: [], previous_response_id: researchResponse.id, text: { format: zodTextFormat(ResearchSummarySchema, "ResearchSummarySchema") } })`
-7. Log extraction response ID, usage, and ETF count
-8. Return `extractionResponse.output`
+1. Get tools via `getStageTools("research")` (includes location-aware web_search)
+2. Build profile summary string via `buildProfileSummary`
+3. **Phase A**: `callOpenAI` with `gpt-5.4-mini`, research prompt, profile summary as input
+4. **Phase B**: `callOpenAIParsed<ResearchSummary>` with `gpt-5.4-nano`, extraction prompt, chained via `previous_response_id`
+5. Return `extractionResponse.output`
 
 **Reuse from existing code:**
 - `callOpenAI`, `callOpenAIParsed` from `#server/services/openai`
-- `getStageTools`, `WEB_SEARCH_TOOL` from `#server/pipeline/tools`
+- `getStageTools` from `#server/pipeline/tools`
+- `buildProfileSummary` from `#server/pipeline/lib`
 - `createLogger` from `#server/lib/logger`
 - `zodTextFormat` from `openai/helpers/zod`
 - `ResearchSummarySchema` from `#server/schemas/pipeline.schema`

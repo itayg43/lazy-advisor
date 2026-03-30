@@ -4,9 +4,15 @@ import { ASK_USER_TOOL } from "./ask-user.tool";
 
 export type Stage = "clarify" | "research" | "plan" | "iterate";
 
-export const WEB_SEARCH_TOOL: WebSearchTool = {
+const DEFAULT_COUNTRY_CODE = "IL";
+
+const WEB_SEARCH_TOOL: WebSearchTool = {
   type: "web_search",
   search_context_size: "medium",
+  user_location: {
+    type: "approximate",
+    country: DEFAULT_COUNTRY_CODE,
+  },
 };
 
 const STAGE_TOOLS: Record<Stage, Tool[]> = {
