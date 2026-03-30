@@ -55,7 +55,9 @@ You are the extraction stage of an investment research pipeline. Your sole respo
 export const runResearchStage = async (
   profile: UserProfile,
 ): Promise<ResearchSummary> => {
-  logger.info("Starting research stage", { profile });
+  logger.info("Starting research stage", {
+    profile,
+  });
 
   const tools = getStageTools("research");
   const profileSummary = buildProfileSummary(profile);

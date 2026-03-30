@@ -125,26 +125,35 @@ vi.mock("#server/services/openai", () => ({
 - `createResearchResponse()` — returns `OpenAIResponse<ResponseOutputItem[]>` with a message item
 - Uses shared `mockTokenUsage` from `#server/mocks/openai.service.mock`
 
-**Test scenarios:**
-1. **Happy path** — returns extracted ResearchSummary; `callOpenAI` called once, `callOpenAIParsed` called once with `previous_response_id` from Phase A
+**Test scenarios** (behavior-only — no implementation detail assertions like verifying call arguments):
+1. **Happy path** — returns extracted ResearchSummary
 2. **Propagates callOpenAI error** (research phase) — `ServiceUnavailableError`; `callOpenAIParsed` not called
 3. **Propagates callOpenAIParsed error** (extraction phase) — `InternalError`
 
 ### Task 4.4 — Research stage evals
 
+**Prerequisite**: Extract extraction logic into a standalone exported `extractResearchSummary` function (mirrors clarify's `extractUserProfile`). This enables extraction-only evals with deterministic input.
+
 **File to create:**
 - `src/server/pipeline/stages/research/research.stage.eval.ts`
 
-**Eval approach:**
-- Real API calls with web search — loose assertions only (results change daily)
-- 2-3 test profiles: Israeli beginner moderate risk, Israeli aggressive young investor
-- Call `runResearchStage` with real profile
-- Assertions per result:
+**Eval approach — two layers** (mirrors clarify eval structure):
+
+**Layer 1: Full-loop eval (build first)**
+- Run `runResearchStage` with a real profile (Story 1: beginner, ₪55k, moderate, Israel) against live OpenAI + web search
+- Purpose: observe what realistic research output looks like, then use that to inform handwritten research text for extraction-only evals
+- Loose assertions only (results change daily):
   - `recommendedEtfs.length >= 1`
   - Each ETF: non-empty `ticker`, `name`, `reasoning`, `risks`
   - Each ETF: `sourceUrl` is valid URL format
   - Each ETF: `expenseRatio` matches `/^\d+(\.\d+)?$/` (numeric string, no `%`)
   - `brokerageRecommendation` and `allocationRationale` are non-empty
 - Timeout: 60s per test (web search is slow)
+
+**Layer 2: Extraction-only evals (build after observing full-loop output)**
+- Feed handwritten research text (modeled after real full-loop output) directly to `extractResearchSummary`
+- Deterministic input — only model extraction variance affects the output
+- Tighter assertions on extracted fields (ticker values, expense ratios, ETF count)
+- Multiple stories covering different profiles and research scenarios
 
 **Runnable after**: Research stage works in isolation, produces validated ResearchSummary
