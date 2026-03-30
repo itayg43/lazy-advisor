@@ -2,6 +2,15 @@
 
 **Goal**: Given UserProfile + ResearchSummary, generates phased plan with steps persisted to DB.
 
+### Stage Contract
+
+- **System prompt**: Focused on plan generation — explain concepts inline, be educational and opinionated, create phased steps with reasoning
+- **Input**: User profile + research summary (both structured, both small)
+- **Output**: Structured plan (phases, steps, reasoning, summary)
+- **Tools**: `create_step(action, reasoning, phase)`, `finish_plan(summary)`
+- **Behavior**: Verbose and educational — every recommendation includes *why*
+- **Events**: `step_created` (steps appearing one by one), `plan_complete`
+
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
 | 5.1 | `create_step` tool: calls stepService, emits `step_created` | `src/server/pipeline/tools/create-step.tool.ts` | 2.6 |
