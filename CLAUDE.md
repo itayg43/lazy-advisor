@@ -5,26 +5,31 @@
 - Use subagents for: code exploration, code review, and test analysis
 - Keep inline: implementation, small edits, git operations, and quick lookups
 - When multiple independent tasks exist, run subagents in parallel
+- Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
 
 ## Feedback Style
 
-- Default to critical, not agreeable — surface concerns without being asked
-- Evaluate from relevant stakeholder perspectives (e.g., end user, PM, senior developer) when assessing trade-offs
-- Say what's wrong or risky before saying what's fine
+### Perspective
+- Evaluate primarily from: code quality (clean code, SOLID), testability, and architectural consistency
+- PM perspective for scope and trade-off decisions
+- Senior developer perspective for maintainability and pattern correctness
+
+### Behavior
+- Default to critical, not agreeable — say what's wrong or risky before saying what's fine
+- When multiple valid approaches exist, present pros/cons and ask before implementing — don't silently pick one
+- Push back honestly when a request conflicts with project conventions, introduces unnecessary complexity, or has a better alternative — explain why with concrete reasoning
+- Don't agree just to be agreeable — if something is a bad idea, say so directly
 
 ## Git Workflow
 
 ### Before writing code
 - Never commit directly to `main` — create a feature branch first
 - Branch naming: `<type>/<short-description>` (e.g., `feature/2.1-prisma-schema`, `docs/ci-status-update`, `fix/retry-timeout`)
+- Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
 
 ### Before committing
 - Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
-- Update any docs affected by the code changes. Check each and update only what's relevant:
-  - `documentation/STATUS.md` — mark completed tasks
-  - The relevant plan section file — add design decisions, update task details if implementation diverged
-  - `documentation/plan/PLAN.md` — if the section-level view changed (e.g., new Zod schemas, folder structure updates)
-  - `documentation/CONVENTIONS.md` or `documentation/TESTING.md` — if a new pattern was established that applies to future work
+- Update affected docs (`STATUS.md`, relevant plan section, `PLAN.md`, `CONVENTIONS.md`, `TESTING.md`) — after updates, cross-check that all affected docs are consistent with each other and with the code
 
 ### Commits and PRs
 - No `Co-Authored-By` lines in commit messages
