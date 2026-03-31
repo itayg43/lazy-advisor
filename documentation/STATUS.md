@@ -57,7 +57,10 @@
 - [x] Hardened error handling, schemas, imports, tests, and ESLint config
 
 ### Section 4: Stage 2 — Research
-- [x] 4.1 — ResearchSummary schema + web_search tool registration
-- [x] 4.2 — Research stage implementation (two-phase: research + extraction)
-- [x] 4.3 — Research stage unit tests (3 passing)
-- [ ] 4.4 — Research stage evals
+- [ ] 4.1 — `investmentPreferences` on `UserProfileSchema` (required, free text, default `"none"`); update clarify prompt to ask about it
+- [ ] 4.2 — Schemas (`RecommendedEtfSchema` with `trackingIndex`, `ResearchSummarySchema`, `AllocationPlanSchema`), types (`ResearchStageResult`), and `web_search` tool registration
+- [ ] 4.3 — Hardcoded brokerage table (4 Israeli brokers: Meitav, IBI, Psagot, Excellence) + `buildAllocationSummary` utility
+- [ ] 4.4 — Research stage implementation (three-phase: allocation → ETF search → extraction) with prompts
+- [ ] 4.5 — Research stage unit tests
+- [ ] 4.6 — Research stage evals (extraction-only, allocation, and full-loop)
+- [ ] 4.7 — Doc updates (STATUS.md, PLAN_SECTION_4.md, TESTING.md)

@@ -58,12 +58,7 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
-- **Two eval layers** (applies to both clarify and research stages):
-  - **Extraction-only**: tests extraction prompt quality in isolation with deterministic input — only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
-    - Clarify: `extractUserProfile` with handwritten `ResponseInputItem[]` transcripts using the real OpenAI conversation structure (`function_call` + `function_call_output` items, not simplified user/assistant messages).
-    - Research: `extractResearchSummary` with handwritten research text modeled after real full-loop output.
-  - **Full-loop**: tests the full stage end-to-end with real OpenAI API calls. Looser assertions — schema validation is primary, exact equality only for values explicitly stated in the input.
-    - Clarify: `runClarifyStage` with `createScriptedResponder`. Scripted responses are natural and focused (2-3 responses answering what the model is likely to ask), not info dumps. Do not assert on conversation flow (question count, ordering).
-    - Research: `runResearchStage` with a real `UserProfile`. Includes live web search — assertions check schema validity, non-empty fields, and format (e.g., `expenseRatio` is numeric string without `%`).
-- **Eval-informed mock data**: research stage unit test mocks use placeholder data initially. After running full-loop evals (4.4) and observing real output structure, update unit test mock data (`mockResearchSummary`, `createResearchResponse`) to reflect realistic research output — including response shape (web_search_call items, url_citation annotations) and ETF details.
+- **Two eval layers**:
+  - **Extraction-only** (`extractUserProfile` with handwritten `ResponseInputItem[]` transcripts): tests extraction prompt quality in isolation. Transcripts use the real OpenAI conversation structure (`function_call` + `function_call_output` items, not simplified user/assistant messages). Deterministic input — only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
+  - **Full-loop** (`runClarifyStage` with `createScriptedResponder`): tests conversation behavior end-to-end. Scripted responses are natural and focused (2-3 responses answering what the model is likely to ask), not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the goal string. Do not assert on conversation flow (question count, ordering).
 - LLM-simulated users are a Level 2+ concern.

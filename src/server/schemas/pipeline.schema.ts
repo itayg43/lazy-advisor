@@ -22,21 +22,3 @@ export const UserProfileSchema = z.object({
   hasDebt: z.boolean(),
   monthlyContribution: z.number().nonnegative().int().max(MAX_MONTHLY_CONTRIBUTION),
 });
-
-const MAX_LONG_STRING_LENGTH = 1024;
-const MAX_ETF_RECOMMENDATIONS = 10;
-
-const RecommendedEtfSchema = z.object({
-  ticker: z.string().min(1).max(5),
-  name: z.string().min(1).max(MAX_STRING_LENGTH),
-  expenseRatio: z.string().min(1).max(16),
-  reasoning: z.string().min(1).max(MAX_LONG_STRING_LENGTH),
-  risks: z.string().min(1).max(MAX_LONG_STRING_LENGTH),
-  sourceUrl: z.string().url(),
-});
-
-export const ResearchSummarySchema = z.object({
-  recommendedEtfs: z.array(RecommendedEtfSchema).min(1).max(MAX_ETF_RECOMMENDATIONS),
-  brokerageRecommendation: z.string().min(1).max(MAX_LONG_STRING_LENGTH),
-  allocationRationale: z.string().min(1).max(MAX_LONG_STRING_LENGTH),
-});
