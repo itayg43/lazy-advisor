@@ -8,7 +8,7 @@
 - [x] 1.3 — Folder skeleton + placeholder entry points
 - [x] 1.4 — Docker Compose + env config
 - [x] 1.5 — Config module
-- [x] 1.6 — Shared constants + event types
+- [x] 1.6 — Event types
 - [x] 1.7 — withRetry utility (8 tests passing)
 - [x] 1.8 — ESLint + Prettier (`tseslint.configs.strict`, `padding-line-between-statements` for return/throw)
 
@@ -45,7 +45,7 @@
 ### Section 3: Stage 1 — Clarify
 - [x] 3.1 — UserProfileSchema Zod schema
 - [x] 3.2 — OpenAI client singleton + service (9 tests passing)
-- [x] 3.3 — OpenAI service mock helpers
+- [x] 3.3 — OpenAI service mock data (inline in test files)
 - [x] 3.4 — `ask_user` tool
 - [x] 3.4b — Logger utility (`createLogger`)
 - [x] 3.5 — Tool registry

@@ -33,6 +33,6 @@
 | 6.5 | Iterate — `research_and_adjust` flow: update profile, re-run Research → Plan stages | `src/server/pipeline/stages/iterate/iterate.stage.ts` | 6.3, Sections 4+5 |
 | 6.6 | Iterate — `clarify` + `done` flows | `src/server/pipeline/stages/iterate/iterate.stage.ts` | 6.3 |
 | 6.7 | Iteration counter + limit enforcement (max 5, clarify doesn't count) | `src/server/pipeline/stages/iterate/iterate.stage.ts` | 6.4-6.6 |
-| 6.8 | Iterate stage tests (classification routing, each flow, iteration limit, mixed iterations) | `src/server/pipeline/stages/iterate/iterate.stage.test.ts` | 3.3, 4.2 |
+| 6.8 | Iterate stage tests (classification routing, each flow, iteration limit, mixed iterations) | `src/server/pipeline/stages/iterate/iterate.stage.test.ts` | 4.2 |
 
 **Runnable after**: Full iterate loop works in isolation — classify, route, modify, persist

@@ -22,7 +22,6 @@
   "license": "ISC",
   "type": "module",
   "imports": {
-    "#shared/*": "./src/shared/*",
     "#server/*": "./src/server/*"
   },
   "bugs": {

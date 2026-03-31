@@ -1,13 +1,14 @@
-import type { ResponseOutputItem } from "openai/resources/responses/responses";
+import type {
+  ResponseOutputItem,
+  ResponseUsage,
+} from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, ServiceUnavailableError } from "#server/errors";
-import { mockTokenUsage } from "#server/mocks/openai.service.mock";
 import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import type { OpenAIResponse } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
-import { MAX_STAGE_TOOL_CALLS } from "#shared/constants/constants";
-import { runClarifyStage } from "./clarify.stage";
+import { MAX_STAGE_TOOL_CALLS, runClarifyStage } from "./clarify.stage";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
   mockedCallOpenAI: vi.fn(),
@@ -20,6 +21,18 @@ vi.mock("#server/services/openai", () => ({
 }));
 
 describe("clarifyStage", () => {
+  const mockTokenUsage: ResponseUsage = {
+    input_tokens: 120,
+    output_tokens: 45,
+    total_tokens: 165,
+    input_tokens_details: {
+      cached_tokens: 0,
+    },
+    output_tokens_details: {
+      reasoning_tokens: 0,
+    },
+  };
+
   const mockGoal = "I have ₪55,000 and want to start investing in ETFs";
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
