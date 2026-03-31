@@ -4,7 +4,7 @@
 
 | Task | What | Files | Depends on |
 |------|------|-------|------------|
-| 7.1 | Express app: CORS, `GET /health`, middleware | `src/server/app.ts`; Server init: HTTP server, listen, shutdown | `src/server/server.ts` | Section 1 |
+| 7.1 | Express app: CORS, `GET /health`, middleware, HTTP server init, listen, shutdown | `src/server/server.ts` | Section 1 |
 | 7.1b | Dockerize server: `Dockerfile.dev`, add server service to `docker-compose.yml` with `develop.watch`, volume mount `src/`, `tsx watch` for hot reload, Prisma migrate script | `Dockerfile.dev`, `docker-compose.yml`, `scripts/start-dev.sh` | 7.1 |
 | 7.2 | WebSocket handler: upgrade on `/api/v1/sessions/ws`, create session, route messages | `src/server/ws/handler/handler.ts` | 7.1 |
 | 7.3 | Session class: state, `sendEvent()`, `waitForUserResponse()` (Promise-based), inactivity timer, `destroy()` | `src/server/ws/session.ts` | 1.7 |

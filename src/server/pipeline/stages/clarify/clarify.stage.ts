@@ -16,11 +16,11 @@ import {
 } from "#server/schemas/pipeline.schema";
 import { callOpenAI, callOpenAIParsed } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
-import { MAX_STAGE_TOOL_CALLS } from "#shared/constants/constants";
 
 const logger = createLogger("clarifyStage");
 
 const CLARIFY_MODEL = "gpt-5.4-nano";
+export const MAX_STAGE_TOOL_CALLS = 10;
 
 const riskLevels = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
 const knowledgeLevels = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");
