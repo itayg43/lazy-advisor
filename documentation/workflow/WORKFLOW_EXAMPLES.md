@@ -342,6 +342,27 @@ Stories 4-12 demonstrate boundary behaviors. The full dialogue is less important
 
 ---
 
+## Story-to-stage mapping
+
+Which stage owns each story's distinct behavior, and where it's validated:
+
+| Story | Primary stage | Eval coverage | Notes |
+|-------|---------------|---------------|-------|
+| 1 (happy path) | All (1→2→3→4) | Clarify extraction eval | Full E2E deferred to Section 11 |
+| 2 (simple adjustment) | 4 — Iterate | — | `adjust` without re-research |
+| 3 (re-research iteration) | 4 — Iterate | — | `research_and_adjust` with new search |
+| 4 (unrealistic expectations) | 1 — Clarify | Clarify full-loop eval | Educate → redirect |
+| 5 (outside scope) | 1 — Clarify | — | Decline stock picks, offer ETF alternative |
+| 6 (weak search results) | 2 — Research | — | Transparent about mixed findings |
+| 7 (vague user) | 1 — Clarify | Clarify full-loop eval | Progressive question simplification |
+| 8 (contradictory input) | 1 — Clarify | Clarify extraction + full-loop evals | Scenario-based risk discovery |
+| 9 (risk correction) | 4 — Iterate | — | Risk change → `research_and_adjust` |
+| 10 (iteration limit) | 4 — Iterate | — | Max 5 iterations |
+| 11 (search failure) | 2 — Research | — | Code-level hard stop, no prompt bypass |
+| 12 (advanced investor) | 1 — Clarify + 3 — Plan | Clarify extraction eval | Adapt depth to knowledge level |
+
+Stories without eval coverage will gain evals in their respective section's eval task (e.g., 4.6 for research, 6.x for iterate).
+
 ## What these stories show
 
 1. **Happy path** (Story 1): Full flow — clarify, research, plan with detailed explanations. Israeli investor context.

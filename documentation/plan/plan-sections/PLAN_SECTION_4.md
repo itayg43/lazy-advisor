@@ -1,5 +1,7 @@
 ## Section 4: Stage 2 — Research
 
+> **Status: Pre-implementation.** This section describes planned architecture — no code has been implemented yet. Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
+
 **Goal**: Given UserProfile, determines target allocation via LLM, then uses OpenAI's built-in web search to find matching ETFs/קרנות כספיות, produces validated `ResearchStageResult` containing both `AllocationPlan` and `ResearchSummary`. Brokerage data is hardcoded (not searched).
 
 ### Stage Contract
