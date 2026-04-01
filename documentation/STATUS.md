@@ -8,7 +8,7 @@
 - [x] 1.3 — Folder skeleton + placeholder entry points
 - [x] 1.4 — Docker Compose + env config
 - [x] 1.5 — Config module
-- [x] 1.6 — Event types
+- [ ] 1.6 — Event types (deferred — will be implemented in Section 7 with WebSocket events)
 - [x] 1.7 — withRetry utility (8 tests passing)
 - [x] 1.8 — ESLint + Prettier (`tseslint.configs.strict`, `padding-line-between-statements` for return/throw)
 
@@ -31,7 +31,7 @@
 - [x] 2.4 — Step repository
 - [x] 2.5 — Plan service + error classes
 - [x] 2.6 — Step service
-- [x] 2.7 — Repository + service tests (22 passing: 11 unit, 11 integration)
+- [x] 2.7 — Repository + service tests (18 passing: 7 unit, 11 integration)
 
 ### Infrastructure (during 2.7)
 - [x] Prisma 7 migration
