@@ -29,7 +29,8 @@
 
 ### Before committing
 - Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
-- Update affected docs (`STATUS.md`, relevant plan section, `PLAN.md`, `CONVENTIONS.md`, `TESTING.md`) — after updates, cross-check that all affected docs are consistent with each other and with the code
+- Update `STATUS.md` if task completion status changed
+- Only update other docs (`CONVENTIONS.md`, `TESTING.md`, plan sections) if the change introduces a new convention, testing pattern, or design decision — don't repeat what's already in the code
 
 ### Commits and PRs
 - No `Co-Authored-By` lines in commit messages

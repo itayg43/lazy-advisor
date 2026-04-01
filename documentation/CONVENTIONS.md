@@ -4,7 +4,6 @@
 
 - Before implementing a new module, align on: (1) input types — prefer SDK/library types over custom wrappers, (2) return type shape — what the caller actually needs, (3) error strategy — which error class for which failure mode
 - Check reference implementations (existing project patterns, other repos) before starting to code, not after the first draft
-- Present trade-offs proactively when making design choices — don't silently pick one approach
 
 ## Exports & Modules
 
