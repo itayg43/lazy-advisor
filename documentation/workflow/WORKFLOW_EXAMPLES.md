@@ -8,6 +8,48 @@ All users are based in Israel. The agent tailors recommendations to Israeli inve
 
 ---
 
+## Agent Behavior Principles
+
+### Adaptive clarifying questions
+
+The agent does NOT ask a fixed list. It analyzes the user's input, identifies what it already knows, and only asks about gaps. Detailed input → skip clarification entirely. Location is one of the key gaps to fill early — it affects almost every recommendation.
+
+### Agent mental model: research is work, not a task
+
+The agent does the research, the human does the actions. Steps like "Research VGT vs QQQ" are the agent's job — not the user's.
+
+- **Research/analysis** → agent does this NOW via built-in web search, synthesizes findings
+- **Human action items** → become steps, enriched with research as context
+
+Steps should be specific, opinionated, and informed.
+
+### Locale awareness
+
+The agent asks where the user is located (or infers from context) and tailors recommendations accordingly — ETF types, brokerages, and tax implications all change by country.
+
+**What changes per locale:** available brokerages (local and international), ETF/fund tickers, tax treatment (dividend withholding rates, capital gains rates), currency considerations, and regulatory constraints.
+
+**Fund type and broker are independent decisions.** An Israeli user can choose Israeli index funds through a local broker, or US ETFs through Interactive Brokers, or any other combination — the agent explains the tradeoffs of each pairing and lets the user decide.
+
+#### Broker recommendations are locale-aware
+
+| Location | Brokers | Notes |
+|----------|---------|-------|
+| **US** | Fidelity, Schwab, Vanguard | Commission-free ETFs, auto-invest support |
+| **Israel** | Meitav, IBI, Psagot | Access to TASE (Israeli index funds) AND international exchanges (US/Irish ETFs). Interactive Brokers is also an option for international-only. |
+
+Israeli brokers offer access to both local and international markets — the user does NOT need Interactive Brokers to buy US or Irish ETFs. Local brokers may charge higher commissions on international trades, but the convenience of a single account matters. The agent explains the tradeoffs (fees, platform UX, market access) and lets the user choose.
+
+#### Israeli investor fund types
+
+| Type | Examples | Pros | Cons |
+|------|----------|------|------|
+| Israeli index funds (קרנות מחקות) | Harel/KSM S&P 500 | No currency conversion, simple tax reporting | Higher expense ratios (0.2-0.8%) |
+| Irish accumulating ETFs | VWRA, CSPX, AGGU | 15% dividend withholding (vs 25% Israeli tax), tax deferred until sale | Requires broker with European exchange access |
+| US ETFs | VTI, VOO | Lowest expense ratios (0.03%) | Dividends taxed at 25% on every payout, USD conversion needed |
+
+---
+
 ## Story 1: The happy path — complete beginner
 
 ```
