@@ -36,15 +36,23 @@
   - `TooManyRequestsError` (429)
 - No class per feature — use the right HTTP error with a descriptive message
 - External service failures (API errors, non-completed responses) → `ServiceUnavailableError`; internal failures (unexpected state after a successful call) → `InternalError`
+- OpenAI-specific: `APIError` or non-completed status → `ServiceUnavailableError` with a generic constant message (prevents token/response leakage to clients), real error details logged at `error` level. Missing `output_parsed` after a successful call → `InternalError`. Non-API errors rethrow unchanged
 - All error classes live in `src/server/errors/index.ts`
 
 ## Testing
 
 See [TESTING.md](TESTING.md)
 
+## File Organization
+
+- `src/server/pipeline/lib/` — shared pure utilities used by 2+ stages (e.g., `build-profile-summary.ts`). Single-stage helpers stay in the stage directory
+- `src/server/pipeline/data/` — static reference data that doesn't change at runtime (e.g., brokerage tables)
+- `index.ts` barrel exports are required for directories defined in the plan
+- Schemas in `src/server/schemas/[domain].schema.ts`, types in `src/server/types/[domain].types.ts`
+
 ## Types
 
-- Zod schemas as source of truth at stage boundaries, infer types with `z.infer<>`
+- Zod schemas as source of truth at stage boundaries; define in `[domain].schema.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts`. Schema is the single source of truth — types are derived, never hand-written duplicates
 - Domain types in `domain.types.ts` re-exported from `@prisma/client`; `PlanStatus` exported as a value (not `export type`) so it can be used at runtime
 - No `any` — use `unknown` when type is uncertain
 

@@ -57,7 +57,8 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
-- **Two eval layers**:
-  - **Extraction-only** (`extractUserProfile` with handwritten `ResponseInputItem[]` transcripts): tests extraction prompt quality in isolation. Transcripts use the real OpenAI conversation structure (`function_call` + `function_call_output` items, not simplified user/assistant messages). Deterministic input — only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
-  - **Full-loop** (`runClarifyStage` with `createScriptedResponder`): tests conversation behavior end-to-end. Scripted responses are natural and focused (2-3 responses answering what the model is likely to ask), not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the goal string. Do not assert on conversation flow (question count, ordering).
+- **Two eval layers** (applied per stage — see [story-to-stage mapping](workflow/WORKFLOW_EXAMPLES.md#story-to-stage-mapping) for coverage):
+  - **Extraction-only**: tests extraction/parsing prompt quality in isolation by feeding deterministic input directly to the extraction function (e.g., `extractUserProfile` for clarify, `extractResearchSummary` for research). Only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
+  - **Full-loop**: tests the full stage end-to-end (e.g., `runClarifyStage` with scripted responder, `runResearchStage` with real web search). Scripted responses (where applicable) are natural and focused, not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the input.
+- Each stage's eval file covers stories from [WORKFLOW_EXAMPLES.md](workflow/WORKFLOW_EXAMPLES.md) whose distinct behavior belongs to that stage.
 - LLM-simulated users are a Level 2+ concern.
