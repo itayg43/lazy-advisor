@@ -2,20 +2,12 @@ import { zodTextFormat } from "openai/helpers/zod";
 import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { createLogger } from "#server/lib/logger";
-import {
-  KnowledgeLevel,
-  RiskTolerance,
-  UserProfileSchema,
-} from "#server/schemas/pipeline.schema";
+import { UserProfileSchema } from "#server/schemas/pipeline.schema";
 import { callOpenAIParsed } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
+import { KNOWLEDGE_LEVELS, RISK_LEVELS } from "./clarify.constants";
 
 const logger = createLogger("clarifyExtraction");
-
-const EXTRACTION_MODEL = "gpt-5.4-nano";
-
-const riskLevels = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
-const knowledgeLevels = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");
 
 const EXTRACTION_SYSTEM_PROMPT = `# Role and Objective
 You are the extraction stage of an investment advisor pipeline. Your sole responsibility is to extract a structured user profile from the preceding conversation. Do **not** infer, assume, or add information that was not explicitly discussed.
@@ -30,10 +22,10 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **goal**: build a concise summary of the user's investment goal using context from the entire conversation — not just their initial input. Include specifics the user mentioned (amounts, purpose, constraints). Do not reduce to generic phrases like "start investing."
 - **amount**: extract the exact number. Convert shorthand (e.g., "₪55k" → 55000).
 - **age**: extract the exact number.
-- **riskTolerance**: map to ${riskLevels} based on what the user described.
+- **riskTolerance**: map to ${RISK_LEVELS} based on what the user described.
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
 - **location**: extract the country or location as stated.
-- **knowledgeLevel**: map to ${knowledgeLevels}.
+- **knowledgeLevel**: map to ${KNOWLEDGE_LEVELS}.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
 - **investmentPreferences**: extract any mentioned sectors, markets, indices, or specific instruments the user wants to invest in. Use the user's own words. Default to \`"none"\` if not mentioned or user has no specific preference.
 - **hasEmergencyFund**: \`true\` or \`false\` based on what the user said.
@@ -83,14 +75,17 @@ export type ExtractionParams = {
   previousResponseId?: string;
 };
 
-export const extractUserProfile = async (
-  params: ExtractionParams,
-): Promise<UserProfile> => {
-  const extractionResponse = await callOpenAIParsed<UserProfile>({
-    model: EXTRACTION_MODEL,
+export const extractUserProfile = async ({
+  input,
+  previousResponseId,
+}: ExtractionParams): Promise<UserProfile> => {
+  const { id, usage, output } = await callOpenAIParsed<UserProfile>({
+    model: "gpt-5.4-nano",
     instructions: EXTRACTION_SYSTEM_PROMPT,
-    input: params.input,
-    ...(params.previousResponseId && { previous_response_id: params.previousResponseId }),
+    input,
+    ...(previousResponseId && {
+      previous_response_id: previousResponseId,
+    }),
     text: {
       format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
     },
@@ -100,12 +95,12 @@ export const extractUserProfile = async (
   });
 
   logger.info("Extraction complete", {
-    extractionResponseId: extractionResponse.id,
-    extractionUsage: extractionResponse.usage,
+    responseId: id,
+    usage,
   });
   logger.debug("Extracted profile", {
-    profile: extractionResponse.output,
+    profile: output,
   });
 
-  return extractionResponse.output;
+  return output;
 };

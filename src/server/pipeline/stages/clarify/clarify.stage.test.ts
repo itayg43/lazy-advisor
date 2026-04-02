@@ -8,7 +8,8 @@ import { InternalError, ServiceUnavailableError } from "#server/errors";
 import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import type { OpenAIResponse } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
-import { MAX_STAGE_TOOL_CALLS, runClarifyStage } from "./clarify.stage";
+import { MAX_STAGE_TOOL_CALLS } from "./clarify.constants";
+import { runClarifyStage } from "./clarify.stage";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
   mockedCallOpenAI: vi.fn(),

@@ -4,22 +4,17 @@ import { InternalError } from "#server/errors";
 import { createLogger } from "#server/lib/logger";
 import { getStageTools } from "#server/pipeline/tools";
 import {
+  ASK_USER_TOOL,
   handleAskUser,
   type SendToUser,
   type WaitForResponse,
 } from "#server/pipeline/tools/ask-user.tool";
-import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
 import { callOpenAI } from "#server/services/openai";
 import type { UserProfile } from "#server/types/pipeline.types";
+import { KNOWLEDGE_LEVELS, MAX_STAGE_TOOL_CALLS, RISK_LEVELS } from "./clarify.constants";
 import { extractUserProfile } from "./clarify.extraction";
 
 const logger = createLogger("clarifyStage");
-
-const CLARIFY_MODEL = "gpt-5.4-nano";
-export const MAX_STAGE_TOOL_CALLS = 10;
-
-const riskLevels = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
-const knowledgeLevels = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");
 
 const CLARIFY_SYSTEM_PROMPT = `# Role and Objective
 You are the clarification stage of an investment advisor pipeline. Your sole responsibility is to collect any missing user information needed for a later recommendation stage. Do **not** provide investment advice, portfolio suggestions, fund names, or action plans.
@@ -37,10 +32,10 @@ You are the clarification stage of an investment advisor pipeline. Your sole res
 Every required field must have a specific, actionable value:
 - Investment amount: a specific number. Not \`some money\`, \`a lot\`, or \`not sure\`.
 - Age: a specific number.
-- Risk tolerance: map the user's description to ${riskLevels}. The user does not need to use these exact terms.
+- Risk tolerance: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms.
 - Investment timeline: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, \`eventually\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` ARE specific enough — do not ask the user to narrow further.
 - Location or country.
-- Knowledge level: map to ${knowledgeLevels} based on what the user describes.
+- Knowledge level: map to ${KNOWLEDGE_LEVELS} based on what the user describes.
 - Emergency fund: yes or no.
 - Outstanding debt: yes or no.
 - Monthly contribution: a specific number. Not \`whatever I can\` or \`not much\`.
@@ -104,7 +99,7 @@ export const runClarifyStage = async (
   const tools = getStageTools("clarify");
 
   let response = await callOpenAI({
-    model: CLARIFY_MODEL,
+    model: "gpt-5.4-nano",
     instructions: CLARIFY_SYSTEM_PROMPT,
     input: goal,
     tools,
@@ -117,6 +112,9 @@ export const runClarifyStage = async (
     responseId: response.id,
     usage: response.usage,
   });
+  logger.debug("Initial clarify response output", {
+    output: response.output,
+  });
 
   let toolCallCount = 0;
 
@@ -126,10 +124,10 @@ export const runClarifyStage = async (
 
     if (functionCalls.length === 0) break;
 
-    const toolOutputs = [];
+    const toolOutputs: ResponseInputItem.FunctionCallOutput[] = [];
 
     for (const functionCall of functionCalls) {
-      if (functionCall.name !== "ask_user") {
+      if (functionCall.name !== ASK_USER_TOOL.name) {
         throw new InternalError(`Unexpected tool call: ${functionCall.name}`);
       }
 
@@ -174,7 +172,7 @@ export const runClarifyStage = async (
     }
 
     response = await callOpenAI({
-      model: CLARIFY_MODEL,
+      model: "gpt-5.4-nano",
       instructions: CLARIFY_SYSTEM_PROMPT,
       tools,
       previous_response_id: response.id,
@@ -187,6 +185,9 @@ export const runClarifyStage = async (
     logger.info("Clarify follow-up response", {
       responseId: response.id,
       usage: response.usage,
+    });
+    logger.debug("Clarify follow-up response output", {
+      output: response.output,
     });
   }
 

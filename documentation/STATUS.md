@@ -56,6 +56,13 @@
 ### Code Review Fixes (Sections 1-3)
 - [x] Hardened error handling, schemas, imports, tests, and ESLint config
 
+### Clarify Stage Refactor
+- [x] Extracted `clarify.constants.ts` — `RISK_LEVELS`, `KNOWLEDGE_LEVELS`, `MAX_STAGE_TOOL_CALLS`
+- [x] Removed duplicated level derivations from `clarify.stage.ts` and `clarify.extraction.ts`
+- [x] Use `ASK_USER_TOOL.name` constant instead of hardcoded `"ask_user"` string
+- [x] Typed `toolOutputs` array explicitly as `ResponseInputItem.FunctionCallOutput[]`
+- [x] Moved `MAX_STAGE_TOOL_CALLS` export to `clarify.constants.ts`
+
 ### Section 4: Stage 2 — Research
 - [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update (2 new evals: extraction + full-loop)
 
