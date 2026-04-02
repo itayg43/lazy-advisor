@@ -7,7 +7,8 @@ import {
   UserProfileSchema,
 } from "#server/schemas/pipeline.schema";
 import type { SendToUser, WaitForResponse } from "../../tools/ask-user.tool";
-import { extractUserProfile, runClarifyStage } from "./clarify.stage";
+import { extractUserProfile } from "./clarify.extraction";
+import { runClarifyStage } from "./clarify.stage";
 
 type ScriptedResponder = {
   sendToUser: SendToUser;
@@ -241,7 +242,9 @@ describe("clarifyStage evals", () => {
       expect(profile.timeline.toLowerCase()).toMatch(/20/);
       expect(profile.location.toLowerCase()).toContain("israel");
       expect(profile.investmentPreferences).not.toBe("none");
-      expect(profile.investmentPreferences.toLowerCase()).toMatch(/irish etf|tax efficien/i);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(
+        /irish etf|tax efficien/i,
+      );
     });
 
     // Story 13 — user mentions specific investment preferences.
