@@ -167,6 +167,9 @@ export const extractUserProfile = async (
     text: {
       format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
     },
+    reasoning: {
+      effort: "low",
+    },
   });
 
   logger.info("Extraction complete", {
