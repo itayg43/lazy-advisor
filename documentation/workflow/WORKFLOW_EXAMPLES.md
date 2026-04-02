@@ -258,6 +258,11 @@ Agent: A few questions to fill in the picture:
 
 You: long-term, yes emergency fund, no debt, maybe ₪1,500/mo, no brokerage
 
+Agent: When you say "long-term," roughly how many years — 10, 20, until
+  retirement?
+
+You: I'd say 20+ years
+
 Agent: Researching aggressive portfolios for your profile...
   ✓ Searched "aggressive ETF portfolio Israeli investor 2026"
   ✓ Searched "Israeli brokerages 2026 international ETF access"
@@ -331,11 +336,13 @@ You: that's what I want, go for it
 Agent: Plan saved.
 ```
 
+This story shows a `research_and_adjust` — the user's feedback ("no emerging markets, more tech") requires new searches the agent hasn't done. The same applies to any change that invalidates the research premise: a risk tolerance shift (e.g., aggressive → moderate) means the entire portfolio structure changes, not just individual funds — that also triggers `research_and_adjust`, not a simple `adjust`.
+
 ---
 
 ## Edge case stories (condensed)
 
-Stories 4-12 demonstrate boundary behaviors. The full dialogue is less important than the *rule* each story establishes.
+Stories 4-11 demonstrate boundary behaviors. The full dialogue is less important than the *rule* each story establishes.
 
 ### Story 4: Unrealistic expectations
 **Input**: "I have ₪18,000 and I want to double it in 6 months"
@@ -344,8 +351,8 @@ Stories 4-12 demonstrate boundary behaviors. The full dialogue is less important
 
 ### Story 5: Outside scope — individual stocks
 **Input**: "Should I buy NVIDIA stock?"
-**Behavior**: Agent declines individual stock picks, explains why (85-90% of fund managers fail to beat market over 10 years — SPIVA data). Offers ETF alternative with sector exposure (semiconductor ETFs). Does NOT judge — explains the tradeoff and offers an alternative within scope.
-**Rule**: Individual stocks → explain ETF philosophy → offer sector ETF alternative.
+**Behavior**: Agent redirects toward ETF-based passive investing — explains why picking individual stocks is outside scope (85-90% of fund managers fail to beat market over 10 years — SPIVA data). Offers ETF alternative with sector exposure (semiconductor ETFs). Does NOT refuse or judge — redirects and offers an alternative within scope, then continues collecting profile as normal.
+**Rule**: Individual stocks → redirect toward ETF-based investing → offer sector ETF alternative → continue profile collection.
 
 ### Story 6: Weak search results
 **Input**: "I want to invest ₪75,000 with focus on clean energy ETFs"
@@ -354,30 +361,25 @@ Stories 4-12 demonstrate boundary behaviors. The full dialogue is less important
 
 ### Story 7: Vague user
 **Input**: "invest" → "idk some money" → "like ₪10,000, I'm 30"
-**Behavior**: Agent progressively simplifies questions (open-ended → multiple choice → yes/no). Adapts plan complexity to investment size (₪10k = one fund, VWRA only). Explains when to diversify further (₪40-50k threshold).
-**Rule**: Vague input → simplify questions iteratively → match plan complexity to portfolio size.
+**Behavior**: Agent progressively simplifies questions (open-ended → multiple choice → yes/no). If the user has been asked about the same field twice without giving a specific value, the agent accepts the best available answer and moves on — it does not keep asking. Adapts plan complexity to investment size (₪10k = one fund, VWRA only). Explains when to diversify further (₪40-50k threshold).
+**Rule**: Vague input → simplify questions iteratively → stop probing any field after 2 asks → match plan complexity to portfolio size.
 
 ### Story 8: Contradictory input
 **Input**: "I want maximum returns but I can't afford to lose any money"
 **Behavior**: Agent uses the contradiction as a teaching moment — explains the risk/return relationship as a fundamental rule, not a flaw. Uses a concrete scenario (₪40k → ₪32k, what do you do? A/B/C) to discover actual risk tolerance. Proceeds with the discovered tolerance (moderate).
 **Rule**: Contradictory goals → educate on the tradeoff → use scenarios to discover real risk tolerance.
 
-### Story 9: Mid-session risk tolerance correction
-**Input**: User claims aggressive, then sees "₪30,000 gone in a bad year" and says "I think I'm actually moderate"
-**Behavior**: Agent recognizes that changing risk tolerance invalidates previous research (aggressive portfolio with concentrated tech/EM bets ≠ moderate with bonds). Triggers `research_and_adjust` — loops back through Stage 2 with updated risk profile, rebuilds plan from scratch. Does NOT just swap a few funds.
-**Rule**: Risk tolerance change → `research_and_adjust` (full re-research), not just `adjust`.
-
-### Story 10: Iteration limit reached
+### Story 9: Iteration limit reached
 **Input**: User goes through 5 iterations — mix of `adjust` (1, 2, 4) and `research_and_adjust` (3). On 5th attempt asks for yet another sector change.
 **Behavior**: Agent presents current plan as final: "We've been through several rounds — here's your current plan. You can start a new session anytime." Plan was already persisted from iteration 4's `plan_complete`.
 **Rule**: Max 5 iterations → present current plan as final → nothing is lost (incremental persistence).
 
-### Story 11: Search failure — pipeline hard stop
+### Story 10: Search failure — pipeline hard stop
 **Input**: Normal user, but search API is down.
 **Behavior**: Stage 2 retries 3 times with exponential backoff, all fail. Pipeline stops at the code level — Stage 3 never runs. Error message: "I wasn't able to retrieve current financial data right now. I don't want to build a plan without verified information." No plan persisted.
 **Rule**: Search failure → hard stop. This is a code-level gate, not an LLM decision — no prompt injection can bypass it.
 
-### Story 12: Advanced Israeli investor
+### Story 11: Advanced Israeli investor
 **Input**: "I have ₪200,000 to invest, I already know the basics" — user mentions Irish ETFs, VWRA vs CSPX+VXUS split, has Interactive Brokers.
 **Behavior**: Agent detects experience level, skips ETF-101 explanations. Engages directly on specific fund comparisons, introduces advanced concepts (factor tilts with ZPRV, US estate tax implications for Irish-domiciled ETFs). Still provides reasoning, but at the user's level.
 **Rule**: Advanced user → match explanation depth to knowledge level → introduce advanced concepts (factor tilts, estate tax) that wouldn't help a beginner.
@@ -392,16 +394,15 @@ Which stage owns each story's distinct behavior, and where it's validated:
 |-------|---------------|---------------|-------|
 | 1 (happy path) | All (1→2→3→4) | Clarify extraction eval | Full E2E deferred to Section 11 |
 | 2 (simple adjustment) | 4 — Iterate | — | `adjust` without re-research |
-| 3 (re-research iteration) | 4 — Iterate | — | `research_and_adjust` with new search |
+| 3 (re-research iteration) | 4 — Iterate | — | `research_and_adjust` with new search (includes risk tolerance change rule) |
 | 4 (unrealistic expectations) | 1 — Clarify | Clarify full-loop eval | Educate → redirect |
-| 5 (outside scope) | 1 — Clarify | — | Decline stock picks, offer ETF alternative |
+| 5 (outside scope) | 1 — Clarify | Clarify full-loop eval | Redirect toward ETF-based investing |
 | 6 (weak search results) | 2 — Research | — | Transparent about mixed findings |
 | 7 (vague user) | 1 — Clarify | Clarify full-loop eval | Progressive question simplification |
 | 8 (contradictory input) | 1 — Clarify | Clarify extraction + full-loop evals | Scenario-based risk discovery |
-| 9 (risk correction) | 4 — Iterate | — | Risk change → `research_and_adjust` |
-| 10 (iteration limit) | 4 — Iterate | — | Max 5 iterations |
-| 11 (search failure) | 2 — Research | — | Code-level hard stop, no prompt bypass |
-| 12 (advanced investor) | 1 — Clarify + 3 — Plan | Clarify extraction eval | Adapt depth to knowledge level |
+| 9 (iteration limit) | 4 — Iterate | — | Max 5 iterations |
+| 10 (search failure) | 2 — Research | — | Code-level hard stop, no prompt bypass |
+| 11 (advanced investor) | 1 — Clarify + 3 — Plan | Clarify extraction eval | Adapt depth to knowledge level |
 
 Stories without eval coverage will gain evals in their respective section's eval task (e.g., 4.6 for research, 6.x for iterate).
 
@@ -409,13 +410,12 @@ Stories without eval coverage will gain evals in their respective section's eval
 
 1. **Happy path** (Story 1): Full flow — clarify, research, plan with detailed explanations. Israeli investor context.
 2. **Simple adjustment** (Story 2): `adjust` — modify plan with existing research, no re-search.
-3. **Iteration with re-research** (Story 3): `research_and_adjust` — new sector requires new searches.
+3. **Iteration with re-research** (Story 3): `research_and_adjust` — new sector or risk change requires new searches.
 4. **Boundaries** (Story 4): Educate on unrealistic expectations, redirect.
-5. **Scope limits** (Story 5): Decline stock picks, offer ETF alternative.
+5. **Scope limits** (Story 5): Redirect stock picks toward ETF-based investing.
 6. **Weak data** (Story 6): Transparent about mixed research, recommend balanced approach.
 7. **Vague users** (Story 7): Simplify questions iteratively, match plan to portfolio size.
 8. **Contradictions** (Story 8): Use contradiction to teach risk/return, discover real tolerance.
-9. **Risk correction** (Story 9): Risk tolerance change triggers full re-research, not just adjust.
-10. **Iteration limit** (Story 10): Max 5 iterations, present current plan as final.
-11. **Search failure** (Story 11): Code-level hard stop, no plan without verified data.
-12. **Advanced investor** (Story 12): Adapt depth to user's knowledge level.
+9. **Iteration limit** (Story 9): Max 5 iterations, present current plan as final.
+10. **Search failure** (Story 10): Code-level hard stop, no plan without verified data.
+11. **Advanced investor** (Story 11): Adapt depth to user's knowledge level.

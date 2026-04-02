@@ -285,29 +285,58 @@ describe("clarifyStage evals", () => {
       expect(profile.brokerage).toBe("none");
     });
 
-    // Story 7 — ultra-vague input ("invest") with gradual responses.
-    // Tests that the stage handles minimal input across multiple rounds.
-    it("story 7: gathers complete profile from ultra-vague input", async () => {
+    // Story 5 — out-of-scope request ("Should I buy NVIDIA stock?").
+    // Tests that the stage redirects toward ETF-based passive investing
+    // and still gathers a valid profile afterward.
+    it("story 5: redirects out-of-scope stock picking toward ETF-based investing", async () => {
       const responder = createScriptedResponder([
-        "I guess I have about ₪10,000, I'm 30, I'm in Israel, I'm a complete beginner",
-        "yeah I have savings for emergencies, no debt, maybe ₪300/mo, I'd say moderate risk, maybe 10 years or so, no brokerage",
+        "ok fine, I'm open to ETFs. I have ₪30,000 to invest",
+        "I'm 29, moderate risk, about 10 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
       ]);
 
       const profile = await runClarifyStage(
-        "invest",
+        "Should I buy NVIDIA stock?",
         responder.sendToUser,
         responder.waitForResponse,
       );
 
       assertValidProfile(profile);
-      expect(profile.amount).toBe(10_000);
-      expect(profile.age).toBe(30);
+      expect(profile.amount).toBe(30_000);
+      expect(profile.age).toBe(29);
       expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-      expect(profile.monthlyContribution).toBe(300);
+      expect(profile.monthlyContribution).toBe(1_000);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.brokerage).toBe("none");
+      expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.goal.toLowerCase()).toMatch(/etf|passive|invest/);
+    });
+
+    // Story 7 variant — stop probing after 2 asks.
+    // Tests that the stage stops asking about the same field (timeline) after
+    // the user gives a vague answer first, then a soft number on the second ask.
+    // The agent should accept the soft number and move on — not ask a third time.
+    it("story 7 variant: stops probing timeline after 2 asks", async () => {
+      const responder = createScriptedResponder([
+        "I have ₪20,000, I'm 32, I'm in Israel, long-term",
+        "I guess maybe 10-15 years. moderate risk, beginner, yes emergency fund, no debt, ₪800/mo, no brokerage",
+      ]);
+
+      const profile = await runClarifyStage(
+        "I want to invest",
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(20_000);
+      expect(profile.age).toBe(32);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.monthlyContribution).toBe(800);
       expect(profile.hasEmergencyFund).toBe(true);
       expect(profile.hasDebt).toBe(false);
       expect(profile.location.toLowerCase()).toContain("israel");
-      expect(profile.brokerage).toBe("none");
+      expect(profile.timeline.toLowerCase()).toMatch(/10|15/);
     });
 
     // Story 8 — contradictory input ("maximum returns but can't lose money").
