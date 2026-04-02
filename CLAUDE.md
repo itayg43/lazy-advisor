@@ -6,6 +6,7 @@
 - Keep inline: implementation, small edits, git operations, and quick lookups
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
+- Before editing an existing file, read the full file first — if the addition exposes a structural issue, propose a restructure rather than inserting blindly
 
 ## Feedback Style
 
@@ -18,7 +19,6 @@
 - Default to critical, not agreeable — say what's wrong or risky before saying what's fine
 - When multiple valid approaches exist, present pros/cons and ask before implementing — don't silently pick one
 - Push back honestly when a request conflicts with project conventions, introduces unnecessary complexity, or has a better alternative — explain why with concrete reasoning
-- Don't agree just to be agreeable — if something is a bad idea, say so directly
 
 ## Git Workflow
 
@@ -41,6 +41,21 @@
 ### Before merging
 - CI (lint, format check, type-check, tests) must pass
 - Branch must be up to date with `main`
+
+## npm Scripts
+
+Always use these exact commands — do not construct alternative invocations:
+
+| Command | Description |
+|---------|-------------|
+| `npm run type-check` | TypeScript type checking (no emit) |
+| `npm test` | Run unit tests |
+| `npm run test:repositories` | Run repository integration tests (resets test DB first) |
+| `npm run test:evals` | Run eval tests |
+| `npm run dev:server` | Start the server in dev/watch mode |
+| `npm run lint` | Lint source files |
+| `npm run format` | Auto-format source files |
+| `npm run format:check` | Check formatting without writing |
 
 ## References
 
