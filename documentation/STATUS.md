@@ -56,6 +56,9 @@
 ### Code Review Fixes (Sections 1-3)
 - [x] Hardened error handling, schemas, imports, tests, and ESLint config
 
+### Section 4: Stage 2 — Research
+- [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update (2 new evals: extraction + full-loop)
+
 ## Up Next
 
-Section 4: Stage 2 — Research. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.
+Section 4 continued (4.2–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.

@@ -46,6 +46,7 @@ describe("clarifyStage", () => {
     location: "Israel",
     knowledgeLevel: KnowledgeLevel.enum.beginner,
     brokerage: "none",
+    investmentPreferences: "none",
     hasEmergencyFund: true,
     hasDebt: false,
     monthlyContribution: 1_800,

@@ -48,6 +48,7 @@ Every required field must have a specific, actionable value:
 - Emergency fund: yes or no.
 - Outstanding debt: yes or no.
 - Monthly contribution: a specific number. Not \`whatever I can\` or \`not much\`.
+- Investment preferences: specific sectors, markets, or instruments (e.g., \`S&P 500\`, \`tech sector\`, \`Israeli market\`, \`TLV-125\`). If the user has no specific preference, set to \`none\`. Not vague like \`something safe\` or \`good returns\` — either name specific sectors/markets/instruments or \`none\`.
 
 ## Optional Fields
 - Brokerage preference: default to \`none\` if not mentioned.
@@ -77,10 +78,11 @@ Field evaluation:
 - emergency fund: yes ✓
 - debt: no ✓
 - monthly contribution: ₪1,200 ✓
-One field failed → call \`ask_user\`: "When you say long-term, roughly how many years are you thinking — 10, 20, or until retirement at a certain age?"
+- investment preferences: not mentioned ✗ — need to ask
+Two fields failed → call \`ask_user\`: "When you say long-term, roughly how many years are you thinking — 10, 20, or until retirement at a certain age? Also, do you have any preference for specific sectors, markets, or instruments (e.g., S&P 500, Israeli market, tech sector), or should I just go with a general diversified approach?"
 
 ## Example 2 — all fields specific (range timeline is acceptable), done
-ask_user returned: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund."
+ask_user returned: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund, I'm interested in S&P 500 and Israeli market."
 Field evaluation:
 - amount: ₪18,000 ✓
 - age: 24 ✓
@@ -91,6 +93,7 @@ Field evaluation:
 - emergency fund: yes ✓
 - debt: no ✓
 - monthly contribution: ₪700 ✓
+- investment preferences: "S&P 500 and Israeli market" ✓
 All fields passed → respond: "Got it, I have everything I need to build your plan."`;
 
 const EXTRACTION_SYSTEM_PROMPT = `# Role and Objective
@@ -100,7 +103,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - Extract each field strictly from what the user said in the conversation.
 - Stay close to the user's actual words. Do not paraphrase, summarize, or embellish.
 - Every required field must have a value extracted from the conversation. If a required field was not discussed, the clarification phase failed — extract the best available information anyway, but do not fabricate values.
-- The only field with a default is **brokerage** (\`"none"\` if not mentioned).
+- Fields with defaults: **brokerage** (\`"none"\` if not mentioned), **investmentPreferences** (\`"none"\` if not mentioned or user has no specific preference).
 
 # Field Rules
 - **goal**: build a concise summary of the user's investment goal using context from the entire conversation — not just their initial input. Include specifics the user mentioned (amounts, purpose, constraints). Do not reduce to generic phrases like "start investing."
@@ -111,6 +114,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **location**: extract the country or location as stated.
 - **knowledgeLevel**: map to ${knowledgeLevels}.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
+- **investmentPreferences**: extract any mentioned sectors, markets, indices, or specific instruments the user wants to invest in. Use the user's own words. Default to \`"none"\` if not mentioned or user has no specific preference.
 - **hasEmergencyFund**: \`true\` or \`false\` based on what the user said.
 - **hasDebt**: \`true\` or \`false\` based on what the user said.
 - **monthlyContribution**: extract the exact number.
@@ -128,6 +132,7 @@ Output:
 - location: "Israel"
 - knowledgeLevel: "beginner"
 - brokerage: "none"
+- investmentPreferences: "none"
 - hasEmergencyFund: true
 - hasDebt: false
 - monthlyContribution: 1800
@@ -143,6 +148,7 @@ Output:
 - location: "Israel"
 - knowledgeLevel: "intermediate"
 - brokerage: "Interactive Brokers"
+- investmentPreferences: "none"
 - hasEmergencyFund: false
 - hasDebt: true
 - monthlyContribution: 3500`;

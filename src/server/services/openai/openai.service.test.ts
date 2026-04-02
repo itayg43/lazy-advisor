@@ -119,6 +119,7 @@ describe("openaiService", () => {
       location: "United States",
       knowledgeLevel: KnowledgeLevel.enum.beginner,
       brokerage: "none",
+      investmentPreferences: "none",
       hasEmergencyFund: true,
       hasDebt: false,
       monthlyContribution: 500,

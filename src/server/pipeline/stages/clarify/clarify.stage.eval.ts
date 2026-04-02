@@ -85,6 +85,7 @@ describe("clarifyStage evals", () => {
       expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
       expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
       expect(profile.brokerage).toBe("none");
+      expect(profile.investmentPreferences).toBe("none");
     });
 
     // Story 2 — most info in the goal, 1-turn fill-the-gaps conversation.
@@ -129,6 +130,7 @@ describe("clarifyStage evals", () => {
       expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
       expect(profile.timeline.toLowerCase()).toMatch(/30|65|retire/);
       expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.investmentPreferences).toBe("none");
     });
 
     // Story 8 — contradictory input resolved through conversation.
@@ -189,6 +191,7 @@ describe("clarifyStage evals", () => {
       expect(profile.brokerage).toBe("none");
       expect(profile.timeline.toLowerCase()).toMatch(/5/);
       expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.investmentPreferences).toBe("none");
     });
 
     // Story 12 — advanced investor with existing brokerage.
@@ -237,6 +240,52 @@ describe("clarifyStage evals", () => {
       expect(profile.hasDebt).toBe(false);
       expect(profile.timeline.toLowerCase()).toMatch(/20/);
       expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.investmentPreferences).not.toBe("none");
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/irish etf|tax efficien/i);
+    });
+
+    // Story 13 — user mentions specific investment preferences.
+    // Tests that extraction captures sectors/instruments from conversation.
+    it("story 13: extracts investment preferences when user mentions specific instruments", async () => {
+      const transcript: ResponseInputItem[] = [
+        {
+          role: "user",
+          content:
+            "I have ₪100,000 and I want to invest mainly in S&P 500 and TLV-125 index funds",
+        },
+        {
+          type: "function_call",
+          name: "ask_user",
+          arguments: JSON.stringify({
+            question:
+              "Great choices — a few more details:\n1) How old are you?\n2) What country are you in?\n3) What's your investment timeline (number of years or milestone)?\n4) Risk tolerance — conservative, moderate, or aggressive?\n5) Emergency fund in place? (yes/no)\n6) Any outstanding debt? (yes/no)\n7) How much can you invest monthly?\n8) Knowledge level (beginner, intermediate, advanced)?",
+          }),
+          call_id: "call_1",
+          id: "fc_1",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output:
+            "I'm 31, Israel, about 15 years, moderate risk, yes emergency fund, no debt, ₪2,500/mo, intermediate. No brokerage yet.",
+        },
+      ];
+
+      const profile = await extractUserProfile({
+        input: transcript,
+      });
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(100_000);
+      expect(profile.age).toBe(31);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.intermediate);
+      expect(profile.monthlyContribution).toBe(2_500);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.location.toLowerCase()).toContain("israel");
+      expect(profile.investmentPreferences).not.toBe("none");
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|tlv/i);
     });
   });
 
@@ -362,6 +411,30 @@ describe("clarifyStage evals", () => {
       );
       expect(profile.hasEmergencyFund).toBe(true);
       expect(profile.hasDebt).toBe(false);
+    });
+
+    // Story 13 — user mentions specific investment preferences in goal.
+    // Tests that the stage captures investment preferences from natural conversation
+    // and extracts them into the profile.
+    it("story 13: captures investment preferences from goal", async () => {
+      const responder = createScriptedResponder([
+        "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",
+      ]);
+
+      const profile = await runClarifyStage(
+        "I have ₪100,000 and I want to invest in tech sector ETFs",
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      assertValidProfile(profile);
+      expect(profile.amount).toBe(100_000);
+      expect(profile.age).toBe(31);
+      expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+      expect(profile.monthlyContribution).toBe(2_500);
+      expect(profile.hasEmergencyFund).toBe(true);
+      expect(profile.hasDebt).toBe(false);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/tech/);
     });
   });
 });
