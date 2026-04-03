@@ -27,7 +27,7 @@ describe("planRepository", () => {
   });
 
   describe("createPlan", () => {
-    it("creates a plan with the given goal and default draft status", async () => {
+    it("should create a plan with the given goal and default draft status", async () => {
       const goal = "Build a diversified ETF portfolio for retirement";
 
       const plan = await createPlan(prismaClient, goal);
@@ -41,13 +41,13 @@ describe("planRepository", () => {
   });
 
   describe("getPlanWithSteps", () => {
-    it("returns null for a non-existent plan id", async () => {
+    it("should return null for a non-existent plan id", async () => {
       const result = await getPlanWithSteps(prismaClient, 999999);
 
       expect(result).toBeNull();
     });
 
-    it("returns a plan with an empty steps array when no steps exist", async () => {
+    it("should return a plan with an empty steps array when no steps exist", async () => {
       const plan = await createPlan(prismaClient, "Invest in global index funds");
 
       const result = await getPlanWithSteps(prismaClient, plan.id);
@@ -57,7 +57,7 @@ describe("planRepository", () => {
       expect(result?.steps).toEqual([]);
     });
 
-    it("returns steps ordered by sortOrder ascending", async () => {
+    it("should return steps ordered by sortOrder ascending", async () => {
       const plan = await createPlan(prismaClient, "Start a three-fund portfolio");
       await prismaClient.step.createMany({
         data: [
@@ -92,7 +92,7 @@ describe("planRepository", () => {
   });
 
   describe("updatePlan", () => {
-    it("updates the goal", async () => {
+    it("should update the goal", async () => {
       const plan = await createPlan(prismaClient, "Invest in tech ETFs");
 
       const updatedGoal = "Focus on low-cost broad market ETFs instead";
@@ -103,7 +103,7 @@ describe("planRepository", () => {
       expect(updated.goal).toBe(updatedGoal);
     });
 
-    it("updates the status", async () => {
+    it("should update the status", async () => {
       const plan = await createPlan(prismaClient, "Build a retirement portfolio");
 
       const updated = await updatePlan(prismaClient, plan.id, {

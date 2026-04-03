@@ -3,7 +3,7 @@
 ## Structure
 
 - Co-located test files (next to source files, not in a separate `tests/` directory)
-- Tests use `describe`/`it` blocks with clear descriptions
+- Tests use `describe`/`it` blocks with clear descriptions — `it` block descriptions must start with `should`
 - Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `planService`, `stepRepository`, `withRetry`); place `beforeEach` first, then `afterAll`
 - Each `it` block creates its own context/options variables — no inline objects
 

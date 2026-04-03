@@ -35,7 +35,7 @@ describe("stepService", () => {
   });
 
   describe("createStep", () => {
-    it("delegates to the repository with prismaClient and params", async () => {
+    it("should delegate to the repository with prismaClient and params", async () => {
       const params: CreateStepParams = {
         planId: mockStep.planId,
         title: mockStep.title,
@@ -52,7 +52,7 @@ describe("stepService", () => {
   });
 
   describe("updateStep", () => {
-    it("delegates to the repository with correct arguments", async () => {
+    it("should delegate to the repository with correct arguments", async () => {
       const updatedTitle = "Compare expense ratios across ETF providers";
       const params: UpdateStepParams = {
         title: updatedTitle,
@@ -71,7 +71,7 @@ describe("stepService", () => {
   });
 
   describe("removeStep", () => {
-    it("delegates to the repository with correct arguments", async () => {
+    it("should delegate to the repository with correct arguments", async () => {
       mockedRemoveStep.mockResolvedValue(mockStep);
 
       const result = await removeStep(mockStep.id);

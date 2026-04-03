@@ -5,7 +5,6 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, ServiceUnavailableError } from "#errors";
-
 import { MAX_STAGE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
@@ -112,7 +111,7 @@ describe("clarifyStage", () => {
     vi.clearAllMocks();
   });
 
-  it("returns extracted profile when model needs no clarification", async () => {
+  it("should return extracted profile when model needs no clarification", async () => {
     mockedCallOpenAI.mockResolvedValue(createTextResponse());
     mockedCallOpenAIParsed.mockResolvedValue({
       output: mockProfile,
@@ -125,7 +124,7 @@ describe("clarifyStage", () => {
     expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(1);
   });
 
-  it("asks user for clarification then returns extracted profile", async () => {
+  it("should ask user for clarification then return extracted profile", async () => {
     const mockUserResponse = "I'm 28, moderate risk, based in Israel";
     mockWaitForResponse.mockResolvedValue(mockUserResponse);
 
@@ -145,7 +144,7 @@ describe("clarifyStage", () => {
     expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(1);
   });
 
-  it("throws InternalError for unexpected tool name", async () => {
+  it("should throw InternalError for unexpected tool name", async () => {
     mockedCallOpenAI.mockResolvedValue(createUnexpectedToolResponse());
 
     await expect(
@@ -153,7 +152,7 @@ describe("clarifyStage", () => {
     ).rejects.toThrow(InternalError);
   });
 
-  it("throws InternalError when tool call cap is reached", async () => {
+  it("should throw InternalError when tool call cap is reached", async () => {
     mockWaitForResponse.mockResolvedValue("I'm not sure, maybe moderate risk");
 
     let callCount = 0;
@@ -170,7 +169,7 @@ describe("clarifyStage", () => {
     expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_STAGE_TOOL_CALLS);
   });
 
-  it("propagates callOpenAI error from clarification phase", async () => {
+  it("should propagate callOpenAI error from clarification phase", async () => {
     mockedCallOpenAI.mockRejectedValue(
       new ServiceUnavailableError("OpenAI API is unavailable"),
     );
@@ -183,7 +182,7 @@ describe("clarifyStage", () => {
     expect(mockedCallOpenAIParsed).not.toHaveBeenCalled();
   });
 
-  it("propagates callOpenAIParsed error from extraction phase", async () => {
+  it("should propagate callOpenAIParsed error from extraction phase", async () => {
     mockedCallOpenAI.mockResolvedValue(createTextResponse());
     mockedCallOpenAIParsed.mockRejectedValue(new InternalError("Parsed output is null"));
 

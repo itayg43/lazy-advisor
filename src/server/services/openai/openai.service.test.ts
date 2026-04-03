@@ -69,7 +69,7 @@ describe("openaiService", () => {
         ...overrides,
       }) as Response;
 
-    it("passes params to responses.create and returns id, output, and usage", async () => {
+    it("should pass params to responses.create and return id, output, and usage", async () => {
       const mockResponse = createMockResponse();
       mockedCreate.mockResolvedValue(mockResponse);
 
@@ -83,14 +83,14 @@ describe("openaiService", () => {
       });
     });
 
-    it("throws ServiceUnavailableError when response status is not completed", async () => {
+    it("should throw ServiceUnavailableError when response status is not completed", async () => {
       const mockResponse = createMockResponse({ status: "failed" });
       mockedCreate.mockResolvedValue(mockResponse);
 
       await expect(callOpenAI(mockParams)).rejects.toThrow(ServiceUnavailableError);
     });
 
-    it("throws ServiceUnavailableError when OpenAI returns an API error", async () => {
+    it("should throw ServiceUnavailableError when OpenAI returns an API error", async () => {
       const apiError = new APIError(
         StatusCodes.SERVICE_UNAVAILABLE,
         undefined,
@@ -102,7 +102,7 @@ describe("openaiService", () => {
       await expect(callOpenAI(mockParams)).rejects.toThrow(ServiceUnavailableError);
     });
 
-    it("rethrows non-API errors unchanged", async () => {
+    it("should rethrow non-API errors unchanged", async () => {
       const genericError = new Error("Network timeout");
       mockedCreate.mockRejectedValue(genericError);
 
@@ -138,7 +138,7 @@ describe("openaiService", () => {
         ...overrides,
       }) as ParsedResponse<UserProfile>;
 
-    it("passes params to responses.parse and returns id, parsed output, and usage", async () => {
+    it("should pass params to responses.parse and return id, parsed output, and usage", async () => {
       const mockResponse = createMockParsedResponse();
       mockedParse.mockResolvedValue(mockResponse);
 
@@ -152,7 +152,7 @@ describe("openaiService", () => {
       });
     });
 
-    it("throws ServiceUnavailableError when response status is not completed", async () => {
+    it("should throw ServiceUnavailableError when response status is not completed", async () => {
       const mockResponse = createMockParsedResponse({ status: "failed" });
       mockedParse.mockResolvedValue(mockResponse);
 
@@ -161,7 +161,7 @@ describe("openaiService", () => {
       );
     });
 
-    it("throws InternalError when output_parsed is null", async () => {
+    it("should throw InternalError when output_parsed is null", async () => {
       const mockResponse = createMockParsedResponse({ output_parsed: null });
       mockedParse.mockResolvedValue(mockResponse);
 
@@ -170,7 +170,7 @@ describe("openaiService", () => {
       );
     });
 
-    it("throws ServiceUnavailableError when OpenAI returns an API error", async () => {
+    it("should throw ServiceUnavailableError when OpenAI returns an API error", async () => {
       const apiError = new APIError(
         StatusCodes.TOO_MANY_REQUESTS,
         undefined,
@@ -184,7 +184,7 @@ describe("openaiService", () => {
       );
     });
 
-    it("rethrows non-API errors unchanged", async () => {
+    it("should rethrow non-API errors unchanged", async () => {
       const genericError = new Error("Network timeout");
       mockedParse.mockRejectedValue(genericError);
 
