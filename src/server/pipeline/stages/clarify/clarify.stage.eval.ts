@@ -22,11 +22,8 @@ describe("clarifyStage evals", () => {
   };
 
   // --- Layer 1: Extraction-only evals ---
-  // Tests extraction prompt quality in isolation by feeding handwritten conversation
-  // transcripts directly to extractUserProfile. The conversation content is deterministic;
-  // only model extraction variance affects the output.
-  // Transcripts mirror the actual OpenAI conversation structure: user message → function_call
-  // → function_call_output → (repeat) → assistant confirmation.
+  // Feeds handwritten transcripts directly to extractUserProfile to test extraction in isolation.
+  // Only extraction variance affects output — conversation content is fixed.
   describe("extraction", () => {
     // Story 1 — vague beginner, 2-turn conversation.
     // Tests baseline extraction: all fields present, risk mapped from behavioral description.
@@ -135,8 +132,7 @@ describe("clarifyStage evals", () => {
     });
 
     // Story 8 — contradictory input resolved through conversation.
-    // Tests that extraction picks up the resolved risk tolerance (moderate),
-    // not the contradictory initial signals.
+    // Tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
     it("story 8: extracts resolved risk tolerance from contradictory conversation", async () => {
       const transcript: ResponseInputItem[] = [
         {
@@ -294,9 +290,7 @@ describe("clarifyStage evals", () => {
 
   // --- Layer 2: Full-loop evals ---
   // Tests the full clarify stage end-to-end: conversation loop + extraction.
-  // Scripted responses are natural and focused (not info dumps), answering what the
-  // model is likely to ask. Assertions are looser since both conversation variance
-  // and extraction variance affect the output.
+  // Assertions are looser — both conversation and extraction variance affect output.
   describe("full-loop", () => {
     const createScriptedResponder = (responses: string[]): ScriptedResponder => {
       let responseIndex = 0;
@@ -365,9 +359,7 @@ describe("clarifyStage evals", () => {
     });
 
     // Story 7 variant — stop probing after 2 asks.
-    // Tests that the stage stops asking about the same field (timeline) after
-    // the user gives a vague answer first, then a soft number on the second ask.
-    // The agent should accept the soft number and move on — not ask a third time.
+    // Tests that a soft answer on the second ask (timeline) is accepted; no third probe.
     it("story 7 variant: stops probing timeline after 2 asks", async () => {
       const responder = createScriptedResponder([
         "I have ₪20,000, I'm 32, I'm in Israel, long-term",
@@ -417,8 +409,7 @@ describe("clarifyStage evals", () => {
     });
 
     // Story 13 — user mentions specific investment preferences in goal.
-    // Tests that the stage captures investment preferences from natural conversation
-    // and extracts them into the profile.
+    // Tests that preferences mentioned naturally are captured in the profile.
     it("story 13: captures investment preferences from goal", async () => {
       const responder = createScriptedResponder([
         "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",

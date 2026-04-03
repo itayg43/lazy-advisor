@@ -69,10 +69,8 @@ Output:
 - hasDebt: true
 - monthlyContribution: 3500`;
 
-// Production: pass `input: []` with `previousResponseId` — conversation context is carried
-// server-side by OpenAI's response chaining.
-// Extraction evals: pass the full conversation as `input` without `previousResponseId` —
-// allows testing extraction in isolation with deterministic, handwritten transcripts.
+// Production: `input: []` + `previousResponseId` — context carried via OpenAI response chaining.
+// Evals: full conversation as `input`, no `previousResponseId` — tests extraction in isolation.
 export type ExtractionParams = {
   input: ResponseInputItem[];
   previousResponseId?: string;

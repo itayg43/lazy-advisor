@@ -57,8 +57,8 @@ See [TESTING.md](TESTING.md)
 
 ## Comments
 
-- Only when the logic is non-obvious
-- Never comment things the file name, function name, or plan already explain
+- Comment only what's non-obvious — not what the name, structure, or surrounding code already makes clear
+- Every line must add distinct information; merge related thoughts rather than splitting across lines
 
 ## ESLint
 
