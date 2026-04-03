@@ -20,6 +20,16 @@
 - When multiple valid approaches exist, present pros/cons and ask before implementing — don't silently pick one
 - Push back honestly when a request conflicts with project conventions, introduces unnecessary complexity, or has a better alternative — explain why with concrete reasoning
 
+## Session Workflow
+
+Work one task at a time. Each task must be fully closed before moving to the next:
+- Implementation complete
+- Docs updated (`STATUS.md` + any relevant plan section)
+- All checks passing
+- Commit made and PR opened
+
+If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
+
 ## Git Workflow
 
 ### Before writing code
