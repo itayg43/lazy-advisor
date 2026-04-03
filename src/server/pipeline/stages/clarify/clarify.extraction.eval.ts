@@ -14,9 +14,8 @@ describe("clarifyExtraction", () => {
     expect(result.success).toBe(true);
   };
 
-  // Story 1 — vague beginner, 2-turn conversation.
-  // Tests baseline extraction: all fields present, risk mapped from behavioral description.
-  it("story 1: extracts profile from a 2-turn beginner conversation", async () => {
+  // Story 1: tests baseline extraction across all fields, with risk mapped from behavioral description.
+  it("should extract profile from a 2-turn beginner conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
@@ -73,10 +72,8 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toBe("none");
   });
 
-  // Story 2 — most info in the goal, 1-turn fill-the-gaps conversation.
-  // Tests extraction when fields are split between goal string and user response,
-  // and brokerage name extraction (IBI).
-  it("story 2: extracts profile with fields split between goal and response", async () => {
+  // Story 2: tests extraction when fields are split between goal and response, including brokerage name (IBI).
+  it("should extract profile with fields split between goal and response", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
@@ -116,9 +113,8 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toBe("none");
   });
 
-  // Story 8 — contradictory input resolved through conversation.
-  // Tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
-  it("story 8: extracts resolved risk tolerance from contradictory conversation", async () => {
+  // Story 8: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
+  it("should extract resolved risk tolerance from contradictory conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
@@ -174,10 +170,8 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toBe("none");
   });
 
-  // Story 12 — advanced investor with existing brokerage.
-  // Tests knowledge level mapping (intermediate/advanced from described experience),
-  // "moderate-to-aggressive" risk mapping, and brokerage name extraction.
-  it("story 12: extracts profile from advanced investor conversation", async () => {
+  // Story 12: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
+  it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
@@ -224,9 +218,8 @@ describe("clarifyExtraction", () => {
     );
   });
 
-  // Story 13 — user mentions specific investment preferences.
-  // Tests that extraction captures sectors/instruments from conversation.
-  it("story 13: extracts investment preferences when user mentions specific instruments", async () => {
+  // Story 13: tests that extraction captures specific sectors/instruments mentioned in conversation.
+  it("should extract investment preferences when user mentions specific instruments", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
