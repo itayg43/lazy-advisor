@@ -1,6 +1,6 @@
 ## Section 4: Stage 2 — Research
 
-> **Status: Pre-implementation.** This section describes planned architecture — no code has been implemented yet. Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
+> **Status: Task 4.1 complete. Tasks 4.2–4.7 pre-implementation.** Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
 
 **Goal**: Given UserProfile, determines target allocation via LLM, then uses OpenAI's built-in web search to find matching ETFs/קרנות כספיות, produces validated `ResearchStageResult` containing both `AllocationPlan` and `ResearchSummary`. Brokerage data is hardcoded (not searched).
 
@@ -31,9 +31,11 @@
 
 ---
 
-### Task 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update
+### Completed
 
-Add `investmentPreferences` field to `pipeline.schema.ts` (required, free text, defaults to `"none"`). Update clarify prompt to ask about sectors, markets, specific instruments. Must exist before research stage implementation.
+| Task | Summary |
+|------|---------|
+| 4.1 | `investmentPreferences` field added to `UserProfileSchema` (free text, defaults to `"none"`). Clarify prompt updated to ask about sectors, markets, and specific instruments. 2 new evals (extraction + full-loop) |
 
 ### Task 4.2 — Schemas, types, and web_search tool registration
 

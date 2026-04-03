@@ -411,18 +411,3 @@ Which stage owns each story's distinct behavior, and where it's validated:
 | 12 (investment preferences) | 1 — Clarify | Clarify extraction + full-loop evals | Capture stated instrument/sector preferences |
 
 Stories without eval coverage will gain evals in their respective section's eval task (e.g., 4.6 for research, 6.x for iterate).
-
-## What these stories show
-
-1. **Happy path** (Story 1): Full flow — clarify, research, plan with detailed explanations. Israeli investor context.
-2. **Simple adjustment** (Story 2): `adjust` — modify plan with existing research, no re-search.
-3. **Iteration with re-research** (Story 3): `research_and_adjust` — new sector or risk change requires new searches.
-4. **Boundaries** (Story 4): Educate on unrealistic expectations, redirect.
-5. **Scope limits** (Story 5): Redirect stock picks toward ETF-based investing.
-6. **Weak data** (Story 6): Transparent about mixed research, recommend balanced approach.
-7. **Vague users** (Story 7): Simplify questions iteratively, match plan to portfolio size.
-8. **Contradictions** (Story 8): Use contradiction to teach risk/return, discover real tolerance.
-9. **Iteration limit** (Story 9): Max 5 iterations, present current plan as final.
-10. **Search failure** (Story 10): Code-level hard stop, no plan without verified data.
-11. **Advanced investor** (Story 11): Adapt depth to user's knowledge level.
-12. **Investment preferences** (Story 12): Capture stated sector/instrument preferences, pass to research.

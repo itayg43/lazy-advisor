@@ -3,7 +3,7 @@
 ## Development Process
 
 - Before implementing a new module, align on: (1) input types — prefer SDK/library types over custom wrappers, (2) return type shape — what the caller actually needs, (3) error strategy — which error class for which failure mode
-- Check reference implementations (existing project patterns, other repos) before starting to code, not after the first draft
+- Check reference implementations (e.g., similar modules in this repo) before starting to code, not after the first draft
 
 ## Exports & Modules
 
