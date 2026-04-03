@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NotFoundError } from "#errors";
-
 import { prismaClient } from "#clients/prisma.client";
+import { NotFoundError } from "#errors";
 import * as planRepository from "#repositories/plan";
 import { createPlan, getPlanWithSteps, updatePlan } from "#services/plan/plan.service";
 import {

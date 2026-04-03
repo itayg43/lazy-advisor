@@ -4,7 +4,6 @@ import type {
 } from "openai/resources/responses/responses";
 
 import { InternalError } from "#errors";
-
 import { createLogger } from "#lib/logger";
 import {
   KNOWLEDGE_LEVELS,

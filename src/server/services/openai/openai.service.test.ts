@@ -10,7 +10,6 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, ServiceUnavailableError } from "#errors";
-
 import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
 import { callOpenAI, callOpenAIParsed } from "#services/openai/openai.service";
 import type { UserProfile } from "#types/pipeline.types";

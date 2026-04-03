@@ -1,6 +1,5 @@
-import { NotFoundError } from "#errors";
-
 import { prismaClient } from "#clients/prisma.client";
+import { NotFoundError } from "#errors";
 import * as planRepository from "#repositories/plan";
 import type { Plan, PlanWithSteps, UpdatePlanParams } from "#types/domain.types";
 

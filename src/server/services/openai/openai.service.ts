@@ -6,9 +6,8 @@ import type {
   ResponseUsage,
 } from "openai/resources/responses/responses";
 
-import { InternalError, ServiceUnavailableError } from "#errors";
-
 import { openaiClient } from "#clients/openai.client";
+import { InternalError, ServiceUnavailableError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { withRetry } from "#lib/with-retry";
 
