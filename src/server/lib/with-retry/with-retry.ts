@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { createLogger } from "#server/lib/logger";
+import { createLogger } from "#lib/logger";
 
 const logger = createLogger("withRetry");
 

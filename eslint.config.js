@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import importPlugin from "eslint-plugin-import-x";
+import unusedImports from "eslint-plugin-unused-imports";
 import unicorn from "eslint-plugin-unicorn";
 
 export default tseslint.config(
@@ -18,6 +19,7 @@ export default tseslint.config(
     files: ["src/**/*.ts"],
     plugins: {
       "import-x": importPlugin,
+      "unused-imports": unusedImports,
       unicorn,
     },
     rules: {
@@ -47,11 +49,13 @@ export default tseslint.config(
         "error",
         { case: "kebabCase" },
       ],
+      "unused-imports/no-unused-imports": "error",
       "import-x/order": [
         "error",
         {
           groups: ["builtin", "external", "internal"],
           "newlines-between": "always",
+          alphabetize: { order: "asc", caseInsensitive: true },
         },
       ],
       "import-x/newline-after-import": "error",

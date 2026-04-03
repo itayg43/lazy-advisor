@@ -4,19 +4,20 @@ import type {
 } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InternalError, ServiceUnavailableError } from "#server/errors";
-import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
-import type { OpenAIResponse } from "#server/services/openai";
-import type { UserProfile } from "#server/types/pipeline.types";
-import { MAX_STAGE_TOOL_CALLS } from "./clarify.constants";
-import { runClarifyStage } from "./clarify.stage";
+import { InternalError, ServiceUnavailableError } from "#errors";
+
+import { MAX_STAGE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
+import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
+import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
+import type { OpenAIResponse } from "#services/openai";
+import type { UserProfile } from "#types/pipeline.types";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
   mockedCallOpenAI: vi.fn(),
   mockedCallOpenAIParsed: vi.fn(),
 }));
 
-vi.mock("#server/services/openai", () => ({
+vi.mock("#services/openai", () => ({
   callOpenAI: mockedCallOpenAI,
   callOpenAIParsed: mockedCallOpenAIParsed,
 }));

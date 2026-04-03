@@ -2,8 +2,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { PlanStatus } from "#server/types/domain.types";
-import { createPlan, getPlanWithSteps, updatePlan } from "./plan.repository";
+import {
+  createPlan,
+  getPlanWithSteps,
+  updatePlan,
+} from "#repositories/plan/plan.repository";
+import { PlanStatus } from "#types/domain.types";
 
 describe("planRepository", () => {
   const adapter = new PrismaPg({

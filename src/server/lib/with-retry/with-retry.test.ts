@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { BadRequestError, ServiceUnavailableError, TooManyRequestsError } from "#errors";
+
 import {
-  BadRequestError,
-  ServiceUnavailableError,
-  TooManyRequestsError,
-} from "#server/errors";
-import { withRetry, type RetryContext, type RetryOptions } from "./with-retry";
+  withRetry,
+  type RetryContext,
+  type RetryOptions,
+} from "#lib/with-retry/with-retry";
 
 describe("withRetry", () => {
   const mockContext: RetryContext = {

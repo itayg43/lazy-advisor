@@ -1,23 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { prismaClient } from "#server/clients/prisma.client";
-import { NotFoundError } from "#server/errors";
-import * as planRepository from "#server/repositories/plan";
+import { NotFoundError } from "#errors";
+
+import { prismaClient } from "#clients/prisma.client";
+import * as planRepository from "#repositories/plan";
+import { createPlan, getPlanWithSteps, updatePlan } from "#services/plan/plan.service";
 import {
   PlanStatus,
   type Plan,
   type PlanWithSteps,
   type UpdatePlanParams,
-} from "#server/types/domain.types";
-import { createPlan, getPlanWithSteps, updatePlan } from "./plan.service";
+} from "#types/domain.types";
 
-vi.mock("#server/repositories/plan", () => ({
+vi.mock("#repositories/plan", () => ({
   createPlan: vi.fn(),
   getPlanWithSteps: vi.fn(),
   updatePlan: vi.fn(),
 }));
 
-vi.mock("#server/clients/prisma.client", () => ({
+vi.mock("#clients/prisma.client", () => ({
   prismaClient: {},
 }));
 

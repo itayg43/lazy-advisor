@@ -25,12 +25,12 @@ All `import` statements must come **before** the `vi.hoisted` + `vi.mock` block.
 import { describe, it, vi } from "vitest";
 
 const { mockedFn } = vi.hoisted(() => ({ mockedFn: vi.fn() }));
-vi.mock("#server/services/openai", () => ({ callOpenAI: mockedFn }));
+vi.mock("#services/openai", () => ({ callOpenAI: mockedFn }));
 
 // wrong — imports after vi.mock
 const { mockedFn } = vi.hoisted(() => ({ mockedFn: vi.fn() }));
-vi.mock("#server/services/openai", () => ({ callOpenAI: mockedFn }));
-import { something } from "#server/some-module"; // breaks
+vi.mock("#services/openai", () => ({ callOpenAI: mockedFn }));
+import { something } from "#some-module"; // breaks
 ```
 
 ## Test Data

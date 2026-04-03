@@ -1,7 +1,7 @@
 import type { FunctionTool } from "openai/resources/responses/responses";
 import { z } from "zod";
 
-import { InternalError } from "#server/errors";
+import { InternalError } from "#errors";
 
 export type SendToUser = (message: string) => void;
 export type WaitForResponse = () => Promise<string>;

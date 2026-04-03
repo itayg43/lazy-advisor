@@ -1,1 +1,5 @@
-export { createPlan, getPlanWithSteps, updatePlan } from "./plan.repository";
+export {
+  createPlan,
+  getPlanWithSteps,
+  updatePlan,
+} from "#repositories/plan/plan.repository";

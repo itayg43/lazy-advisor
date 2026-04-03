@@ -1,10 +1,6 @@
-import { prismaClient } from "#server/clients/prisma.client";
-import * as stepRepository from "#server/repositories/step";
-import type {
-  CreateStepParams,
-  Step,
-  UpdateStepParams,
-} from "#server/types/domain.types";
+import { prismaClient } from "#clients/prisma.client";
+import * as stepRepository from "#repositories/step";
+import type { CreateStepParams, Step, UpdateStepParams } from "#types/domain.types";
 
 export const createStep = async (params: CreateStepParams): Promise<Step> => {
   return stepRepository.createStep(prismaClient, params);
