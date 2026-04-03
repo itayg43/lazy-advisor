@@ -11,10 +11,10 @@
 
 - Mock external services (OpenAI), real DB for repository tests
 - Use proper types for all mock data and options objects (e.g., `const options: RetryOptions = { ... }`, not untyped object literals)
-- Define shared mocks as typed `const` inside the top-level `describe` block, prefixed with `mock`/`mocked` (e.g., `mockContext`, `mockedCreatePlan`). For plain function modules, use `vi.mocked()` wrappers. For object methods (e.g., `openaiClient.responses.create`), use `vi.hoisted` to declare `vi.fn()` references and inject them in the `vi.mock` factory
+- **Mock data placement**: shared across all `describe` blocks → top-level `describe`. Used in only one block → inside that block. Mock factories (e.g., `createMockResponse`) always go inside the block that uses them
+- Shared mocks are typed `const` prefixed with `mock`/`mocked` (e.g., `mockContext`, `mockedCreatePlan`). For plain function modules, use `vi.mocked()` wrappers. For object methods (e.g., `openaiClient.responses.create`), use `vi.hoisted` to declare `vi.fn()` references and inject them in the `vi.mock` factory
 - Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work — for consistency
-- Define mock factories (e.g., `createMockResponse`) inside the `describe` block that uses them, not at the top level — shared data used across all blocks (e.g., `mockUsage`, `mockParams`) stays in the top-level `describe`
-- `vi.hoisted`/`vi.mock` blocks **cannot be exported** from shared files — they must stay inline in each test file. Shared mock data (e.g., `mockTokenUsage`) should also be defined inline in each test file's top-level `describe` block
+- `vi.hoisted`/`vi.mock` blocks **cannot be exported** from shared files — they must stay inline in each test file
 
 ### Import ordering with `vi.hoisted`/`vi.mock`
 
@@ -61,4 +61,3 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
   - **Extraction-only**: tests extraction/parsing prompt quality in isolation by feeding deterministic input directly to the extraction function (e.g., `extractUserProfile` for clarify, `extractResearchSummary` for research). Only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
   - **Full-loop**: tests the full stage end-to-end (e.g., `runClarifyStage` with scripted responder, `runResearchStage` with real web search). Scripted responses (where applicable) are natural and focused, not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the input.
 - Each stage's eval file covers stories from [WORKFLOW_EXAMPLES.md](workflow/WORKFLOW_EXAMPLES.md) whose distinct behavior belongs to that stage.
-- LLM-simulated users are a Level 2+ concern.

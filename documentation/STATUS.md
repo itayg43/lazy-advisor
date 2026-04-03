@@ -17,14 +17,8 @@
 - [x] Branch protection ruleset
 - [x] `format:check` script
 
-## Notes
-
-- Server will be Dockerized in Section 7 (Task 7.1b)
-
-### Section 2: Database Layer (Prerequisite)
-- [x] 2.0a — Path aliases via Node.js subpath imports
-
 ### Section 2: Database Layer
+- [x] 2.0a — Path aliases via Node.js subpath imports
 - [x] 2.1 — Prisma schema
 - [x] 2.2 — Domain types
 - [x] 2.3 — Plan repository + Prisma client
@@ -39,8 +33,6 @@
 - [x] Separate Vitest config for repository tests
 - [x] `test:repositories` script
 - [x] Separate test database
-
-## Completed (continued)
 
 ### Section 3: Stage 1 — Clarify
 - [x] 3.1 — UserProfileSchema Zod schema

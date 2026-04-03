@@ -2,11 +2,22 @@
 
 ## Agent Usage
 
-- Use subagents for: code exploration, code review, and test analysis
-- Keep inline: implementation, small edits, git operations, and quick lookups
+- Use subagents for: broad code exploration (3+ files to understand), code review, and test analysis
+- Keep inline: looking up a specific file or function, implementation, small edits, git operations
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
 - Before editing an existing file, read the full file first — if the addition exposes a structural issue, propose a restructure rather than inserting blindly
+
+## References
+
+| Document | Read when |
+|----------|-----------|
+| [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
+| [Testing](documentation/TESTING.md) | Before writing or modifying tests |
+| [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
+| [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
+| [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition |
+| [Status](documentation/STATUS.md) | At the start of each session |
 
 ## Feedback Style
 
@@ -40,7 +51,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 ### Before committing
 - Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
 - Update `STATUS.md` if task completion status changed
-- Only update other docs (`CONVENTIONS.md`, `TESTING.md`, plan sections) if the change introduces a new convention, testing pattern, or design decision — don't repeat what's already in the code
+- Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
 
 ### Commits and PRs
 - No `Co-Authored-By` lines in commit messages
@@ -67,13 +78,3 @@ Always use these exact commands — do not construct alternative invocations:
 | `npm run format` | Auto-format source files |
 | `npm run format:check` | Check formatting without writing |
 
-## References
-
-| Document | Description |
-|----------|-------------|
-| [Conventions](documentation/CONVENTIONS.md) | Code style, naming, error handling, imports |
-| [Testing](documentation/TESTING.md) | Test structure, mocking, test data, repository tests |
-| [Plan](documentation/plan/PLAN.md) | Development plan and section breakdown |
-| [Status](documentation/STATUS.md) | Task completion tracker |
-| [Workflow](documentation/workflow/WORKFLOW.md) | Architecture, staged pipeline, session lifecycle |
-| [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | Realistic CLI scenarios and expected behavior |

@@ -124,6 +124,13 @@ The agent is NOT one long LLM conversation. It's a pipeline of discrete stages, 
 
 Each stage's contract (input/output, tools, behavior rules) is documented in its plan section file. See [plan sections](../plan/plan-sections/).
 
+### Feedback classification (Stage 4)
+
+Classify user feedback before routing:
+
+- **`adjust`** — existing research still applies. Change is purely structural (remove a fund, shift allocations, reorder phases). No new searches needed. Uses `remove_step` / `update_step` directly.
+- **`research_and_adjust`** — feedback invalidates the research premise. Triggers: new sector or fund class the agent hasn't researched, or a risk tolerance shift (which changes the entire portfolio structure, not just individual funds). Must re-enter Stage 2 before updating the plan.
+
 ### Stage boundary validation
 
 Each handoff between stages is validated with a Zod schema: user profile (Stage 1 → 2), research summary (Stage 2 → 3), plan structure (Stage 3 → 4). If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed handoff means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help. The user starts a new session.
@@ -146,7 +153,11 @@ Incremental persistence means the worst case is losing the current LLM invocatio
 4. **Testable** — each stage can be tested independently
 5. **Predictable** — the agent behaves consistently because no single prompt is trying to do everything
 
-## Output model: plans and steps
+---
+
+## Reference
+
+### Output model: plans and steps
 
 ```json
 {
@@ -172,7 +183,7 @@ Incremental persistence means the worst case is losing the current LLM invocatio
 }
 ```
 
-## Observability
+### Observability
 
 Structured logging from the start, Prometheus metrics added incrementally — same patterns as ai-task-assistant, adapted for an agentic workflow.
 
