@@ -384,6 +384,11 @@ Stories 4-11 demonstrate boundary behaviors. The full dialogue is less important
 **Behavior**: Agent detects experience level, skips ETF-101 explanations. Engages directly on specific fund comparisons, introduces advanced concepts (factor tilts with ZPRV, US estate tax implications for Irish-domiciled ETFs). Still provides reasoning, but at the user's level.
 **Rule**: Advanced user → match explanation depth to knowledge level → introduce advanced concepts (factor tilts, estate tax) that wouldn't help a beginner.
 
+### Story 12: User states investment preferences
+**Input**: "I have ₪100,000 and I want to invest mainly in S&P 500 and TLV-125 index funds" (or "I want to invest in tech sector ETFs").
+**Behavior**: Agent captures stated preferences as `investmentPreferences` during clarify and factors them into the research phase — it does not override or redirect unless the preference conflicts with the user's risk profile. If a preference is vague ("I like tech"), the agent accepts it and uses it to bias the research. If it's specific ("S&P 500 and TLV-125"), it is preserved verbatim.
+**Rule**: Stated sector/instrument preferences → capture in `investmentPreferences` → pass to research phase as a constraint.
+
 ---
 
 ## Story-to-stage mapping
@@ -403,6 +408,7 @@ Which stage owns each story's distinct behavior, and where it's validated:
 | 9 (iteration limit) | 4 — Iterate | — | Max 5 iterations |
 | 10 (search failure) | 2 — Research | — | Code-level hard stop, no prompt bypass |
 | 11 (advanced investor) | 1 — Clarify + 3 — Plan | Clarify extraction eval | Adapt depth to knowledge level |
+| 12 (investment preferences) | 1 — Clarify | Clarify extraction + full-loop evals | Capture stated instrument/sector preferences |
 
 Stories without eval coverage will gain evals in their respective section's eval task (e.g., 4.6 for research, 6.x for iterate).
 
@@ -419,3 +425,4 @@ Stories without eval coverage will gain evals in their respective section's eval
 9. **Iteration limit** (Story 9): Max 5 iterations, present current plan as final.
 10. **Search failure** (Story 10): Code-level hard stop, no plan without verified data.
 11. **Advanced investor** (Story 11): Adapt depth to user's knowledge level.
+12. **Investment preferences** (Story 12): Capture stated sector/instrument preferences, pass to research.

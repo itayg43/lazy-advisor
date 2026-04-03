@@ -124,7 +124,7 @@ describe("clarifyStage", () => {
     expect(profile.hasDebt).toBe(false);
   });
 
-  // Story 13: tests that investment preferences mentioned naturally in the goal are captured.
+  // Story 12: tests that investment preferences mentioned naturally in the goal are captured.
   it("should capture investment preferences from goal", async () => {
     const responder = createScriptedResponder([
       "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",

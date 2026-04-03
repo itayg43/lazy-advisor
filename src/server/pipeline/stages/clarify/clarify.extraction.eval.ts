@@ -170,7 +170,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toBe("none");
   });
 
-  // Story 12: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
+  // Story 11: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -218,7 +218,7 @@ describe("clarifyExtraction", () => {
     );
   });
 
-  // Story 13: tests that extraction captures specific sectors/instruments mentioned in conversation.
+  // Story 12: tests that extraction captures specific sectors/instruments mentioned in conversation.
   it("should extract investment preferences when user mentions specific instruments", async () => {
     const transcript: ResponseInputItem[] = [
       {
