@@ -51,7 +51,7 @@
 - [x] 3.5 — Tool registry
 - [x] 3.6 — Clarify stage
 - [x] 3.7 — Clarify stage unit tests (6 passing)
-- [x] 3.7b — Clarify stage evals (7 passing: 4 extraction-only + 3 full-loop)
+- [x] 3.7b — Clarify stage evals (10 passing: 5 extraction-only + 5 full-loop)
 
 ### Code Review Fixes (Sections 1-3)
 - [x] Hardened error handling, schemas, imports, tests, and ESLint config

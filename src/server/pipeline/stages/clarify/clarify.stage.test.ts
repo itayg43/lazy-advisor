@@ -112,10 +112,9 @@ describe("clarifyStage", () => {
   });
 
   it("should return extracted profile when model needs no clarification", async () => {
+    const mockExtractedProfile = { output: mockProfile };
     mockedCallOpenAI.mockResolvedValue(createTextResponse());
-    mockedCallOpenAIParsed.mockResolvedValue({
-      output: mockProfile,
-    });
+    mockedCallOpenAIParsed.mockResolvedValue(mockExtractedProfile);
 
     const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
 
@@ -126,14 +125,13 @@ describe("clarifyStage", () => {
 
   it("should ask user for clarification then return extracted profile", async () => {
     const mockUserResponse = "I'm 28, moderate risk, based in Israel";
+    const mockExtractedProfile = { output: mockProfile };
     mockWaitForResponse.mockResolvedValue(mockUserResponse);
 
     mockedCallOpenAI
       .mockResolvedValueOnce(createAskUserResponse("clarify_1"))
       .mockResolvedValueOnce(createTextResponse());
-    mockedCallOpenAIParsed.mockResolvedValue({
-      output: mockProfile,
-    });
+    mockedCallOpenAIParsed.mockResolvedValue(mockExtractedProfile);
 
     const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
 
