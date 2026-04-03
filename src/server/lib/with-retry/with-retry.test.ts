@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { BadRequestError, ServiceUnavailableError, TooManyRequestsError } from "#errors";
-
 import {
   withRetry,
   type RetryContext,
@@ -13,7 +12,7 @@ describe("withRetry", () => {
     operation: "test",
   };
 
-  it("returns the result on first success", async () => {
+  it("should return the result on first success", async () => {
     const fn = vi.fn().mockResolvedValue("ok");
 
     const result = await withRetry(fn, mockContext);
@@ -21,7 +20,7 @@ describe("withRetry", () => {
     expect(result).toBe("ok");
   });
 
-  it("retries on failure and returns on subsequent success", async () => {
+  it("should retry on failure and return on subsequent success", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new Error("fail"))
@@ -36,7 +35,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("throws after all attempts are exhausted", async () => {
+  it("should throw after all attempts are exhausted", async () => {
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
     const options: RetryOptions = {
       attempts: 3,
@@ -47,7 +46,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  it("respects custom attempt count", async () => {
+  it("should respect custom attempt count", async () => {
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
     const options: RetryOptions = {
       attempts: 2,
@@ -58,7 +57,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("throws immediately on non-retryable 4xx error", async () => {
+  it("should throw immediately on non-retryable 4xx error", async () => {
     const fn = vi.fn().mockRejectedValue(new BadRequestError("bad request"));
     const options: RetryOptions = {
       attempts: 3,
@@ -69,7 +68,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("retries on 429 rate limit error", async () => {
+  it("should retry on 429 rate limit error", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new TooManyRequestsError("rate limited"))
@@ -84,7 +83,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("retries on 5xx server error", async () => {
+  it("should retry on 5xx server error", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new ServiceUnavailableError("unavailable"))
@@ -99,7 +98,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("retries on error without status property", async () => {
+  it("should retry on error without status property", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new Error("network"))

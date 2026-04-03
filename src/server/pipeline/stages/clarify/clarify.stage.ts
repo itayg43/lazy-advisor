@@ -1,7 +1,9 @@
-import type { ResponseInputItem } from "openai/resources/responses/responses";
+import type {
+  ResponseFunctionToolCall,
+  ResponseInputItem,
+} from "openai/resources/responses/responses";
 
 import { InternalError } from "#errors";
-
 import { createLogger } from "#lib/logger";
 import {
   KNOWLEDGE_LEVELS,
@@ -92,6 +94,50 @@ Field evaluation:
 - investment preferences: "S&P 500 and Israeli market" ✓
 All fields passed → respond: "Got it, I have everything I need to build your plan."`;
 
+async function collectToolOutputs(
+  functionCalls: ResponseFunctionToolCall[],
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<ResponseInputItem.FunctionCallOutput[]> {
+  const toolOutputs: ResponseInputItem.FunctionCallOutput[] = [];
+
+  for (const functionCall of functionCalls) {
+    if (functionCall.name !== ASK_USER_TOOL.name) {
+      throw new InternalError(`Unexpected tool call: ${functionCall.name}`);
+    }
+
+    logger.info("Tool call received", {
+      tool: functionCall.name,
+      callId: functionCall.call_id,
+    });
+    logger.debug("Tool call arguments", {
+      arguments: functionCall.arguments,
+    });
+
+    const result = await handleAskUser(
+      functionCall.arguments,
+      sendToUser,
+      waitForResponse,
+    );
+
+    logger.info("Tool call completed", {
+      tool: functionCall.name,
+      callId: functionCall.call_id,
+    });
+    logger.debug("User response", {
+      userResponse: result,
+    });
+
+    toolOutputs.push({
+      type: "function_call_output",
+      call_id: functionCall.call_id,
+      output: result,
+    });
+  }
+
+  return toolOutputs;
+}
+
 export const runClarifyStage = async (
   goal: string,
   sendToUser: SendToUser,
@@ -125,56 +171,24 @@ export const runClarifyStage = async (
 
   // Loop exits on break (model stops calling tools) or throw (tool call cap exceeded)
   while (true) {
-    const functionCalls = response.output.filter((item) => item.type === "function_call");
+    const functionCalls = response.output.filter(
+      (item): item is ResponseFunctionToolCall => item.type === "function_call",
+    );
 
     if (functionCalls.length === 0) break;
 
-    const toolOutputs: ResponseInputItem.FunctionCallOutput[] = [];
-
-    for (const functionCall of functionCalls) {
-      if (functionCall.name !== ASK_USER_TOOL.name) {
-        throw new InternalError(`Unexpected tool call: ${functionCall.name}`);
-      }
-
-      toolCallCount++;
-
-      if (toolCallCount > MAX_STAGE_TOOL_CALLS) {
-        throw new InternalError(
-          `Clarify stage failed to converge within ${MAX_STAGE_TOOL_CALLS} tool calls`,
-        );
-      }
-
-      logger.info("Tool call received", {
-        toolCallCount,
-        tool: functionCall.name,
-        callId: functionCall.call_id,
-      });
-      logger.debug("Tool call arguments", {
-        arguments: functionCall.arguments,
-      });
-
-      const result = await handleAskUser(
-        functionCall.arguments,
-        sendToUser,
-        waitForResponse,
+    toolCallCount += functionCalls.length;
+    if (toolCallCount > MAX_STAGE_TOOL_CALLS) {
+      throw new InternalError(
+        `Clarify stage failed to converge within ${MAX_STAGE_TOOL_CALLS} tool calls`,
       );
-
-      logger.info("Tool call completed", {
-        toolCallCount,
-        tool: functionCall.name,
-        callId: functionCall.call_id,
-      });
-      logger.debug("User response", {
-        userResponse: result,
-      });
-
-      const toolOutput: ResponseInputItem.FunctionCallOutput = {
-        type: "function_call_output",
-        call_id: functionCall.call_id,
-        output: result,
-      };
-      toolOutputs.push(toolOutput);
     }
+
+    const toolOutputs = await collectToolOutputs(
+      functionCalls,
+      sendToUser,
+      waitForResponse,
+    );
 
     response = await callOpenAI({
       model: "gpt-5.4-nano",
@@ -200,10 +214,7 @@ export const runClarifyStage = async (
     lastResponseId: response.id,
   });
 
-  const profile = await extractUserProfile({
-    input: [],
-    previousResponseId: response.id,
-  });
+  const profile = await extractUserProfile(response.id);
 
   logger.info("Clarify stage complete", {
     totalToolCalls: toolCallCount,

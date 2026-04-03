@@ -25,7 +25,7 @@ describe("stepRepository", () => {
   });
 
   describe("createStep", () => {
-    it("creates a step linked to a plan", async () => {
+    it("should create a step linked to a plan", async () => {
       const plan = await prismaClient.plan.create({
         data: {
           goal: mockPlanGoal,
@@ -49,7 +49,7 @@ describe("stepRepository", () => {
   });
 
   describe("updateStep", () => {
-    it("updates the title and description", async () => {
+    it("should update the title and description", async () => {
       const plan = await prismaClient.plan.create({
         data: {
           goal: mockPlanGoal,
@@ -73,7 +73,7 @@ describe("stepRepository", () => {
       expect(updated.description).toBe(updatedDescription);
     });
 
-    it("updates the sortOrder", async () => {
+    it("should update the sortOrder", async () => {
       const plan = await prismaClient.plan.create({
         data: {
           goal: mockPlanGoal,
@@ -95,7 +95,7 @@ describe("stepRepository", () => {
   });
 
   describe("removeStep", () => {
-    it("deletes the step", async () => {
+    it("should delete the step", async () => {
       const plan = await prismaClient.plan.create({
         data: {
           goal: mockPlanGoal,
@@ -120,7 +120,7 @@ describe("stepRepository", () => {
   });
 
   describe("cascade delete", () => {
-    it("deletes steps when the parent plan is deleted", async () => {
+    it("should delete steps when the parent plan is deleted", async () => {
       const plan = await prismaClient.plan.create({
         data: {
           goal: "Abandoned sector-rotation strategy",

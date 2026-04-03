@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NotFoundError } from "#errors";
-
 import { prismaClient } from "#clients/prisma.client";
+import { NotFoundError } from "#errors";
 import * as planRepository from "#repositories/plan";
 import { createPlan, getPlanWithSteps, updatePlan } from "#services/plan/plan.service";
 import {
@@ -40,7 +39,7 @@ describe("planService", () => {
   });
 
   describe("createPlan", () => {
-    it("delegates to the repository with prismaClient and goal", async () => {
+    it("should delegate to the repository with prismaClient and goal", async () => {
       mockedCreatePlan.mockResolvedValue(mockPlan);
 
       const result = await createPlan(mockPlan.goal);
@@ -51,7 +50,7 @@ describe("planService", () => {
   });
 
   describe("getPlanWithSteps", () => {
-    it("returns the plan when found", async () => {
+    it("should return the plan when found", async () => {
       const mockPlanWithSteps: PlanWithSteps = {
         ...mockPlan,
         steps: [],
@@ -64,7 +63,7 @@ describe("planService", () => {
       expect(result).toBe(mockPlanWithSteps);
     });
 
-    it("throws NotFoundError when the plan does not exist", async () => {
+    it("should throw NotFoundError when the plan does not exist", async () => {
       mockedGetPlanWithSteps.mockResolvedValue(null);
 
       await expect(getPlanWithSteps(999)).rejects.toThrow(NotFoundError);
@@ -72,7 +71,7 @@ describe("planService", () => {
   });
 
   describe("updatePlan", () => {
-    it("delegates to the repository with correct arguments", async () => {
+    it("should delegate to the repository with correct arguments", async () => {
       const updatedGoal = "Start with low-cost index funds for long-term growth";
       const params: UpdatePlanParams = {
         goal: updatedGoal,

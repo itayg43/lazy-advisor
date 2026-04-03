@@ -54,6 +54,10 @@ export default tseslint.config(
         "error",
         {
           groups: ["builtin", "external", "internal"],
+          pathGroups: [
+            { pattern: "#*", group: "internal" },
+            { pattern: "#*/**", group: "internal" },
+          ],
           "newlines-between": "always",
           alphabetize: { order: "asc", caseInsensitive: true },
         },

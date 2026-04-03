@@ -69,24 +69,24 @@ Output:
 - hasDebt: true
 - monthlyContribution: 3500`;
 
-// Production: `input: []` + `previousResponseId` — context carried via OpenAI response chaining.
-// Evals: full conversation as `input`, no `previousResponseId` — tests extraction in isolation.
-export type ExtractionParams = {
-  input: ResponseInputItem[];
-  previousResponseId?: string;
-};
+export const extractUserProfile = async (
+  // string = previousResponseId (production); array = full transcript (evals)
+  source: string | ResponseInputItem[],
+): Promise<UserProfile> => {
+  const inputParams =
+    typeof source === "string"
+      ? {
+          input: [] as ResponseInputItem[],
+          previous_response_id: source,
+        }
+      : {
+          input: source,
+        };
 
-export const extractUserProfile = async ({
-  input,
-  previousResponseId,
-}: ExtractionParams): Promise<UserProfile> => {
   const { id, usage, output } = await callOpenAIParsed<UserProfile>({
     model: "gpt-5.4-nano",
     instructions: EXTRACTION_SYSTEM_PROMPT,
-    input,
-    ...(previousResponseId && {
-      previous_response_id: previousResponseId,
-    }),
+    ...inputParams,
     text: {
       format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
     },
