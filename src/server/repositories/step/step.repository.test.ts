@@ -2,12 +2,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { config } from "#config";
 import { createStep, removeStep, updateStep } from "#repositories/step/step.repository";
 import type { CreateStepParams } from "#types/domain.types";
 
 describe("stepRepository", () => {
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: config.DATABASE_URL,
   });
   const prismaClient = new PrismaClient({
     adapter,
