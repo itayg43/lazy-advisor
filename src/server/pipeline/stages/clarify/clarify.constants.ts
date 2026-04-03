@@ -1,4 +1,4 @@
-import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
+import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
 
 export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
 export const KNOWLEDGE_LEVELS = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");

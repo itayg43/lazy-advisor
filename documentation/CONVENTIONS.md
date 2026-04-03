@@ -67,14 +67,28 @@ The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict 
 ## Imports
 
 - Order: Node built-ins, then external packages, then internal (blank line between groups)
-- Use `#server/*` for imports from `src/server/` (Node.js subpath imports via `package.json` `imports` field)
-- Prefer subpath imports over relative paths for cross-folder imports
 - No `.js` or `.ts` extensions in imports — `moduleResolution: "bundler"` resolves `.ts` files directly
+- All internal imports use path aliases — no relative paths (`./`, `../`) anywhere
+- Each subdirectory of `src/server/` has its own alias defined in `package.json` `imports` and `tsconfig.json` `paths`:
+  - `#config` → `src/server/config.ts`
+  - `#errors` → `src/server/errors/`
+  - `#clients/*` → `src/server/clients/*`
+  - `#lib/*` → `src/server/lib/*`
+  - `#pipeline/*` → `src/server/pipeline/*`
+  - `#repositories/*` → `src/server/repositories/*`
+  - `#schemas/*` → `src/server/schemas/*`
+  - `#services/*` → `src/server/services/*`
+  - `#types/*` → `src/server/types/*`
 
 ```ts
 // correct
-import { planService } from "#server/services/plan/plan.service";
+import { planService } from "#services/plan/plan.service";
+import { InternalError } from "#errors";
 
-// wrong — no file extensions in imports
-import { planService } from "#server/services/plan/plan.service.ts";
+// wrong — no relative paths
+import { planService } from "./plan.service";
+import { InternalError } from "../../errors";
+
+// wrong — no file extensions
+import { planService } from "#services/plan/plan.service.ts";
 ```

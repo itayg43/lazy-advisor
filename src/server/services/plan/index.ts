@@ -1,1 +1,1 @@
-export { createPlan, getPlanWithSteps, updatePlan } from "./plan.service";
+export { createPlan, getPlanWithSteps, updatePlan } from "#services/plan/plan.service";

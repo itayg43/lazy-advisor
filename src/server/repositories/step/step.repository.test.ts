@@ -2,8 +2,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { CreateStepParams } from "#server/types/domain.types";
-import { createStep, removeStep, updateStep } from "./step.repository";
+import { createStep, removeStep, updateStep } from "#repositories/step/step.repository";
+import type { CreateStepParams } from "#types/domain.types";
 
 describe("stepRepository", () => {
   const adapter = new PrismaPg({

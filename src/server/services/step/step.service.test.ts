@@ -1,21 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { prismaClient } from "#server/clients/prisma.client";
-import * as stepRepository from "#server/repositories/step";
-import type {
-  CreateStepParams,
-  Step,
-  UpdateStepParams,
-} from "#server/types/domain.types";
-import { createStep, removeStep, updateStep } from "./step.service";
+import { prismaClient } from "#clients/prisma.client";
+import * as stepRepository from "#repositories/step";
+import { createStep, removeStep, updateStep } from "#services/step/step.service";
+import type { CreateStepParams, Step, UpdateStepParams } from "#types/domain.types";
 
-vi.mock("#server/repositories/step", () => ({
+vi.mock("#repositories/step", () => ({
   createStep: vi.fn(),
   updateStep: vi.fn(),
   removeStep: vi.fn(),
 }));
 
-vi.mock("#server/clients/prisma.client", () => ({
+vi.mock("#clients/prisma.client", () => ({
   prismaClient: {},
 }));
 

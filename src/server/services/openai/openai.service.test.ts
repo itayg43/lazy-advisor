@@ -9,17 +9,18 @@ import type {
 } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InternalError, ServiceUnavailableError } from "#server/errors";
-import { KnowledgeLevel, RiskTolerance } from "#server/schemas/pipeline.schema";
-import type { UserProfile } from "#server/types/pipeline.types";
-import { callOpenAI, callOpenAIParsed } from "./openai.service";
+import { InternalError, ServiceUnavailableError } from "#errors";
+
+import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
+import { callOpenAI, callOpenAIParsed } from "#services/openai/openai.service";
+import type { UserProfile } from "#types/pipeline.types";
 
 const { mockedCreate, mockedParse } = vi.hoisted(() => ({
   mockedCreate: vi.fn(),
   mockedParse: vi.fn(),
 }));
 
-vi.mock("#server/clients/openai.client", () => ({
+vi.mock("#clients/openai.client", () => ({
   openaiClient: {
     responses: {
       create: mockedCreate,
@@ -28,7 +29,7 @@ vi.mock("#server/clients/openai.client", () => ({
   },
 }));
 
-vi.mock("#server/lib/with-retry", () => ({
+vi.mock("#lib/with-retry", () => ({
   withRetry: vi.fn((fn: () => unknown) => fn()),
 }));
 

@@ -1,11 +1,14 @@
 import { zodTextFormat } from "openai/helpers/zod";
 import type { ResponseInputItem } from "openai/resources/responses/responses";
 
-import { createLogger } from "#server/lib/logger";
-import { UserProfileSchema } from "#server/schemas/pipeline.schema";
-import { callOpenAIParsed } from "#server/services/openai";
-import type { UserProfile } from "#server/types/pipeline.types";
-import { KNOWLEDGE_LEVELS, RISK_LEVELS } from "./clarify.constants";
+import { createLogger } from "#lib/logger";
+import {
+  KNOWLEDGE_LEVELS,
+  RISK_LEVELS,
+} from "#pipeline/stages/clarify/clarify.constants";
+import { UserProfileSchema } from "#schemas/pipeline.schema";
+import { callOpenAIParsed } from "#services/openai";
+import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyExtraction");
 

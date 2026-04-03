@@ -1,18 +1,23 @@
 import type { ResponseInputItem } from "openai/resources/responses/responses";
 
-import { InternalError } from "#server/errors";
-import { createLogger } from "#server/lib/logger";
-import { getStageTools } from "#server/pipeline/tools";
+import { InternalError } from "#errors";
+
+import { createLogger } from "#lib/logger";
+import {
+  KNOWLEDGE_LEVELS,
+  MAX_STAGE_TOOL_CALLS,
+  RISK_LEVELS,
+} from "#pipeline/stages/clarify/clarify.constants";
+import { extractUserProfile } from "#pipeline/stages/clarify/clarify.extraction";
+import { getStageTools } from "#pipeline/tools";
 import {
   ASK_USER_TOOL,
   handleAskUser,
   type SendToUser,
   type WaitForResponse,
-} from "#server/pipeline/tools/ask-user.tool";
-import { callOpenAI } from "#server/services/openai";
-import type { UserProfile } from "#server/types/pipeline.types";
-import { KNOWLEDGE_LEVELS, MAX_STAGE_TOOL_CALLS, RISK_LEVELS } from "./clarify.constants";
-import { extractUserProfile } from "./clarify.extraction";
+} from "#pipeline/tools/ask-user.tool";
+import { callOpenAI } from "#services/openai";
+import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");
 

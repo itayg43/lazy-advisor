@@ -1,7 +1,8 @@
-import { prismaClient } from "#server/clients/prisma.client";
-import { NotFoundError } from "#server/errors";
-import * as planRepository from "#server/repositories/plan";
-import type { Plan, PlanWithSteps, UpdatePlanParams } from "#server/types/domain.types";
+import { NotFoundError } from "#errors";
+
+import { prismaClient } from "#clients/prisma.client";
+import * as planRepository from "#repositories/plan";
+import type { Plan, PlanWithSteps, UpdatePlanParams } from "#types/domain.types";
 
 export const createPlan = async (goal: string): Promise<Plan> => {
   return planRepository.createPlan(prismaClient, goal);

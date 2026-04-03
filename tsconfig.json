@@ -14,7 +14,15 @@
     "rootDir": "src",
     "sourceMap": true,
     "paths": {
-      "#server/*": ["./src/server/*"]
+      "#config": ["./src/server/config"],
+      "#errors": ["./src/server/errors"],
+      "#clients/*": ["./src/server/clients/*"],
+      "#lib/*": ["./src/server/lib/*"],
+      "#pipeline/*": ["./src/server/pipeline/*"],
+      "#repositories/*": ["./src/server/repositories/*"],
+      "#schemas/*": ["./src/server/schemas/*"],
+      "#services/*": ["./src/server/services/*"],
+      "#types/*": ["./src/server/types/*"]
     }
   },
   "include": ["src"],

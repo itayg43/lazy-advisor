@@ -1,14 +1,14 @@
 import type { ResponseInputItem } from "openai/resources/responses/responses";
 import { describe, expect, it } from "vitest";
 
+import { extractUserProfile } from "#pipeline/stages/clarify/clarify.extraction";
+import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
+import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import {
   KnowledgeLevel,
   RiskTolerance,
   UserProfileSchema,
-} from "#server/schemas/pipeline.schema";
-import type { SendToUser, WaitForResponse } from "../../tools/ask-user.tool";
-import { extractUserProfile } from "./clarify.extraction";
-import { runClarifyStage } from "./clarify.stage";
+} from "#schemas/pipeline.schema";
 
 type ScriptedResponder = {
   sendToUser: SendToUser;

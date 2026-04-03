@@ -1,1 +1,5 @@
-export { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "./openai.service";
+export {
+  callOpenAI,
+  callOpenAIParsed,
+  type OpenAIResponse,
+} from "#services/openai/openai.service";

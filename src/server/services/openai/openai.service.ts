@@ -6,10 +6,11 @@ import type {
   ResponseUsage,
 } from "openai/resources/responses/responses";
 
-import { openaiClient } from "#server/clients/openai.client";
-import { InternalError, ServiceUnavailableError } from "#server/errors";
-import { createLogger } from "#server/lib/logger";
-import { withRetry } from "#server/lib/with-retry";
+import { InternalError, ServiceUnavailableError } from "#errors";
+
+import { openaiClient } from "#clients/openai.client";
+import { createLogger } from "#lib/logger";
+import { withRetry } from "#lib/with-retry";
 
 const logger = createLogger("openaiService");
 
