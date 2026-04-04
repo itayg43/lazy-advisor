@@ -46,7 +46,8 @@ import { something } from "#some-module"; // breaks
 ## Repository Tests
 
 - Repository tests run via `npm run test:repositories` (separate Vitest config with `fileParallelism: false`); excluded from `npm test` / CI
-- Repository tests use a separate test database (`lazy_advisor_test`) loaded via `dotenv-cli -e .env.test`; the script resets the DB with `prisma db push --force-reset` before each run
+- Repository tests use a separate test database (`lazy_advisor_test`) loaded via `dotenvx run -f .env.test`; the script resets the DB with `prisma db push --force-reset` before each run
+- When running `test:repositories` via an AI agent (e.g. Claude Code), Prisma's AI safety guard will block the `db push --force-reset` step and require explicit user consent — respond with "yes" to proceed
 - Repository tests define `adapter` and `prismaClient` inside the top-level `describe` block — always name it `prismaClient`, not `prisma`
 
 ## Evals

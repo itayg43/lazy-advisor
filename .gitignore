@@ -1,5 +1,3 @@
 node_modules/
 dist/
-.env
-.env.test
-*.log
+.env.keys

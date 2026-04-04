@@ -58,6 +58,12 @@
 ### Section 4: Stage 2 — Research
 - [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update (2 new evals: extraction + full-loop)
 
+### Security Improvements
+- [x] Replaced `dotenv` + `dotenv-cli` with `dotenvx` — `.env` and `.env.test` encrypted in place, ciphertext committed, `.env.keys` gitignored
+- [x] Removed `import "dotenv/config"` from `config.ts` and `prisma.config.ts` — env injection handled by `dotenvx run` in npm scripts
+- [x] Added `secretlint` pre-commit hook via `husky` + `lint-staged` — blocks raw API key patterns from being committed
+- [x] Added prisma convenience scripts (`prisma:migrate`, `prisma:studio`, `prisma:push`) to ensure dotenvx wrapping on direct CLI calls
+
 ## Up Next
 
 Section 4 continued (4.2–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.

@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 import { cleanEnv, str, url } from "envalid";
 
 export const config = cleanEnv(process.env, {
