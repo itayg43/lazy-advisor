@@ -75,13 +75,8 @@ export const extractUserProfile = async (
 ): Promise<UserProfile> => {
   const inputParams =
     typeof source === "string"
-      ? {
-          input: [] as ResponseInputItem[],
-          previous_response_id: source,
-        }
-      : {
-          input: source,
-        };
+      ? { input: [] as ResponseInputItem[], previous_response_id: source }
+      : { input: source };
 
   const { id, usage, output } = await callOpenAIParsed<UserProfile>({
     model: "gpt-5.4-nano",
