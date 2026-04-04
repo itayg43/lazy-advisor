@@ -4,7 +4,7 @@ import type {
 } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InternalError, ServiceUnavailableError } from "#errors";
+import { InternalError } from "#errors";
 import { MAX_STAGE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
@@ -165,29 +165,5 @@ describe("clarifyStage", () => {
     ).rejects.toThrow(InternalError);
 
     expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_STAGE_TOOL_CALLS);
-  });
-
-  it("should propagate callOpenAI error from clarification phase", async () => {
-    mockedCallOpenAI.mockRejectedValue(
-      new ServiceUnavailableError("OpenAI API is unavailable"),
-    );
-
-    await expect(
-      runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
-    ).rejects.toThrow(ServiceUnavailableError);
-
-    expect(mockWaitForResponse).not.toHaveBeenCalled();
-    expect(mockedCallOpenAIParsed).not.toHaveBeenCalled();
-  });
-
-  it("should propagate callOpenAIParsed error from extraction phase", async () => {
-    mockedCallOpenAI.mockResolvedValue(createTextResponse());
-    mockedCallOpenAIParsed.mockRejectedValue(new InternalError("Parsed output is null"));
-
-    await expect(
-      runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse),
-    ).rejects.toThrow(InternalError);
-
-    expect(mockWaitForResponse).not.toHaveBeenCalled();
   });
 });

@@ -7,14 +7,21 @@
 - Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `planService`, `stepRepository`, `withRetry`); place `beforeEach` first, then `afterAll`
 - Each `it` block creates its own context/options variables — no inline objects
 
+## What Not to Test
+
+- **Default language behavior**: Don't test that errors propagate when there's no `try/catch` or error transformation in the code under test — that's JavaScript, not application logic.
+- **Parameter variations on the same branch**: Don't add a second test for the same code path with a different numeric input (e.g. `attempts: 2` vs `attempts: 3`). Varying a value without hitting a new branch adds no safety net.
+- **Mock delegation without logic**: Don't write tests that only assert a mock was called with the same arguments passed in. If a function has no conditionals, transformations, or error handling of its own, there is nothing to assert — add tests when logic is added.
+
 ## Mocking
 
-- Mock external services (OpenAI), real DB for repository tests
+- Mock external services (OpenAI); use a real DB for repository tests (see [Repository Tests](#repository-tests))
 - Use proper types for all mock data and options objects (e.g., `const options: RetryOptions = { ... }`, not untyped object literals)
 - **Mock data placement**: shared across all `describe` blocks → top-level `describe`. Used in only one block → inside that block. Mock factories (e.g., `createMockResponse`) always go inside the block that uses them
 - Shared mocks are typed `const` prefixed with `mock`/`mocked` (e.g., `mockContext`, `mockedCreatePlan`). For plain function modules, use `vi.mocked()` wrappers. For object methods (e.g., `openaiClient.responses.create`), use `vi.hoisted` to declare `vi.fn()` references and inject them in the `vi.mock` factory
-- Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work — for consistency
+- Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work
 - `vi.hoisted`/`vi.mock` blocks **cannot be exported** from shared files — they must stay inline in each test file
+- Don't spy on `console.warn`/`console.log` — test logging through the real logger instead
 
 ### Import ordering with `vi.hoisted`/`vi.mock`
 
@@ -41,13 +48,11 @@ import { something } from "#some-module"; // breaks
 - Extract duplicated strings within an `it` block into a `const` (e.g., `const updatedGoal = "..."`) and reference it in both params and expected result; in repository tests, assert against `params` properties (e.g., `expect(step.title).toBe(params.title)`)
 - Use enum values (e.g., `PlanStatus.draft`) instead of string literals (`"draft"`) for status fields
 - Use `StatusCodes` from `http-status-codes` for HTTP status values in tests (e.g., `StatusCodes.SERVICE_UNAVAILABLE`)
-- Don't spy on `console.warn`/`console.log` — test logging through the real logger instead
 
 ## Repository Tests
 
 - Repository tests run via `npm run test:repositories` (separate Vitest config with `fileParallelism: false`); excluded from `npm test` / CI
 - Repository tests use a separate test database (`lazy_advisor_test`) loaded via `dotenvx run -f .env.test`; the script resets the DB with `prisma db push --force-reset` before each run
-- When running `test:repositories` via an AI agent (e.g. Claude Code), Prisma's AI safety guard will block the `db push --force-reset` step and require explicit user consent — respond with "yes" to proceed
 - Repository tests define `adapter` and `prismaClient` inside the top-level `describe` block — always name it `prismaClient`, not `prisma`
 
 ## Evals

@@ -100,13 +100,6 @@ describe("openaiService", () => {
 
       await expect(callOpenAI(mockParams)).rejects.toThrow(ServiceUnavailableError);
     });
-
-    it("should rethrow non-API errors unchanged", async () => {
-      const genericError = new Error("Network timeout");
-      mockedCreate.mockRejectedValue(genericError);
-
-      await expect(callOpenAI(mockParams)).rejects.toThrow(genericError);
-    });
   });
 
   describe("callOpenAIParsed", () => {
@@ -180,15 +173,6 @@ describe("openaiService", () => {
 
       await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
         ServiceUnavailableError,
-      );
-    });
-
-    it("should rethrow non-API errors unchanged", async () => {
-      const genericError = new Error("Network timeout");
-      mockedParse.mockRejectedValue(genericError);
-
-      await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
-        genericError,
       );
     });
   });
