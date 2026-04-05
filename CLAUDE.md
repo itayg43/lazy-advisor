@@ -54,9 +54,11 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
 
 ### Commits and PRs
+- Commit messages must be descriptive, detailed, and self-contained — no links to plan docs or external documents, as they can break over time
 - No `Co-Authored-By` lines in commit messages
+- Always push the branch before creating the PR — `gh pr create` requires the branch to exist on the remote
+- PR descriptions must be descriptive, detailed, and self-contained
 - No "Generated with Claude Code" lines in PR descriptions
-- Commit messages and PR descriptions must be descriptive, detailed, and self-contained — no links to plan docs or external documents, as they can break over time
 - No "Test plan" section in PR descriptions — CI already covers lint, format, type-check, and tests
 
 ### Before merging
