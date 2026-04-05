@@ -4,6 +4,16 @@ import { createLogger } from "#lib/logger";
 
 const logger = createLogger("withRetry");
 
+export type RetryContext = {
+  operation: string;
+  [key: string]: unknown;
+};
+
+export type RetryOptions = {
+  attempts?: number;
+  baseDelayMs?: number;
+};
+
 const MAX_RETRY_ATTEMPTS = 3;
 const DEFAULT_BASE_DELAY_MS = 500;
 
@@ -16,16 +26,6 @@ const isRetryableError = (error: unknown): boolean => {
     status === StatusCodes.TOO_MANY_REQUESTS ||
     status >= StatusCodes.INTERNAL_SERVER_ERROR
   );
-};
-
-export type RetryContext = {
-  operation: string;
-  [key: string]: unknown;
-};
-
-export type RetryOptions = {
-  attempts?: number;
-  baseDelayMs?: number;
 };
 
 export const withRetry = async <T>(

@@ -8,6 +8,7 @@
 ## Exports & Modules
 
 - Named exports only (no `export default`)
+- Only export what is part of a module's public API — internal types and helpers stay unexported
 - Barrel `index.ts` files where defined in the plan (re-export public API)
 
 ## Naming
@@ -19,6 +20,8 @@
 
 ## Functions
 
+- Arrow functions (`const foo = () => ...`) over `function` declarations — enforces top-to-bottom declaration order and is consistent with the rest of the codebase
+- Module declaration order: logger (treated as import-level dependency) → types → constants → helpers → exports
 - Pure functions where possible
 - Dependency injection via function parameters (not classes), except where the plan explicitly uses classes (e.g., `Session`)
 - Async functions return typed `Promise<T>`, no bare `any`

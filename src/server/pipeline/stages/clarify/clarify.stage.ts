@@ -94,11 +94,11 @@ Field evaluation:
 - investment preferences: "S&P 500 and Israeli market" ✓
 All fields passed → respond: "Got it, I have everything I need to build your plan."`;
 
-async function collectToolOutputs(
+const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<ResponseInputItem.FunctionCallOutput[]> {
+): Promise<ResponseInputItem.FunctionCallOutput[]> => {
   const toolOutputs: ResponseInputItem.FunctionCallOutput[] = [];
 
   for (const functionCall of functionCalls) {
@@ -136,7 +136,7 @@ async function collectToolOutputs(
   }
 
   return toolOutputs;
-}
+};
 
 export const runClarifyStage = async (
   goal: string,

@@ -13,13 +13,13 @@ import { withRetry } from "#lib/with-retry";
 
 const logger = createLogger("openaiService");
 
-export const OPENAI_REQUEST_FAILED_MESSAGE = "OpenAI request failed";
-
 export type OpenAIResponse<T> = {
   id: string;
   output: T;
   usage: ResponseUsage | undefined;
 };
+
+const OPENAI_REQUEST_FAILED_MESSAGE = "OpenAI request failed";
 
 const logTokenUsage = (operation: string, usage: ResponseUsage | undefined): void => {
   if (!usage) return;
@@ -38,6 +38,16 @@ const validateResponseStatus = (status: ResponseStatus | undefined): void => {
   }
 };
 
+const handleOpenAIError = (error: unknown): never => {
+  if (error instanceof APIError) {
+    logger.error("OpenAI API error", { status: error.status, message: error.message });
+
+    throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
+  }
+
+  throw error;
+};
+
 export const callOpenAI = async (
   params: ResponseCreateParamsNonStreaming,
 ): Promise<OpenAIResponse<ResponseOutputItem[]>> => {
@@ -50,22 +60,9 @@ export const callOpenAI = async (
     logTokenUsage("callOpenAI", usage);
     validateResponseStatus(status);
 
-    return {
-      id,
-      output,
-      usage,
-    };
+    return { id, output, usage };
   } catch (error) {
-    if (error instanceof APIError) {
-      logger.error("OpenAI API error", {
-        status: error.status,
-        message: error.message,
-      });
-
-      throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
-    }
-
-    throw error;
+    return handleOpenAIError(error);
   }
 };
 
@@ -90,21 +87,8 @@ export const callOpenAIParsed = async <T>(
       throw new InternalError("OpenAI responded with missing parsed output");
     }
 
-    return {
-      id,
-      output: outputParsed,
-      usage,
-    };
+    return { id, output: outputParsed, usage };
   } catch (error) {
-    if (error instanceof APIError) {
-      logger.error("OpenAI API error", {
-        status: error.status,
-        message: error.message,
-      });
-
-      throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
-    }
-
-    throw error;
+    return handleOpenAIError(error);
   }
 };

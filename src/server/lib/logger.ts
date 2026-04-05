@@ -1,6 +1,6 @@
-export type LogContext = Record<string, unknown>;
+type LogContext = Record<string, unknown>;
 
-export type Logger = {
+type Logger = {
   info: (message: string, context?: LogContext) => void;
   warn: (message: string, context?: LogContext) => void;
   error: (message: string, error: unknown, context?: LogContext) => void;
@@ -17,7 +17,41 @@ const CONSOLE_METHODS = {
   DEBUG: console.debug.bind(console),
 } as const;
 
-type LogLevel = keyof typeof CONSOLE_METHODS;
+const serializeError = (error: unknown): string => {
+  if (error === null || error === undefined) {
+    return "Error value was null or undefined";
+  }
+
+  if (error instanceof Error) {
+    return error.stack ?? `${error.name}: ${error.message}`;
+  }
+
+  if (typeof error === "object") {
+    return JSON.stringify(error, null, 2);
+  }
+
+  return String(error);
+};
+
+const log = (
+  level: keyof typeof CONSOLE_METHODS,
+  tag: string,
+  message: string,
+  context?: LogContext,
+  error?: unknown,
+): void => {
+  const base = `[${new Date().toISOString()}] [${level}] [${tag}]: ${message}`;
+
+  const args: unknown[] = [];
+  if (error !== undefined) {
+    args.push(serializeError(error));
+  }
+  if (context) {
+    args.push(JSON.stringify(context, null, 2));
+  }
+
+  CONSOLE_METHODS[level](base, ...args);
+};
 
 export const createLogger = (tag: string): Logger => ({
   info: (message, context) => {
@@ -33,39 +67,3 @@ export const createLogger = (tag: string): Logger => ({
     log("DEBUG", tag, message, context);
   },
 });
-
-function log(
-  level: LogLevel,
-  tag: string,
-  message: string,
-  context?: LogContext,
-  error?: unknown,
-): void {
-  const base = `[${new Date().toISOString()}] [${level}] [${tag}]: ${message}`;
-
-  const args: unknown[] = [];
-  if (error !== undefined) {
-    args.push(serializeError(error));
-  }
-  if (context) {
-    args.push(JSON.stringify(context, null, 2));
-  }
-
-  CONSOLE_METHODS[level](base, ...args);
-}
-
-function serializeError(error: unknown): string {
-  if (error === null || error === undefined) {
-    return "Error value was null or undefined";
-  }
-
-  if (error instanceof Error) {
-    return error.stack ?? `${error.name}: ${error.message}`;
-  }
-
-  if (typeof error === "object") {
-    return JSON.stringify(error, null, 2);
-  }
-
-  return String(error);
-}
