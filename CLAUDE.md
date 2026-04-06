@@ -2,11 +2,10 @@
 
 ## Agent Usage
 
-- Use subagents for: broad code exploration (3+ files to understand), code review, and test analysis
+- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Git Workflow § Before writing code), code review, and test analysis
 - Keep inline: looking up a specific file or function, implementation, small edits, git operations
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
-- Before editing an existing file, read the full file first — if the addition exposes a structural issue, propose a restructure rather than inserting blindly
 
 ## References
 
@@ -16,7 +15,7 @@
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
-| [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition |
+| [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
 | [Status](documentation/STATUS.md) | At the start of each session |
 
 ## Feedback Style
@@ -39,13 +38,16 @@ Work one task at a time. Each task must be fully closed before moving to the nex
 - All checks passing
 - Commit made and PR opened
 
-If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
+If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on, then follow the Git Workflow section as the execution sequence.
 
 ## Git Workflow
 
-### Before writing code
 - Never commit directly to `main` — create a feature branch first
 - Branch naming: `<type>/<short-description>` (e.g., `feature/2.1-prisma-schema`, `docs/ci-status-update`, `fix/retry-timeout`)
+
+### Before writing code
+- For tasks touching multiple files or areas: spawn an Explore subagent to map the affected area with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing — see [RPI Improvements § 1](documentation/RPI_IMPROVEMENTS.md)
+- Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
 
 ### Before committing
