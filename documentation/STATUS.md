@@ -70,3 +70,11 @@
 ## Up Next
 
 Section 4 continued (4.2–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.
+
+## Workflow Improvements
+
+Based on "Everything We Got Wrong About Research-Plan-Implement" by Dexter Horthy. See [RPI_IMPROVEMENTS.md](RPI_IMPROVEMENTS.md) for full analysis.
+
+- [x] Gap 1 — Objective research: Explore subagent with no task framing before designing (added to `CLAUDE.md`)
+- [ ] Gap 2 — Design artifact before implementation (pending discussion)
+- [ ] Gap 3 — Vertical slices in task planning (pending discussion)
