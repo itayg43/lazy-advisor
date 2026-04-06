@@ -2,6 +2,8 @@ import path from "node:path";
 
 import { defineConfig } from "vitest/config";
 
+import { EvalRunReporter } from "./src/server/pipeline/eval.reporter";
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -13,5 +15,6 @@ export default defineConfig({
     include: ["src/**/*.eval.ts"],
     fileParallelism: false,
     testTimeout: 120_000,
+    reporters: ["default", new EvalRunReporter()],
   },
 });
