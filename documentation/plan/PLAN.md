@@ -31,6 +31,7 @@ Tasks within a section are intentionally granular for dependency tracking, but r
 | 9 | Middleware Layer | [PLAN_SECTION_9.md](plan-sections/PLAN_SECTION_9.md) |
 | 10 | Observability | [PLAN_SECTION_10.md](plan-sections/PLAN_SECTION_10.md) |
 | 11 | Integration Testing + Polish | [PLAN_SECTION_11.md](plan-sections/PLAN_SECTION_11.md) |
+| 12 | Eval Infrastructure | [PLAN_SECTION_12.md](plan-sections/PLAN_SECTION_12.md) |
 
 ---
 

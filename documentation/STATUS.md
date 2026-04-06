@@ -64,6 +64,9 @@
 - [x] Added `secretlint` pre-commit hook via `husky` + `lint-staged` — blocks raw API key patterns from being committed
 - [x] Added prisma convenience scripts (`prisma:migrate`, `prisma:studio`, `prisma:push`) to ensure dotenvx wrapping on direct CLI calls
 
+### Section 12: Eval Infrastructure
+- [x] 12.1 — Eval run history: custom Vitest reporter writing `.runs.jsonl` per eval file
+
 ## Up Next
 
 Section 4 continued (4.2–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.
