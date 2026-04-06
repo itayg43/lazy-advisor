@@ -57,6 +57,7 @@
 
 ### Section 4: Stage 2 — Research
 - [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update
+- [x] 4.2 — Research stage schemas, types, and web search tool registration
 
 ### Security Improvements
 - [x] Replaced `dotenv` + `dotenv-cli` with `dotenvx` — `.env` and `.env.test` encrypted in place, ciphertext committed, `.env.keys` gitignored
@@ -69,7 +70,7 @@
 
 ## Up Next
 
-Section 4 continued (4.2–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.
+Section 4 continued (4.3–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.
 
 ## Workflow Improvements
 

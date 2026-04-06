@@ -1,6 +1,6 @@
 ## Section 4: Stage 2 — Research
 
-> **Status: Task 4.1 complete. Tasks 4.2–4.7 pre-implementation.** Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
+> **Status: Tasks 4.1–4.2 complete. Tasks 4.3–4.7 pre-implementation.** Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
 
 **Goal**: Given UserProfile, determines target allocation via LLM, then uses OpenAI's built-in web search to find matching ETFs/קרנות כספיות, produces validated `ResearchStageResult` containing both `AllocationPlan` and `ResearchSummary`. Brokerage data is hardcoded (not searched).
 
@@ -36,10 +36,7 @@
 | Task | Summary |
 |------|---------|
 | 4.1 | `investmentPreferences` field added to `UserProfileSchema` (free text, defaults to `"none"`). Clarify prompt updated to ask about sectors, markets, and specific instruments. 2 new evals (extraction + full-loop) |
-
-### Task 4.2 — Schemas, types, and web_search tool registration
-
-Add `RecommendedEtfSchema` (with `trackingIndex`), `ResearchSummarySchema`, `AllocationPlanSchema` to `pipeline.schema.ts`. Inferred types to `pipeline.types.ts`. Register `WEB_SEARCH_TOOL` with `user_location` (IL) and `filters.allowed_domains` in tool registry.
+| 4.2 | Research stage schemas and types added to `pipeline.schema.ts` / `pipeline.types.ts`. Key decisions: `ResearchSummarySchema` groups ETFs by allocation category structurally (via internal `ResearchCategorySchema`) rather than a flat list — avoids string-matching fragility at Stage 3. `expenseRatio` is a percentage (0–100). `trackingIndex` defaults to `"none"`. `AllocationPlanSchema` has a `.refine()` enforcing slices sum to 100. `WEB_SEARCH_TOOL` (`web_search_2025_08_26`, IL, medium context, domain-restricted) created and registered for the research stage. |
 
 ### Task 4.3 — Hardcoded brokerage table + shared utilities
 
