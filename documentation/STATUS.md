@@ -4,8 +4,8 @@
 
 ## Up Next
 
-**Next task: 4.4a — Phase A: allocation function + evals.**
-Tasks 4.4a, 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
+**Next task: 4.4b — Phase C: extraction function + evals.**
+Tasks 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
 ## Completed
 
@@ -62,10 +62,17 @@ Tasks 4.4a, 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md
 - [x] Typed `toolOutputs` array explicitly as `ResponseInputItem.FunctionCallOutput[]`
 - [x] Moved `MAX_STAGE_TOOL_CALLS` export to `clarify.constants.ts`
 
+### Clarify Stage — Investment Preferences Weighting
+- [x] Clarify prompt updated to ask for a percentage split when user names multiple instruments (e.g. "70% S&P 500, 30% TLV-125")
+- [x] Extraction prompt updated to capture percentage splits in `investmentPreferences`
+- [x] Stage and extraction evals updated to cover the split-request flow
+- [x] `WORKFLOW_EXAMPLES.md` Story 12 and `PLAN_SECTION_4.md` updated to document the decision
+
 ### Section 4: Stage 2 — Research
 - [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update
 - [x] 4.2 — Research stage schemas, types, and web search tool registration
 - [x] 4.3 — Hardcoded brokerage table + shared utilities
+- [x] 4.4a — `buildAllocationPlan` in `research.allocation.ts` + allocation evals
 
 ### Section 12: Eval Infrastructure
 - [x] 12.1 — Eval run history: custom Vitest reporter writing `.runs.jsonl` per eval file

@@ -386,8 +386,8 @@ Stories 4-11 demonstrate boundary behaviors. The full dialogue is less important
 
 ### Story 12: User states investment preferences
 **Input**: "I have ₪100,000 and I want to invest mainly in S&P 500 and TLV-125 index funds" (or "I want to invest in tech sector ETFs").
-**Behavior**: Agent captures stated preferences as `investmentPreferences` during clarify and factors them into the research phase — it does not override or redirect unless the preference conflicts with the user's risk profile. If a preference is vague ("I like tech"), the agent accepts it and uses it to bias the research. If it's specific ("S&P 500 and TLV-125"), it is preserved verbatim.
-**Rule**: Stated sector/instrument preferences → capture in `investmentPreferences` → pass to research phase as a constraint.
+**Behavior**: Agent captures stated preferences as `investmentPreferences` during clarify and factors them into the research phase — it does not override or redirect unless the preference conflicts with the user's risk profile. If a preference is vague ("I like tech"), the agent accepts it and uses it to bias the research. If the user names a single instrument, it is captured as-is. If the user names two or more instruments without a percentage split, the agent asks: "What percentage would you put in each — for example, 70% S&P 500 and 30% TLV-125, or 50/50?" The confirmed split (e.g., "60% S&P 500, 40% TLV-125") is captured in `investmentPreferences` and passed to the research phase.
+**Rule**: Stated sector/instrument preferences → capture in `investmentPreferences` → if multiple instruments named without a split, ask for percentage allocation → pass to research phase as a constraint.
 
 ---
 
