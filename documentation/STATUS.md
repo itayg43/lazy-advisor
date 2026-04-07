@@ -1,5 +1,12 @@
 # Project Status
 
+> **When closing a task, update all three:** (1) the relevant task entry in Completed below, (2) Up Next, (3) the relevant plan section in `documentation/plan/plan-sections/`.
+
+## Up Next
+
+**Next task: 4.4 — Research stage implementation (three-phase) with prompts.**
+Tasks 4.4–4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
+
 ## Completed
 
 ### Section 1: Project Setup
@@ -45,7 +52,7 @@
 - [x] 3.7 — Clarify stage unit tests
 - [x] 3.7b — Clarify stage evals
 
-### Code Review Fixes (Sections 1-3)
+### Code Review Fixes (Sections 1–3)
 - [x] Hardened error handling, schemas, imports, tests, and ESLint config
 
 ### Clarify Stage Refactor
@@ -60,18 +67,14 @@
 - [x] 4.2 — Research stage schemas, types, and web search tool registration
 - [x] 4.3 — Hardcoded brokerage table + shared utilities
 
+### Section 12: Eval Infrastructure
+- [x] 12.1 — Eval run history: custom Vitest reporter writing `.runs.jsonl` per eval file
+
 ### Security Improvements
 - [x] Replaced `dotenv` + `dotenv-cli` with `dotenvx` — `.env` and `.env.test` encrypted in place, ciphertext committed, `.env.keys` gitignored
 - [x] Removed `import "dotenv/config"` from `config.ts` and `prisma.config.ts` — env injection handled by `dotenvx run` in npm scripts
 - [x] Added `secretlint` pre-commit hook via `husky` + `lint-staged` — blocks raw API key patterns from being committed
 - [x] Added prisma convenience scripts (`prisma:migrate`, `prisma:studio`, `prisma:push`) to ensure dotenvx wrapping on direct CLI calls
-
-### Section 12: Eval Infrastructure
-- [x] 12.1 — Eval run history: custom Vitest reporter writing `.runs.jsonl` per eval file
-
-## Up Next
-
-Section 4 continued (4.3–4.7). See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for task details.
 
 ## Workflow Improvements
 
