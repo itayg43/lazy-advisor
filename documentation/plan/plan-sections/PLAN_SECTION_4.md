@@ -1,7 +1,5 @@
 ## Section 4: Stage 2 — Research
 
-> **Status: Tasks 4.1–4.2 complete. Tasks 4.3–4.7 pre-implementation.** Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
-
 **Goal**: Given UserProfile, determines target allocation via LLM, then uses OpenAI's built-in web search to find matching ETFs/קרנות כספיות, produces validated `ResearchStageResult` containing both `AllocationPlan` and `ResearchSummary`. Brokerage data is hardcoded (not searched).
 
 ### Stage Contract
@@ -29,19 +27,6 @@
 2. `callOpenAI` + web_search → research text (guided by allocation plan)
 3. `extractResearchSummary` → `ResearchSummary` (extraction)
 
----
-
-### Completed
-
-| Task | Summary |
-|------|---------|
-| 4.1 | `investmentPreferences` field added to `UserProfileSchema` (free text, defaults to `"none"`). Clarify prompt updated to ask about sectors, markets, and specific instruments. 2 new evals (extraction + full-loop) |
-| 4.2 | Research stage schemas and types added to `pipeline.schema.ts` / `pipeline.types.ts`. Key decisions: `ResearchSummarySchema` groups ETFs by allocation category structurally (via internal `ResearchCategorySchema`) rather than a flat list — avoids string-matching fragility at Stage 3. `expenseRatio` is a percentage (0–100). `trackingIndex` defaults to `"none"`. `AllocationPlanSchema` has a `.refine()` enforcing slices sum to 100. `WEB_SEARCH_TOOL` (`web_search_2025_08_26`, IL, medium context, domain-restricted) created and registered for the research stage. |
-
-### Task 4.3 — Hardcoded brokerage table + shared utilities
-
-Create `src/server/pipeline/data/` with `ISRAELI_BROKERAGES` constant (4 brokers: Meitav, IBI, Psagot, Excellence). Create `src/server/pipeline/lib/` with `buildProfileSummary(profile)` (shared across stages) and `buildAllocationSummary` (formats allocation plan as text for research prompt). Barrel exports for both directories.
-
 ### Task 4.4 — Research stage implementation (three-phase) with prompts
 
 Create `src/server/pipeline/stages/research/research.stage.ts`. Implements `runResearchStage(profile): Promise<ResearchStageResult>` following the three-phase stage flow above.
@@ -53,10 +38,7 @@ Create `src/server/pipeline/stages/research/research.stage.ts`. Implements `runR
 
 ### Task 4.5 — Research stage unit tests
 
-**File created:**
-- `src/server/pipeline/stages/research/research.stage.test.ts`
-
-Mock pattern follows [TESTING.md](../../TESTING.md) (`vi.hoisted` + `vi.mock`). Mock data uses realistic Israeli investor profiles, allocation slices summing to 100%, and ETF entries with TASE tickers.
+Mock data uses realistic Israeli investor profiles, allocation slices summing to 100%, and ETF entries with TASE tickers.
 
 **Test scenarios** (behavior-only — no implementation detail assertions):
 1. **Happy path** — returns `ResearchStageResult` with both `allocationPlan` and `researchSummary`
@@ -74,4 +56,4 @@ Export `extractResearchSummary` and `buildAllocationPlan` for direct eval usage 
 
 ### Task 4.7 — Doc updates
 
-Update STATUS.md, PLAN_SECTION_4.md, and TESTING.md to reflect completed implementation, schema decisions discovered during evals, and research-specific eval guidance.
+Update STATUS.md, PLAN_SECTION_4.md, and TESTING.md to reflect completed implementation and any schema decisions discovered during evals.
