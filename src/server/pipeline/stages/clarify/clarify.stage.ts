@@ -46,7 +46,10 @@ Every required field must have a specific, actionable value:
 - Emergency fund: yes or no.
 - Outstanding debt: yes or no.
 - Monthly contribution: a specific number. Not \`whatever I can\` or \`not much\`.
-- Investment preferences: specific sectors, markets, or instruments (e.g., \`S&P 500\`, \`tech sector\`, \`Israeli market\`, \`TLV-125\`). If the user has no specific preference, set to \`none\`. Not vague like \`something safe\` or \`good returns\` — either name specific sectors/markets/instruments or \`none\`.
+- Investment preferences:
+  - Valid: one or more specific named instruments/sectors/markets (e.g., \`S&P 500\`, \`TLV-125\`, \`tech sector\`). If the user names more than one, a percentage split is also required (e.g., \`70% S&P 500, 30% TLV-125\`). \`none\` if the user has no preference.
+  - Invalid: vague answers like \`something safe\` or \`good returns\` — ask for a specific name or \`none\`.
+  - If the user names multiple instruments without a split, ask: "What percentage would you put in each — for example, 70% S&P 500 and 30% TLV-125, or 50/50?"
 
 ## Optional Fields
 - Brokerage preference: default to \`none\` if not mentioned.
@@ -80,7 +83,7 @@ Field evaluation:
 Two fields failed → call \`ask_user\`: "When you say long-term, roughly how many years are you thinking — 10, 20, or until retirement at a certain age? Also, do you have any preference for specific sectors, markets, or instruments (e.g., S&P 500, Israeli market, tech sector), or should I just go with a general diversified approach?"
 
 ## Example 2 — all fields specific (range timeline is acceptable), done
-ask_user returned: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund, I'm interested in S&P 500 and Israeli market."
+ask_user returned: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund, I'm interested in S&P 500 and Israeli market, roughly 60/40."
 Field evaluation:
 - amount: ₪18,000 ✓
 - age: 24 ✓
@@ -91,7 +94,7 @@ Field evaluation:
 - emergency fund: yes ✓
 - debt: no ✓
 - monthly contribution: ₪700 ✓
-- investment preferences: "S&P 500 and Israeli market" ✓
+- investment preferences: "60% S&P 500, 40% Israeli market" ✓ — multiple instruments with percentage split
 All fields passed → respond: "Got it, I have everything I need to build your plan."`;
 
 const collectToolOutputs = async (

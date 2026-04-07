@@ -124,8 +124,8 @@ describe("clarifyStage", () => {
     expect(profile.hasDebt).toBe(false);
   });
 
-  // Story 12: tests that investment preferences mentioned naturally in the goal are captured.
-  it("should capture investment preferences from goal", async () => {
+  // Story 12a: tests that a single instrument preference mentioned in the goal is captured.
+  it("should capture single instrument preference from goal", async () => {
     const responder = createScriptedResponder([
       "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",
     ]);
@@ -144,5 +144,27 @@ describe("clarifyStage", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/tech/);
+  });
+
+  // Story 12b: tests that when multiple instruments are named without a split, the stage asks for
+  // a percentage allocation and captures it in investmentPreferences.
+  it("should ask for percentage split when multiple instruments are named and capture it", async () => {
+    const responder = createScriptedResponder([
+      "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",
+      "70% S&P 500 and 30% TLV-125",
+    ]);
+
+    const profile = await runClarifyStage(
+      "I have ₪100,000 and I want to invest mainly in S&P 500 and TLV-125 index funds",
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(100_000);
+    expect(profile.age).toBe(31);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
+    expect(profile.investmentPreferences).toMatch(/\d+%/);
   });
 });

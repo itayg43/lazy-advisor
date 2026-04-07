@@ -218,8 +218,8 @@ describe("clarifyExtraction", () => {
     );
   });
 
-  // Story 12: tests that extraction captures specific sectors/instruments mentioned in conversation.
-  it("should extract investment preferences when user mentions specific instruments", async () => {
+  // Story 12: tests that extraction captures specific instruments with their percentage split.
+  it("should extract investment preferences with percentage split when stated", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
@@ -242,6 +242,21 @@ describe("clarifyExtraction", () => {
         output:
           "I'm 31, Israel, about 15 years, moderate risk, yes emergency fund, no debt, ₪2,500/mo, intermediate. No brokerage yet.",
       },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "What percentage would you put in each — for example, 70% S&P 500 and 30% TLV-125, or 50/50?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "70% S&P 500 and 30% TLV-125",
+      },
     ];
 
     const profile = await extractUserProfile(transcript);
@@ -256,6 +271,8 @@ describe("clarifyExtraction", () => {
     expect(profile.hasDebt).toBe(false);
     expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.investmentPreferences).not.toBe("none");
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|tlv/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
+    expect(profile.investmentPreferences).toMatch(/\d+%/);
   });
 });

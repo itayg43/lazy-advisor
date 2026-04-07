@@ -30,7 +30,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **location**: extract the country or location as stated.
 - **knowledgeLevel**: map to ${KNOWLEDGE_LEVELS}.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
-- **investmentPreferences**: extract any mentioned sectors, markets, indices, or specific instruments the user wants to invest in. Use the user's own words. Default to \`"none"\` if not mentioned or user has no specific preference.
+- **investmentPreferences**: extract any mentioned sectors, markets, indices, or specific instruments the user wants to invest in, including percentage splits if stated (e.g., "60% S&P 500, 40% TLV-125"). Use the user's own words. Default to \`"none"\` if not mentioned or user has no specific preference.
 - **hasEmergencyFund**: \`true\` or \`false\` based on what the user said.
 - **hasDebt**: \`true\` or \`false\` based on what the user said.
 - **monthlyContribution**: extract the exact number.
@@ -67,7 +67,23 @@ Output:
 - investmentPreferences: "none"
 - hasEmergencyFund: false
 - hasDebt: true
-- monthlyContribution: 3500`;
+- monthlyContribution: 3500
+
+## Example 3 — multiple instruments with percentage split
+Conversation: User wants to invest ₪100,000, is 31, moderate risk, 15-year horizon, Israel-based, intermediate, has emergency fund, no debt, ₪2,500/month, no brokerage. Wants S&P 500 and TLV-125, confirmed 60/40 split when asked.
+Output:
+- goal: "invest ₪100,000 with a 15-year horizon, split between S&P 500 and TLV-125"
+- amount: 100000
+- age: 31
+- riskTolerance: "moderate"
+- timeline: "15 years"
+- location: "Israel"
+- knowledgeLevel: "intermediate"
+- brokerage: "none"
+- investmentPreferences: "60% S&P 500, 40% TLV-125"
+- hasEmergencyFund: true
+- hasDebt: false
+- monthlyContribution: 2500`;
 
 export const extractUserProfile = async (
   // string = previousResponseId (production); array = full transcript (evals)
