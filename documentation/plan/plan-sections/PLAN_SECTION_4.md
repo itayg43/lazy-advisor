@@ -1,6 +1,6 @@
 ## Section 4: Stage 2 — Research
 
-> **Status: Tasks 4.1–4.2 complete. Tasks 4.3–4.7 pre-implementation.** Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
+> **Status: Tasks 4.1–4.3 complete. Tasks 4.4–4.7 pre-implementation.** Design decisions may change during implementation. See [STATUS.md](../../STATUS.md) for task completion status.
 
 **Goal**: Given UserProfile, determines target allocation via LLM, then uses OpenAI's built-in web search to find matching ETFs/קרנות כספיות, produces validated `ResearchStageResult` containing both `AllocationPlan` and `ResearchSummary`. Brokerage data is hardcoded (not searched).
 
@@ -37,10 +37,7 @@
 |------|---------|
 | 4.1 | `investmentPreferences` field added to `UserProfileSchema` (free text, defaults to `"none"`). Clarify prompt updated to ask about sectors, markets, and specific instruments. 2 new evals (extraction + full-loop) |
 | 4.2 | Research stage schemas and types added to `pipeline.schema.ts` / `pipeline.types.ts`. Key decisions: `ResearchSummarySchema` groups ETFs by allocation category structurally (via internal `ResearchCategorySchema`) rather than a flat list — avoids string-matching fragility at Stage 3. `expenseRatio` is a percentage (0–100). `trackingIndex` defaults to `"none"`. `AllocationPlanSchema` has a `.refine()` enforcing slices sum to 100. `WEB_SEARCH_TOOL` (`web_search_2025_08_26`, IL, medium context, domain-restricted) created and registered for the research stage. |
-
-### Task 4.3 — Hardcoded brokerage table + shared utilities
-
-Create `src/server/pipeline/data/` with `ISRAELI_BROKERAGES` constant (4 brokers: Meitav, IBI, Psagot, Excellence). Create `src/server/pipeline/lib/` with `buildProfileSummary(profile)` (shared across stages) and `buildAllocationSummary` (formats allocation plan as text for research prompt). Barrel exports for both directories.
+| 4.3 | `ISRAELI_BROKERAGES` constant (Meitav, IBI, Excellence) in `src/server/pipeline/data/brokerages.ts`. `buildProfileSummary(profile)` and `buildAllocationSummary(plan)` in `src/server/pipeline/lib/` — both format data as labeled multi-line strings for LLM prompt injection. |
 
 ### Task 4.4 — Research stage implementation (three-phase) with prompts
 

@@ -58,6 +58,7 @@
 ### Section 4: Stage 2 — Research
 - [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update
 - [x] 4.2 — Research stage schemas, types, and web search tool registration
+- [x] 4.3 — Hardcoded brokerage table + shared utilities
 
 ### Security Improvements
 - [x] Replaced `dotenv` + `dotenv-cli` with `dotenvx` — `.env` and `.env.test` encrypted in place, ciphertext committed, `.env.keys` gitignored
