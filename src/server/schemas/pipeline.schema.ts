@@ -42,19 +42,19 @@ export const RecommendedEtfSchema = z.object({
   name: z.string().min(1).max(MAX_STRING_LENGTH),
   expenseRatio: z.number().nonnegative().max(100),
   trackingIndex: z.string().min(1).max(MAX_STRING_LENGTH).default("none"),
-  sourceUrl: z.string().url(),
+  sourceUrl: z.string().min(1).max(MAX_STRING_LENGTH), // .url() omitted — OpenAI structured outputs reject "format": "uri"
 });
 
 const ResearchCategorySchema = z.object({
   allocationCategory: z.string().min(1).max(MAX_STRING_LENGTH),
+  percentage: z.number().int().min(0).max(100),
   etfs: z.array(RecommendedEtfSchema).min(1),
 });
 
-export const ResearchSummarySchema = z.object({
-  categories: z.array(ResearchCategorySchema).min(1),
-});
-
-export const ResearchStageResultSchema = z.object({
-  allocationPlan: AllocationPlanSchema,
-  researchSummary: ResearchSummarySchema,
-});
+export const ResearchSummarySchema = z
+  .object({
+    categories: z.array(ResearchCategorySchema).min(1),
+  })
+  .refine((s) => s.categories.reduce((sum, c) => sum + c.percentage, 0) === 100, {
+    message: "Category percentages must sum to 100",
+  });

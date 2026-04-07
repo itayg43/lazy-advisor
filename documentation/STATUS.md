@@ -4,8 +4,10 @@
 
 ## Up Next
 
-**Next task: 4.4b — Phase C: extraction function + evals.**
-Tasks 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
+**Pending design task (before 4.4c):** Clarify stage — upfront portfolio philosophy validation. See [PLAN_SECTION_3.md](plan/plan-sections/PLAN_SECTION_3.md) task 3.8.
+
+**Next task: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
 ## Completed
 
@@ -73,6 +75,7 @@ Tasks 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan
 - [x] 4.2 — Research stage schemas, types, and web search tool registration
 - [x] 4.3 — Hardcoded brokerage table + shared utilities
 - [x] 4.4a — `buildAllocationPlan` in `research.allocation.ts` + allocation evals
+- [x] 4.4b — `extractResearchSummary` in `research.extraction.ts` + extraction evals
 
 ### Section 12: Eval Infrastructure
 - [x] 12.1 — Eval run history: custom Vitest reporter writing `.runs.jsonl` per eval file
