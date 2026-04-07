@@ -4,8 +4,8 @@
 
 ## Up Next
 
-**Next task: 4.4a — Phase A: allocation function + evals.**
-Tasks 4.4a, 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
+**Next task: 4.4b — Phase C: extraction function + evals.**
+Tasks 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
 ## Completed
 
@@ -72,6 +72,7 @@ Tasks 4.4a, 4.4b, 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md
 - [x] 4.1 — `investmentPreferences` on `UserProfileSchema` + clarify prompt update
 - [x] 4.2 — Research stage schemas, types, and web search tool registration
 - [x] 4.3 — Hardcoded brokerage table + shared utilities
+- [x] 4.4a — `buildAllocationPlan` in `research.allocation.ts` + allocation evals
 
 ### Section 12: Eval Infrastructure
 - [x] 12.1 — Eval run history: custom Vitest reporter writing `.runs.jsonl` per eval file
