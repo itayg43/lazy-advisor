@@ -4,6 +4,8 @@
 
 ## Up Next
 
+**Pending design task (before 4.4c):** Clarify stage — upfront portfolio philosophy validation. See [PLAN_SECTION_3.md](plan/plan-sections/PLAN_SECTION_3.md) task 3.8.
+
 **Next task: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 

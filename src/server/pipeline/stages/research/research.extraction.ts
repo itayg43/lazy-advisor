@@ -27,7 +27,6 @@ You are the extraction phase of an investment advisor pipeline. Your sole respon
 - **sourceUrl**: the URL from which this information was sourced. Extract from url_citation annotations or URLs mentioned inline in the research text.`;
 
 export const extractResearchSummary = async (
-  // string = previousResponseId (production); array = full transcript (evals)
   source: string | ResponseInputItem[],
 ): Promise<ResearchSummary> => {
   const { id, usage, output } = await callOpenAIParsed<ResearchSummary>({

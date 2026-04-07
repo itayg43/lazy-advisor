@@ -51,11 +51,10 @@ const ResearchCategorySchema = z.object({
   etfs: z.array(RecommendedEtfSchema).min(1),
 });
 
-export const ResearchSummarySchema = z.object({
-  categories: z.array(ResearchCategorySchema).min(1),
-});
-
-export const ResearchStageResultSchema = z.object({
-  allocationPlan: AllocationPlanSchema,
-  researchSummary: ResearchSummarySchema,
-});
+export const ResearchSummarySchema = z
+  .object({
+    categories: z.array(ResearchCategorySchema).min(1),
+  })
+  .refine((s) => s.categories.reduce((sum, c) => sum + c.percentage, 0) === 100, {
+    message: "Category percentages must sum to 100",
+  });

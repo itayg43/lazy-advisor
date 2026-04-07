@@ -87,7 +87,6 @@ Output:
 - monthlyContribution: 2500`;
 
 export const extractUserProfile = async (
-  // string = previousResponseId (production); array = full transcript (evals)
   source: string | ResponseInputItem[],
 ): Promise<UserProfile> => {
   const { id, usage, output } = await callOpenAIParsed<UserProfile>({
