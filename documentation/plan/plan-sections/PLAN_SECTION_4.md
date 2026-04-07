@@ -27,32 +27,44 @@
 2. `callOpenAI` + web_search → research text (guided by allocation plan)
 3. `extractResearchSummary` → `ResearchSummary` (extraction)
 
-### Task 4.4 — Research stage implementation (three-phase) with prompts
+### Task 4.4a — Phase A: allocation function + evals
 
-Create `src/server/pipeline/stages/research/research.stage.ts`. Implements `runResearchStage(profile): Promise<ResearchStageResult>` following the three-phase stage flow above.
+Create `src/server/pipeline/stages/research/research.extraction.ts`. Implement `buildAllocationPlan(profile: UserProfile): Promise<AllocationPlan>` using `callOpenAIParsed` with `gpt-5.4-nano`.
 
-**Prompts:**
-- **Allocation**: target allocation from profile, emergency fund + age interaction, investment preferences → category-specific slices
-- **Research**: financial researcher role, domain-restricted sources, searches for ETFs + קרנות כספיות matching allocation slices
-- **Extraction**: extract structured `ResearchSummary` from research text, field rules for each schema field
+**Allocation prompt rules:** target allocation from profile, emergency fund + age interaction (young ≤50 with emergency fund can reduce/skip bonds; older >50 needs bonds regardless), investment preferences → category-specific slices, category names must be specific enough to guide ETF search.
 
-### Task 4.5 — Research stage unit tests
+Export `buildAllocationPlan` for direct eval usage.
 
-Mock data uses realistic Israeli investor profiles, allocation slices summing to 100%, and ETF entries with TASE tickers.
+**Evals** (`research.allocation.eval.ts`):
+- Various `UserProfile` inputs → `buildAllocationPlan`. Slices must sum to 100%.
+- Tests: emergency fund + young investor reduces bonds; older investor keeps bonds even with emergency fund; investment preferences produce category-specific slices.
 
-**Test scenarios** (behavior-only — no implementation detail assertions):
+### Task 4.4b — Phase C: extraction function + evals
+
+Add `extractResearchSummary(source: string | ResponseInputItem[]): Promise<ResearchSummary>` to `research.extraction.ts`. Uses `callOpenAIParsed` with `gpt-5.4-nano`, same `source` pattern as `extractUserProfile` (string = previousResponseId for production; array = full transcript for evals).
+
+**Extraction prompt rules:** extract structured `ResearchSummary` from research text; field rules for ticker, name, expenseRatio, trackingIndex (default "none"), sourceUrl from `url_citation` annotations.
+
+**Evals** (`research.extraction.eval.ts`):
+- Handwritten research text → `extractResearchSummary`. Tight assertions on tickers, expense ratios, trackingIndex.
+
+### Task 4.4c — Phase B + orchestration + unit tests + full-loop eval
+
+Create `src/server/pipeline/stages/research/research.stage.ts`. Implements `runResearchStage(profile): Promise<ResearchStageResult>` following the three-phase flow: `buildAllocationPlan` → Phase B web search call (`gpt-5.4-mini`, `getStageTools("research")`) → `extractResearchSummary(phaseB.id)`.
+
+**Research prompt rules:** financial researcher role, domain-restricted sources (already enforced by `WEB_SEARCH_TOOL` config), searches for ETFs + קרנות כספיות per allocation slice.
+
+**Unit tests** (`research.stage.test.ts`) — mock `callOpenAI`, `callOpenAIParsed`, realistic Israeli investor mock data:
 1. **Happy path** — returns `ResearchStageResult` with both `allocationPlan` and `researchSummary`
-2. **Propagates allocation error** (Phase A) — `ServiceUnavailableError`; research phase not called
-3. **Propagates research error** (Phase B) — `ServiceUnavailableError`; extraction phase not called
+2. **Propagates allocation error** (Phase A) — `ServiceUnavailableError`; Phase B not called
+3. **Propagates research error** (Phase B) — `ServiceUnavailableError`; Phase C not called
 4. **Propagates extraction error** (Phase C) — `InternalError`
 
-### Task 4.6 — Research stage evals
+**Full-loop eval** (`research.stage.eval.ts`): `runResearchStage` against live OpenAI + web search. Schema validation primary, exact equality only for explicit input values.
 
-Export `extractResearchSummary` and `buildAllocationPlan` for direct eval usage (same `ExtractionParams` pattern as clarify). Two-layer eval structure per [TESTING.md](../../TESTING.md):
+### Task 4.4d — Update extraction evals with real web search output shape
 
-- **Extraction-only**: handwritten research text → `extractResearchSummary`. Tight assertions on tickers, expense ratios, trackingIndex
-- **Allocation**: various `UserProfile` inputs → `buildAllocationPlan`. Tests emergency fund/age interaction, investment preferences. Slices must sum to 100%
-- **Full-loop**: `runResearchStage` against live OpenAI + web search. Schema validation primary, exact equality only for explicit input values
+After 4.4c's full-loop eval reveals the actual Phase B output format (url_citation annotations, web_search_call items, response structure), update 4.4b's extraction evals to use realistic web search output instead of simplified handwritten text. If the real output exposes prompt gaps, fix the extraction prompt too.
 
 ### Task 4.7 — Doc updates
 
