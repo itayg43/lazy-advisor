@@ -2,6 +2,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
+import { buildSourceParams } from "#pipeline/lib/build-source-params";
 import {
   KNOWLEDGE_LEVELS,
   RISK_LEVELS,
@@ -89,15 +90,10 @@ export const extractUserProfile = async (
   // string = previousResponseId (production); array = full transcript (evals)
   source: string | ResponseInputItem[],
 ): Promise<UserProfile> => {
-  const inputParams =
-    typeof source === "string"
-      ? { input: [] as ResponseInputItem[], previous_response_id: source }
-      : { input: source };
-
   const { id, usage, output } = await callOpenAIParsed<UserProfile>({
     model: "gpt-5.4-nano",
     instructions: EXTRACTION_SYSTEM_PROMPT,
-    ...inputParams,
+    ...buildSourceParams(source),
     text: {
       format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
     },

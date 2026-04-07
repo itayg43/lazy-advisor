@@ -27,6 +27,14 @@
 
 - **Citation annotations** — Phase C extracts `sourceUrl` from Phase B's `url_citation` annotations via `previous_response_id` chaining.
 
+- **`sourceUrl` uses plain string, not `.url()`** — OpenAI's structured output API rejects `"format": "uri"` in the generated JSON schema. `z.string().url()` produces that format, so `sourceUrl` uses `z.string().min(1)` instead.
+
+- **`percentage` on `ResearchCategorySchema`** — the plan stage needs category + percentage + ETFs together. Keeping them separate in `AllocationPlan` and `ResearchSummary` would require joining by category name, which is fragile. Phase C extracts the percentage directly from the allocation plan already present in the context chain.
+
+- **קרן כספית as default buffer** — for Israeli investors with no stated bond preference, the default defensive allocation is קרן כספית (Israeli money market), not a global bond ETF (e.g. AGGU). קרן כספית is shekel-denominated with no currency risk and simpler tax reporting. Bonds remain valid if the user explicitly requests them.
+
+- **`buildSourceParams` shared utility** — the `source: string | ResponseInputItem[]` branching (previousResponseId vs transcript) is identical across all extraction functions. Extracted to `pipeline/lib/build-source-params.ts` to avoid duplication.
+
 - **Models** — `gpt-5.4-mini` for Phase B (nano doesn't support web search), `gpt-5.4-nano` for A and C. `reasoning: low` for all (medium caused timeouts).
 
 ### Stage Flow
@@ -45,13 +53,11 @@
 - Older investor (58yo) → bonds > 0% even with emergency fund
 - Multiple preferences with % split → dedicated slices at exact stated percentages
 
-### Task 4.4b — Phase C: extraction function + evals
+### Task 4.4b — Phase C: extraction function + evals ✅
 
-`extractResearchSummary(source: string | ResponseInputItem[]): Promise<ResearchSummary>` in `research.extraction.ts`. Same `source` pattern as `extractUserProfile` (string = previousResponseId for production; array = transcript for evals).
+`extractResearchSummary(source: string | ResponseInputItem[]): Promise<ResearchSummary>` in `research.extraction.ts`.
 
-**Extraction prompt**: extract structured `ResearchSummary` from research text. Field rules: ticker, name, expenseRatio, trackingIndex (default "none"), sourceUrl from `url_citation` annotations.
-
-**Evals** (`research.extraction.eval.ts`) — handwritten research text → `extractResearchSummary`. Tight assertions on tickers, expense ratios, trackingIndex.
+**Evals** (`research.extraction.eval.ts`) — Story 1 and Story 3 research text → `extractResearchSummary`. Assertions on tickers, expense ratios, percentages, and trackingIndex (including default "none" for a thematic ETF with no index mentioned).
 
 ### Task 4.4c — Phase B + orchestration + unit tests + full-loop eval
 

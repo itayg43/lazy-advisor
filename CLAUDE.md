@@ -76,7 +76,8 @@ Always use these exact commands — do not construct alternative invocations:
 | `npm run type-check` | TypeScript type checking (no emit) |
 | `npm test` | Run unit tests |
 | `npm run test:repositories` | Run repository integration tests (resets test DB first) — Prisma's AI safety guard will prompt for confirmation before `db push --force-reset`; respond with "yes" to proceed |
-| `npm run test:evals` | Run eval tests |
+| `npm run test:evals` | Run all eval tests |
+| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/research/research.extraction.eval.ts`) |
 | `npm run dev:server` | Start the server in dev/watch mode |
 | `npm run lint` | Lint source files |
 | `npm run format` | Auto-format source files |
