@@ -44,7 +44,6 @@ describe("clarifyStage", () => {
     age: 28,
     riskTolerance: RiskTolerance.enum.moderate,
     timeline: "20 years",
-    location: "Israel",
     knowledgeLevel: KnowledgeLevel.enum.beginner,
     brokerage: "none",
     investmentPreferences: "none",

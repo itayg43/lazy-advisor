@@ -46,7 +46,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - Branch naming: `<type>/<short-description>` (e.g., `feature/2.1-prisma-schema`, `docs/ci-status-update`, `fix/retry-timeout`)
 
 ### Before writing code
-- For tasks touching multiple files or areas: spawn an Explore subagent to map the affected area with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing — see [RPI Improvements § 1](documentation/RPI_IMPROVEMENTS.md)
+- For tasks touching multiple files or areas: spawn an Explore subagent to map the affected area with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
 - Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
 

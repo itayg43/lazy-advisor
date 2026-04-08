@@ -20,3 +20,29 @@
 | 5.5 | Plan stage tests (happy path, step ordering, stage cap, DB persistence verification) | `src/server/pipeline/stages/plan/plan.stage.test.ts` | 5.4 |
 
 **Runnable after**: Plan stage creates plans/steps in Postgres, events emitted
+
+### Target Output Format
+
+```json
+{
+  "plan": {
+    "goal": "Build diversified ETF portfolio with $10k",
+    "phases": [
+      {
+        "phase": 1,
+        "steps": [
+          { "action": "Open Fidelity brokerage account", "reasoning": "No fees, commission-free ETFs" }
+        ]
+      },
+      {
+        "phase": 2,
+        "steps": [
+          { "action": "Buy $5.5k VTI", "reasoning": "0.03% ER, broad US market, growth engine" },
+          { "action": "Buy $4.5k VWO", "reasoning": "0.08% ER, emerging markets diversification" }
+        ]
+      }
+    ],
+    "summary": "Aggressive two-fund portfolio: 60% US, 40% emerging markets"
+  }
+}
+```

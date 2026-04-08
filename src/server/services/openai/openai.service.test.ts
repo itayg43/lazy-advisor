@@ -109,7 +109,6 @@ describe("openaiService", () => {
       age: 30,
       riskTolerance: RiskTolerance.enum.moderate,
       timeline: "10+ years",
-      location: "United States",
       knowledgeLevel: KnowledgeLevel.enum.beginner,
       brokerage: "none",
       investmentPreferences: "none",

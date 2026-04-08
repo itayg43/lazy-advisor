@@ -2,13 +2,7 @@
 
 An agentic investment planning CLI for beginner ETF investors. Inspired by the Israeli "Lazy Investor" philosophy — invest in ETFs, set up monthly contributions, stick to the plan, don't overthink it. The agent asks smart questions, researches current ETF data, and produces an actionable plan with phased steps. Within a session, the user can iterate on the plan. Across sessions (stretch goal), the plan evolves as the user's situation changes.
 
-## Disclaimer
-
-This is an **educational/demonstrative portfolio project**, not a licensed financial advisor. The CLI displays a clear disclaimer on every startup:
-
-> This tool is for educational purposes only. It is designed for beginner investors learning about ETF investing. It does not constitute financial advice. Always do your own research and consult a licensed financial advisor before making investment decisions.
-
-Target audience: beginner investors overwhelmed by getting started — not experienced traders looking for alpha.
+> Educational/demonstrative project — not a licensed financial advisor. Target audience: beginner investors getting started, not experienced traders.
 
 ## Architecture: Client + Backend Service
 
@@ -27,11 +21,7 @@ Backend Service (single Express app)
   └── Redis                              → rate limiting
 ```
 
-### Client
-CLI or React frontend. Connects to the backend via WebSocket for the entire session. Sends user messages, receives agent events.
-
 ### Backend Service
-A single Express app that handles everything: client connections, pipeline execution, plan persistence, and external API calls. The pipeline runs in-process — no inter-service communication needed.
 
 **Gateway layer**: Auth, rate limiting, session lifecycle, WebSocket connection management.
 
@@ -41,24 +31,11 @@ A single Express app that handles everything: client connections, pipeline execu
 
 ### Communication flow
 
-**Starting a session:**
-1. Client opens WebSocket to the backend
-2. Client sends goal message
-3. Backend creates session, starts pipeline execution in-process
-
-**Live streaming (search progress, steps appearing):**
-1. Pipeline completes a search or creates a step
-2. Backend sends event directly to the client over WebSocket: `{ type: "search_progress", query: "..." }`
-
-**ask_user (bidirectional — agent asks, user responds):**
-1. Pipeline needs user input, sends `clarification` event to client over WebSocket
-2. Client responds over WebSocket
-3. Pipeline receives the response via an in-process callback (e.g., a Promise that resolves when the WebSocket message arrives) and continues
-
-**Plan persistence (tool calls during the loop):**
-1. Pipeline tool call invokes plan domain directly (function call)
-2. Step is persisted to DB, result returned synchronously
-3. Event sent to client over WebSocket so the step appears live
+The client and backend communicate entirely over WebSocket:
+- **Session start**: client sends goal → backend creates session and starts pipeline in-process
+- **Streaming**: each search query or step creation triggers a WebSocket event to the client
+- **`ask_user`**: pipeline pauses and sends a `clarification` event; client responds over WebSocket; an in-process Promise resolves and the pipeline continues
+- **Plan persistence**: tool calls invoke the plan domain directly (function calls, not HTTP); steps persist immediately and trigger a `step_created` event to the client
 
 ### WebSocket events (Backend ↔ Client)
 - **Server → Client**: `clarification`, `search_progress`, `step_created`, `step_updated`, `step_removed`, `plan_complete`, `message`, `error`
@@ -70,11 +47,6 @@ A single Express app that handles everything: client connections, pipeline execu
 - **WebSocket disconnect**: Session is lost — start a new one. Incremental persistence means completed steps survive even if the session drops mid-loop. The worst case is losing the current LLM invocation's remaining tool calls.
 - **Production upgrade path**: For horizontal scaling or reconnection support, session state moves to Redis. This is a storage-layer change, not an architectural one — the pipeline logic doesn't change.
 
-### Why this architecture
-- **Single service, minimal coordination**: The pipeline runs in-process. Tool calls are function calls, not HTTP requests. `ask_user` resolves via an in-process Promise, not Pub/Sub. No race conditions, no distributed debugging.
-- **Separation of concerns via modules, not services**: Gateway, pipeline engine, and plan domain are distinct layers within the same process. Clean boundaries without the overhead of inter-service communication.
-- **Right-sized for the workload**: A single session is one user, one pipeline, one WebSocket connection. There's no concurrent processing that would benefit from service separation. The interesting engineering is in the pipeline — stages, feedback classification, tool-calling loop — not in distributed coordination.
-
 ## MVP scope
 
 **In:**
@@ -84,18 +56,11 @@ A single Express app that handles everything: client connections, pipeline execu
 - WebSocket streaming (user sees research progress and steps appearing live)
 - In-memory session state with 15-minute inactivity timeout
 - Specialized financial system prompt
-- Tool-calling loop with `search`, `create_step`, `ask_user`, `finish_plan`
+- Tool-calling loop with built-in OpenAI web search (Stage 2) and custom tools: `ask_user` (Stage 1), `create_step`, `finish_plan`, `update_step`, `remove_step` (Stages 3–4)
 - Plan persistence to DB (Prisma + PostgreSQL) — saved on every `plan_complete`, not on user confirmation
 - Redis for rate limiting
 
-**Out (stretch goals):**
-- Multi-session continuity (load previous plan/profile)
-- Persistent user memory across sessions
-- Adaptive verbosity (adjust explanation depth over time)
-- Step status tracking (done/skipped)
-- `get_plan`, `update_step`, `update_profile` tools
-- Redis session state (for horizontal scaling and reconnection support)
-- WebSocket reconnection with event replay (server buffers events per session, client sends last received event ID on reconnect)
+**Out (stretch goals):** multi-session continuity, persistent user memory, adaptive verbosity, step status tracking, Redis session state, WebSocket reconnection with event replay.
 
 ## Two levels of conversation
 
@@ -105,7 +70,7 @@ A single Express app that handles everything: client connections, pipeline execu
 
 ## Staged pipeline architecture
 
-The agent is NOT one long LLM conversation. It's a pipeline of discrete stages, each with its own focused prompt and minimal context. This prevents context bloat, keeps behavior consistent, and makes each stage independently testable.
+Each stage has its own focused prompt and minimal context. Stages start fresh (no accumulated context), search results are summarized and discarded after Stage 2, and Zod schemas validate every handoff.
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -126,10 +91,7 @@ Each stage's contract (input/output, tools, behavior rules) is documented in its
 
 ### Feedback classification (Stage 4)
 
-Classify user feedback before routing:
-
-- **`adjust`** — existing research still applies. Change is purely structural (remove a fund, shift allocations, reorder phases). No new searches needed. Uses `remove_step` / `update_step` directly.
-- **`research_and_adjust`** — feedback invalidates the research premise. Triggers: new sector or fund class the agent hasn't researched, or a risk tolerance shift (which changes the entire portfolio structure, not just individual funds). Must re-enter Stage 2 before updating the plan.
+Four types: `adjust`, `research_and_adjust`, `clarify`, `done`. See [PLAN_SECTION_6.md](../plan/plan-sections/PLAN_SECTION_6.md) for triggers, routing behavior, and examples.
 
 ### Stage boundary validation
 
@@ -144,72 +106,3 @@ All OpenAI API calls (every stage) use retry with exponential backoff (3 attempt
 - **Plan already complete** (Stage 4 failure): The user's previous completed plan is safe in the DB. Send `error` event via WebSocket: "Couldn't process your last change, but your previous plan is saved."
 
 Incremental persistence means the worst case is losing the current LLM invocation's remaining tool calls — never steps that were already created.
-
-### Why this matters
-
-1. **No context degradation** — each stage starts fresh with a focused prompt and minimal input
-2. **Search results don't pollute** — raw search text is summarized in stage 2 and discarded
-3. **Validated handoffs** — Zod schemas at every stage boundary catch malformed LLM output before it propagates downstream
-4. **Testable** — each stage can be tested independently
-5. **Predictable** — the agent behaves consistently because no single prompt is trying to do everything
-
----
-
-## Reference
-
-### Output model: plans and steps
-
-```json
-{
-  "plan": {
-    "goal": "Build diversified ETF portfolio with $10k",
-    "phases": [
-      {
-        "phase": 1,
-        "steps": [
-          { "action": "Open Fidelity brokerage account", "reasoning": "No fees, commission-free ETFs" }
-        ]
-      },
-      {
-        "phase": 2,
-        "steps": [
-          { "action": "Buy $5.5k VTI", "reasoning": "0.03% ER, broad US market, growth engine" },
-          { "action": "Buy $4.5k VWO", "reasoning": "0.08% ER, emerging markets diversification" }
-        ]
-      }
-    ],
-    "summary": "Aggressive two-fund portfolio: 60% US, 40% emerging markets"
-  }
-}
-```
-
-### Observability
-
-Structured logging from the start, Prometheus metrics added incrementally — same patterns as ai-task-assistant, adapted for an agentic workflow.
-
-### Metrics (Prometheus)
-
-MVP metrics — only what comes trivially from existing middleware wrappers. Custom pipeline-specific metrics deferred until the system matures.
-
-**Request/response (from middleware):**
-- `http_request_duration_seconds` (histogram, labels: `method`, `route`, `status`) — request latency.
-- `http_requests_total` (counter, labels: `method`, `route`, `status`) — request counts and error rates.
-
-**OpenAI:**
-- `openai_request_duration_seconds` (histogram, labels: `stage`) — LLM latency per stage.
-- `openai_tokens_total` (counter, labels: `type`: `prompt`, `completion`, `stage`) — token usage per stage.
-
-**Deferred (add incrementally):**
-- Pipeline stage durations, session durations, completion outcomes
-- Search reliability and latency
-- Feedback classification distribution
-- Step operation patterns
-
-### Structured logging
-
-JSON logs with consistent fields: `sessionId`, `stage`, `timestamp`, `event`. Key log points:
-- Stage transitions (clarify → research → plan → iterate)
-- Tool call execution (which tool, duration, success/failure)
-- Feedback classification decisions (what type, why)
-- Search queries and result quality
-- Errors with full context (which stage, what failed, what was the pipeline state)

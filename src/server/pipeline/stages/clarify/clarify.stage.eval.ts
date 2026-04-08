@@ -73,7 +73,6 @@ describe("clarifyStage", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.brokerage).toBe("none");
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.goal.toLowerCase()).toMatch(/etf|passive|invest/);
   });
 
@@ -97,7 +96,6 @@ describe("clarifyStage", () => {
     expect(profile.monthlyContribution).toBe(800);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.timeline.toLowerCase()).toMatch(/10|15/);
   });
 
