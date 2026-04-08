@@ -2,7 +2,6 @@ import type { UserProfile } from "#types/pipeline.types";
 
 export const buildProfileSummary = (profile: UserProfile): string =>
   `- Age: ${profile.age}
-- Location: ${profile.location}
 - Investment amount: ${profile.amount.toLocaleString()}
 - Monthly contribution: ${profile.monthlyContribution.toLocaleString()}
 - Investment timeline: ${profile.timeline}

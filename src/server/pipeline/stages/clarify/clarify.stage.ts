@@ -41,7 +41,6 @@ Every required field must have a specific, actionable value:
 - Age: a specific number.
 - Risk tolerance: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms.
 - Investment timeline: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, \`eventually\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` ARE specific enough — do not ask the user to narrow further.
-- Location or country.
 - Knowledge level: map to ${KNOWLEDGE_LEVELS} based on what the user describes.
 - Emergency fund: yes or no.
 - Outstanding debt: yes or no.
@@ -74,7 +73,6 @@ Field evaluation:
 - age: 30 ✓
 - risk tolerance: moderate ✓
 - timeline: "long-term" ✗ — not specific, needs a number of years or milestone
-- location: Israel ✓
 - knowledge level: beginner ✓
 - emergency fund: yes ✓
 - debt: no ✓
@@ -89,7 +87,6 @@ Field evaluation:
 - age: 24 ✓
 - risk tolerance: moderate ✓
 - timeline: "10-15 years" ✓ — a numeric range is specific enough
-- location: Israel ✓
 - knowledge level: beginner ✓
 - emergency fund: yes ✓
 - debt: no ✓

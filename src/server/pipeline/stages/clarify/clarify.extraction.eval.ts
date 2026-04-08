@@ -65,7 +65,6 @@ describe("clarifyExtraction", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.monthlyContribution).toBe(1_800);
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
     expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
     expect(profile.brokerage).toBe("none");
@@ -109,7 +108,6 @@ describe("clarifyExtraction", () => {
     expect(profile.hasDebt).toBe(false);
     expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
     expect(profile.timeline.toLowerCase()).toMatch(/30|65|retire/);
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.investmentPreferences).toBe("none");
   });
 
@@ -166,7 +164,6 @@ describe("clarifyExtraction", () => {
     expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
     expect(profile.brokerage).toBe("none");
     expect(profile.timeline.toLowerCase()).toMatch(/5/);
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.investmentPreferences).toBe("none");
   });
 
@@ -211,7 +208,6 @@ describe("clarifyExtraction", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.investmentPreferences).not.toBe("none");
     expect(profile.investmentPreferences.toLowerCase()).toMatch(
       /irish etf|tax efficien/i,
@@ -269,7 +265,6 @@ describe("clarifyExtraction", () => {
     expect(profile.monthlyContribution).toBe(2_500);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.location.toLowerCase()).toContain("israel");
     expect(profile.investmentPreferences).not.toBe("none");
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);

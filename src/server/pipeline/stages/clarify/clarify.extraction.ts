@@ -28,7 +28,6 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **age**: extract the exact number.
 - **riskTolerance**: map to ${RISK_LEVELS} based on what the user described.
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
-- **location**: extract the country or location as stated.
 - **knowledgeLevel**: map to ${KNOWLEDGE_LEVELS}.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
 - **investmentPreferences**: extract any mentioned sectors, markets, indices, or specific instruments the user wants to invest in, including percentage splits if stated (e.g., "60% S&P 500, 40% TLV-125"). Use the user's own words. Default to \`"none"\` if not mentioned or user has no specific preference.
@@ -46,7 +45,6 @@ Output:
 - age: 28
 - riskTolerance: "moderate"
 - timeline: "20 years"
-- location: "Israel"
 - knowledgeLevel: "beginner"
 - brokerage: "none"
 - investmentPreferences: "none"
@@ -62,7 +60,6 @@ Output:
 - age: 35
 - riskTolerance: "aggressive"
 - timeline: "until retirement at 65"
-- location: "Israel"
 - knowledgeLevel: "intermediate"
 - brokerage: "Interactive Brokers"
 - investmentPreferences: "none"
@@ -78,7 +75,6 @@ Output:
 - age: 31
 - riskTolerance: "moderate"
 - timeline: "15 years"
-- location: "Israel"
 - knowledgeLevel: "intermediate"
 - brokerage: "none"
 - investmentPreferences: "60% S&P 500, 40% TLV-125"

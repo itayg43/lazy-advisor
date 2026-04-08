@@ -4,18 +4,6 @@
 
 Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis, OpenAI API (including built-in web search). Tasks are broken into small, independently completable units.
 
-When writing or finalizing a plan section, add a `### Design Decisions` block documenting non-obvious architectural choices and their reasoning. Discuss these decisions with the user before documenting them.
-
-When a design decision is used by 2+ sections, promote it to `CONVENTIONS.md` and replace the original entry with a cross-reference (e.g., "See [CONVENTIONS.md — Error Handling](../../CONVENTIONS.md#error-handling)").
-
-## Task Grouping
-
-Tasks within a section are intentionally granular for dependency tracking, but related tasks are typically implemented together in a single PR. Common groupings:
-
-- **Schema + types + registration** (e.g., 4.1–4.2) — define the data shapes before implementation
-- **Implementation + unit tests** (e.g., 4.4–4.5) — code and its tests in one PR
-- **Evals + doc updates** (e.g., 4.6–4.7) — validation and documentation as a closing PR
-
 ## Sections
 
 | # | Section | File |

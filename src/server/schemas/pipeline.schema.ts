@@ -15,7 +15,6 @@ export const UserProfileSchema = z.object({
   age: z.number().int().positive().max(MAX_AGE),
   riskTolerance: RiskTolerance,
   timeline: z.string().min(1).max(MAX_STRING_LENGTH),
-  location: z.string().min(1).max(MAX_STRING_LENGTH),
   knowledgeLevel: KnowledgeLevel,
   brokerage: z.string().min(1).max(MAX_STRING_LENGTH).default("none"),
   investmentPreferences: z.string().min(1).max(MAX_STRING_LENGTH).default("none"),
