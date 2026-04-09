@@ -89,6 +89,8 @@ Each stage has its own focused prompt and minimal context. Stages start fresh (n
 
 Each stage's contract (input/output, tools, behavior rules) is documented in its plan section file. See [plan sections](../plan/plan-sections/).
 
+Per-stage behavior examples and conversation scenarios are documented in stage-specific files. See [CLARIFY_EXAMPLES.md](CLARIFY_EXAMPLES.md) for Stage 1.
+
 ### Feedback classification (Stage 4)
 
 Four types: `adjust`, `research_and_adjust`, `clarify`, `done`. See [PLAN_SECTION_6.md](../plan/plan-sections/PLAN_SECTION_6.md) for triggers, routing behavior, and examples.

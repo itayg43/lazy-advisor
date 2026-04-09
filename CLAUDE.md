@@ -15,6 +15,7 @@
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
+| [Clarify Examples](documentation/workflow/CLARIFY_EXAMPLES.md) | When implementing Stage 1 behavior, clarify prompts, or clarify evals |
 | [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
 | [Status](documentation/STATUS.md) | At the start of each session |
 
@@ -52,7 +53,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 
 ### Before committing
 - Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
-- After running evals, commit the updated `*.runs.jsonl` files alongside the code — they are the persistent eval log and should not be left unstaged
+- After running evals, commit the updated `*.runs.jsonl` and `*.last-run.md` files alongside the code — they are the persistent eval log and should not be left unstaged
 - Update `STATUS.md` if task completion status changed
 - Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
 

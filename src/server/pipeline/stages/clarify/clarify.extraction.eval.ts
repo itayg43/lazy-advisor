@@ -1,6 +1,11 @@
 import type { ResponseInputItem } from "openai/resources/responses/responses";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  appendLastRunEntry,
+  initLastRun,
+  type TranscriptEntry,
+} from "#pipeline/eval.transcript";
 import { extractUserProfile } from "#pipeline/stages/clarify/clarify.extraction";
 import {
   KnowledgeLevel,
@@ -8,11 +13,53 @@ import {
   UserProfileSchema,
 } from "#schemas/pipeline.schema";
 
+const LAST_RUN_PATH = new URL("clarify.extraction.last-run.md", import.meta.url).pathname;
+
+// Converts a ResponseInputItem[] to TranscriptEntry[] for the last-run file.
+// Includes the initial user message (goal), agent questions, and user responses.
+function toTranscriptEntries(items: ResponseInputItem[]): TranscriptEntry[] {
+  const entries: TranscriptEntry[] = [];
+  for (const item of items) {
+    if ("role" in item && item.role === "user" && typeof item.content === "string") {
+      entries.push({ role: "user", content: item.content });
+    } else if (
+      "type" in item &&
+      item.type === "function_call" &&
+      "name" in item &&
+      item.name === "ask_user"
+    ) {
+      const args = JSON.parse(item.arguments) as { question: string };
+      entries.push({ role: "agent", content: args.question });
+    } else if ("type" in item && item.type === "function_call_output") {
+      entries.push({ role: "user", content: String(item.output) });
+    }
+  }
+
+  return entries;
+}
+
 describe("clarifyExtraction", () => {
+  let lastTranscript: TranscriptEntry[] | undefined;
+  let lastProfile: unknown | undefined;
+
   const assertValidProfile = (profile: unknown): void => {
     const result = UserProfileSchema.safeParse(profile);
     expect(result.success).toBe(true);
   };
+
+  beforeAll(() => initLastRun(LAST_RUN_PATH));
+
+  afterEach((ctx) => {
+    if (!lastTranscript) return;
+    appendLastRunEntry(LAST_RUN_PATH, {
+      name: ctx.task.name,
+      passed: !ctx.task.result?.errors?.length,
+      durationMs: ctx.task.result?.duration ?? 0,
+      transcript: lastTranscript,
+      profile: lastProfile,
+    });
+    lastTranscript = lastProfile = undefined;
+  });
 
   // Story 1: tests full clarify flow for a beginner — required fields collected, portfolio defaults
   // question asked and answered with a custom equity split + buffer preference.
@@ -70,8 +117,10 @@ describe("clarifyExtraction", () => {
         output: "70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.",
       },
     ];
+    lastTranscript = toTranscriptEntries(transcript);
 
     const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
 
     assertValidProfile(profile);
     expect(profile.amount).toBe(55_000);
@@ -117,8 +166,10 @@ describe("clarifyExtraction", () => {
           "yes emergency fund, no debt, about ₪2,000/mo, yes I have IBI, I'm in Israel, about 30 years until retirement at 65. I'm a beginner.",
       },
     ];
+    lastTranscript = toTranscriptEntries(transcript);
 
     const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
 
     assertValidProfile(profile);
     expect(profile.age).toBe(35);
@@ -173,8 +224,10 @@ describe("clarifyExtraction", () => {
           "₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
       },
     ];
+    lastTranscript = toTranscriptEntries(transcript);
 
     const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
 
     assertValidProfile(profile);
     expect(profile.amount).toBe(45_000);
@@ -214,8 +267,10 @@ describe("clarifyExtraction", () => {
           "34, long-term 20+ years, moderate-to-aggressive, emergency fund yes, no debt, ₪5,000/mo, I have Interactive Brokers. I've been investing for a few years — I know about Irish ETFs, tax efficiency, the basics. I'm in Israel.",
       },
     ];
+    lastTranscript = toTranscriptEntries(transcript);
 
     const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
 
     assertValidProfile(profile);
     expect(profile.amount).toBe(200_000);
@@ -273,8 +328,10 @@ describe("clarifyExtraction", () => {
           "100% NASDAQ. I have strong conviction in tech and a long horizon — I'm fine with the volatility. קרן כספית is fine for the buffer.",
       },
     ];
+    lastTranscript = toTranscriptEntries(transcript);
 
     const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
 
     assertValidProfile(profile);
     expect(profile.amount).toBe(80_000);
@@ -324,8 +381,10 @@ describe("clarifyExtraction", () => {
         output: "70% S&P 500 and 30% TLV-125",
       },
     ];
+    lastTranscript = toTranscriptEntries(transcript);
 
     const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
 
     assertValidProfile(profile);
     expect(profile.amount).toBe(100_000);
