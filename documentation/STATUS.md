@@ -4,10 +4,7 @@
 
 ## Up Next
 
-**Next task: Fix flaky clarify eval — "should ask for percentage split when multiple instruments are named and capture it"**
-The model sometimes bundles the split question into the same multi-field message as other profile questions. The scripted user only answers the profile fields, so the split goes unanswered and the model extracts without a percentage. Fix is in the clarify stage prompt — the split question must be asked as a separate follow-up, not bundled with other fields. Identified via `clarify.stage.last-run.md` on 2026-04-09.
-
-**After that: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+**Next task: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
 ## Section Status
