@@ -51,49 +51,55 @@ Agent: Solid foundation. No debt and an emergency fund means you're in a great
 You: I'd say about 20 years, maybe until I'm around 50.
 
 Agent: Great — 20 years is a solid horizon. Before we head into research,
-  two quick questions to shape the approach:
+  two quick things to shape the approach:
 
-  1. Geographic scope — for the stock portion, there are three directions:
+  1. What do you want your equity allocation to look like?
+     Any combination or split works — here are the main options:
 
-     • All-world including emerging markets (FTSE All-World / MSCI ACWI):
-       ~3,700 stocks across US, Europe, Japan, China, India, Brazil, and
-       more. Widest diversification. The downside: emerging markets have
-       been a drag recently — political instability, regulatory surprises,
-       slower growth. ~10% average annual return over the past 10 years
-       (USD).
+     • FTSE All-World / MSCI ACWI (~10%/yr, past 10 years in USD):
+       stocks across US, Europe, Japan, China, India, Brazil and more.
+       Widest diversification. Trade-off: includes emerging markets which
+       have been a drag recently — political instability, slower growth,
+       regulatory surprises.
 
-     • Developed markets only (MSCI World equivalent): US, Europe, Japan —
-       no emerging market exposure. Middle ground. ~11% average annual
-       return over the past 10 years (USD).
+     • MSCI World — developed markets only (~11%/yr): US, Europe, Japan,
+       no emerging market exposure. Removes EM drag, still globally
+       diversified.
 
-     • US/Israeli concentrated (S&P 500, NASDAQ, TLV-125): historically
-       the strongest performer. The downside: if the US has a bad decade,
-       you feel it fully. ~13% average annual return over the past 10
-       years (USD).
+     • S&P 500 (~13%/yr): 500 largest US companies. Trade-off: fully
+       concentrated in the US market.
 
-     Those percentage gaps look small, but compounding makes them
-     enormous. ₪55,000 invested for 20 years: at 10%/yr → ~₪370,000; at
-     13%/yr → ~₪634,000. That's a 70% larger portfolio from the same
-     starting point. Worth knowing before you pick. (Past returns don't
-     guarantee future results — the US dominated the last decade, which
-     may or may not repeat.)
+     • NASDAQ-100 (~18%/yr): US tech-heavy index, best performer of the
+       last decade. Trade-off: very volatile — down ~33% in 2022 alone —
+       and bets heavily on tech continuing to dominate.
 
-     Which direction feels right for you?
+     • TLV-125 (~8%/yr in NIS): Israel's 125 largest companies.
+       Shekel-denominated so no currency risk, but a small and
+       concentrated market.
 
-  2. Conservative buffer — for the non-equity portion, I'd recommend a
-     קרן כספית (Israeli money market fund) rather than bonds. Here's
-     why: it's shekel-denominated so there's no currency risk, currently
-     yielding around 4–5%, and capital-stable — it doesn't drop when
-     interest rates rise. Bond funds like AGGU have slightly higher return
-     potential in some environments, but they carry interest rate risk
-     (bond prices fall when rates go up) and currency risk since AGGU is
-     USD-denominated. For an Israeli investor, the "safe" part of your
-     portfolio probably shouldn't be swinging with the dollar.
+     Those gaps compound fast. ₪55,000 over 20 years: at 10%/yr →
+     ~₪370,000; at 13%/yr → ~₪634,000; at 18%/yr → ~₪1,200,000 (but
+     with far more volatility). Past returns don't guarantee future
+     results — NASDAQ and S&P 500 dominance of the last decade may not
+     repeat.
 
-     Does קרן כספית work for you, or would you prefer bonds?
+     You can pick one of these, describe a custom split (e.g., 70% FTSE
+     All-World + 30% NASDAQ, or 70% FTSE All-World + 30% TLV-125), or
+     go 100% concentrated in a single index. If you have conviction in
+     a specific sector — healthcare, financials, energy, real estate —
+     sector ETFs are also an option, though returns are fully tied to
+     that sector's cycles.
 
-You: All-world makes sense for me — I'd rather spread the risk. And
-     קרן כספית sounds right.
+     If you choose multiple instruments, just tell me the percentage
+     split so we can build accordingly.
+
+  2. Conservative buffer — for the non-equity portion, I'd suggest a
+     קרן כספית (Israeli money market fund): shekel-denominated, currently
+     yielding ~4–5%, capital-stable, no currency risk. It's the standard
+     conservative allocation for Israeli investors. Does that work for
+     you, or do you have a different preference?
+
+You: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.
 
 Agent: Got it, I have everything I need. Let me research the best options
   for you.

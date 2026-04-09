@@ -37,8 +37,8 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 
 # Examples
 
-## Example 1 — beginner with no brokerage, portfolio defaults answered
-Conversation: User wants to invest ₪55,000, is 28, moderate risk, plans to invest for about 20 years, Israel-based, beginner, has emergency fund, no debt, ₪1,800/month, no brokerage mentioned. When asked about portfolio defaults, user chose all-world diversification (FTSE All-World) and קרן כספית for the conservative buffer.
+## Example 1 — beginner with no brokerage, portfolio defaults answered with custom split
+Conversation: User wants to invest ₪55,000, is 28, moderate risk, plans to invest for about 20 years, Israel-based, beginner, has emergency fund, no debt, ₪1,800/month, no brokerage mentioned. When asked about portfolio defaults, user said: "70% FTSE All-World and 30% TLV-125. קרן כספית is fine."
 Output:
 - goal: "invest ₪55,000 as a complete beginner, moderate risk, 20-year horizon with ₪1,800/month contributions"
 - amount: 55000
@@ -47,7 +47,7 @@ Output:
 - timeline: "20 years"
 - knowledgeLevel: "beginner"
 - brokerage: "none"
-- investmentPreferences: "all-world (FTSE All-World), קרן כספית buffer"
+- investmentPreferences: "70% FTSE All-World + 30% TLV-125, קרן כספית buffer"
 - hasEmergencyFund: true
 - hasDebt: false
 - monthlyContribution: 1800
