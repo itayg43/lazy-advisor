@@ -11,14 +11,6 @@
 - **`previous_response_id` does NOT carry `instructions` forward** — all chained calls must re-pass `instructions`. Omitting them caused the model to run without the system prompt (OpenAI SDK gotcha)
 - **HTTP over streaming for OpenAI calls** — stages are tool-heavy (short JSON), not long prose. Streaming complicates tool call handling. Revisit for plan output stage (Section 5)
 - **Built-in web search over Tavily** — eliminates Tavily client, mock, error class, and search tool handler. Trade-off: less control (black box). Tavily is the documented fallback
-
-### Task 3.8 — Upfront portfolio philosophy validation (pending)
-
-When `investmentPreferences` is `"none"`, the clarify stage should proactively surface two trade-off questions before the research phase runs:
-
-1. **Geographic scope (stocks)** — all-world diversification (MSCI World / FTSE All-World) vs concentrated US/Israeli indices (S&P 500, NASDAQ, TLV-125). Include real 10-year performance context so the user can choose with eyes open. Do not default silently to all-world.
-2. **Buffer allocation** — קרן כספית (Israeli money market, shekel-denominated, no currency risk) vs bonds (Israeli or global). Default recommendation is קרן כספית; explain the tradeoff.
-
-Guard: skip the relevant question if the user has already stated a preference for that dimension.
-
-**Scope of changes:** `clarify.stage.ts` system prompt, `WORKFLOW_EXAMPLES.md` Story 1 (update plan output to reflect קרן כספית instead of AGGU, and show the validation conversation).
+- **Portfolio defaults before research** — when `investmentPreferences` is `"none"`, the clarify stage asks two questions before handing off: (1) equity allocation, (2) buffer allocation. Prevents the research phase from silently picking sides on high-impact decisions
+- **Equity allocation as open preference capture, not forced choice** — presents five anchors with ~10-year returns and trade-offs (FTSE All-World ~10%/yr, MSCI World ~11%/yr, S&P 500 ~13%/yr, NASDAQ-100 ~18%/yr, TLV-125 ~8%/yr NIS). Any combination, split, or 100% concentration is valid — trade-offs are presented, not constraints. Sector ETFs (healthcare, financials, energy, real estate) are also surfaced. If multiple instruments are named without a split, follow up for the percentage
+- **Buffer defaults to קרן כספית without offering bonds** — all users are Israeli; קרן כספית (shekel-denominated, ~4–5% yield, capital-stable) is the appropriate default. Bonds are not presented as an option but are captured if the user volunteers them

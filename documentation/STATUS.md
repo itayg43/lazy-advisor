@@ -4,10 +4,10 @@
 
 ## Up Next
 
-**Next task: 3.8 — Clarify stage upfront portfolio philosophy validation.**
-See [PLAN_SECTION_3.md](plan/plan-sections/PLAN_SECTION_3.md) task 3.8 for full task details.
+**Next task: Docs restructure + eval transcript capture.**
+See [TASK_DOCS_AND_EVAL_IMPROVEMENTS.md](plan/TASK_DOCS_AND_EVAL_IMPROVEMENTS.md) for the full plan. Splits `WORKFLOW_EXAMPLES.md` into lean overall-flow doc + per-stage behavior files; adds `*.last-run.md` transcript output to eval runs.
 
-**After 3.8: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+**After that: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
 ## Section Status
@@ -16,7 +16,7 @@ Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-
 |---------|--------|
 | 1 — Project Setup | Complete (task 1.6 deferred to Section 7) |
 | 2 — Database Layer | Complete |
-| 3 — Stage 1 — Clarify | Complete (task 3.8 pending — see Up Next) |
+| 3 — Stage 1 — Clarify | Complete |
 | 4 — Stage 2 — Research | In progress (4.4c, 4.4d, 4.7 remaining) |
 | 5 — Stage 3 — Plan | Not started |
 | 6 — Stage 4 — Iterate | Not started |

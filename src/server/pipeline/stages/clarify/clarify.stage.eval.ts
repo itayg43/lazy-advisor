@@ -77,10 +77,12 @@ describe("clarifyStage", () => {
   });
 
   // Story 7 variant: tests that a soft answer on the second ask is accepted without a third probe.
+  // A third response is needed for the portfolio defaults question that follows once all required fields pass.
   it("should stop probing timeline after 2 asks", async () => {
     const responder = createScriptedResponder([
       "I have ₪20,000, I'm 32, I'm in Israel, long-term",
       "I guess maybe 10-15 years. moderate risk, beginner, yes emergency fund, no debt, ₪800/mo, no brokerage",
+      "100% FTSE All-World. קרן כספית for the buffer.",
     ]);
 
     const profile = await runClarifyStage(
@@ -120,6 +122,37 @@ describe("clarifyStage", () => {
     );
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
+  });
+
+  // Story 1 (portfolio defaults): tests that when investmentPreferences is "none", the stage asks the
+  // portfolio defaults question and captures the user's equity allocation + buffer answers.
+  it("should ask portfolio defaults question and capture answers when no preferences stated", async () => {
+    const responder = createScriptedResponder([
+      "I'm 28, yes 6 months emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, no brokerage, I'm in Israel, I'm a complete beginner",
+      "70% FTSE All-World and 30% TLV-125. קרן כספית sounds right for the buffer.",
+    ]);
+
+    const profile = await runClarifyStage(
+      "I have ₪55,000 and I want to start investing but I have no idea where to begin",
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(55_000);
+    expect(profile.age).toBe(28);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+    expect(profile.monthlyContribution).toBe(1_800);
+    expect(profile.hasEmergencyFund).toBe(true);
+    expect(profile.hasDebt).toBe(false);
+    expect(profile.brokerage).toBe("none");
+    expect(profile.investmentPreferences).not.toBe("none");
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(
+      /ftse|all.world|world|global/i,
+    );
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
+    expect(profile.investmentPreferences).toMatch(/\d+%/);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
   // Story 12a: tests that a single instrument preference mentioned in the goal is captured.

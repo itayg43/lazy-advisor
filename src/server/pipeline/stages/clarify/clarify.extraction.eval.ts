@@ -14,8 +14,9 @@ describe("clarifyExtraction", () => {
     expect(result.success).toBe(true);
   };
 
-  // Story 1: tests baseline extraction across all fields, with risk mapped from behavioral description.
-  it("should extract profile from a 2-turn beginner conversation", async () => {
+  // Story 1: tests full clarify flow for a beginner — required fields collected, portfolio defaults
+  // question asked and answered with a custom equity split + buffer preference.
+  it("should extract profile from a beginner conversation including portfolio defaults answers", async () => {
     const transcript: ResponseInputItem[] = [
       {
         role: "user",
@@ -53,6 +54,21 @@ describe("clarifyExtraction", () => {
         call_id: "call_2",
         output: "I'd say about 20 years, maybe until I'm around 50.",
       },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Before I hand this off, two things to shape the approach:\n\n1. What do you want your equity allocation to look like?\n• FTSE All-World (~10%/yr): widest diversification, includes emerging markets.\n• MSCI World (~11%/yr): developed markets only, no EM.\n• S&P 500 (~13%/yr): US concentrated.\n• NASDAQ-100 (~18%/yr): US tech-heavy, very volatile.\n• TLV-125 (~8%/yr in NIS): Israeli market, shekel-denominated.\n\n₪55,000 over 20 years: at 10%/yr → ~₪370,000; at 13%/yr → ~₪634,000; at 18%/yr → ~₪1,200,000. Past returns don't guarantee future results.\n\nAny combination or split works — e.g., 70% FTSE All-World + 30% TLV-125.\n\n2. For the non-equity buffer, I'd suggest a קרן כספית — shekel-denominated, ~4–5% yield, capital-stable. Does that work?",
+        }),
+        call_id: "call_3",
+        id: "fc_3",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_3",
+        output: "70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.",
+      },
     ];
 
     const profile = await extractUserProfile(transcript);
@@ -68,7 +84,13 @@ describe("clarifyExtraction", () => {
     expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
     expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
     expect(profile.brokerage).toBe("none");
-    expect(profile.investmentPreferences).toBe("none");
+    expect(profile.investmentPreferences).not.toBe("none");
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(
+      /ftse|all.world|world|global/i,
+    );
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
+    expect(profile.investmentPreferences).toMatch(/\d+%/);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
   // Story 2: tests extraction when fields are split between goal and response, including brokerage name (IBI).
@@ -168,6 +190,7 @@ describe("clarifyExtraction", () => {
   });
 
   // Story 11: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
+  // investmentPreferences should be "none" — the user expresses knowledge about Irish ETFs, not a preference to invest in them.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -208,10 +231,57 @@ describe("clarifyExtraction", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
+  });
+
+  // Story 13: tests that 100% concentration in a single index is captured as-is without modification.
+  it("should capture 100% single-index concentration as a valid investmentPreferences answer", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪80,000 and I want to start investing",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Happy to help. A few questions: How old are you? What country are you in? When might you need this money? Risk tolerance? Emergency fund? Any debt? Monthly contribution? Knowledge level? Brokerage?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "I'm 32, Israel, about 15 years, aggressive, yes emergency fund, no debt, ₪2,000/mo, intermediate, no brokerage",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Before I hand this off, two things:\n1. What do you want your equity allocation to look like? Options include FTSE All-World (~10%/yr), S&P 500 (~13%/yr), NASDAQ-100 (~18%/yr, very volatile), TLV-125 (~8%/yr in NIS), or any combination.\n2. For the conservative buffer, I'd suggest קרן כספית — shekel-denominated, ~4–5% yield, capital-stable. Does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output:
+          "100% NASDAQ. I have strong conviction in tech and a long horizon — I'm fine with the volatility. קרן כספית is fine for the buffer.",
+      },
+    ];
+
+    const profile = await extractUserProfile(transcript);
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(80_000);
+    expect(profile.age).toBe(32);
     expect(profile.investmentPreferences).not.toBe("none");
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(
-      /irish etf|tax efficien/i,
-    );
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/nasdaq/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
   // Story 12: tests that extraction captures specific instruments with their percentage split.

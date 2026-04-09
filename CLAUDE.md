@@ -52,6 +52,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 
 ### Before committing
 - Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
+- After running evals, commit the updated `*.runs.jsonl` files alongside the code — they are the persistent eval log and should not be left unstaged
 - Update `STATUS.md` if task completion status changed
 - Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
 

@@ -50,11 +50,63 @@ Agent: Solid foundation. No debt and an emergency fund means you're in a great
 
 You: I'd say about 20 years, maybe until I'm around 50.
 
-Agent: Great — 20 years is a solid horizon. Let me research the best options
+Agent: Great — 20 years is a solid horizon. Before we head into research,
+  two quick things to shape the approach:
+
+  1. What do you want your equity allocation to look like?
+     Any combination or split works — here are the main options:
+
+     • FTSE All-World / MSCI ACWI (~10%/yr, past 10 years in USD):
+       stocks across US, Europe, Japan, China, India, Brazil and more.
+       Widest diversification. Trade-off: includes emerging markets which
+       have been a drag recently — political instability, slower growth,
+       regulatory surprises.
+
+     • MSCI World — developed markets only (~11%/yr): US, Europe, Japan,
+       no emerging market exposure. Removes EM drag, still globally
+       diversified.
+
+     • S&P 500 (~13%/yr): 500 largest US companies. Trade-off: fully
+       concentrated in the US market.
+
+     • NASDAQ-100 (~18%/yr): US tech-heavy index, best performer of the
+       last decade. Trade-off: very volatile — down ~33% in 2022 alone —
+       and bets heavily on tech continuing to dominate.
+
+     • TLV-125 (~8%/yr in NIS): Israel's 125 largest companies.
+       Shekel-denominated so no currency risk, but a small and
+       concentrated market.
+
+     Those gaps compound fast. ₪55,000 over 20 years: at 10%/yr →
+     ~₪370,000; at 13%/yr → ~₪634,000; at 18%/yr → ~₪1,200,000 (but
+     with far more volatility). Past returns don't guarantee future
+     results — NASDAQ and S&P 500 dominance of the last decade may not
+     repeat.
+
+     You can pick one of these, describe a custom split (e.g., 70% FTSE
+     All-World + 30% NASDAQ, or 70% FTSE All-World + 30% TLV-125), or
+     go 100% concentrated in a single index. If you have conviction in
+     a specific sector — healthcare, financials, energy, real estate —
+     sector ETFs are also an option, though returns are fully tied to
+     that sector's cycles.
+
+     If you choose multiple instruments, just tell me the percentage
+     split so we can build accordingly.
+
+  2. Conservative buffer — for the non-equity portion, I'd suggest a
+     קרן כספית (Israeli money market fund): shekel-denominated, currently
+     yielding ~4–5%, capital-stable, no currency risk. It's the standard
+     conservative allocation for Israeli investors. Does that work for
+     you, or do you have a different preference?
+
+You: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.
+
+Agent: Got it, I have everything I need. Let me research the best options
   for you.
   ✓ Searched "best ETF investing from Israel 2026 tax efficiency"
-  ✓ Searched "Irish accumulating ETFs VWRA AGGU Israeli investor"
+  ✓ Searched "Irish accumulating ETFs VWRA Israeli investor"
   ✓ Searched "Israeli brokerages 2026 Meitav IBI international ETF fees"
+  ✓ Searched "Israeli money market funds קרן כספית 2026 yield comparison"
 
   Before the plan, a quick concept: an ETF (Exchange-Traded Fund) is a basket
   of stocks or bonds bundled together. Instead of buying one company and hoping
@@ -67,7 +119,7 @@ Agent: Great — 20 years is a solid horizon. Let me research the best options
   • Israeli index funds (קרנות מחקות) — traded on TASE in shekels. Simple tax
     reporting, no currency conversion. Higher expense ratios (0.2-0.8%).
 
-  • Irish accumulating ETFs (VWRA, AGGU) — best tax efficiency. Dividends
+  • Irish accumulating ETFs (VWRA, IWDA) — best tax efficiency. Dividends
     reinvest inside the fund at 15% withholding (US-Ireland treaty) instead
     of 25% Israeli dividend tax. You only pay tax when you sell.
 
@@ -87,7 +139,7 @@ Plan: "First investment portfolio — ₪55,000"
       else making decisions and charging management fees.
 
   Phase 2:
-    • Buy ₪33,000 VWRA — Vanguard FTSE All-World (accumulating, Irish)
+    • Buy ₪44,000 VWRA — Vanguard FTSE All-World (accumulating, Irish)
       This holds over 3,700 stocks across the entire world — US, Europe,
       Japan, emerging markets, everything. 0.22% ER. The accumulating
       structure means dividends reinvest inside the fund at 15% withholding
@@ -95,36 +147,31 @@ Plan: "First investment portfolio — ₪55,000"
       (25%) when you sell — and with 20 years ahead, that deferral is
       powerful.
 
-    • Buy ₪11,000 AGGU — iShares Global Aggregate Bond (accumulating, Irish)
-      Bonds are essentially loans you make to governments and companies.
-      They pay steady interest and don't swing wildly like stocks. When
-      stocks drop 20%, bonds typically hold steady or even go up. AGGU is
-      your seatbelt — it won't make you rich, but it'll make the scary
-      months a lot less scary. 0.10% ER, same tax advantage as VWRA.
+    • Buy ₪11,000 קרן כספית (e.g., Meitav קרן כספית שקלית)
+      A shekel-denominated Israeli money market fund. No currency risk —
+      your conservative buffer doesn't swing with the dollar. Currently
+      yielding around 4–5%, capital-stable, and liquid. This is your
+      seatbelt: it won't make you rich, but it'll make the scary months
+      a lot less scary.
 
-      Remember you said a 20% drop would stress you out? Without bonds,
-      your portfolio might drop 20%. With AGGU buffering 20% of your
-      portfolio, that same crash might only hit you for 15%. That difference
-      matters when you're staring at your phone at 2am.
-
-    • Buy ₪11,000 קרן מחקה S&P 500 (e.g., Harel/KSM S&P 500)
-      A local Israeli index fund tracking the S&P 500, traded on TASE in
-      shekels. 0.25% ER. Why mix in a local fund? No currency conversion
-      cost on this portion, and it diversifies your broker risk — part of
-      your money is on TASE, part on international exchanges.
+      Remember you said a 20% drop would stress you out? Without any
+      buffer, your portfolio might drop 20%. With 20% in קרן כספית, that
+      same crash might only hit you for 15-16%. And unlike bond funds,
+      קרן כספית doesn't drop when interest rates rise.
 
   Phase 3:
     • Set up ₪1,800/mo standing order (הוראת קבע) to Meitav
-    • Monthly allocation: 60% VWRA, 20% AGGU, 20% קרן מחקה S&P 500
+    • Monthly allocation: 80% VWRA, 20% קרן כספית
       Meitav doesn't have US-style auto-invest. You'll need to log in
       monthly and place the orders yourself — takes about 10 minutes.
       Set a calendar reminder for after your salary lands.
 
-  Target allocation: 80% equity / 20% bonds.
+  Target allocation: 80% equity / 20% קרן כספית.
 
-  This is a well-known diversified approach adapted for Israeli tax efficiency.
-  You're paying about 0.19% blended expense ratio — roughly ₪105 per year
-  for every ₪55,000 invested.
+  This is a clean two-fund portfolio adapted for Israeli tax efficiency.
+  You're paying 0.22% on the equity portion — roughly ₪97 per year on
+  the ₪44,000 in VWRA. The קרן כספית has minimal management fees and
+  no trading costs.
 
   Anything you'd like to adjust?
 
