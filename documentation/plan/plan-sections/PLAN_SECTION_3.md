@@ -12,13 +12,13 @@
 - **HTTP over streaming for OpenAI calls** — stages are tool-heavy (short JSON), not long prose. Streaming complicates tool call handling. Revisit for plan output stage (Section 5)
 - **Built-in web search over Tavily** — eliminates Tavily client, mock, error class, and search tool handler. Trade-off: less control (black box). Tavily is the documented fallback
 
-### Task 3.8 — Upfront portfolio philosophy validation (pending)
+### Task 3.8 — Upfront portfolio defaults (complete)
 
-When `investmentPreferences` is `"none"`, the clarify stage should proactively surface two trade-off questions before the research phase runs:
+When `investmentPreferences` is `"none"`, the clarify stage surfaces two trade-off questions before the research phase runs:
 
-1. **Geographic scope (stocks)** — all-world diversification (MSCI World / FTSE All-World) vs concentrated US/Israeli indices (S&P 500, NASDAQ, TLV-125). Include real 10-year performance context so the user can choose with eyes open. Do not default silently to all-world.
-2. **Buffer allocation** — קרן כספית (Israeli money market, shekel-denominated, no currency risk) vs bonds (Israeli or global). Default recommendation is קרן כספית; explain the tradeoff.
+1. **Geographic scope (stocks)** — three options: all-world including emerging markets (FTSE All-World / MSCI ACWI, ~10%/yr 10yr), developed markets only (MSCI World, ~11%/yr), or US/Israeli concentrated (S&P 500, NASDAQ, TLV-125, ~13%/yr). Compounding difference shown concretely using the user's actual amount and timeline. Past-performance caveat included. No silent default.
+2. **Buffer allocation** — קרן כספית (Israeli money market, shekel-denominated, no currency risk, ~4–5% yield) vs bonds (slightly higher return potential but interest rate risk and currency exposure). Leans toward recommending קרן כספית for Israeli investors.
 
 Guard: skip the relevant question if the user has already stated a preference for that dimension.
 
-**Scope of changes:** `clarify.stage.ts` system prompt, `WORKFLOW_EXAMPLES.md` Story 1 (update plan output to reflect קרן כספית instead of AGGU, and show the validation conversation).
+**Changes made:** `clarify.stage.ts` system prompt (Portfolio Defaults section + updated Output Format + updated examples), `clarify.extraction.ts` Example 1, `WORKFLOW_EXAMPLES.md` Story 1 (portfolio defaults conversation added, plan updated to קרן כספית and simplified to two-fund portfolio: VWRA + קרן כספית).

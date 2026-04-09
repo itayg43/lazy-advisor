@@ -122,6 +122,33 @@ describe("clarifyStage", () => {
     expect(profile.hasDebt).toBe(false);
   });
 
+  // Story 1 (portfolio defaults): tests that when investmentPreferences is "none", the stage asks the
+  // portfolio defaults questions and captures the user's geographic scope + buffer answers.
+  it("should ask portfolio defaults questions and capture answers when no preferences stated", async () => {
+    const responder = createScriptedResponder([
+      "I'm 28, yes 6 months emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, no brokerage, I'm in Israel, I'm a complete beginner",
+      "All-world makes sense for me — I'd rather spread the risk. And קרן כספית sounds right.",
+    ]);
+
+    const profile = await runClarifyStage(
+      "I have ₪55,000 and I want to start investing but I have no idea where to begin",
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(55_000);
+    expect(profile.age).toBe(28);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+    expect(profile.monthlyContribution).toBe(1_800);
+    expect(profile.hasEmergencyFund).toBe(true);
+    expect(profile.hasDebt).toBe(false);
+    expect(profile.brokerage).toBe("none");
+    expect(profile.investmentPreferences).not.toBe("none");
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/all.world|world|global/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
+  });
+
   // Story 12a: tests that a single instrument preference mentioned in the goal is captured.
   it("should capture single instrument preference from goal", async () => {
     const responder = createScriptedResponder([

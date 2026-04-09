@@ -168,6 +168,7 @@ describe("clarifyExtraction", () => {
   });
 
   // Story 11: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
+  // investmentPreferences should be "none" — the user expresses knowledge about Irish ETFs, not a preference to invest in them.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -208,10 +209,63 @@ describe("clarifyExtraction", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
+  });
+
+  // Story 1 (extended): tests that portfolio defaults answers (geographic scope + buffer) are captured in investmentPreferences.
+  it("should capture portfolio defaults answers in investmentPreferences", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content:
+          "I have ₪55,000 and I want to start investing but I have no idea where to begin",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Happy to help. A few questions: How old are you? Do you have an emergency fund? Any debt? When might you need this money? How would you feel if your portfolio dropped 20%? How much can you invest monthly? Do you have a brokerage account?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "I'm 28, yes 6 months emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, no brokerage, I'm in Israel, I'm a complete beginner",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Two quick questions before I hand off to research:\n1. Geographic scope: all-world including emerging markets (~10%/yr, 10yr), developed markets only (~11%/yr), or US/Israeli concentrated like S&P 500/NASDAQ/TLV-125 (~13%/yr)? ₪55,000 at 10% for 20 years = ~₪370,000; at 13% = ~₪634,000.\n2. Conservative buffer: קרן כספית (shekel-denominated, ~4-5% yield, no currency risk) or bonds (slightly higher potential, but interest rate and currency risk)?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "All-world makes sense for me — I'd rather spread the risk. And קרן כספית sounds right.",
+      },
+    ];
+
+    const profile = await extractUserProfile(transcript);
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(55_000);
+    expect(profile.age).toBe(28);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
+    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
+    expect(profile.hasEmergencyFund).toBe(true);
+    expect(profile.hasDebt).toBe(false);
+    expect(profile.monthlyContribution).toBe(1_800);
+    expect(profile.brokerage).toBe("none");
     expect(profile.investmentPreferences).not.toBe("none");
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(
-      /irish etf|tax efficien/i,
-    );
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/all.world|world|global/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
   // Story 12: tests that extraction captures specific instruments with their percentage split.

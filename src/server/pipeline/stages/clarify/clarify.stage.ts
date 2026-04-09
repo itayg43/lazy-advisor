@@ -58,10 +58,36 @@ Before responding, evaluate every required field against the specificity rules a
 - If any field is missing or too vague → call \`ask_user\`.
 - If the user has been asked about the same field twice without providing a specific value, accept the best available answer and move on. Do not keep asking.
 
+# Portfolio Defaults (when investmentPreferences is "none")
+
+When **all required fields pass validation** and \`investmentPreferences\` is \`"none"\`, ask the following two questions before completing. Group both into a single \`ask_user\` call. These establish high-level defaults for the research phase — do not let the research phase silently pick sides.
+
+## Geographic scope
+Present three options for the equity portion, with pros/cons and a concrete compounding illustration:
+
+- **All-world including emerging markets** (FTSE All-World / MSCI ACWI): ~50+ countries including China, India, Brazil. Widest diversification. Pros: no single-market concentration. Cons: emerging markets have been a drag recently — political instability, slower growth, regulatory surprises. ~10% average annual return over the past 10 years (USD).
+- **Developed markets only** (MSCI World equivalent): US, Europe, Japan — no emerging market exposure. Middle ground between diversification and performance. ~11% average annual return over the past 10 years (USD).
+- **US/Israeli concentrated** (S&P 500, NASDAQ, TLV-125): historically the strongest performer. Pros: highest past returns. Cons: concentrated in one or two markets — if the US has a bad decade, you feel it fully. ~13% average annual return over the past 10 years (USD).
+
+Make the compounding difference concrete — "2% more per year" sounds small, but it isn't. Use the user's actual investment amount and timeline. For example, ₪55,000 invested for 20 years: at 10%/yr → ~₪370,000; at 13%/yr → ~₪634,000. That's a 70% larger portfolio from the same starting point. Always add the caveat: past returns don't guarantee future results, and the US dominance of the last decade may not repeat.
+
+Guard: skip this question if the user has already mentioned a geographic or market preference (e.g., S&P 500, NASDAQ, TLV-125, MSCI World, FTSE All-World, EIMI, "global", "Israeli market", "emerging").
+
+## Buffer allocation
+Present two options for the non-equity, conservative portion:
+
+- **קרן כספית** (Israeli money market fund): shekel-denominated, no currency risk, currently yielding ~4–5%, capital-stable. Recommended for Israeli investors — the stable portion of the portfolio without currency exposure.
+- **Bonds** (Israeli or global, e.g., AGGU): slightly higher return potential than קרן כספית in some rate environments, but subject to interest rate risk (when rates rise, bond prices fall). Global bond funds also carry currency risk for Israeli investors — your "safe" allocation swings with the dollar.
+
+You may lean toward recommending קרן כספית and explain why it fits Israeli investors better, but present both options so the user can choose.
+
+Guard: skip this question if the user has already mentioned bonds, AGGU, or קרן כספית.
+
 # Output Format
 Return exactly one of:
-- A single \`ask_user\` tool call if any field fails validation.
-- A short confirmation like "Got it, I have everything I need." if all fields pass.
+- A single \`ask_user\` tool call if any required field fails validation.
+- A single \`ask_user\` tool call if all required fields pass, \`investmentPreferences\` is \`"none"\`, and portfolio defaults questions have not yet been asked.
+- A short confirmation like "Got it, I have everything I need." if all required fields pass and either (a) \`investmentPreferences\` is not \`"none"\`, or (b) portfolio defaults questions have been asked and answered.
 - Nothing else — no advice, no suggestions, no plans.
 
 # Examples
@@ -79,8 +105,9 @@ Field evaluation:
 - monthly contribution: ₪1,200 ✓
 - investment preferences: not mentioned ✗ — need to ask
 Two fields failed → call \`ask_user\`: "When you say long-term, roughly how many years are you thinking — 10, 20, or until retirement at a certain age? Also, do you have any preference for specific sectors, markets, or instruments (e.g., S&P 500, Israeli market, tech sector), or should I just go with a general diversified approach?"
+(If the user then responds "15 years, no specific preference" → all required fields pass, investmentPreferences is "none" → proceed to Portfolio Defaults: ask both geographic scope and buffer allocation in a single ask_user call.)
 
-## Example 2 — all fields specific (range timeline is acceptable), done
+## Example 2 — all fields specific (range timeline is acceptable), investmentPreferences set, done
 ask_user returned: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund, I'm interested in S&P 500 and Israeli market, roughly 60/40."
 Field evaluation:
 - amount: ₪18,000 ✓
@@ -92,7 +119,14 @@ Field evaluation:
 - debt: no ✓
 - monthly contribution: ₪700 ✓
 - investment preferences: "60% S&P 500, 40% Israeli market" ✓ — multiple instruments with percentage split
-All fields passed → respond: "Got it, I have everything I need to build your plan."`;
+All fields passed, investmentPreferences is not "none" → no portfolio defaults needed → respond: "Got it, I have everything I need to build your plan."
+
+## Example 3 — all required fields pass, investmentPreferences is "none", portfolio defaults needed
+All required fields collected. investmentPreferences: "none". No geographic or buffer preference mentioned anywhere in the conversation.
+Portfolio defaults check:
+- Geographic scope: not addressed ✗ — ask
+- Buffer allocation: not addressed ✗ — ask
+→ Call \`ask_user\` with both questions in a single message. Present the three geographic options (all-world+EM, developed-only, US/Israeli concentrated) with ~10-year annualized returns, make the compounding gap concrete using the user's actual amount and timeline, and add the past-performance caveat. For buffer, present קרן כספית vs bonds, lean toward recommending קרן כספית for Israeli investors.`;
 
 const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
