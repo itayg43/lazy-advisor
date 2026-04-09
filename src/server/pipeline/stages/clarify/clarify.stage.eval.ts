@@ -36,7 +36,7 @@ describe("clarifyStage", () => {
     lastGoal = lastTranscript = lastProfile = undefined;
   });
 
-  // Story 4: tests redirect on unrealistic expectation and valid profile extraction after user pivots.
+  // CLARIFY_EXAMPLES #9: tests redirect on unrealistic expectation and valid profile extraction after user pivots.
   it("should handle unrealistic expectations and extract profile after redirect", async () => {
     lastGoal = "I have ₪18,000 and I want to double it in 6 months";
     const responder = createTrackedResponder([
@@ -62,7 +62,7 @@ describe("clarifyStage", () => {
     expect(profile.brokerage).toBe("none");
   });
 
-  // Story 5: tests redirect from out-of-scope stock picking toward ETF-based investing with valid profile.
+  // CLARIFY_EXAMPLES #4: tests redirect from out-of-scope stock picking toward ETF-based investing with valid profile.
   it("should redirect out-of-scope stock picking toward ETF-based investing", async () => {
     lastGoal = "Should I buy NVIDIA stock?";
     const responder = createTrackedResponder([
@@ -89,7 +89,7 @@ describe("clarifyStage", () => {
     expect(profile.goal.toLowerCase()).toMatch(/etf|passive|invest/);
   });
 
-  // Story 7 variant: tests that a soft answer on the second ask is accepted without a third probe.
+  // CLARIFY_EXAMPLES #2: tests that a soft answer on the second ask is accepted without a third probe.
   // A third response is needed for the portfolio defaults question that follows once all required fields pass.
   it("should stop probing timeline after 2 asks", async () => {
     lastGoal = "I want to invest";
@@ -117,7 +117,7 @@ describe("clarifyStage", () => {
     expect(profile.timeline.toLowerCase()).toMatch(/10|15/);
   });
 
-  // Story 8: tests contradiction resolution through conversation and correct risk tolerance extraction.
+  // CLARIFY_EXAMPLES #3: tests contradiction resolution through conversation and correct risk tolerance extraction.
   it("should resolve contradictory input and extract correct risk tolerance", async () => {
     lastGoal = "I want maximum returns but I can't afford to lose any money";
     const responder = createTrackedResponder([
@@ -143,7 +143,7 @@ describe("clarifyStage", () => {
     expect(profile.hasDebt).toBe(false);
   });
 
-  // Story 1 (portfolio defaults): tests that when investmentPreferences is "none", the stage asks the
+  // CLARIFY_EXAMPLES #1: tests that when investmentPreferences is "none", the stage asks the
   // portfolio defaults question and captures the user's equity allocation + buffer answers.
   it("should ask portfolio defaults question and capture answers when no preferences stated", async () => {
     lastGoal =
@@ -178,7 +178,7 @@ describe("clarifyStage", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // Story 12a: tests that a single instrument preference mentioned in the goal is captured.
+  // CLARIFY_EXAMPLES #5: tests that a single instrument preference mentioned in the goal is captured.
   it("should capture single instrument preference from goal", async () => {
     lastGoal = "I have ₪100,000 and I want to invest in tech sector ETFs";
     const responder = createTrackedResponder([
@@ -203,7 +203,7 @@ describe("clarifyStage", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/tech/);
   });
 
-  // Story 12b: tests that when multiple instruments are named without a split, the stage asks for
+  // CLARIFY_EXAMPLES #6: tests that when multiple instruments are named without a split, the stage asks for
   // a percentage allocation and captures it in investmentPreferences.
   it("should ask for percentage split when multiple instruments are named and capture it", async () => {
     lastGoal =

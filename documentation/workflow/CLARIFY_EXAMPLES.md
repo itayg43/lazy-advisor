@@ -179,3 +179,47 @@ Are you open to an ETF-based approach?
 **Agent:** *(stage completes — no ETF-101 explanation, no portfolio defaults question since no preferences stated and knowledge level is advanced)*
 
 **Extracted:** amount: 200000 | age: 34 | risk: moderate or aggressive | timeline: "20+ years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000 | brokerage: Interactive Brokers | knowledgeLevel: intermediate or advanced | investmentPreferences: none
+
+---
+
+## 9. Unrealistic expectations → redirect to realistic plan
+
+**Rule:** When the user states an unrealistic financial goal (e.g., doubling money in 6 months), redirect honestly — explain why it's not achievable, ask if they want to proceed with a realistic long-term plan, then collect the profile as normal.
+
+**Goal:** "I have ₪18,000 and I want to double it in 6 months"
+
+**Agent:** Doubling ₪18,000 in 6 months would require a ~100% return — that's not realistic through any legitimate investment. Even aggressive ETF portfolios average 15–20% per year over the long run. The risk of losing a significant portion of the money in 6 months is very real.
+
+If you're open to a long-term plan instead — something that could realistically grow ₪18,000 over 10–20 years — I can help you build that. Does that work for you?
+
+**User:** Ok fine, long-term then, maybe 10-15 years, moderate risk.
+
+**Agent:** Got it — that's a realistic horizon. A few more details: how old are you, do you have an emergency fund, any debt, how much can you add monthly, do you have a brokerage, what country are you in, and what's your knowledge level about investing?
+
+**User:** I'm 24, yes to emergency fund, no debt, maybe ₪700/mo, no brokerage, I'm in Israel, I'm a beginner.
+
+**Agent:** *(stage completes — profile collected, no portfolio defaults question since timeline is short-to-medium and investmentPreferences was not discussed)*
+
+**Extracted:** amount: 18000 | age: 24 | risk: moderate | timeline: "10-15 years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 700 | brokerage: none | knowledgeLevel: beginner | investmentPreferences: none
+
+---
+
+## 10. Rich initial goal → agent asks only for gaps
+
+**Rule:** The agent asks only for gaps — fields already stated in the goal (amount, age, risk, context) are not re-asked. If the goal provides enough to infer a field, treat it as answered.
+
+**Goal:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings"
+
+**Agent:** Good detail — just a few gaps:
+1. Do you have an emergency fund?
+2. Any debt?
+3. How much can you invest monthly going forward?
+4. Do you have a brokerage account?
+5. What country are you in?
+6. How long is "long-term" — roughly how many years or until what age?
+
+**User:** Yes emergency fund, no debt, about ₪2,000/mo, yes I have IBI, I'm in Israel, about 30 years until retirement at 65. I'm a beginner.
+
+**Agent:** *(stage completes — no questions about amount, age, or risk since all were stated in the goal)*
+
+**Extracted:** amount: 75000 | age: 35 | risk: moderate | timeline: "~30 years, retirement at 65" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000 | brokerage: IBI | knowledgeLevel: beginner | investmentPreferences: none

@@ -89,7 +89,7 @@ Each stage has its own focused prompt and minimal context. Stages start fresh (n
 
 Each stage's contract (input/output, tools, behavior rules) is documented in its plan section file. See [plan sections](../plan/plan-sections/).
 
-Per-stage behavior examples and conversation scenarios are documented in stage-specific files. See [CLARIFY_EXAMPLES.md](CLARIFY_EXAMPLES.md) for Stage 1.
+Per-stage behavior examples and conversation scenarios are documented in stage-specific files. See [STAGE_EXAMPLES.md](STAGE_EXAMPLES.md) for the index.
 
 ### Feedback classification (Stage 4)
 

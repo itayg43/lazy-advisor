@@ -61,7 +61,7 @@ describe("clarifyExtraction", () => {
     lastTranscript = lastProfile = undefined;
   });
 
-  // Story 1: tests full clarify flow for a beginner — required fields collected, portfolio defaults
+  // CLARIFY_EXAMPLES #1: tests full clarify flow for a beginner — required fields collected, portfolio defaults
   // question asked and answered with a custom equity split + buffer preference.
   it("should extract profile from a beginner conversation including portfolio defaults answers", async () => {
     const transcript: ResponseInputItem[] = [
@@ -142,7 +142,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // Story 2: tests extraction when fields are split between goal and response, including brokerage name (IBI).
+  // CLARIFY_EXAMPLES #10: tests extraction when fields are split between goal and response, including brokerage name (IBI).
   it("should extract profile with fields split between goal and response", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -184,7 +184,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toBe("none");
   });
 
-  // Story 8: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
+  // CLARIFY_EXAMPLES #3: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
   it("should extract resolved risk tolerance from contradictory conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -242,7 +242,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toBe("none");
   });
 
-  // Story 11: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
+  // CLARIFY_EXAMPLES #8: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
   // investmentPreferences should be "none" — the user expresses knowledge about Irish ETFs, not a preference to invest in them.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
@@ -288,7 +288,7 @@ describe("clarifyExtraction", () => {
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
   });
 
-  // Story 13: tests that 100% concentration in a single index is captured as-is without modification.
+  // CLARIFY_EXAMPLES #7: tests that 100% concentration in a single index is captured as-is without modification.
   it("should capture 100% single-index concentration as a valid investmentPreferences answer", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -341,7 +341,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // Story 12: tests that extraction captures specific instruments with their percentage split.
+  // CLARIFY_EXAMPLES #6: tests that extraction captures specific instruments with their percentage split.
   it("should extract investment preferences with percentage split when stated", async () => {
     const transcript: ResponseInputItem[] = [
       {

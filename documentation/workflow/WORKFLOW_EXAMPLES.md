@@ -33,7 +33,13 @@ All users are based in Israel. The agent tailors recommendations to Israeli inve
 
 **Goal:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings"
 
-The user provides enough detail that the agent asks only 4 gap questions (emergency fund, debt, monthly contribution, brokerage). Research completes and a 3-fund plan is produced. The user requests "100% equity, skip bonds entirely." The agent warns about increased volatility exposure, then resolves the change entirely from existing research — no new searches. It removes the bond fund and redistributes to the equity positions. This is a pure `adjust` — existing research covers the updated portfolio.
+**Stage 1 — Clarify:** The user provides amount, age, risk, and goal in the initial message. The agent asks only for gaps: emergency fund, debt, monthly contribution, brokerage, and timeline specifics. Stage completes.
+
+**Stage 2 — Research:** Searches for Irish accumulating ETFs and Israeli brokerages. Returns a 3-fund allocation (global equities, bond fund, money market). Stage completes.
+
+**Stage 3 — Plan:** Produces a 3-fund plan with phased steps. Stage completes.
+
+**Stage 4 — Iterate:** The user requests "100% equity, skip bonds entirely." The agent warns about increased volatility, then resolves the change entirely from existing research — no new searches needed. Removes the bond fund and redistributes to equity positions. This is a pure `adjust` — existing research covers the updated portfolio.
 
 ---
 
@@ -41,7 +47,13 @@ The user provides enough detail that the agent asks only 4 gap questions (emerge
 
 **Goal:** "Invest ₪35,000, I'm 25, aggressive risk tolerance"
 
-Clarification collects remaining gaps (timeline, emergency fund, debt, monthly contribution, brokerage). Research produces an aggressive plan with VWRA + EIMI + SXRV. The user requests "no emerging markets, more tech." This invalidates the EIMI research — the agent runs a new search for tech ETFs, drops EIMI, and adds IUIT alongside SXRV. A risk warning about ~60% tech concentration is included. This is a `research_and_adjust` — the user's change requires new search data the agent doesn't have. The same applies to a risk tolerance shift (aggressive → moderate): the entire portfolio structure changes, triggering `research_and_adjust` rather than a simple `adjust`.
+**Stage 1 — Clarify:** The user provides amount, age, and risk in the goal. The agent asks for remaining gaps: timeline, emergency fund, debt, monthly contribution, brokerage. Stage completes.
+
+**Stage 2 — Research:** Runs searches for an aggressive ETF allocation. Returns VWRA (60% global equities), EIMI (30% emerging markets), SXRV (10% tech/automation). Stage completes.
+
+**Stage 3 — Plan:** Produces an aggressive 3-ETF plan with phased steps. Stage completes.
+
+**Stage 4 — Iterate:** The user requests "no emerging markets, more tech." This invalidates the EIMI research — the agent runs a new search for tech ETFs, drops EIMI, and adds IUIT alongside SXRV. A risk warning about ~60% tech concentration is included. This is a `research_and_adjust` — the user's change requires new search data the agent doesn't have. The same applies to a risk tolerance shift (aggressive → moderate): the entire portfolio structure changes, triggering `research_and_adjust` rather than a simple `adjust`.
 
 ---
 

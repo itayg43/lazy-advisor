@@ -15,7 +15,7 @@
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
-| [Clarify Examples](documentation/workflow/CLARIFY_EXAMPLES.md) | When implementing Stage 1 behavior, clarify prompts, or clarify evals |
+| [Stage Examples](documentation/workflow/STAGE_EXAMPLES.md) | When implementing any stage's behavior, prompts, or evals |
 | [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
 | [Status](documentation/STATUS.md) | At the start of each session |
 
