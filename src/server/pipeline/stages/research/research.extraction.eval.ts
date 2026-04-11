@@ -9,8 +9,7 @@ import {
 import { extractResearchSummary } from "#pipeline/stages/research/research.extraction";
 import { ResearchSummarySchema } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("research.extraction.last-run.md", import.meta.url)
-  .pathname;
+const LAST_RUN_PATH = new URL("RESEARCH_EXTRACTION_LAST_RUN.md", import.meta.url).pathname;
 
 describe("researchExtraction", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -23,7 +22,6 @@ describe("researchExtraction", () => {
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
       passed: !ctx.task.result?.errors?.length,
-      durationMs: ctx.task.result?.duration ?? 0,
       transcript: lastTranscript,
       profile: lastResult,
     });

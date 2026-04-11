@@ -3,13 +3,15 @@ import fs from "node:fs";
 
 export type TranscriptEntry = { role: "agent" | "user"; content: string };
 
-// Replaces createScriptedResponder — same interface, adds tracking.
-// sendToUser captures model questions; waitForResponse returns the scripted response and captures it.
-export function createTrackedResponder(responses: string[]): {
+type TrackedResponder = {
   sendToUser: (message: string) => void;
   waitForResponse: () => Promise<string>;
   transcript: TranscriptEntry[];
-} {
+};
+
+// Replaces createScriptedResponder — same interface, adds tracking.
+// sendToUser captures model questions; waitForResponse returns the scripted response and captures it.
+export const createTrackedResponder = (responses: string[]): TrackedResponder => {
   let responseIndex = 0;
   const transcript: TranscriptEntry[] = [];
 
@@ -31,10 +33,10 @@ export function createTrackedResponder(responses: string[]): {
     },
     transcript,
   };
-}
+};
 
 // Called in beforeAll — clears the file and writes the run header.
-export function initLastRun(filePath: string): void {
+export const initLastRun = (filePath: string): void => {
   const timestamp = new Date().toISOString();
   let commitHash = "unknown";
   try {
@@ -45,29 +47,27 @@ export function initLastRun(filePath: string): void {
   fs.writeFileSync(
     filePath,
     `# Eval Last Run\nTimestamp: ${timestamp} | Commit: ${commitHash}\n`,
-    "utf-8",
   );
-}
+};
 
 // Called in afterEach — appends one test block to the last-run file.
-export function appendLastRunEntry(
+export const appendLastRunEntry = (
   filePath: string,
   entry: {
     name: string;
     passed: boolean;
-    durationMs: number;
     goal?: string;
     transcript: TranscriptEntry[];
     profile?: unknown;
     error?: string;
   },
-): void {
+): void => {
   const status = entry.passed ? "✓" : "✗";
   const lines: string[] = [
     "",
     "---",
     "",
-    `## ${status} ${entry.name} (${Math.round(entry.durationMs)}ms)`,
+    `## ${status} ${entry.name}`,
     "",
   ];
 
@@ -91,5 +91,5 @@ export function appendLastRunEntry(
     lines.push(`Error: ${entry.error}`, "");
   }
 
-  fs.appendFileSync(filePath, lines.join("\n") + "\n", "utf-8");
-}
+  fs.appendFileSync(filePath, lines.join("\n") + "\n");
+};

@@ -7,6 +7,16 @@
 **Next task: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
+## Known Flaky Evals (investigate before 4.4c)
+
+Two tests in `clarify.stage.eval.ts` fail intermittently — both are model behavior issues, not assertion or wiring bugs. See `CLARIFY_STAGE_LAST_RUN.md` for the latest transcripts.
+
+**1. "should handle unrealistic expectations and extract profile after redirect"**
+The model gets stuck asking the user to choose between the original short-term goal (double in 6 months) and the long-term pivot, even after the user has moved on and answered with portfolio preferences. Expected: model accepts the long-term pivot and proceeds to extraction. Actual: model loops on the A/B goal disambiguation question, runs out of scripted responses.
+
+**2. "should resolve contradictory input and extract correct risk tolerance"**
+After the user says "FTSE All-World. קרן כספית for the buffer.", the model asks for a percentage split between the two, treating the buffer as an equity allocation rather than understanding the answer is already complete. Expected: model recognises FTSE All-World as the equity leg and קרן כספית as the buffer, and proceeds to extraction without asking for a split. Actual: asks for a percentage, runs out of scripted responses.
+
 ## Section Status
 
 | Section | Status |

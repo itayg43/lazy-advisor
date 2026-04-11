@@ -9,7 +9,7 @@ import {
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import { RiskTolerance, UserProfileSchema } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("clarify.stage.last-run.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("CLARIFY_STAGE_LAST_RUN.md", import.meta.url).pathname;
 
 describe("clarifyStage", () => {
   let lastGoal: string | undefined;
@@ -28,7 +28,6 @@ describe("clarifyStage", () => {
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
       passed: !ctx.task.result?.errors?.length,
-      durationMs: ctx.task.result?.duration ?? 0,
       goal: lastGoal,
       transcript: lastTranscript,
       profile: lastProfile,

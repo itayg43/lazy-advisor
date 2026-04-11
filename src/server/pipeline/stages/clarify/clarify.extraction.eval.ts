@@ -13,30 +13,24 @@ import {
   UserProfileSchema,
 } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("clarify.extraction.last-run.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("CLARIFY_EXTRACTION_LAST_RUN.md", import.meta.url).pathname;
 
 // Converts a ResponseInputItem[] to TranscriptEntry[] for the last-run file.
 // Includes the initial user message (goal), agent questions, and user responses.
-function toTranscriptEntries(items: ResponseInputItem[]): TranscriptEntry[] {
-  const entries: TranscriptEntry[] = [];
-  for (const item of items) {
+const toTranscriptEntries = (items: ResponseInputItem[]): TranscriptEntry[] =>
+  items.flatMap((item): TranscriptEntry[] => {
     if ("role" in item && item.role === "user" && typeof item.content === "string") {
-      entries.push({ role: "user", content: item.content });
-    } else if (
-      "type" in item &&
-      item.type === "function_call" &&
-      "name" in item &&
-      item.name === "ask_user"
-    ) {
-      const args = JSON.parse(item.arguments) as { question: string };
-      entries.push({ role: "agent", content: args.question });
-    } else if ("type" in item && item.type === "function_call_output") {
-      entries.push({ role: "user", content: String(item.output) });
+      return [{ role: "user", content: item.content }];
     }
-  }
-
-  return entries;
-}
+    if ("type" in item && item.type === "function_call" && "name" in item && item.name === "ask_user") {
+      const args = JSON.parse(item.arguments) as { question: string };
+      return [{ role: "agent", content: args.question }];
+    }
+    if ("type" in item && item.type === "function_call_output") {
+      return [{ role: "user", content: String(item.output) }];
+    }
+    return [];
+  });
 
 describe("clarifyExtraction", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -54,7 +48,6 @@ describe("clarifyExtraction", () => {
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
       passed: !ctx.task.result?.errors?.length,
-      durationMs: ctx.task.result?.duration ?? 0,
       transcript: lastTranscript,
       profile: lastProfile,
     });

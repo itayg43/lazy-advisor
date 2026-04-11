@@ -1,9 +1,9 @@
 # Eval Last Run
-Timestamp: 2026-04-11T02:27:22.705Z | Commit: f1f8892
+Timestamp: 2026-04-11T03:07:56.273Z | Commit: d599b39
 
 ---
 
-## ✓ should extract categories with percentages, tickers, expense ratios, and tracking indices (0ms)
+## ✓ should extract categories with percentages, tickers, expense ratios, and tracking indices
 
 **User:** Allocation plan:
 - Global Equities (FTSE All-World): 60%
@@ -34,7 +34,7 @@ categories: [object Object],[object Object],[object Object]
 
 ---
 
-## ✓ should default trackingIndex to none when not mentioned in research text (0ms)
+## ✓ should default trackingIndex to none when not mentioned in research text
 
 **User:** Allocation plan:
 - Global Equities (FTSE All-World): 60%

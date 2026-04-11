@@ -5,8 +5,7 @@ import { buildAllocationPlan } from "#pipeline/stages/research/research.allocati
 import { AllocationPlanSchema } from "#schemas/pipeline.schema";
 import type { AllocationPlan, UserProfile } from "#types/pipeline.types";
 
-const LAST_RUN_PATH = new URL("research.allocation.last-run.md", import.meta.url)
-  .pathname;
+const LAST_RUN_PATH = new URL("RESEARCH_ALLOCATION_LAST_RUN.md", import.meta.url).pathname;
 
 const BOND_KEYWORDS = [
   "bond",
@@ -29,7 +28,6 @@ describe("researchAllocation", () => {
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
       passed: !ctx.task.result?.errors?.length,
-      durationMs: ctx.task.result?.duration ?? 0,
       goal: lastInputProfile.goal,
       transcript: [],
       profile: lastPlan,
