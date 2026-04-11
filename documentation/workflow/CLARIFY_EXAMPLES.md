@@ -180,6 +180,8 @@ Are you open to an ETF-based approach?
 
 **Extracted:** amount: 200000 | age: 34 | risk: moderate or aggressive | timeline: "20+ years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000 | brokerage: Interactive Brokers | knowledgeLevel: intermediate or advanced | investmentPreferences: none
 
+> `risk: "moderate or aggressive"` and `knowledgeLevel: "intermediate or advanced"` reflect current model behavior when the user signals ambiguous values. The extractor captures the hedged output as-is rather than forcing a single enum value.
+
 ---
 
 ## 9. Unrealistic expectations → redirect to realistic plan

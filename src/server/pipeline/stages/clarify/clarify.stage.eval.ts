@@ -27,10 +27,11 @@ describe("clarifyStage", () => {
     if (!lastTranscript) return;
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
-      passed: !ctx.task.result?.errors?.length,
+      passed: ctx.task.result?.state === "pass",
       goal: lastGoal,
       transcript: lastTranscript,
       profile: lastProfile,
+      error: ctx.task.result?.errors?.[0]?.message,
     });
     lastGoal = lastTranscript = lastProfile = undefined;
   });

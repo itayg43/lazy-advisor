@@ -34,7 +34,13 @@ const toTranscriptEntries = (items: ResponseInputItem[]): TranscriptEntry[] =>
     }
 
     if ("type" in item && item.type === "function_call_output") {
-      return [{ role: "user", content: String(item.output) }];
+      return [
+        {
+          role: "user",
+          content:
+            typeof item.output === "string" ? item.output : JSON.stringify(item.output),
+        },
+      ];
     }
 
     return [];
@@ -55,9 +61,10 @@ describe("clarifyExtraction", () => {
     if (!lastTranscript) return;
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
-      passed: !ctx.task.result?.errors?.length,
+      passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
       profile: lastProfile,
+      error: ctx.task.result?.errors?.[0]?.message,
     });
     lastTranscript = lastProfile = undefined;
   });

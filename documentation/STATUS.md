@@ -17,6 +17,21 @@ The model gets stuck asking the user to choose between the original short-term g
 **2. "should resolve contradictory input and extract correct risk tolerance"**
 After the user says "FTSE All-World. קרן כספית for the buffer.", the model asks for a percentage split between the two, treating the buffer as an equity allocation rather than understanding the answer is already complete. Expected: model recognises FTSE All-World as the equity leg and קרן כספית as the buffer, and proceeds to extraction without asking for a split. Actual: asks for a percentage, runs out of scripted responses.
 
+## Known Schema Ambiguity (investigate before using extraction in production)
+
+The clarify extractor occasionally returns hedged string values for enum fields when the user's input is ambiguous — e.g., `risk: "moderate or aggressive"` or `knowledgeLevel: "intermediate or advanced"`. These pass through extraction without validation errors because the extractor does not enforce a strict enum on output; it returns the model's raw text.
+
+**Root cause (suspected):** The extraction prompt does not explicitly instruct the model to pick the closest single enum value when the user hedges. The model mirrors the user's phrasing instead of resolving it.
+
+**Impact:** Downstream stages (research, plan) that read `risk` or `knowledgeLevel` may receive an unexpected string value that doesn't match any enum member, causing silent mismatch or runtime failure.
+
+**Suggested investigation:**
+- Add a Zod parse + assert in the extraction eval to catch non-enum values early (currently only `assertValidProfile` checks the schema, which may not cover all edge cases)
+- Review the extraction prompt — add an explicit instruction to resolve ambiguous input to the nearest single enum value
+- Consider adding a normalization step post-extraction if the prompt fix alone is insufficient
+
+See `CLARIFY_EXAMPLES.md` Scenario 8 for the concrete example and the note added there.
+
 ## Section Status
 
 | Section | Status |

@@ -28,10 +28,11 @@ describe("researchAllocation", () => {
     if (!lastInputProfile) return;
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
-      passed: !ctx.task.result?.errors?.length,
+      passed: ctx.task.result?.state === "pass",
       goal: lastInputProfile.goal,
       transcript: [],
       profile: lastPlan,
+      error: ctx.task.result?.errors?.[0]?.message,
     });
     lastInputProfile = lastPlan = undefined;
   });

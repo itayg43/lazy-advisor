@@ -22,9 +22,10 @@ describe("researchExtraction", () => {
     if (!lastTranscript) return;
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
-      passed: !ctx.task.result?.errors?.length,
+      passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
       profile: lastResult,
+      error: ctx.task.result?.errors?.[0]?.message,
     });
     lastTranscript = lastResult = undefined;
   });
