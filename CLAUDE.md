@@ -63,10 +63,10 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - Always push the branch before creating the PR — `gh pr create` requires the branch to exist on the remote
 - PR descriptions must be descriptive, detailed, and self-contained
 - No "Generated with Claude Code" lines in PR descriptions
-- No "Test plan" section in PR descriptions — CI already covers lint, format, type-check, and tests
+- No "Test plan" section in PR descriptions — CI already covers format, lint, type-check, and tests
 
 ### Before merging
-- CI (lint, format, type-check, tests) must pass
+- CI (format, lint, type-check, tests) must pass
 - Branch must be up to date with `main`
 
 ## npm Scripts
