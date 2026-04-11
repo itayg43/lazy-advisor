@@ -36,5 +36,5 @@ After the user says "FTSE All-World. קרן כספית for the buffer.", the mod
 
 ## Infrastructure
 
-- CI pipeline, branch protection, `format:check` script — complete
+- CI pipeline, branch protection, format enforcement — complete
 - `dotenvx` encryption for `.env`/`.env.test`, `secretlint` pre-commit hook, prisma convenience scripts — complete

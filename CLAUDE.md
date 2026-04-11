@@ -52,7 +52,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
 
 ### Before committing
-- Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
+- Run all checks: `npm run format`, `npm run lint`, `npm run type-check`, `npm test`
 - After running evals, commit the updated `*.runs.jsonl` and `*.last-run.md` files alongside the code — they are the persistent eval log and should not be left unstaged
 - Update `STATUS.md` if task completion status changed
 - Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
@@ -66,7 +66,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - No "Test plan" section in PR descriptions — CI already covers lint, format, type-check, and tests
 
 ### Before merging
-- CI (lint, format check, type-check, tests) must pass
+- CI (lint, format, type-check, tests) must pass
 - Branch must be up to date with `main`
 
 ## npm Scripts
@@ -83,5 +83,4 @@ Always use these exact commands — do not construct alternative invocations:
 | `npm run dev:server` | Start the server in dev/watch mode |
 | `npm run lint` | Lint source files |
 | `npm run format` | Auto-format source files |
-| `npm run format:check` | Check formatting without writing |
 

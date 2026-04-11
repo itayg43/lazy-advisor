@@ -169,7 +169,7 @@ it("should handle unrealistic expectations...", async () => {
 
 ```bash
 npm run lint
-npm run format:check
+npm run format
 npm run type-check
 npm test
 npm run test:evals -- src/server/pipeline/stages/clarify/clarify.stage.eval.ts
