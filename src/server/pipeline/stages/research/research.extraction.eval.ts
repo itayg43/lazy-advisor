@@ -1,10 +1,35 @@
 import type { ResponseInputItem } from "openai/resources/responses/responses";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  appendLastRunEntry,
+  initLastRun,
+  type TranscriptEntry,
+} from "#pipeline/eval.transcript";
 import { extractResearchSummary } from "#pipeline/stages/research/research.extraction";
 import { ResearchSummarySchema } from "#schemas/pipeline.schema";
 
+const LAST_RUN_PATH = new URL("research.extraction.last-run.md", import.meta.url)
+  .pathname;
+
 describe("researchExtraction", () => {
+  let lastTranscript: TranscriptEntry[] | undefined;
+  let lastResult: unknown | undefined;
+
+  beforeAll(() => initLastRun(LAST_RUN_PATH));
+
+  afterEach((ctx) => {
+    if (!lastTranscript) return;
+    appendLastRunEntry(LAST_RUN_PATH, {
+      name: ctx.task.name,
+      passed: !ctx.task.result?.errors?.length,
+      durationMs: ctx.task.result?.duration ?? 0,
+      transcript: lastTranscript,
+      profile: lastResult,
+    });
+    lastTranscript = lastResult = undefined;
+  });
+
   const assertValidSummary = (summary: unknown): void => {
     const result = ResearchSummarySchema.safeParse(summary);
     expect(result.success).toBe(true);
@@ -40,8 +65,10 @@ Source: https://maya.tase.co.il/fund/5122505
     `.trim();
 
     const transcript: ResponseInputItem[] = [{ role: "user", content: researchText }];
+    lastTranscript = [{ role: "user", content: researchText }];
 
     const summary = await extractResearchSummary(transcript);
+    lastResult = summary;
 
     assertValidSummary(summary);
     expect(summary.categories.length).toBeGreaterThanOrEqual(3);
@@ -111,8 +138,10 @@ Source: https://www.ishares.com/uk/individual/en/products/279174/ishares-automat
     `.trim();
 
     const transcript: ResponseInputItem[] = [{ role: "user", content: researchText }];
+    lastTranscript = [{ role: "user", content: researchText }];
 
     const summary = await extractResearchSummary(transcript);
+    lastResult = summary;
 
     assertValidSummary(summary);
 

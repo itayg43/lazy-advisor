@@ -42,14 +42,15 @@ describe("clarifyStage", () => {
     const responder = createTrackedResponder([
       "ok fine, long term then, maybe 10-15 years, moderate risk",
       "I'm 24, yes to emergency fund, no debt, maybe ₪700/mo, no brokerage, I'm in Israel, I'm a beginner",
+      "FTSE All-World. קרן כספית for the buffer.",
     ]);
+    lastTranscript = responder.transcript;
 
     const profile = await runClarifyStage(
       lastGoal,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastTranscript = responder.transcript;
     lastProfile = profile;
 
     assertValidProfile(profile);
@@ -68,14 +69,15 @@ describe("clarifyStage", () => {
     const responder = createTrackedResponder([
       "ok fine, I'm open to ETFs. I have ₪30,000 to invest",
       "I'm 29, moderate risk, about 10 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
+      "FTSE All-World. קרן כספית for the buffer.",
     ]);
+    lastTranscript = responder.transcript;
 
     const profile = await runClarifyStage(
       lastGoal,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastTranscript = responder.transcript;
     lastProfile = profile;
 
     assertValidProfile(profile);
@@ -123,14 +125,15 @@ describe("clarifyStage", () => {
     const responder = createTrackedResponder([
       "If my ₪40,000 dropped to ₪32,000 I'd feel sick but hold on and wait. I guess I'm moderate.",
       "₪45,000 to invest, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
+      "FTSE All-World. קרן כספית for the buffer.",
     ]);
+    lastTranscript = responder.transcript;
 
     const profile = await runClarifyStage(
       lastGoal,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastTranscript = responder.transcript;
     lastProfile = profile;
 
     assertValidProfile(profile);
@@ -152,13 +155,13 @@ describe("clarifyStage", () => {
       "I'm 28, yes 6 months emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, no brokerage, I'm in Israel, I'm a complete beginner",
       "70% FTSE All-World and 30% TLV-125. קרן כספית sounds right for the buffer.",
     ]);
+    lastTranscript = responder.transcript;
 
     const profile = await runClarifyStage(
       lastGoal,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastTranscript = responder.transcript;
     lastProfile = profile;
 
     assertValidProfile(profile);
@@ -183,14 +186,15 @@ describe("clarifyStage", () => {
     lastGoal = "I have ₪100,000 and I want to invest in tech sector ETFs";
     const responder = createTrackedResponder([
       "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",
+      "Yes, קרן כספית is fine for the buffer.",
     ]);
+    lastTranscript = responder.transcript;
 
     const profile = await runClarifyStage(
       lastGoal,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastTranscript = responder.transcript;
     lastProfile = profile;
 
     assertValidProfile(profile);

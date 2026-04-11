@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-09T15:18:50.892Z | Commit: 1ce09f3
+Timestamp: 2026-04-11T02:27:14.108Z | Commit: f1f8892
 
 ---
 
@@ -41,7 +41,7 @@ Any combination or split works — e.g., 70% FTSE All-World + 30% TLV-125.
 **User:** 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.
 
 **Extracted profile:**
-goal: invest ₪55,000 for long-term investing (~20 years, maybe until around 50), with a 70% FTSE All-World and 30% TLV-125 allocation; a 20% drop would stress them but they wouldn't sell | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years, maybe until around 50 | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125; קרן כספית sounds right | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
+goal: Start investing ₪55,000 for about 20 years (around age 50); complete beginner; would feel stressed by a 20% drop but wouldn't sell; split 70% FTSE All-World and 30% TLV-125; wants a קרן כספית buffer; in Israel; contribute about ₪1,800/month | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years (maybe until around 50) | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125; קרן כספית sounds right | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
 
 
 ---
@@ -61,7 +61,7 @@ goal: invest ₪55,000 for long-term investing (~20 years, maybe until around 50
 **User:** yes emergency fund, no debt, about ₪2,000/mo, yes I have IBI, I'm in Israel, about 30 years until retirement at 65. I'm a beginner.
 
 **Extracted profile:**
-goal: ₪75,000 long-term retirement savings (about 30 years until retirement at 65) with moderate risk | amount: 75000 | age: 35 | riskTolerance: moderate | timeline: about 30 years until retirement at 65 | knowledgeLevel: beginner | brokerage: IBI | investmentPreferences: none | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
+goal: retirement savings for about 30 years until retirement at 65 with ₪75,000, moderate risk | amount: 75000 | age: 35 | riskTolerance: moderate | timeline: about 30 years until retirement at 65 | knowledgeLevel: beginner | brokerage: IBI | investmentPreferences: none | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
 
 
 ---
@@ -91,7 +91,7 @@ C) Buy more while it's cheap
 **User:** ₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner
 
 **Extracted profile:**
-goal: maximum returns but can't afford to lose any money; invest ₪45,000 with a moderate risk approach, would feel sick but hold on if it dropped (₪40,000 to ₪32,000), about 5 years, with ₪1,000/mo contributions | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: none | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
+goal: Maximum returns, but can’t afford to lose any money; if ₪40,000 dropped to ₪32,000 I'd feel sick but hold on and wait (moderate risk); investing ₪45,000 | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: none | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
 
 
 ---
@@ -113,7 +113,7 @@ goal: maximum returns but can't afford to lose any money; invest ₪45,000 with 
 **User:** 34, long-term 20+ years, moderate-to-aggressive, emergency fund yes, no debt, ₪5,000/mo, I have Interactive Brokers. I've been investing for a few years — I know about Irish ETFs, tax efficiency, the basics. I'm in Israel.
 
 **Extracted profile:**
-goal: invest ₪200,000 for a long-term 20+ year horizon with moderate-to-aggressive risk tolerance; also investing ₪5,000/month | amount: 200000 | age: 34 | riskTolerance: moderate | timeline: 20+ years | knowledgeLevel: intermediate | brokerage: Interactive Brokers | investmentPreferences: none | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000
+goal: invest ₪200,000 with a long-term 20+ year timeline, moderate-to-aggressive risk tolerance; has emergency fund (yes) and no debt | amount: 200000 | age: 34 | riskTolerance: aggressive | timeline: long-term 20+ years | knowledgeLevel: intermediate | brokerage: Interactive Brokers | investmentPreferences: Irish ETFs, tax efficiency | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000
 
 
 ---
@@ -133,7 +133,7 @@ goal: invest ₪200,000 for a long-term 20+ year horizon with moderate-to-aggres
 **User:** 100% NASDAQ. I have strong conviction in tech and a long horizon — I'm fine with the volatility. קרן כספית is fine for the buffer.
 
 **Extracted profile:**
-goal: invest ₪80,000 as a 32-year-old in Israel for about 15 years, aggressive risk tolerance with strong conviction in tech (100% NASDAQ) and using קרן כספית for the buffer; monthly contribution ₪2,000/mo | amount: 80000 | age: 32 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 100% NASDAQ; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
+goal: Invest ₪80,000 to start investing with a long horizon (~15 years), strong conviction in tech, aggressive risk tolerance; equity allocation 100% NASDAQ; קרן כספית is fine for the buffer | amount: 80000 | age: 32 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 100% NASDAQ; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
 
 
 ---
@@ -159,5 +159,5 @@ goal: invest ₪80,000 as a 32-year-old in Israel for about 15 years, aggressive
 **User:** 70% S&P 500 and 30% TLV-125
 
 **Extracted profile:**
-goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds; 70% S&P 500 and 30% TLV-125; moderate risk over about 15 years, with ₪2,500/month contributions; Israel. | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
+goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds; moderate risk with about 15 years horizon, with ₪2,500/month contributions; 70% S&P 500 and 30% TLV-125 | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
 

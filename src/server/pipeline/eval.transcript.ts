@@ -18,7 +18,12 @@ export function createTrackedResponder(responses: string[]): {
       transcript.push({ role: "agent", content: message });
     },
     waitForResponse: () => {
-      const response = responses[responseIndex] ?? "that's all I have";
+      if (responseIndex >= responses.length) {
+        throw new Error(
+          `createTrackedResponder: no response scripted for turn ${responseIndex + 1} (only ${responses.length} provided)`,
+        );
+      }
+      const response = responses[responseIndex];
       responseIndex++;
       transcript.push({ role: "user", content: response });
 
@@ -31,7 +36,12 @@ export function createTrackedResponder(responses: string[]): {
 // Called in beforeAll — clears the file and writes the run header.
 export function initLastRun(filePath: string): void {
   const timestamp = new Date().toISOString();
-  const commitHash = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
+  let commitHash = "unknown";
+  try {
+    commitHash = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
+  } catch {
+    // not in a git repo or git unavailable
+  }
   fs.writeFileSync(
     filePath,
     `# Eval Last Run\nTimestamp: ${timestamp} | Commit: ${commitHash}\n`,

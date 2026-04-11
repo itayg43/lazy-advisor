@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.transcript";
 import { buildAllocationPlan } from "#pipeline/stages/research/research.allocation";
 import { AllocationPlanSchema } from "#schemas/pipeline.schema";
 import type { AllocationPlan, UserProfile } from "#types/pipeline.types";
+
+const LAST_RUN_PATH = new URL("research.allocation.last-run.md", import.meta.url)
+  .pathname;
 
 const BOND_KEYWORDS = [
   "bond",
@@ -15,6 +19,24 @@ const BOND_KEYWORDS = [
 ];
 
 describe("researchAllocation", () => {
+  let lastInputProfile: UserProfile | undefined;
+  let lastPlan: AllocationPlan | undefined;
+
+  beforeAll(() => initLastRun(LAST_RUN_PATH));
+
+  afterEach((ctx) => {
+    if (!lastInputProfile) return;
+    appendLastRunEntry(LAST_RUN_PATH, {
+      name: ctx.task.name,
+      passed: !ctx.task.result?.errors?.length,
+      durationMs: ctx.task.result?.duration ?? 0,
+      goal: lastInputProfile.goal,
+      transcript: [],
+      profile: lastPlan,
+    });
+    lastInputProfile = lastPlan = undefined;
+  });
+
   const assertValidPlan = (plan: unknown): void => {
     const result = AllocationPlanSchema.safeParse(plan);
     expect(result.success).toBe(true);
@@ -45,7 +67,9 @@ describe("researchAllocation", () => {
       monthlyContribution: 1_800,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
 
     assertValidPlan(plan);
     expect(totalBondPercentage(plan)).toBeLessThanOrEqual(20);
@@ -68,7 +92,9 @@ describe("researchAllocation", () => {
       monthlyContribution: 1_500,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
 
     assertValidPlan(plan);
     expect(totalBondPercentage(plan)).toBeLessThanOrEqual(10);
@@ -91,7 +117,9 @@ describe("researchAllocation", () => {
       monthlyContribution: 3_000,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
 
     assertValidPlan(plan);
     expect(totalBondPercentage(plan)).toBeGreaterThan(0);
@@ -114,7 +142,9 @@ describe("researchAllocation", () => {
       monthlyContribution: 2_500,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
     const sp500Slice = plan.slices.find((s) =>
       s.category.toLowerCase().match(/s&p 500|sp500/),
     );
