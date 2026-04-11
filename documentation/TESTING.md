@@ -66,4 +66,16 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Two eval layers** (applied per stage — see [story-to-stage mapping](workflow/WORKFLOW_EXAMPLES.md#story-to-stage-mapping) for coverage):
   - **Extraction-only**: tests extraction/parsing prompt quality in isolation by feeding deterministic input directly to the extraction function (e.g., `extractUserProfile` for clarify, `extractResearchSummary` for research). Only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
   - **Full-loop**: tests the full stage end-to-end (e.g., `runClarifyStage` with scripted responder, `runResearchStage` with real web search). Scripted responses (where applicable) are natural and focused, not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the input.
-- Each stage's eval file covers stories from [WORKFLOW_EXAMPLES.md](workflow/WORKFLOW_EXAMPLES.md) whose distinct behavior belongs to that stage.
+- Each stage's eval file covers scenarios from the stage-specific example files (see [STAGE_EXAMPLES.md](workflow/STAGE_EXAMPLES.md)).
+
+### Debugging failing evals
+
+When an eval fails, check the `*.last-run.md` file alongside the eval before doing anything else. It contains the full transcript of what the model said and did — this is usually enough to diagnose the failure without rerunning.
+
+Common failure patterns and how the transcript reveals them:
+
+- **Overflow throw** (`no response scripted for turn N`): the transcript shows all turns up to the throw. Count the agent questions — the test has fewer scripted responses than the model asked for. Add the missing response.
+- **Assertion failure**: the extracted profile is shown at the bottom. Check whether the assertion is too strict (e.g., the model chose `conservative` where `moderate` was expected and both are valid), or whether the model genuinely extracted the wrong value. Loosen the assertion or fix the prompt accordingly.
+- **Stage error before transcript**: the last-run entry will be missing or empty. Look at the test's scripted responses — one may be an unexpected or nonsensical answer that caused the stage to error out.
+
+After diagnosing, make the minimal fix (add a response, adjust an assertion, fix the prompt) and rerun the specific eval file to confirm.
