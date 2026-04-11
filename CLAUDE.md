@@ -15,6 +15,7 @@
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
+| [Stage Examples](documentation/workflow/STAGE_EXAMPLES.md) | When implementing any stage's behavior, prompts, or evals |
 | [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
 | [Status](documentation/STATUS.md) | At the start of each session |
 
@@ -51,8 +52,8 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
 
 ### Before committing
-- Run all checks: `npm run lint`, `npm run format:check`, `npm run type-check`, `npm test`
-- After running evals, commit the updated `*.runs.jsonl` files alongside the code — they are the persistent eval log and should not be left unstaged
+- Run all checks: `npm run format`, `npm run lint`, `npm run type-check`, `npm test`
+- After running evals, commit the updated `*.runs.jsonl` and `*.last-run.md` files alongside the code — they are the persistent eval log and should not be left unstaged
 - Update `STATUS.md` if task completion status changed
 - Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
 
@@ -62,10 +63,10 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 - Always push the branch before creating the PR — `gh pr create` requires the branch to exist on the remote
 - PR descriptions must be descriptive, detailed, and self-contained
 - No "Generated with Claude Code" lines in PR descriptions
-- No "Test plan" section in PR descriptions — CI already covers lint, format, type-check, and tests
+- No "Test plan" section in PR descriptions — CI already covers format, lint, type-check, and tests
 
 ### Before merging
-- CI (lint, format check, type-check, tests) must pass
+- CI (format, lint, type-check, tests) must pass
 - Branch must be up to date with `main`
 
 ## npm Scripts
@@ -82,5 +83,4 @@ Always use these exact commands — do not construct alternative invocations:
 | `npm run dev:server` | Start the server in dev/watch mode |
 | `npm run lint` | Lint source files |
 | `npm run format` | Auto-format source files |
-| `npm run format:check` | Check formatting without writing |
 

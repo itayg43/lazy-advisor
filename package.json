@@ -14,7 +14,6 @@
     "prisma:push": "dotenvx run -- npx prisma db push",
     "lint": "eslint src/",
     "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
     "prepare": "husky"
   },
   "repository": {

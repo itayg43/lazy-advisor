@@ -1,19 +1,44 @@
 import type { ResponseInputItem } from "openai/resources/responses/responses";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  appendLastRunEntry,
+  initLastRun,
+  type TranscriptEntry,
+} from "#pipeline/eval.transcript";
 import { extractResearchSummary } from "#pipeline/stages/research/research.extraction";
 import { ResearchSummarySchema } from "#schemas/pipeline.schema";
 
+const LAST_RUN_PATH = new URL("RESEARCH_EXTRACTION_LAST_RUN.md", import.meta.url)
+  .pathname;
+
 describe("researchExtraction", () => {
+  let lastTranscript: TranscriptEntry[] | undefined;
+  let lastResult: unknown | undefined;
+
+  beforeAll(() => initLastRun(LAST_RUN_PATH));
+
+  afterEach((ctx) => {
+    if (!lastTranscript) return;
+    appendLastRunEntry(LAST_RUN_PATH, {
+      name: ctx.task.name,
+      passed: ctx.task.result?.state === "pass",
+      transcript: lastTranscript,
+      profile: lastResult,
+      error: ctx.task.result?.errors?.[0]?.message,
+    });
+    lastTranscript = lastResult = undefined;
+  });
+
   const assertValidSummary = (summary: unknown): void => {
     const result = ResearchSummarySchema.safeParse(summary);
     expect(result.success).toBe(true);
   };
 
-  // Story 1: 28yo moderate beginner, 20-year horizon, emergency fund.
+  // RESEARCH_EXAMPLES #5: 28yo moderate beginner, 20-year horizon, emergency fund.
   // Allocation: 60% global equities, 20% Israeli S&P 500 index funds, 20% קרן כספית.
   // Tests extraction of categories, tickers, expense ratios, tracking indices, and percentages.
-  it("should extract categories with percentages, tickers, expense ratios, and tracking indices (Story 1)", async () => {
+  it("should extract categories with percentages, tickers, expense ratios, and tracking indices", async () => {
     const researchText = `
 Allocation plan:
 - Global Equities (FTSE All-World): 60%
@@ -40,8 +65,10 @@ Source: https://maya.tase.co.il/fund/5122505
     `.trim();
 
     const transcript: ResponseInputItem[] = [{ role: "user", content: researchText }];
+    lastTranscript = [{ role: "user", content: researchText }];
 
     const summary = await extractResearchSummary(transcript);
+    lastResult = summary;
 
     assertValidSummary(summary);
     expect(summary.categories.length).toBeGreaterThanOrEqual(3);
@@ -81,10 +108,10 @@ Source: https://maya.tase.co.il/fund/5122505
     expect(migdal?.expenseRatio).toBe(0.03);
   });
 
-  // Story 3: 25yo aggressive investor, 20+ year horizon, no bonds.
+  // RESEARCH_EXAMPLES #6: 25yo aggressive investor, 20+ year horizon, no bonds.
   // Allocation: 60% global equities, 30% emerging markets, 10% tech & automation.
   // SXRV is a thematic ETF with no tracking index mentioned → should default to "none".
-  it("should default trackingIndex to none when not mentioned in research text (Story 3)", async () => {
+  it("should default trackingIndex to none when not mentioned in research text", async () => {
     const researchText = `
 Allocation plan:
 - Global Equities (FTSE All-World): 60%
@@ -111,8 +138,10 @@ Source: https://www.ishares.com/uk/individual/en/products/279174/ishares-automat
     `.trim();
 
     const transcript: ResponseInputItem[] = [{ role: "user", content: researchText }];
+    lastTranscript = [{ role: "user", content: researchText }];
 
     const summary = await extractResearchSummary(transcript);
+    lastResult = summary;
 
     assertValidSummary(summary);
 

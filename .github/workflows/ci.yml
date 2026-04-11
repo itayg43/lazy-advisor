@@ -6,7 +6,7 @@ on:
 
 jobs:
   ci:
-    name: Lint, Format, Type-check, Test
+    name: Format, Lint, Type-check, Test
     runs-on: ubuntu-latest
 
     steps:
@@ -22,13 +22,14 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
         env:
-          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy # secretlint-disable-line
+
+      - name: Format
+        # Runs Prettier in-place, then fails if any files were modified (exit code 1 = uncommitted changes)
+        run: npm run format && git diff --exit-code
 
       - name: Lint
         run: npm run lint
-
-      - name: Format check
-        run: npm run format:check
 
       - name: Type check
         run: npm run type-check

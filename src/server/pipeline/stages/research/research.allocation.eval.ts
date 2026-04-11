@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.transcript";
 import { buildAllocationPlan } from "#pipeline/stages/research/research.allocation";
 import { AllocationPlanSchema } from "#schemas/pipeline.schema";
 import type { AllocationPlan, UserProfile } from "#types/pipeline.types";
+
+const LAST_RUN_PATH = new URL("RESEARCH_ALLOCATION_LAST_RUN.md", import.meta.url)
+  .pathname;
 
 const BOND_KEYWORDS = [
   "bond",
@@ -15,6 +19,24 @@ const BOND_KEYWORDS = [
 ];
 
 describe("researchAllocation", () => {
+  let lastInputProfile: UserProfile | undefined;
+  let lastPlan: AllocationPlan | undefined;
+
+  beforeAll(() => initLastRun(LAST_RUN_PATH));
+
+  afterEach((ctx) => {
+    if (!lastInputProfile) return;
+    appendLastRunEntry(LAST_RUN_PATH, {
+      name: ctx.task.name,
+      passed: ctx.task.result?.state === "pass",
+      goal: lastInputProfile.goal,
+      transcript: [],
+      profile: lastPlan,
+      error: ctx.task.result?.errors?.[0]?.message,
+    });
+    lastInputProfile = lastPlan = undefined;
+  });
+
   const assertValidPlan = (plan: unknown): void => {
     const result = AllocationPlanSchema.safeParse(plan);
     expect(result.success).toBe(true);
@@ -28,9 +50,9 @@ describe("researchAllocation", () => {
       .filter((s) => isBondSlice(s.category))
       .reduce((sum, s) => sum + s.percentage, 0);
 
-  // Story 1: 28yo moderate investor with emergency fund, no preferences.
+  // RESEARCH_EXAMPLES #1: 28yo moderate investor with emergency fund, no preferences.
   // Young + emergency fund → bonds should be reduced or absent.
-  it("should reduce bonds for young moderate investor with emergency fund (Story 1)", async () => {
+  it("should reduce bonds for young moderate investor with emergency fund", async () => {
     const profile: UserProfile = {
       goal: "invest ₪55,000 as a complete beginner, moderate risk, 20-year horizon with ₪1,800/month contributions",
       amount: 55_000,
@@ -45,15 +67,17 @@ describe("researchAllocation", () => {
       monthlyContribution: 1_800,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
 
     assertValidPlan(plan);
     expect(totalBondPercentage(plan)).toBeLessThanOrEqual(20);
   });
 
-  // Story 3: 25yo aggressive investor with emergency fund, no preferences.
+  // RESEARCH_EXAMPLES #2: 25yo aggressive investor with emergency fund, no preferences.
   // Young + aggressive + emergency fund → bonds should be minimal or absent.
-  it("should produce minimal or no bonds for young aggressive investor with emergency fund (Story 3)", async () => {
+  it("should produce minimal or no bonds for young aggressive investor with emergency fund", async () => {
     const profile: UserProfile = {
       goal: "aggressive growth portfolio, ₪35,000 over 20+ years",
       amount: 35_000,
@@ -68,13 +92,15 @@ describe("researchAllocation", () => {
       monthlyContribution: 1_500,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
 
     assertValidPlan(plan);
     expect(totalBondPercentage(plan)).toBeLessThanOrEqual(10);
   });
 
-  // Older conservative Israeli investor (58yo) with emergency fund.
+  // RESEARCH_EXAMPLES #3: older conservative investor (58yo) with emergency fund.
   // Age > 50 → bonds must be present regardless of emergency fund.
   it("should keep bonds for older investor even with emergency fund", async () => {
     const profile: UserProfile = {
@@ -91,15 +117,17 @@ describe("researchAllocation", () => {
       monthlyContribution: 3_000,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
 
     assertValidPlan(plan);
     expect(totalBondPercentage(plan)).toBeGreaterThan(0);
   });
 
-  // Story 12: 32yo moderate investor with explicit 80/20 split between S&P 500 and TLV-125.
+  // RESEARCH_EXAMPLES #4: 32yo moderate investor with explicit 80/20 split between S&P 500 and TLV-125.
   // Stated preferences with percentages → dedicated slices at the exact stated percentages.
-  it("should produce dedicated slices at stated percentages for multiple preferences (Story 12)", async () => {
+  it("should produce dedicated slices at stated percentages for multiple preferences", async () => {
     const profile: UserProfile = {
       goal: "invest ₪100,000 with a 15-year horizon, 80% S&P 500 and 20% TLV-125",
       amount: 100_000,
@@ -114,7 +142,9 @@ describe("researchAllocation", () => {
       monthlyContribution: 2_500,
     };
 
+    lastInputProfile = profile;
     const plan = await buildAllocationPlan(profile);
+    lastPlan = plan;
     const sp500Slice = plan.slices.find((s) =>
       s.category.toLowerCase().match(/s&p 500|sp500/),
     );
