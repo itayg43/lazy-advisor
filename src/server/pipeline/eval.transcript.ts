@@ -63,13 +63,7 @@ export const appendLastRunEntry = (
   },
 ): void => {
   const status = entry.passed ? "✓" : "✗";
-  const lines: string[] = [
-    "",
-    "---",
-    "",
-    `## ${status} ${entry.name}`,
-    "",
-  ];
+  const lines: string[] = ["", "---", "", `## ${status} ${entry.name}`, ""];
 
   if (entry.goal) {
     lines.push(`**Goal:** "${entry.goal}"`, "");

@@ -22,7 +22,12 @@ const toTranscriptEntries = (items: ResponseInputItem[]): TranscriptEntry[] =>
     if ("role" in item && item.role === "user" && typeof item.content === "string") {
       return [{ role: "user", content: item.content }];
     }
-    if ("type" in item && item.type === "function_call" && "name" in item && item.name === "ask_user") {
+    if (
+      "type" in item &&
+      item.type === "function_call" &&
+      "name" in item &&
+      item.name === "ask_user"
+    ) {
       const args = JSON.parse(item.arguments) as { question: string };
 
       return [{ role: "agent", content: args.question }];

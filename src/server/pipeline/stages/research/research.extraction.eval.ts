@@ -9,7 +9,8 @@ import {
 import { extractResearchSummary } from "#pipeline/stages/research/research.extraction";
 import { ResearchSummarySchema } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("RESEARCH_EXTRACTION_LAST_RUN.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("RESEARCH_EXTRACTION_LAST_RUN.md", import.meta.url)
+  .pathname;
 
 describe("researchExtraction", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
