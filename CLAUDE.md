@@ -2,7 +2,7 @@
 
 ## Agent Usage
 
-- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Git Workflow § Before writing code), code review, and test analysis
+- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Git Workflow § Before writing code), and code review
 - Keep inline: looking up a specific file or function, implementation, small edits, git operations
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
@@ -11,13 +11,13 @@
 
 | Document | Read when |
 |----------|-----------|
+| [Status](documentation/STATUS.md) | At the start of each session |
+| [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
 | [Stage Examples](documentation/workflow/STAGE_EXAMPLES.md) | When implementing any stage's behavior, prompts, or evals |
-| [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
-| [Status](documentation/STATUS.md) | At the start of each session |
 
 ## Feedback Style
 
@@ -39,7 +39,7 @@ Work one task at a time. Each task must be fully closed before moving to the nex
 - All checks passing
 - Commit made and PR opened
 
-If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on, then follow the Git Workflow section as the execution sequence.
+If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
 ## Git Workflow
 
@@ -60,7 +60,6 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 ### Commits and PRs
 - Commit messages must be descriptive, detailed, and self-contained — no links to plan docs or external documents, as they can break over time
 - No `Co-Authored-By` lines in commit messages
-- Always push the branch before creating the PR — `gh pr create` requires the branch to exist on the remote
 - PR descriptions must be descriptive, detailed, and self-contained
 - No "Generated with Claude Code" lines in PR descriptions
 - No "Test plan" section in PR descriptions — CI already covers format, lint, type-check, and tests
@@ -75,12 +74,12 @@ Always use these exact commands — do not construct alternative invocations:
 
 | Command | Description |
 |---------|-------------|
+| `npm run format` | Auto-format source files |
+| `npm run lint` | Lint source files |
 | `npm run type-check` | TypeScript type checking (no emit) |
 | `npm test` | Run unit tests |
 | `npm run test:repositories` | Run repository integration tests (resets test DB first) — Prisma's AI safety guard will prompt for confirmation before `db push --force-reset`; respond with "yes" to proceed |
 | `npm run test:evals` | Run all eval tests |
 | `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/research/research.extraction.eval.ts`) |
 | `npm run dev:server` | Start the server in dev/watch mode |
-| `npm run lint` | Lint source files |
-| `npm run format` | Auto-format source files |
 
