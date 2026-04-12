@@ -40,13 +40,6 @@
 2. `callOpenAI` + web_search → research text (Phase B — mini, guided by allocation plan)
 3. `extractResearchSummary(phaseB.id)` → `ResearchSummary` (Phase C — nano, extraction)
 
-### Completed Tasks
-
-| Task | Summary |
-|------|---------|
-| 4.4a | `buildAllocationPlan(profile)` in `research.allocation.ts` — LLM allocation via `callOpenAIParsed` + evals (Story 1, 3, 12 + older investor) |
-| 4.4b | `extractResearchSummary(source)` in `research.extraction.ts` — Phase C extraction + evals (Story 1, 3; assertions on tickers, expense ratios, percentages, trackingIndex) |
-
 ### Remaining Tasks
 
 **4.4c — Phase B + orchestration + unit tests + full-loop eval**
