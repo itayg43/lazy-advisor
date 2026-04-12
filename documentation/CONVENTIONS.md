@@ -62,6 +62,10 @@
 
 The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict on our own code without fighting third-party `any` types from SDKs like OpenAI. If a suppression is ever needed, include a `-- reason` suffix: `// eslint-disable-next-line rule-name -- why`
 
+## OpenAI
+
+- `previous_response_id` does **not** carry `instructions` forward — every chained call must re-pass `instructions` explicitly. Omitting them causes the model to run without the system prompt
+
 ## Imports
 
 - Order: Node built-ins, then external packages, then internal (blank line between groups)
