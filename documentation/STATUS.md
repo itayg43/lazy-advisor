@@ -2,11 +2,9 @@
 
 ## Up Next
 
-**Clarify stage refactor** — Split the clarify stage into two sequential sub-phases with focused prompts and separate files. Full plan: [CLARIFY_REFACTOR_PLAN.md](../CLARIFY_REFACTOR_PLAN.md).
-
 **Before starting 4.4c — two prerequisite tasks:**
 
-1. **Clarify stage eval review** — Review the latest clarify stage (non-extraction) eval runs and assess the quality and depth of explanation the agent provides to the user.
+1. **Clarify stage eval review** — Run the new fields and preferences evals, review the last-run transcripts, and assess quality and depth of the agent's explanations.
 2. **Research stage: examples → rules refactor** — Apply the same refactor done in the clarify stage (converting examples to rules in the prompt) to the research stage.
 
 After both are complete: **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
