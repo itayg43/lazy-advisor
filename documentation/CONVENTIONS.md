@@ -22,7 +22,6 @@
 
 - Arrow functions (`const foo = () => ...`) over `function` declarations — enforces top-to-bottom declaration order and is consistent with the rest of the codebase
 - Module declaration order: logger (treated as import-level dependency) → types → constants → helpers → exports
-- Pure functions where possible
 - Dependency injection via function parameters (not classes), except where the plan explicitly uses classes (e.g., `Session`)
 - Async functions return typed `Promise<T>`, no bare `any`
 - More than 3 domain params → group them into a typed object. Infrastructure dependencies (e.g., `prisma`) and identifiers (e.g., `planId`) stay positional — they are not counted
@@ -40,10 +39,6 @@
 - External service failures (API errors, non-completed responses) → `ServiceUnavailableError`; internal failures (unexpected state after a successful call) → `InternalError`
 - OpenAI-specific: `APIError` or non-completed status → `ServiceUnavailableError` with a generic constant message (prevents token/response leakage to clients), real error details logged at `error` level. Missing `output_parsed` after a successful call → `InternalError`. Non-API errors rethrow unchanged
 - All error classes live in `src/server/errors/index.ts`
-
-## Testing
-
-See [TESTING.md](TESTING.md)
 
 ## File Organization
 
@@ -82,16 +77,3 @@ The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict 
   - `#schemas/*` → `src/server/schemas/*`
   - `#services/*` → `src/server/services/*`
   - `#types/*` → `src/server/types/*`
-
-```ts
-// correct
-import { planService } from "#services/plan/plan.service";
-import { InternalError } from "#errors";
-
-// wrong — no relative paths
-import { planService } from "./plan.service";
-import { InternalError } from "../../errors";
-
-// wrong — no file extensions
-import { planService } from "#services/plan/plan.service.ts";
-```
