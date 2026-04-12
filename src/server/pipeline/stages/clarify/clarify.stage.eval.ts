@@ -36,13 +36,14 @@ describe("clarifyStage", () => {
     lastGoal = lastTranscript = lastProfile = undefined;
   });
 
-  // CLARIFY_EXAMPLES #9: tests redirect on unrealistic expectation and valid profile extraction after user pivots.
+  // CLARIFY_RULES #9: tests redirect on unrealistic expectation and valid profile extraction after user pivots.
+  // User declines buffer — emergency fund is held separately outside the portfolio (CLARIFY_RULES #11).
   it("should handle unrealistic expectations and extract profile after redirect", async () => {
     lastGoal = "I have ₪18,000 and I want to double it in 6 months";
     const responder = createTrackedResponder([
       "ok fine, long term then, maybe 10-15 years, moderate risk",
       "I'm 24, yes to emergency fund, no debt, maybe ₪700/mo, no brokerage, I'm in Israel, I'm a beginner",
-      "FTSE All-World. קרן כספית for the buffer.",
+      "100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.",
     ]);
     lastTranscript = responder.transcript;
 
@@ -61,15 +62,18 @@ describe("clarifyStage", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.brokerage).toBe("none");
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
   });
 
-  // CLARIFY_EXAMPLES #4: tests redirect from out-of-scope stock picking toward ETF-based investing with valid profile.
+  // CLARIFY_RULES #4: tests redirect from out-of-scope stock picking toward ETF-based investing with valid profile.
+  // US tech tilt (S&P 500 + NASDAQ) makes sense for a user who originally cared about NVIDIA.
   it("should redirect out-of-scope stock picking toward ETF-based investing", async () => {
     lastGoal = "Should I buy NVIDIA stock?";
     const responder = createTrackedResponder([
       "ok fine, I'm open to ETFs. I have ₪30,000 to invest",
       "I'm 29, moderate risk, about 10 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
-      "FTSE All-World. קרן כספית for the buffer.",
+      "70% S&P 500 + 30% NASDAQ. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;
 
@@ -89,9 +93,12 @@ describe("clarifyStage", () => {
     expect(profile.hasDebt).toBe(false);
     expect(profile.brokerage).toBe("none");
     expect(profile.goal.toLowerCase()).toMatch(/etf|passive|invest/);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/nasdaq/i);
+    expect(profile.investmentPreferences).toMatch(/\d+%/);
   });
 
-  // CLARIFY_EXAMPLES #2: tests that a soft answer on the second ask is accepted without a third probe.
+  // CLARIFY_RULES #2: tests that a soft answer on the second ask is accepted without a third probe.
   // A third response is needed for the portfolio defaults question that follows once all required fields pass.
   it("should stop probing timeline after 2 asks", async () => {
     lastGoal = "I want to invest";
@@ -119,13 +126,14 @@ describe("clarifyStage", () => {
     expect(profile.timeline.toLowerCase()).toMatch(/10|15/);
   });
 
-  // CLARIFY_EXAMPLES #3: tests contradiction resolution through conversation and correct risk tolerance extraction.
+  // CLARIFY_RULES #3: tests contradiction resolution through conversation and correct risk tolerance extraction.
+  // MSCI World (developed-only, no EM drag) fits conservative-moderate after contradiction resolution.
   it("should resolve contradictory input and extract correct risk tolerance", async () => {
     lastGoal = "I want maximum returns but I can't afford to lose any money";
     const responder = createTrackedResponder([
       "If my ₪40,000 dropped to ₪32,000 I'd feel sick but hold on and wait. I guess I'm moderate.",
       "₪45,000 to invest, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
-      "FTSE All-World. קרן כספית for the buffer.",
+      "MSCI World. קרן כספית.",
     ]);
     lastTranscript = responder.transcript;
 
@@ -144,9 +152,10 @@ describe("clarifyStage", () => {
     );
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/msci world/i);
   });
 
-  // CLARIFY_EXAMPLES #1: tests that when investmentPreferences is "none", the stage asks the
+  // CLARIFY_RULES #1: tests that when no preference is stated, the stage asks the
   // portfolio defaults question and captures the user's equity allocation + buffer answers.
   it("should ask portfolio defaults question and capture answers when no preferences stated", async () => {
     lastGoal =
@@ -172,7 +181,6 @@ describe("clarifyStage", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.brokerage).toBe("none");
-    expect(profile.investmentPreferences).not.toBe("none");
     expect(profile.investmentPreferences.toLowerCase()).toMatch(
       /ftse|all.world|world|global/i,
     );
@@ -181,7 +189,7 @@ describe("clarifyStage", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_EXAMPLES #5: tests that a single instrument preference mentioned in the goal is captured.
+  // CLARIFY_RULES #5: tests that a single instrument preference mentioned in the goal is captured.
   it("should capture single instrument preference from goal", async () => {
     lastGoal = "I have ₪100,000 and I want to invest in tech sector ETFs";
     const responder = createTrackedResponder([
@@ -207,7 +215,7 @@ describe("clarifyStage", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/tech/);
   });
 
-  // CLARIFY_EXAMPLES #6: tests that when multiple instruments are named without a split, the stage asks for
+  // CLARIFY_RULES #6: tests that when multiple instruments are named without a split, the stage asks for
   // a percentage allocation and captures it in investmentPreferences.
   it("should ask for percentage split when multiple instruments are named and capture it", async () => {
     lastGoal =
@@ -231,5 +239,31 @@ describe("clarifyStage", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
     expect(profile.investmentPreferences).toMatch(/\d+%/);
+  });
+
+  // CLARIFY_RULES #11: user declines buffer because emergency fund is held separately outside the portfolio.
+  // Stage must accept this without pushback and capture the no-buffer intent in investmentPreferences.
+  it("should accept no-buffer preference when emergency fund is external", async () => {
+    lastGoal = "I have ₪25,000 and want to invest it all in the market";
+    const responder = createTrackedResponder([
+      "I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo, no brokerage",
+      "100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const profile = await runClarifyStage(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(25_000);
+    expect(profile.age).toBe(26);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
+    expect(profile.hasEmergencyFund).toBe(true);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500/i);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
   });
 });
