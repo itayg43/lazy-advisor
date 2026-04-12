@@ -1,16 +1,10 @@
-import type {
-  ResponseFunctionToolCall,
-  ResponseInputItem,
-} from "openai/resources/responses/responses";
+import type { ResponseInputItem } from "openai/resources/responses/responses";
 
-import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { buildSourceParams } from "#pipeline/lib/build-source-params";
 import { MAX_PREFERENCES_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { collectToolOutputs } from "#pipeline/stages/clarify/clarify.lib";
-import { getStageTools } from "#pipeline/tools";
+import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { callOpenAI } from "#services/openai";
 
 const logger = createLogger("clarifyPreferences");
 
@@ -103,73 +97,12 @@ export const collectPreferences = async (
 ): Promise<string> => {
   logger.info("Starting preferences phase");
 
-  const tools = getStageTools("clarify");
-
-  let response = await callOpenAI({
-    model: "gpt-5.4-nano",
-    instructions: PREFERENCES_PROMPT,
-    ...buildSourceParams(source),
-    tools,
-    reasoning: {
-      effort: "low",
-    },
-  });
-
-  logger.info("Initial preferences response", {
-    responseId: response.id,
-    usage: response.usage,
-  });
-  logger.debug("Initial preferences response output", {
-    output: response.output,
-  });
-
-  let toolCallCount = 0;
-
-  // Loop exits on break (model stops calling tools) or throw (tool call cap exceeded)
-  while (true) {
-    const functionCalls = response.output.filter(
-      (item): item is ResponseFunctionToolCall => item.type === "function_call",
-    );
-
-    if (functionCalls.length === 0) break;
-
-    toolCallCount += functionCalls.length;
-    if (toolCallCount > MAX_PREFERENCES_TOOL_CALLS) {
-      throw new InternalError(
-        `Preferences phase failed to converge within ${MAX_PREFERENCES_TOOL_CALLS} tool calls`,
-      );
-    }
-
-    const toolOutputs = await collectToolOutputs(
-      functionCalls,
-      sendToUser,
-      waitForResponse,
-    );
-
-    response = await callOpenAI({
-      model: "gpt-5.4-nano",
-      instructions: PREFERENCES_PROMPT,
-      tools,
-      previous_response_id: response.id,
-      input: toolOutputs,
-      reasoning: {
-        effort: "low",
-      },
-    });
-
-    logger.info("Preferences follow-up response", {
-      responseId: response.id,
-      usage: response.usage,
-    });
-    logger.debug("Preferences follow-up response output", {
-      output: response.output,
-    });
-  }
-
-  logger.info("Preferences phase complete", {
-    lastResponseId: response.id,
-    totalToolCalls: toolCallCount,
-  });
-
-  return response.id;
+  return await runPhaseLoop(
+    PREFERENCES_PROMPT,
+    buildSourceParams(source),
+    MAX_PREFERENCES_TOOL_CALLS,
+    "Preferences phase",
+    sendToUser,
+    waitForResponse,
+  );
 };

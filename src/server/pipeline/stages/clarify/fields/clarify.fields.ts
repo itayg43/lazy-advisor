@@ -1,16 +1,11 @@
-import type { ResponseFunctionToolCall } from "openai/resources/responses/responses";
-
-import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import {
   KNOWLEDGE_LEVELS,
   MAX_FIELDS_TOOL_CALLS,
   RISK_LEVELS,
 } from "#pipeline/stages/clarify/clarify.constants";
-import { collectToolOutputs } from "#pipeline/stages/clarify/clarify.lib";
-import { getStageTools } from "#pipeline/tools";
+import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { callOpenAI } from "#services/openai";
 
 const logger = createLogger("clarifyFields");
 
@@ -84,73 +79,12 @@ export const collectFields = async (
 ): Promise<string> => {
   logger.info("Starting fields phase", { goal });
 
-  const tools = getStageTools("clarify");
-
-  let response = await callOpenAI({
-    model: "gpt-5.4-nano",
-    instructions: FIELDS_PROMPT,
-    input: goal,
-    tools,
-    reasoning: {
-      effort: "low",
-    },
-  });
-
-  logger.info("Initial fields response", {
-    responseId: response.id,
-    usage: response.usage,
-  });
-  logger.debug("Initial fields response output", {
-    output: response.output,
-  });
-
-  let toolCallCount = 0;
-
-  // Loop exits on break (model stops calling tools) or throw (tool call cap exceeded)
-  while (true) {
-    const functionCalls = response.output.filter(
-      (item): item is ResponseFunctionToolCall => item.type === "function_call",
-    );
-
-    if (functionCalls.length === 0) break;
-
-    toolCallCount += functionCalls.length;
-    if (toolCallCount > MAX_FIELDS_TOOL_CALLS) {
-      throw new InternalError(
-        `Fields phase failed to converge within ${MAX_FIELDS_TOOL_CALLS} tool calls`,
-      );
-    }
-
-    const toolOutputs = await collectToolOutputs(
-      functionCalls,
-      sendToUser,
-      waitForResponse,
-    );
-
-    response = await callOpenAI({
-      model: "gpt-5.4-nano",
-      instructions: FIELDS_PROMPT,
-      tools,
-      previous_response_id: response.id,
-      input: toolOutputs,
-      reasoning: {
-        effort: "low",
-      },
-    });
-
-    logger.info("Fields follow-up response", {
-      responseId: response.id,
-      usage: response.usage,
-    });
-    logger.debug("Fields follow-up response output", {
-      output: response.output,
-    });
-  }
-
-  logger.info("Fields phase complete", {
-    lastResponseId: response.id,
-    totalToolCalls: toolCallCount,
-  });
-
-  return response.id;
+  return await runPhaseLoop(
+    FIELDS_PROMPT,
+    { input: goal },
+    MAX_FIELDS_TOOL_CALLS,
+    "Fields phase",
+    sendToUser,
+    waitForResponse,
+  );
 };
