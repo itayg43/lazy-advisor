@@ -69,23 +69,28 @@ describe("collectPreferences", () => {
     const responder = createTrackedResponder([
       "70% FTSE All-World and 30% TLV-125. קרן כספית sounds right for the buffer.",
     ]);
-    lastTranscript = [...toTranscriptEntries(fieldsTranscript), ...responder.transcript];
+    try {
+      const prefsResponseId = await collectPreferences(
+        fieldsTranscript,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+      const profile = await extractUserProfile(prefsResponseId);
+      lastProfile = profile;
 
-    const prefsResponseId = await collectPreferences(
-      fieldsTranscript,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    const profile = await extractUserProfile(prefsResponseId);
-    lastProfile = profile;
-
-    assertValidProfile(profile);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(
-      /ftse|all.world|world|global/i,
-    );
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
-    expect(profile.investmentPreferences).toMatch(/\d+%/);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
+      assertValidProfile(profile);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(
+        /ftse|all.world|world|global/i,
+      );
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
+      expect(profile.investmentPreferences).toMatch(/\d+%/);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
+    } finally {
+      lastTranscript = [
+        ...toTranscriptEntries(fieldsTranscript),
+        ...responder.transcript,
+      ];
+    }
   });
 
   // CLARIFY_RULES #5: when an equity preference is already stated in the goal, the equity guard fires
@@ -115,19 +120,24 @@ describe("collectPreferences", () => {
     ];
 
     const responder = createTrackedResponder(["Yes, קרן כספית is fine for the buffer."]);
-    lastTranscript = [...toTranscriptEntries(fieldsTranscript), ...responder.transcript];
+    try {
+      const prefsResponseId = await collectPreferences(
+        fieldsTranscript,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+      const profile = await extractUserProfile(prefsResponseId);
+      lastProfile = profile;
 
-    const prefsResponseId = await collectPreferences(
-      fieldsTranscript,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    const profile = await extractUserProfile(prefsResponseId);
-    lastProfile = profile;
-
-    assertValidProfile(profile);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tech/i);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
+      assertValidProfile(profile);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/tech/i);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
+    } finally {
+      lastTranscript = [
+        ...toTranscriptEntries(fieldsTranscript),
+        ...responder.transcript,
+      ];
+    }
   });
 
   // CLARIFY_RULES #6: when multiple instruments are named without a percentage split, the preferences
@@ -156,21 +166,30 @@ describe("collectPreferences", () => {
       },
     ];
 
-    const responder = createTrackedResponder(["70% S&P 500 and 30% TLV-125."]);
-    lastTranscript = [...toTranscriptEntries(fieldsTranscript), ...responder.transcript];
+    const responder = createTrackedResponder([
+      "70% S&P 500 and 30% TLV-125.",
+      "קרן כספית is fine for the buffer.",
+    ]);
+    try {
+      const prefsResponseId = await collectPreferences(
+        fieldsTranscript,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+      const profile = await extractUserProfile(prefsResponseId);
+      lastProfile = profile;
 
-    const prefsResponseId = await collectPreferences(
-      fieldsTranscript,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    const profile = await extractUserProfile(prefsResponseId);
-    lastProfile = profile;
-
-    assertValidProfile(profile);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
-    expect(profile.investmentPreferences).toMatch(/\d+%/);
+      assertValidProfile(profile);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/tlv/i);
+      expect(profile.investmentPreferences).toMatch(/\d+%/);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
+    } finally {
+      lastTranscript = [
+        ...toTranscriptEntries(fieldsTranscript),
+        ...responder.transcript,
+      ];
+    }
   });
 
   // CLARIFY_RULES #11: when the user explicitly declines the buffer because their emergency fund is
@@ -203,18 +222,25 @@ describe("collectPreferences", () => {
     const responder = createTrackedResponder([
       "100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.",
     ]);
-    lastTranscript = [...toTranscriptEntries(fieldsTranscript), ...responder.transcript];
+    try {
+      const prefsResponseId = await collectPreferences(
+        fieldsTranscript,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+      const profile = await extractUserProfile(prefsResponseId);
+      lastProfile = profile;
 
-    const prefsResponseId = await collectPreferences(
-      fieldsTranscript,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    const profile = await extractUserProfile(prefsResponseId);
-    lastProfile = profile;
-
-    assertValidProfile(profile);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500/i);
-    expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
+      assertValidProfile(profile);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500/i);
+      expect(profile.investmentPreferences.toLowerCase()).toMatch(
+        /no buffer|separately/i,
+      );
+    } finally {
+      lastTranscript = [
+        ...toTranscriptEntries(fieldsTranscript),
+        ...responder.transcript,
+      ];
+    }
   });
 });
