@@ -16,8 +16,8 @@
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
-| [Usage Stories](documentation/workflow/WORKFLOW_EXAMPLES.md) | When implementing stage behavior or LLM prompts |
-| [Stage Examples](documentation/workflow/STAGE_EXAMPLES.md) | When implementing any stage's behavior, prompts, or evals |
+| [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
+| [Stage Examples](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
 
 ## Feedback Style
 
