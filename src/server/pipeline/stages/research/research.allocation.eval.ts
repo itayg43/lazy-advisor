@@ -50,7 +50,7 @@ describe("researchAllocation", () => {
       .filter((s) => isBondSlice(s.category))
       .reduce((sum, s) => sum + s.percentage, 0);
 
-  // RESEARCH_EXAMPLES #1: 28yo moderate investor with emergency fund, no preferences.
+  // RESEARCH_EXAMPLES #1: 28yo moderate investor with emergency fund, 70% FTSE All-World + 30% TLV-125.
   // Young + emergency fund → bonds should be reduced or absent.
   it("should reduce bonds for young moderate investor with emergency fund", async () => {
     const profile: UserProfile = {
@@ -61,7 +61,7 @@ describe("researchAllocation", () => {
       timeline: "20 years",
       knowledgeLevel: "beginner",
       brokerage: "none",
-      investmentPreferences: "none",
+      investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
       hasEmergencyFund: true,
       hasDebt: false,
       monthlyContribution: 1_800,
@@ -75,8 +75,8 @@ describe("researchAllocation", () => {
     expect(totalBondPercentage(plan)).toBeLessThanOrEqual(20);
   });
 
-  // RESEARCH_EXAMPLES #2: 25yo aggressive investor with emergency fund, no preferences.
-  // Young + aggressive + emergency fund → bonds should be minimal or absent.
+  // RESEARCH_EXAMPLES #2: 25yo aggressive investor with emergency fund, 100% NASDAQ — no buffer.
+  // Young + aggressive + emergency fund + explicit no-buffer → bonds should be minimal or absent.
   it("should produce minimal or no bonds for young aggressive investor with emergency fund", async () => {
     const profile: UserProfile = {
       goal: "aggressive growth portfolio, ₪35,000 over 20+ years",
@@ -86,7 +86,8 @@ describe("researchAllocation", () => {
       timeline: "20+ years",
       knowledgeLevel: "beginner",
       brokerage: "none",
-      investmentPreferences: "none",
+      investmentPreferences:
+        "100% NASDAQ — no buffer; emergency fund held separately outside portfolio",
       hasEmergencyFund: true,
       hasDebt: false,
       monthlyContribution: 1_500,
@@ -100,7 +101,7 @@ describe("researchAllocation", () => {
     expect(totalBondPercentage(plan)).toBeLessThanOrEqual(10);
   });
 
-  // RESEARCH_EXAMPLES #3: older conservative investor (58yo) with emergency fund.
+  // RESEARCH_EXAMPLES #3: older conservative investor (58yo) with emergency fund, 60% MSCI World + 40% קרן כספית.
   // Age > 50 → bonds must be present regardless of emergency fund.
   it("should keep bonds for older investor even with emergency fund", async () => {
     const profile: UserProfile = {
@@ -111,7 +112,7 @@ describe("researchAllocation", () => {
       timeline: "10 years",
       knowledgeLevel: "intermediate",
       brokerage: "none",
-      investmentPreferences: "none",
+      investmentPreferences: "60% MSCI World, 40% קרן כספית",
       hasEmergencyFund: true,
       hasDebt: false,
       monthlyContribution: 3_000,

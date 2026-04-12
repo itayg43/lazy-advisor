@@ -20,7 +20,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - Extract each field strictly from what the user said in the conversation.
 - Stay close to the user's actual words. Do not paraphrase, summarize, or embellish.
 - Every required field must have a value extracted from the conversation. If a required field was not discussed, the clarification phase failed — extract the best available information anyway, but do not fabricate values.
-- Fields with defaults: **brokerage** (\`"none"\` if not mentioned), **investmentPreferences** (\`"none"\` if not mentioned or user has no specific preference).
+- Fields with defaults: **brokerage** (\`"none"\` if not mentioned).
 
 # Field Rules
 - **goal**: build a concise summary of the user's investment goal using context from the entire conversation — not just their initial input. Include specifics the user mentioned (amounts, purpose, constraints). Do not reduce to generic phrases like "start investing."
@@ -30,7 +30,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
 - **knowledgeLevel**: map to a single value from ${KNOWLEDGE_LEVELS}. When the user's input is ambiguous (e.g., "intermediate or advanced"), pick the lower level. Never output a hedged string.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
-- **investmentPreferences**: extract any mentioned sectors, markets, indices, or specific instruments the user wants to invest in, including percentage splits if stated (e.g., "60% S&P 500, 40% TLV-125"). Use the user's own words. Default to \`"none"\` if not mentioned or user has no specific preference.
+- **investmentPreferences**: extract the user's stated investment preference from the conversation — sectors, markets, indices, instruments, percentage splits, and any explicit buffer choice (e.g., "60% S&P 500, 40% TLV-125", "100% NASDAQ — no buffer; emergency fund held separately"). Use the user's own words. This field must always be extracted from the conversation; if no preference appears in the transcript, the clarification phase was incomplete.
 - **hasEmergencyFund**: \`true\` or \`false\` based on what the user said.
 - **hasDebt**: \`true\` or \`false\` based on what the user said.
 - **monthlyContribution**: extract the exact number.
@@ -53,7 +53,7 @@ Output:
 - monthlyContribution: 1800
 
 ## Example 2 — experienced investor with brokerage, goal captures constraints
-Conversation: User has ₪180,000 inheritance, is 35, aggressive risk, investing until retirement at 65, lives in Israel, intermediate, no emergency fund, has student debt, can contribute ₪3,500/month, uses Interactive Brokers.
+Conversation: User has ₪180,000 inheritance, is 35, aggressive risk, investing until retirement at 65, lives in Israel, intermediate, no emergency fund, has student debt, can contribute ₪3,500/month, uses Interactive Brokers. When asked about portfolio defaults, user said: "80% MSCI World and 20% TLV-125. קרן כספית for the buffer."
 Output:
 - goal: "invest ₪180,000 inheritance aggressively until retirement at 65, has student debt and no emergency fund"
 - amount: 180000
@@ -62,7 +62,7 @@ Output:
 - timeline: "until retirement at 65"
 - knowledgeLevel: "intermediate"
 - brokerage: "Interactive Brokers"
-- investmentPreferences: "none"
+- investmentPreferences: "80% MSCI World + 20% TLV-125, קרן כספית buffer"
 - hasEmergencyFund: false
 - hasDebt: true
 - monthlyContribution: 3500
@@ -80,7 +80,22 @@ Output:
 - investmentPreferences: "60% S&P 500, 40% TLV-125"
 - hasEmergencyFund: true
 - hasDebt: false
-- monthlyContribution: 2500`;
+- monthlyContribution: 2500
+
+## Example 4 — user declines buffer, emergency fund held separately
+Conversation: User has ₪25,000, is 26, aggressive risk, 15-year horizon, Israel-based, beginner, has emergency fund held separately outside the portfolio, no debt, ₪500/month, no brokerage. When asked about portfolio defaults, user said: "100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio."
+Output:
+- goal: "invest ₪25,000 aggressively, 100% S&P 500, no in-portfolio buffer — emergency fund held separately"
+- amount: 25000
+- age: 26
+- riskTolerance: "aggressive"
+- timeline: "15 years"
+- knowledgeLevel: "beginner"
+- brokerage: "none"
+- investmentPreferences: "100% S&P 500 — no buffer; emergency fund held separately outside portfolio"
+- hasEmergencyFund: true
+- hasDebt: false
+- monthlyContribution: 500`;
 
 export const extractUserProfile = async (
   source: string | ResponseInputItem[],

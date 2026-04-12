@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-11T03:07:23.343Z | Commit: d599b39
+Timestamp: 2026-04-12T10:39:03.953Z | Commit: bc8ddba
 
 ---
 
@@ -8,7 +8,7 @@ Timestamp: 2026-04-11T03:07:23.343Z | Commit: d599b39
 **Goal:** "invest ₪55,000 as a complete beginner, moderate risk, 20-year horizon with ₪1,800/month contributions"
 
 **Extracted profile:**
-slices: [object Object],[object Object],[object Object],[object Object]
+slices: [object Object],[object Object],[object Object]
 
 
 ---
@@ -18,7 +18,7 @@ slices: [object Object],[object Object],[object Object],[object Object]
 **Goal:** "aggressive growth portfolio, ₪35,000 over 20+ years"
 
 **Extracted profile:**
-slices: [object Object],[object Object],[object Object],[object Object]
+slices: [object Object]
 
 
 ---
@@ -28,7 +28,7 @@ slices: [object Object],[object Object],[object Object],[object Object]
 **Goal:** "invest ₪200,000 conservatively for retirement in 10 years"
 
 **Extracted profile:**
-slices: [object Object],[object Object],[object Object],[object Object],[object Object],[object Object]
+slices: [object Object],[object Object]
 
 
 ---

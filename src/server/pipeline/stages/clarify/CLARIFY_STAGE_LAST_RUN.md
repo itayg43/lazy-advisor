@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-12T06:27:43.690Z | Commit: b442b2d
+Timestamp: 2026-04-12T10:37:41.642Z | Commit: bc8ddba
 
 ---
 
@@ -7,29 +7,35 @@ Timestamp: 2026-04-12T06:27:43.690Z | Commit: b442b2d
 
 **Goal:** "I have ₪18,000 and I want to double it in 6 months"
 
-**Agent:** Doubling in 6 months is generally not achievable with passive ETF-style investing—there’s a high risk you could lose a lot of money over that short window. Would you like to switch to a more realistic long-term goal (for example, aiming for growth over ~5–10+ years), and if so what timeline should we use?
+**Agent:** Just to flag this: in 6 months, “double it” (≈100% return) is generally not achievable with passive ETF investing—there’s a high chance you could lose a meaningful part instead.
 
-Also, to build your profile: how old are you, and what’s your risk tolerance (are you okay with possible large drops in bad years, or do you prefer to minimize ups/downs)?
+Would you like to adjust to a realistic long-term goal (e.g., growing it over ~5–10+ years), or are you specifically trying to take on high risk for a short timeline?
+
+Also, to set the right plan, what’s your age and how would you describe your risk tolerance (e.g., conservative/moderate/aggressive—how would you react if your investment dropped ~20–30% in a bad year)?
 
 **User:** ok fine, long term then, maybe 10-15 years, moderate risk
 
-**Agent:** Great—just a few details so I can set up the rest of your profile:
+**Agent:** Great—10–15 years and moderate risk works.
 
+A few quick details so I can build your profile:
 1) What’s your age?
-2) Do you currently have an emergency fund? (yes/no)
-3) Do you have any outstanding debt? (yes/no)
-4) How much can you add each month to investing? (a specific amount in ₪)
-5) What’s your knowledge level with investing? (beginner / intermediate / advanced)
-6) Any preferences for specific markets/instruments (e.g., S&P 500, NASDAQ, global/All-World, Israeli market), or should I use a general diversified approach? (none is OK)
+2) Do you have an emergency fund already (yes/no)?
+3) Do you have any outstanding debt you’re actively paying off (yes/no)?
+4) How much would you add each month (₪ per month)?
+5) What’s your investing knowledge level with ETFs/index funds: beginner, intermediate, or advanced?
 
 **User:** I'm 24, yes to emergency fund, no debt, maybe ₪700/mo, no brokerage, I'm in Israel, I'm a beginner
 
-**Agent:** Got it. For investment preferences: do you want any specific market/instrument (e.g., S&P 500, NASDAQ-100, FTSE All-World/global, Israeli market), or should I set it to **none** (general diversified approach)?
+**Agent:** Perfect—thanks. One last set of choices before I hand this off.
 
-**User:** FTSE All-World. קרן כספית for the buffer.
+**1) Equity allocation:** Which market/index do you want for the stock part? You can pick one, or split (e.g., 70% FTSE All-World + 30% NASDAQ). Options people commonly choose are: FTSE All-World / MSCI ACWI (global), MSCI World (developed markets), S&P 500 (US large caps), NASDAQ-100 (tech-heavy, more volatile), or TLV-125 (Israeli market, shekel-denominated). What do you prefer?
+
+**2) Buffer for the non-equity portion:** For the conservative buffer, a **קרן כספית** (Israeli money market fund) is commonly used (shekel-denominated, relatively stable). Are you comfortable using a קרן כספית for the buffer, or do you want a different preference / no buffer?
+
+**User:** 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.
 
 **Extracted profile:**
-goal: Double ₪18,000 by switching to a more realistic long-term goal; invest over 10-15 years with moderate risk | amount: 18000 | age: 24 | riskTolerance: moderate | timeline: 10-15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: FTSE All-World; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 700
+goal: invest ₪18,000 for the long term (10–15 years) after changing from doubling in 6 months to a realistic plan, with moderate risk | amount: 18000 | age: 24 | riskTolerance: moderate | timeline: 10-15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% S&P 500 — no buffer; emergency fund is already in a קרן כספית outside this portfolio | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 700
 
 
 ---
@@ -38,47 +44,31 @@ goal: Double ₪18,000 by switching to a more realistic long-term goal; invest o
 
 **Goal:** "Should I buy NVIDIA stock?"
 
-**Agent:** I can’t help decide on a single stock like NVIDIA, but we can set up a passive ETF-based approach. To tailor the right mix for you, can you share:
-1) Your age
-2) How much you want to invest (₪ amount)
-3) How much you can add each month (₪)
-4) Your time horizon (e.g., 5, 10, 20 years)
-5) Your risk comfort (do you prefer smaller ups/downs or are you okay with bigger swings?)
-6) Do you have an emergency fund already? (yes/no)
-7) Any outstanding debt? (yes/no)
-8) How would you describe your investing knowledge—beginner, intermediate, or advanced?
-9) Any preference for markets (e.g., S&P 500, global/All-World, Israeli market, tech), or should I assume no preference?
+**Agent:** Totally fine to ask about single stocks—but to build you a solid plan, I’ll steer this toward a passive ETF approach (so we’re not relying on one company like NVIDIA). Can you share a few basics: how much you want to invest (₪ amount) and your age?
 
 **User:** ok fine, I'm open to ETFs. I have ₪30,000 to invest
 
-**Agent:** Great—next, can you share the rest so I can tailor an ETF-based plan?
-1) Your age
-2) How much you’ll add each month (₪)
-3) Your timeline (roughly how many years)
-4) Your risk comfort (conservative / moderate / aggressive, or “how big a drop you could tolerate”)
-5) Do you have an emergency fund already? (yes/no)
-6) Any outstanding debt? (yes/no)
-7) Your investing knowledge level (beginner / intermediate / advanced)
-8) Any market/instrument preference (e.g., S&P 500, global/All-World, Israeli market), or should I assume none?
+**Agent:** Great—what’s your age?
 
 **User:** I'm 29, moderate risk, about 10 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner
 
-**Agent:** Before I hand this off, two quick choices to shape the ETF mix:
+**Agent:** Awesome—since you’re open to ETFs, two quick choices will let me size the approach:
 
-**1) Equity allocation (stocks):** which direction do you prefer?
-• **FTSE All-World / MSCI ACWI** (~10%/yr past 10y): widest global diversification (includes emerging markets).
-• **MSCI World** (~11%/yr): developed markets only (no emerging market exposure).
-• **S&P 500** (~13%/yr): US large companies; concentration in the US.
-• **NASDAQ-100** (~18%/yr): tech-heavy; higher volatility (past outperformance may not repeat).
-• **TLV-125** (~8%/yr in NIS): Israel’s largest companies; concentrated but shekel-denominated.
-You can pick one or use a split (e.g., 70% FTSE All-World + 30% NASDAQ).
+**1) What equity mix do you want (which index/market[s])?** Options people commonly use:
+- **FTSE All-World / MSCI ACWI** (~10%/yr): widest diversification (includes emerging markets, which can lag).
+- **MSCI World** (~11%/yr): developed markets only (no emerging markets).
+- **S&P 500** (~13%/yr): US-only, more concentrated.
+- **NASDAQ-100** (~18%/yr past decade): tech-heavy, higher volatility.
+- **TLV-125** (~8%/yr in NIS): Israeli market, shekel-denominated but concentrated.
 
-**2) Conservative buffer (non-equity):** for the “cash-like” portion, I typically use a **קרן כספית** (Israeli money market fund; shekel-denominated, ~4–5% yield, aims to be capital-stable). Are you comfortable using that for the non-equity part, or do you want something else?
+You can pick one (e.g., 100% FTSE All-World) or split (e.g., 70% FTSE All-World + 30% S&P 500). Past returns don’t guarantee future results, and the last decade’s leaders (like US tech) may not repeat.
 
-**User:** FTSE All-World. קרן כספית for the buffer.
+**2) For the conservative/non-equity portion, would you like to use a _קרן כספית_ (Israeli money-market fund) for the buffer, or do you prefer something else? (If you prefer no buffer because your emergency fund is already handled outside this portfolio, you can say that too.)
+
+**User:** 70% S&P 500 + 30% NASDAQ. קרן כספית for the buffer.
 
 **Extracted profile:**
-goal: Invest ₪30,000 for about 10 years with moderate risk as a beginner, adding ₪1,000/month, using a FTSE All-World approach with קרן כספית buffer | amount: 30000 | age: 29 | riskTolerance: moderate | timeline: about 10 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: FTSE All-World; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
+goal: invest ₪30,000 with a moderate risk approach using ETFs (70% S&P 500 + 30% NASDAQ), with a קרן כספית buffer | amount: 30000 | age: 29 | riskTolerance: moderate | timeline: about 10 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% S&P 500 + 30% NASDAQ; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
 
 
 ---
@@ -87,39 +77,30 @@ goal: Invest ₪30,000 for about 10 years with moderate risk as a beginner, addi
 
 **Goal:** "I want to invest"
 
-**Agent:** Sure—so I can tailor what information I need next: how much money (exact amount) do you want to invest to start, and how old are you?
+**Agent:** Great—so I can tailor this to you, can you share: (1) your age, (2) the amount you want to invest (exact number), (3) how much you’ll add each month (exact number), (4) your investing timeline in years (or a milestone like “until age 65”), (5) your risk comfort (e.g., would you prefer to avoid big drops, or are you okay with volatility), (6) your knowledge level (beginner/intermediate/advanced), (7) do you already have an emergency fund? (yes/no), (8) do you have any outstanding debt? (yes/no), and (9) any preference for specific markets/instruments (e.g., S&P 500, NASDAQ, global like “all-world,” Israeli market, tech sector)—or say “no preference yet”.
 
 **User:** I have ₪20,000, I'm 32, I'm in Israel, long-term
 
-**Agent:** Thanks. A few quick details so I can lock in the profile:
-1) When you say long-term, roughly how many years are you thinking (e.g., 10 years, 20 years, or until retirement at age X)?
-2) How would you describe your risk tolerance—are you mainly trying to protect value (conservative), okay with ups/downs for better growth (moderate), or willing to take big swings (aggressive)?
-3) What’s your investing knowledge level—beginner, intermediate, or advanced?
-4) Do you have an emergency fund already (yes/no)?
-5) Do you currently have outstanding debt you’re paying down (yes/no)?
-6) How much would you add each month (exact amount in ₪)?
-7) Any preference for where to invest—e.g., S&P 500, NASDAQ/tech, Israeli market, or global (and if multiple, what split)? Or should I pick a general diversified approach?
+**Agent:** Thanks—just a few more specifics so I can set up your profile: 
+1) When you say “long-term,” about how many years are you thinking (e.g., 10 years, 20 years, until age 65)?
+2) How would you rate your risk comfort—would you rather prioritize stability (smaller ups/downs) or are you okay with bigger drops for potentially higher returns?
+3) What’s your investing knowledge level: beginner, intermediate, or advanced?
+4) Do you have an emergency fund already? (yes/no)
+5) Any outstanding debt? (yes/no)
+6) How much will you add each month (exact number in ₪)?
+7) Do you have any preference for specific markets/instruments (e.g., S&P 500, NASDAQ, global/all-world, Israeli market/tech), or “no preference yet”?
 
 **User:** I guess maybe 10-15 years. moderate risk, beginner, yes emergency fund, no debt, ₪800/mo, no brokerage
 
-**Agent:** Great—two final things before I move on:
+**Agent:** Perfect—last step before I can move on: 
+**1) For your equity part, do you have a preference for specific markets/indexes (e.g., S&P 500, NASDAQ, global like FTSE All-World/MSCI ACWI, Israeli market like TLV-125, or a sector like tech)?** If not, you can choose one of those options or tell me your own split (e.g., 70% FTSE All-World + 30% NASDAQ).
 
-**1) Equity allocation preference:** Since you don’t have a specific index/sector, what would you like your stock portion to resemble?
-Here are common options (past ~10-year averages are illustrative, not guarantees):
-• **FTSE All-World / MSCI ACWI** (~10%/yr): broad global diversification; includes emerging markets (sometimes a drag).
-• **MSCI World** (~11%/yr): developed markets only.
-• **S&P 500** (~13%/yr): concentrated in the US.
-• **NASDAQ-100** (~18%/yr): tech-heavy; tends to be much more volatile (e.g., big drawdowns in bad tech years).
-• **TLV-125** (~8%/yr in NIS): Israel’s large companies; shekel-denominated, but a smaller/concentrated market.
-
-You can pick one (e.g., 100% FTSE All-World) or split (e.g., **70% FTSE All-World + 30% NASDAQ**). If you name multiple, please include the **% split**.
-
-**2) Conservative buffer:** For the non-equity portion, are you comfortable using a **קרן כספית** (Israeli money market fund; shekel-denominated, capital-stable, typically ~4–5% yield)? If not, what would you prefer instead?
+**2) For the non-equity portion, are you okay using a conservative “קרן כספית” (Israeli money market fund) as a buffer, or would you rather do something different?**
 
 **User:** 100% FTSE All-World. קרן כספית for the buffer.
 
 **Extracted profile:**
-goal: Invest ₪20,000 with a 10-15 years timeline, moderate risk, as a beginner in Israel, using 100% FTSE All-World and קרן כספית as the buffer, with ₪800/month contributions, with an emergency fund and no debt. | amount: 20000 | age: 32 | riskTolerance: moderate | timeline: 10-15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% FTSE All-World, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 800
+goal: Invest ₪20,000 in Israel for a 10–15 year long-term horizon with moderate risk; with 100% FTSE All-World and קרן כספית as the buffer | amount: 20000 | age: 32 | riskTolerance: moderate | timeline: 10-15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% FTSE All-World, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 800
 
 
 ---
@@ -128,44 +109,43 @@ goal: Invest ₪20,000 with a 10-15 years timeline, moderate risk, as a beginner
 
 **Goal:** "I want maximum returns but I can't afford to lose any money"
 
-**Agent:** Got it—just to clarify the tradeoff: “maximum returns” usually requires taking some market risk (prices can drop), while “can’t afford to lose any money” implies you want capital protected. Which do you want to optimize for most: (A) minimize the chance of losses even if returns are lower, or (B) aim higher returns even if there can be temporary declines?
+**Agent:** I hear you want “maximum returns,” but “can’t afford to lose any money” conflicts with market investing (returns usually come with the possibility of drawdowns). Which matters more for you?
+1) You can tolerate temporary drops (but still aim for high long-term returns), or
+2) You truly need to minimize any chance of losses, even if returns may be lower.
 
-Also, to set your profile, can you share: your age, how much you want to invest (₪ amount), how long you can keep the money invested (e.g., 5 years / 10 years / until age 65), your investment knowledge level (beginner/intermediate/advanced), whether you already have an emergency fund (yes/no) and whether you have any outstanding debt (yes/no), and how much you can add each month (₪/month)?
+Also, to set up the profile: how much are you investing (specific amount ₪), what’s your age, and about how many years is this money for?
 
 **User:** If my ₪40,000 dropped to ₪32,000 I'd feel sick but hold on and wait. I guess I'm moderate.
 
-**Agent:** Thanks—so you said you’d feel sick with a drop like ₪40,000 → ₪32,000, and you consider yourself moderate risk.
-
-To fill in the rest: 
-1) How old are you? 
-2) What’s the exact amount you want to invest now (₪)? 
-3) What timeline are you investing for—roughly how many years? 
-4) How would you describe your knowledge level with investing (beginner / intermediate / advanced)? 
-5) Do you already have an emergency fund? (yes/no) 
-6) Do you have any outstanding debt? (yes/no) 
-7) How much can you add each month (₪/month)?
+**Agent:** Got it — moderate risk. A few specifics so I can proceed:
+1) What’s your age?
+2) What investment timeline are you aiming for (e.g., 5 years, 10 years, until you’re 65)?
+3) Do you have an emergency fund already? (yes/no)
+4) Do you have any outstanding debt? (yes/no)
+5) How much can you add each month? (₪ per month)
+6) How would you describe your investing knowledge so far: beginner, intermediate, or advanced?
 
 **User:** ₪45,000 to invest, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner
 
-**Agent:** Great, I have the basics.
+**Agent:** Great—before I pass this to the recommendation step, two choices to shape the portfolio:
 
-Before I hand this off, two choices to shape the approach:
+**1) Equity allocation (what to invest in):**
+Which main equity option(s) fit you? You can pick one or split.
+- **FTSE All-World / MSCI ACWI** (~10%/yr): widest global diversification (includes emerging markets; they’ve been a drag at times)
+- **MSCI World** (~11%/yr): developed markets only (no emerging markets)
+- **S&P 500** (~13%/yr): 500 largest US companies (US-only concentration)
+- **NASDAQ-100** (~18%/yr): tech-heavy, but very volatile (e.g., big drops can happen)
+- **TLV-125** (~8%/yr in NIS): Israel’s 125 largest companies (shekel-denominated; more concentrated)
 
-**1) Equity allocation (stocks):** since you didn’t name a market/index preference, what should your equity portion be based on?
-- **FTSE All-World / MSCI ACWI** (~10%/yr past 10 yrs in USD): widest diversification; trade-off: includes emerging markets that can lag.
-- **MSCI World (developed only)** (~11%/yr): diversified but no emerging markets.
-- **S&P 500** (~13%/yr): US-focused; trade-off: concentrated in the US.
-- **NASDAQ-100** (~18%/yr): tech-heavy; trade-off: very volatile (big drawdowns possible).
-- **TLV-125** (~8%/yr in NIS): Israel-focused and shekel-denominated; trade-off: small/concentrated.
+If you want multiple, tell me the **percentage split** (e.g., 70% FTSE All-World + 30% S&P 500).
 
-You can pick one or split (e.g., **70% FTSE All-World + 30% S&P 500**). Past returns don’t guarantee future results.
+**2) Conservative “buffer” for the non-equity part:**
+Would you be comfortable using a **קרן כספית** (Israeli money market fund, shekel-denominated, typically ~4–5% and designed to be capital-stable) as the non-equity portion? Or do you have a different preference / want no buffer?
 
-**2) Conservative buffer:** for the non-equity portion, would you be comfortable using a **קרן כספית** (Israeli money market fund; shekel-denominated, ~4–5% yield historically, designed to be capital-stable)? Or do you have a different preference?
-
-**User:** FTSE All-World. קרן כספית for the buffer.
+**User:** MSCI World. קרן כספית.
 
 **Extracted profile:**
-goal: Invest ₪45,000 for about 5 years, aiming for maximum returns while being moderate risk (would feel sick if ₪40,000 dropped to ₪32,000) | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: FTSE All-World for the equity portion; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
+goal: Maximum returns while still able to tolerate temporary drops (e.g., ₪40,000 down to ₪32,000 would feel sick but you’d hold and wait); invest ₪45,000 with ₪1,000/month for about 5 years; Israel-based; moderate risk | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: MSCI World; קרן כספית as the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
 
 
 ---
@@ -174,33 +154,27 @@ goal: Invest ₪45,000 for about 5 years, aiming for maximum returns while being
 
 **Goal:** "I have ₪55,000 and I want to start investing but I have no idea where to begin"
 
-**Agent:** Totally okay—we’ll start with your basics so I can tailor the right approach. 
-1) How old are you?
-2) Roughly how many years do you want to invest for (e.g., 5, 10, 20 years)?
-3) Do you have an emergency fund already? (yes/no)
-4) Do you have any outstanding debt? (yes/no)
-5) About how much can you add each month (₪/month, even if it’s small)?
-6) When markets drop, which feels closest to you: you’d rather avoid big swings (conservative), you can tolerate some ups/downs (moderate), or you’re okay with big swings for higher potential (aggressive)?
+**Agent:** To get you started, I need a few basics: **1)** How old are you? **2)** Roughly how many years is this money meant to stay invested (e.g., 5, 10, 20 years)? **3)** Do you think of yourself as taking lower risk, medium risk, or higher risk? **4)** Do you have an emergency fund already? (yes/no) **5)** Do you have any outstanding debt? (yes/no) **6)** About how much will you add each month? (₪ amount) **7)** What’s your investing knowledge level: beginner, intermediate, or advanced?
 
 **User:** I'm 28, yes 6 months emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, no brokerage, I'm in Israel, I'm a complete beginner
 
-**Agent:** Great—thanks. Before I hand you off to the recommendation step, two choices to shape the portfolio (no pressure to be “expert”):
+**Agent:** Great—before I can shape your plan, we have two key choices:
 
-**1) Equity allocation (stocks):** since you don’t have a preference, what starting point do you want?
-- **FTSE All-World / MSCI ACWI** (~10%/yr past decade): very diversified globally; includes emerging markets (which can drag at times).
-- **MSCI World (developed only)** (~11%/yr): global, but excludes emerging markets.
-- **S&P 500** (~13%/yr): US-only, less diversified.
-- **NASDAQ-100** (~18%/yr, but very volatile): tech-heavy and can drop a lot in bad periods.
-- **TLV-125** (~8%/yr in NIS): Israel-focused; shekel-denominated (no FX risk), but concentrated.
+**1) Equity allocation (where you want the stock part invested).** If you don’t have a specific market/sector in mind, common broad options are:
+- **FTSE All-World / MSCI ACWI** (~10%/yr past decade): most diversified worldwide; includes emerging markets (can lag).
+- **MSCI World** (~11%/yr): developed markets only; no emerging markets.
+- **S&P 500** (~13%/yr): US-focused (more concentration).
+- **NASDAQ-100** (~18%/yr): tech-heavy; tends to be much more volatile.
+- **TLV-125** (~8%/yr in NIS): Israel-focused; shekel-denominated but concentrated.
 
-You can pick **one** of these, or tell me a **split** (e.g., 70% FTSE All-World + 30% S&P 500). Past returns don’t guarantee future results, and the last decade’s winners may not repeat.
+Any combination is fine—e.g., “70% FTSE All-World + 30% S&P 500”. Do you want one of these, or a custom split? 
 
-**2) Conservative buffer (non-equity portion):** would you be comfortable using a **קרן כספית** (Israeli money-market fund) as the buffer/cash portion? (If not, tell me your alternative preference.)
+**2) Conservative buffer for the non-equity portion:** In Israel, a **קרן כספית** (money market fund, shekel-denominated, capital-stable, typically ~4–5% yield) is the standard “buffer” for the part you may want to be less volatile. Are you comfortable using a קרן כספית for the non-equity portion, or do you prefer something else (or no buffer)?
 
 **User:** 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right for the buffer.
 
 **Extracted profile:**
-goal: Invest ₪55,000 starting now as a complete beginner, with ₪1,800/month contributions, for about 20 years; 70% FTSE All-World and 30% TLV-125, using קרן כספית as the buffer; you’re okay with a 20% drop but wouldn’t sell | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125; קרן כספית as the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
+goal: Start investing ₪55,000 with ₪1,800/mo contributions for about 20 years; use 70% FTSE All-World and 30% TLV-125, with a קרן כספית as the buffer | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right for the buffer. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
 
 
 ---
@@ -209,19 +183,12 @@ goal: Invest ₪55,000 starting now as a complete beginner, with ₪1,800/month 
 
 **Goal:** "I have ₪100,000 and I want to invest in tech sector ETFs"
 
-**Agent:** Great—so far I have ₪100,000 and a preference for tech-sector ETFs. A few quick details so I can shape the right inputs:
-1) How old are you?
-2) About how would you describe your risk tolerance (for example: conservative, moderate, or aggressive)?
-3) What’s your investment timeline—roughly how many years?
-4) What’s your knowledge level with investing (beginner / intermediate / advanced)?
-5) Do you have an emergency fund? (yes/no)
-6) Do you have any outstanding debt? (yes/no)
-7) How much can you add each month (₪ per month)?
+**Agent:** Great—so far I have ₪100,000 and a preference for tech sector ETFs. To complete your profile, what are your (1) age, (2) your risk tolerance (e.g., are you okay with big drops in a bad year, or do you want smoother ride), (3) your investment timeline in years (or a milestone age), (4) your knowledge level (beginner/intermediate/advanced with ETFs/index funds), (5) do you have an emergency fund already (yes/no), (6) do you have outstanding debt (yes/no), and (7) how much can you add each month (a specific ₪ amount)?
 
 **User:** I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage
 
 **Extracted profile:**
-goal: Invest ₪100,000 in tech sector ETFs, with moderate risk, about 15 years, age 31; intermediate knowledge; has emergency fund; no debt; ₪2,500/month contributions; Israel. | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: tech sector ETFs | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
+goal: Invest ₪100,000 in tech sector ETFs; moderate risk; about 15 years; age 31; intermediate knowledge; emergency fund: yes; no debt | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: invest in tech sector ETFs | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
 
 
 ---
@@ -230,21 +197,47 @@ goal: Invest ₪100,000 in tech sector ETFs, with moderate risk, about 15 years,
 
 **Goal:** "I have ₪100,000 and I want to invest mainly in S&P 500 and TLV-125 index funds"
 
-**Agent:** Great—so you’re looking at S&P 500 and TLV-125. A few key details to finish your profile: 
-1) How old are you?
-2) About how many years is this money meant to be invested (or what milestone, like retirement at a certain age)?
-3) What’s your risk comfort level—would you prefer smoother ups/downs (conservative), a balance (moderate), or you can tolerate larger swings for potentially higher returns (aggressive)?
-4) Is your investing knowledge more beginner, intermediate, or advanced?
+**Agent:** Great—before we decide the exact mix between S&P 500 and TLV-125, I need a few profile details:
+1) What’s your age?
+2) Roughly how long do you plan to keep this invested (in years)?
+3) How would you describe your risk tolerance (e.g., would a temporary drop of ~30% make you panic/sell, or would you stay the course)?
+4) Are you a beginner, intermediate, or advanced with investing?
 5) Do you already have an emergency fund? (yes/no)
-6) Do you currently have any outstanding debt? (yes/no)
-7) How much will you add each month? (exact ₪ amount)
+6) Do you have any outstanding debt? (yes/no)
+7) How much can you add each month (₪/month)?
 
 **User:** I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage
 
-**Agent:** Got it. For S&P 500 vs TLV-125, what percentage split would you like—for example, 70% S&P 500 / 30% TLV-125, or 50/50? (Percentages should add up to 100%).
+**Agent:** Thanks—since you mentioned both S&P 500 and TLV-125, what percentage would you put in each (e.g., 70% S&P 500 / 30% TLV-125, or 50/50)?
 
 **User:** 70% S&P 500 and 30% TLV-125
 
 **Extracted profile:**
-goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds, with a 70% S&P 500 / 30% TLV-125 split, moderate risk, and about a 15-year timeline; age 31; ₪2,500/month contributions | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 index funds | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
+goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500 / 30% TLV-125), moderate risk, about 15 years, with ₪2,500/month contributions | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 index funds | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
+
+
+---
+
+## ✓ should accept no-buffer preference when emergency fund is external
+
+**Goal:** "I have ₪25,000 and want to invest it all in the market"
+
+**Agent:** Great—before I can shape anything, I need a few details:
+1) What’s your age?
+2) About how many years until you’ll need this money (e.g., 5, 10, 20 years)?
+3) How would you describe your risk comfort (for example, would you rather avoid big drops, or are you okay with them if returns are higher over time)?
+4) Are you a beginner, intermediate, or advanced with investing?
+5) Do you have an emergency fund already? (yes/no)
+6) Do you have any outstanding debt you’re actively paying off? (yes/no)
+7) How much will you add monthly to investing (₪/month)?
+8) When you say “invest it all in the market,” do you have a specific market/index you want (e.g., S&P 500, NASDAQ, MSCI World, FTSE All-World, Israeli market), or is there a particular fund type/region you’re aiming for?
+
+**User:** I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo, no brokerage
+
+**Agent:** Thanks—that helps. What specific market/index (or named instrument) do you want to invest in? For example: S&P 500, NASDAQ-100, MSCI World, FTSE All-World/ACWI, TLV-125 (Israeli market), or a specific tech/sector ETF.
+
+**User:** 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.
+
+**Extracted profile:**
+goal: Invest ₪25,000 in the market aggressively over about 15 years, invest 100% in S&P 500 with no buffer (emergency fund held separately in a קרן כספית) | amount: 25000 | age: 26 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 500
 
