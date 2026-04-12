@@ -64,7 +64,7 @@ The client and backend communicate entirely over WebSocket:
 
 ## Two levels of conversation
 
-**Within a session (MVP)** — the CLI stays open. The agent clarifies, plans, and asks if the user wants to adjust. Back-and-forth continues until the user is satisfied. See [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) for full dialogue examples.
+**Within a session (MVP)** — the CLI stays open. The agent clarifies, plans, and asks if the user wants to adjust. Back-and-forth continues until the user is satisfied. See [STORIES.md](STORIES.md) for full dialogue examples.
 
 **Across sessions (stretch)** — user comes back days/weeks later with new context (executed steps, market events, new money). Agent loads profile + plan from DB and picks up where it left off.
 
@@ -89,7 +89,19 @@ Each stage has its own focused prompt and minimal context. Stages start fresh (n
 
 Each stage's contract (input/output, tools, behavior rules) is documented in its plan section file. See [plan sections](../plan/plan-sections/).
 
-Per-stage behavior examples and conversation scenarios are documented in stage-specific files. See [STAGE_EXAMPLES.md](STAGE_EXAMPLES.md) for the index.
+Per-stage behavior examples and conversation scenarios are documented in stage-specific files in the [`stages/`](stages/) directory.
+
+### Debugging failing evals
+
+When an eval fails, check the `*.last-run.md` file alongside the eval before doing anything else. It contains the full transcript of what the model said and did — this is usually enough to diagnose the failure without rerunning.
+
+Common failure patterns and how the transcript reveals them:
+
+- **Overflow throw** (`no response scripted for turn N`): the transcript shows all turns up to the throw. Count the agent questions — the test has fewer scripted responses than the model asked for. Add the missing response.
+- **Assertion failure**: the extracted profile is shown at the bottom. Check whether the assertion is too strict (e.g., the model chose `conservative` where `moderate` was expected and both are valid), or whether the model genuinely extracted the wrong value. Loosen the assertion or fix the prompt accordingly.
+- **Stage error before transcript**: the last-run entry will be missing or empty. Look at the test's scripted responses — one may be an unexpected or nonsensical answer that caused the stage to error out.
+
+After diagnosing, make the minimal fix (add a response, adjust an assertion, fix the prompt) and rerun the specific eval file to confirm.
 
 ### Feedback classification (Stage 4)
 
