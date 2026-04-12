@@ -1,7 +1,5 @@
 # Project Status
 
-> **When closing a task, update all three:** (1) the section status table below, (2) Up Next, (3) the relevant plan section in `documentation/plan/plan-sections/`.
-
 ## Up Next
 
 **Next task: 4.4c — Phase B + orchestration + unit tests + full-loop eval.**
@@ -24,7 +22,3 @@ Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-
 | 11 — Integration Testing + Polish | Not started |
 | 12 — Eval Infrastructure | Complete |
 
-## Infrastructure
-
-- CI pipeline, branch protection, format enforcement — complete
-- `dotenvx` encryption for `.env`/`.env.test`, `secretlint` pre-commit hook, prisma convenience scripts — complete
