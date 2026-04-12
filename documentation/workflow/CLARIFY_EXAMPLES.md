@@ -178,9 +178,9 @@ Are you open to an ETF-based approach?
 
 **Agent:** *(stage completes — no ETF-101 explanation, no portfolio defaults question since no preferences stated and knowledge level is advanced)*
 
-**Extracted:** amount: 200000 | age: 34 | risk: moderate or aggressive | timeline: "20+ years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000 | brokerage: Interactive Brokers | knowledgeLevel: intermediate or advanced | investmentPreferences: none
+**Extracted:** amount: 200000 | age: 34 | risk: moderate | timeline: "20+ years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000 | brokerage: Interactive Brokers | knowledgeLevel: intermediate | investmentPreferences: none
 
-> `risk: "moderate or aggressive"` and `knowledgeLevel: "intermediate or advanced"` reflect current model behavior when the user signals ambiguous values. The extractor captures the hedged output as-is rather than forcing a single enum value.
+> When the user's input is ambiguous between two adjacent enum values (e.g., "moderate-to-aggressive"), the extractor picks the more conservative option for `riskTolerance` and the lower level for `knowledgeLevel`.
 
 ---
 
@@ -200,9 +200,11 @@ If you're open to a long-term plan instead — something that could realisticall
 
 **User:** I'm 24, yes to emergency fund, no debt, maybe ₪700/mo, no brokerage, I'm in Israel, I'm a beginner.
 
-**Agent:** *(stage completes — profile collected, no portfolio defaults question since timeline is short-to-medium and investmentPreferences was not discussed)*
+**Agent:** *(all required fields now pass; investmentPreferences is "none" — asks portfolio defaults question)*
 
-**Extracted:** amount: 18000 | age: 24 | risk: moderate | timeline: "10-15 years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 700 | brokerage: none | knowledgeLevel: beginner | investmentPreferences: none
+**User:** FTSE All-World. קרן כספית for the buffer.
+
+**Extracted:** amount: 18000 | age: 24 | risk: moderate | timeline: "10-15 years" | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 700 | brokerage: none | knowledgeLevel: beginner | investmentPreferences: "FTSE All-World, קרן כספית buffer"
 
 ---
 

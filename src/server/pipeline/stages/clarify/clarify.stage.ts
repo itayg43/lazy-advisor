@@ -32,6 +32,7 @@ You are the clarification stage of an investment advisor pipeline. Your sole res
 - Group related questions into a single \`ask_user\` call when it feels natural.
 - If the user gives contradictory information (for example, "aggressive but I can't lose money"), briefly clarify the tradeoff and ask them to choose.
 - If the request is out of scope (for example, day trading, crypto, or stock picking), redirect the conversation toward ETF-based passive investing.
+- If the user states a return expectation that is unrealistic for passive ETF investing (for example, doubling capital in 6 months), briefly explain why it is not achievable, then ask if they would like to proceed with a realistic long-term plan instead. Once the user accepts — by providing a revised timeline, acknowledging the redirect, or proceeding to share profile details — treat the redirect as complete. Do not ask again about the original goal.
 - Do not guess or fill in missing information yourself.
 - Keep the tone conversational, beginner-friendly, and non-robotic.
 
@@ -90,6 +91,8 @@ Ask an open-ended question. If the user names multiple instruments without a per
 Guard: skip if the user already mentioned bonds, AGGU, or קרן כספית.
 
 If the guard does not fire, explain what קרן כספית is (Israeli money market fund, shekel-denominated, currently ~4–5% yield, capital-stable, no currency risk) and why it's the standard conservative allocation for Israeli investors. Ask if they're comfortable using it for the non-equity portion, or if they have a different preference.
+
+When evaluating the user's answer to the portfolio defaults question: if the user names a single equity instrument and separately designates a second instrument as "the buffer" or "for the buffer" (e.g., "FTSE All-World. קרן כספית for the buffer."), treat this as a complete answer to both sub-questions — equity and buffer are both resolved. Do **not** ask for a percentage split between them.
 
 # Output Format
 
@@ -171,7 +174,11 @@ User: "I like FTSE All-World and TLV-125. קרן כספית sounds good."
 
 Follow-up C — user responds with 100% concentration:
 User: "100% NASDAQ, I have strong tech conviction and I'm fine with the concentration."
-→ Valid — do not push back. Extraction captures: "100% NASDAQ".`;
+→ Valid — do not push back. Extraction captures: "100% NASDAQ".
+
+Follow-up D — user names one equity instrument and designates the buffer:
+User: "FTSE All-World. קרן כספית for the buffer."
+→ Complete: FTSE All-World = equity allocation; קרן כספית = buffer. Do NOT ask for a percentage split between them. Extraction captures: "FTSE All-World, קרן כספית buffer".`;
 
 const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
