@@ -4,7 +4,7 @@ Realistic scenarios showing how the CLI works in practice. MVP scope: single ses
 
 The agent is **educational by default** — it explains concepts inline so beginner investors understand *why*, not just *what*. Every recommendation comes with reasoning the user can learn from.
 
-All users are based in Israel. The agent tailors recommendations to Israeli investors: Irish-domiciled accumulating ETFs for tax efficiency, Israeli brokerages (Meitav, IBI) vs Interactive Brokers, קרנות מחקות for local exposure, and shekel-denominated amounts.
+All users are based in Israel. The agent tailors recommendations to Israeli investors: Irish-domiciled accumulating ETFs for tax efficiency, Israeli brokerages (Meitav, IBI, Excellence) vs Interactive Brokers, קרנות מחקות for local exposure, and shekel-denominated amounts.
 
 ---
 
@@ -21,7 +21,7 @@ All users are based in Israel. The agent tailors recommendations to Israeli inve
 
 **Stage 1 — Clarify:** The agent identifies gaps (age, timeline, risk, emergency fund, debt, monthly contribution, brokerage) and asks in a single message. The user answers with a 20-year horizon and stress-but-hold risk response, which the agent maps to moderate. Because no investment preferences were stated, the agent asks the portfolio defaults question: equity allocation options with compound projections, plus a קרן כספית suggestion for the buffer. The user picks 70% FTSE All-World + 30% TLV-125 with קרן כספית. Stage completes.
 
-**Stage 2 — Research:** Four searches covering Irish accumulating ETFs, Israeli brokerage fees, and money market funds. The agent explains the Irish ETF tax advantage (15% vs 25% dividend withholding) and recommends VWRA for the equity portion.
+**Stage 2 — Research:** Searches covering Irish accumulating ETFs and money market funds. The agent explains the Irish ETF tax advantage (15% vs 25% dividend withholding) and recommends VWRA for the equity portion. Brokerage data (Meitav, IBI, Excellence) is hardcoded — not searched.
 
 **Stage 3 — Plan:** Three-phase plan: open Meitav account, buy ₪44,000 VWRA + ₪11,000 קרן כספית, set up ₪1,800/mo standing order with 80/20 allocation. Target allocation: 80% equity / 20% קרן כספית.
 
@@ -35,7 +35,7 @@ All users are based in Israel. The agent tailors recommendations to Israeli inve
 
 **Stage 1 — Clarify:** The user provides amount, age, risk, and goal in the initial message. The agent asks only for gaps: emergency fund, debt, monthly contribution, brokerage, and timeline specifics. Stage completes.
 
-**Stage 2 — Research:** Searches for Irish accumulating ETFs and Israeli brokerages. Returns a 3-fund allocation (global equities, bond fund, money market). Stage completes.
+**Stage 2 — Research:** Searches for Irish accumulating ETFs and money market funds. Returns a 3-fund allocation (global equities, bond fund, money market). Brokerage data is hardcoded — not searched. Stage completes.
 
 **Stage 3 — Plan:** Produces a 3-fund plan with phased steps. Stage completes.
 

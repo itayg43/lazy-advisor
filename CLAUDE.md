@@ -16,6 +16,7 @@
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
+| [Decisions](documentation/DECISIONS.md) | Before implementing a new stage or cross-cutting change |
 | [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
 | [Stage Rules](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
 

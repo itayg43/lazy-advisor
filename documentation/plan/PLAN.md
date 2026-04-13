@@ -8,6 +8,9 @@ Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis,
 
 | # | Section | File |
 |---|---------|------|
+| 1 | Project Setup | Complete — see [STATUS.md](../STATUS.md) |
+| 2 | Database Layer | Complete — see [STATUS.md](../STATUS.md) |
+| 3 | Stage 1 — Clarify | Complete — see [STATUS.md](../STATUS.md) |
 | 4 | Stage 2 — Research | [PLAN_SECTION_4.md](plan-sections/PLAN_SECTION_4.md) |
 | 5 | Stage 3 — Plan | [PLAN_SECTION_5.md](plan-sections/PLAN_SECTION_5.md) |
 | 6 | Stage 4 — Iterate | [PLAN_SECTION_6.md](plan-sections/PLAN_SECTION_6.md) |
@@ -16,6 +19,7 @@ Tech stack: TypeScript, Vitest, Express + WebSocket, Prisma + PostgreSQL, Redis,
 | 9 | Middleware Layer | [PLAN_SECTION_9.md](plan-sections/PLAN_SECTION_9.md) |
 | 10 | Observability | [PLAN_SECTION_10.md](plan-sections/PLAN_SECTION_10.md) |
 | 11 | Integration Testing + Polish | [PLAN_SECTION_11.md](plan-sections/PLAN_SECTION_11.md) |
+| 12 | Eval Infrastructure | Complete — see [STATUS.md](../STATUS.md) |
 
 ---
 
