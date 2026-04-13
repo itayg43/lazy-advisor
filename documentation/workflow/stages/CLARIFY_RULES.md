@@ -44,13 +44,13 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 5. Stated preferences in goal → portfolio defaults skipped
+## 5. Stated equity in goal → equity defaults skipped, buffer still asked
 
-**Rule:** If `investmentPreferences` is already set from the goal or clarification, the portfolio defaults question is skipped entirely — the stage does not ask twice.
+**Rule:** If an equity preference is already stated in the goal (e.g., a specific index, sector, or market), the equity sub-question of the portfolio defaults is skipped — the stage does not ask twice. The buffer sub-question is still asked if the user has not already addressed it, since buffer is a separate concern from equity allocation.
 
-**Scenario:** "I have ₪100,000 and I want to invest in tech sector ETFs" — preference stated upfront.
+**Scenario:** "I have ₪100,000 and I want to invest in tech sector ETFs" — preference stated upfront, stage asks buffer only, user accepts קרן כספית.
 
-**Extracted:** amount: 100000 | age: 31 | risk: moderate | timeline: ~15 years | investmentPreferences: "tech sector ETFs"
+**Extracted:** amount: 100000 | age: 31 | risk: moderate | timeline: ~15 years | investmentPreferences: "tech sector ETFs, קרן כספית buffer"
 
 ---
 
@@ -60,7 +60,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 **Scenario:** "I want to invest in S&P 500 and TLV-125" — stage asks for split, user provides 70/30.
 
-**Extracted:** amount: 100000 | age: 31 | risk: moderate | timeline: ~15 years | investmentPreferences: "70% S&P 500, 30% TLV-125"
+**Extracted:** amount: 100000 | age: 31 | risk: moderate | timeline: ~15 years | investmentPreferences: "70% S&P 500, 30% TLV-125, קרן כספית buffer"
 
 ---
 

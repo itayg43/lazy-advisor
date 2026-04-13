@@ -6,7 +6,8 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import { extractUserProfile } from "#pipeline/stages/clarify/clarify.extraction";
+import { toTranscriptEntries } from "#pipeline/stages/clarify/clarify.lib";
+import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import {
   KnowledgeLevel,
   RiskTolerance,
@@ -14,37 +15,6 @@ import {
 } from "#schemas/pipeline.schema";
 
 const LAST_RUN_PATH = new URL("CLARIFY_EXTRACTION_LAST_RUN.md", import.meta.url).pathname;
-
-// Converts a ResponseInputItem[] to TranscriptEntry[] for the last-run file.
-// Includes the initial user message (goal), agent questions, and user responses.
-const toTranscriptEntries = (items: ResponseInputItem[]): TranscriptEntry[] =>
-  items.flatMap((item): TranscriptEntry[] => {
-    if ("role" in item && item.role === "user" && typeof item.content === "string") {
-      return [{ role: "user", content: item.content }];
-    }
-    if (
-      "type" in item &&
-      item.type === "function_call" &&
-      "name" in item &&
-      item.name === "ask_user"
-    ) {
-      const args = JSON.parse(item.arguments) as { question: string };
-
-      return [{ role: "agent", content: args.question }];
-    }
-
-    if ("type" in item && item.type === "function_call_output") {
-      return [
-        {
-          role: "user",
-          content:
-            typeof item.output === "string" ? item.output : JSON.stringify(item.output),
-        },
-      ];
-    }
-
-    return [];
-  });
 
 describe("clarifyExtraction", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
