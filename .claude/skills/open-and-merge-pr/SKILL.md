@@ -25,6 +25,12 @@ git rebase origin/main
 git push --force-with-lease
 ```
 
+If the branch has an upstream but local commits haven't been pushed yet, push:
+
+```bash
+git push
+```
+
 ### 2. Draft PR
 
 Write the PR title and description:
