@@ -2,7 +2,7 @@
 
 ## Agent Usage
 
-- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Git Workflow § Before writing code), and code review
+- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Before Writing Code below), and code review
 - Keep inline: looking up a specific file or function, implementation, small edits, git operations
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
@@ -17,7 +17,7 @@
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
-| [Stage Examples](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
+| [Stage Rules](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
 
 ## Feedback Style
 
@@ -36,37 +36,14 @@
 Work one task at a time. Each task must be fully closed before moving to the next:
 - Implementation complete
 - Docs updated (`STATUS.md` + any relevant plan section)
-- All checks passing
-- Commit made and PR opened
+- Use `/commit-and-push` to run checks and commit, then `/open-pr` to create the PR
 
 If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
-## Git Workflow
-
-- Never commit directly to `main` — create a feature branch first
-- Branch naming: `<type>/<short-description>` (e.g., `feature/2.1-prisma-schema`, `docs/ci-status-update`, `fix/retry-timeout`)
-
-### Before writing code
+## Before Writing Code
 - For tasks touching multiple files or areas: spawn an Explore subagent to map the affected area with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
 - Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
-
-### Before committing
-- Run all checks: `npm run format`, `npm run lint`, `npm run type-check`, `npm test`
-- After running evals, commit the updated `*.runs.jsonl` and `*.last-run.md` files alongside the code — they are the persistent eval log and should not be left unstaged
-- Update `STATUS.md` if task completion status changed
-- Only update `CONVENTIONS.md`, `TESTING.md`, or plan sections when the change introduces a rule that applies project-wide — e.g., a new error class, a new test mocking pattern, a new naming convention. Don't add entries for single-use decisions or things already visible in the code
-
-### Commits and PRs
-- Commit messages must be descriptive, detailed, and self-contained — no links to plan docs or external documents, as they can break over time
-- No `Co-Authored-By` lines in commit messages
-- PR descriptions must be descriptive, detailed, and self-contained
-- No "Generated with Claude Code" lines in PR descriptions
-- No "Test plan" section in PR descriptions — CI already covers format, lint, type-check, and tests
-
-### Before merging
-- CI (format, lint, type-check, tests) must pass
-- Branch must be up to date with `main`
 
 ## npm Scripts
 
