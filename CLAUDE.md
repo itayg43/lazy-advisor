@@ -36,7 +36,7 @@
 Work one task at a time. Each task must be fully closed before moving to the next:
 - Implementation complete
 - Docs updated (`STATUS.md` + any relevant plan section)
-- Use `/commit-and-push` to run checks and commit, then `/open-pr` to create the PR and wait for CI
+- Use `/commit-and-push` to run checks and commit, then `/open-pr` to create the PR
 
 If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
