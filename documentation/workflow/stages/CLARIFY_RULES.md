@@ -98,7 +98,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 **Rule:** The agent asks only for gaps — fields already stated in the goal (amount, age, risk, context) are not re-asked. If the goal provides enough to infer a field, treat it as answered. Portfolio defaults are asked if no preference was stated in the goal.
 
-**Scenario:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings" — only gaps (emergency fund, debt, timeline, monthly, brokerage, country) are asked.
+**Scenario:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings" — only gaps (emergency fund, debt, timeline, monthly, brokerage) are asked.
 
 **Extracted:** amount: 75000 | age: 35 | risk: moderate | timeline: ~30 years, retirement at 65 | brokerage: IBI | investmentPreferences: "FTSE All-World, קרן כספית buffer"
 
