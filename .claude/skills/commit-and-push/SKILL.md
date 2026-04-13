@@ -5,7 +5,15 @@ description: Run all checks, draft a commit message, commit, and push to the cur
 
 ## Steps
 
-### 1. Run checks
+### 1. Check branch
+
+```bash
+git branch --show-current
+```
+
+If the current branch is `main`, stop immediately — never commit directly to `main`. Ask the user which branch to use or create one.
+
+### 2. Run checks
 
 Run in sequence — stop immediately and report if any fail:
 
@@ -18,11 +26,11 @@ npm test
 
 If any check fails, report which one and the full error output. Do not proceed to commit.
 
-### 2. Review changes
+### 3. Review changes
 
 Run `git status` and `git diff` to understand what's changing. Note whether eval log files (`*.runs.jsonl`, `*.last-run.md`) are present and need to be staged alongside code.
 
-### 3. Draft commit message
+### 4. Draft commit message
 
 Write a commit message:
 - First line: imperative mood, ≤72 chars, describes what changed
@@ -32,6 +40,6 @@ Write a commit message:
 
 Present the draft to the user for approval before committing.
 
-### 4. Commit and push
+### 5. Commit and push
 
 Stage relevant files by name (never `git add .` or `git add -A`). Commit with the approved message. Push to the current branch.
