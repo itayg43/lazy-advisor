@@ -12,6 +12,12 @@ git fetch origin main
 git status
 ```
 
+If the current branch has no upstream (never been pushed), push it first:
+
+```bash
+git push -u origin <branch>
+```
+
 If the current branch is behind `main`, rebase and force-push:
 
 ```bash
