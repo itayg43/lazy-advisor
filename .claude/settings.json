@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/itay/Development/lazy-advisor/.claude/hooks/post-merge-doc-review.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
