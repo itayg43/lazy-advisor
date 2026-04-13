@@ -1,6 +1,6 @@
 ---
 name: open-pr
-description: Push the branch if needed, create a PR, and wait for CI. Use after the commit is pushed and ready for review.
+description: Push the branch if needed and create a PR. Use after the commit is pushed and ready for review.
 ---
 
 ## Steps
@@ -49,10 +49,4 @@ EOF
 )"
 ```
 
-### 4. Wait for CI
-
-```bash
-gh pr checks --watch
-```
-
-Report the result. If CI passes, say so and stop — merging is a separate step. If CI fails, report what failed.
+Report the PR URL and stop. CI will run in the background — check the PR on GitHub when ready to merge.
