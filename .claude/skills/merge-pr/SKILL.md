@@ -51,14 +51,6 @@ Show the PR number and title, then ask the user to confirm before merging.
 gh pr merge --squash --delete-branch
 ```
 
-### 6. Sync local main and clean up local branch
+### 6. Report
 
-Note the branch name before switching.
-
-```bash
-git checkout main
-git pull
-git branch -d <branch>
-```
-
-Report the merge and stop.
+Report the merge and stop. (`gh pr merge` handles switching to main, pulling, and deleting the local branch automatically.)
