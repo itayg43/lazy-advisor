@@ -11,7 +11,11 @@ description: Run all checks, draft a commit message, commit, and push to the cur
 git branch --show-current
 ```
 
-If the current branch is `main`, stop immediately — never commit directly to `main`. Ask the user which branch to use or create one.
+If the current branch is `main`, do not stop — create a branch automatically before committing. Derive the branch name from the nature of the changes using the convention `<type>/<short-description>` (e.g., `feature/2.1-prisma-schema`, `docs/ci-status-update`, `fix/retry-timeout`), then run:
+
+```bash
+git checkout -b <branch-name>
+```
 
 ### 2. Run checks
 
