@@ -5,7 +5,7 @@
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
-if echo "$COMMAND" | grep -q "gh pr merge"; then
+if echo "$COMMAND" | grep -qE "^gh pr merge\b"; then
   jq -n '{
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
