@@ -36,7 +36,7 @@
 Work one task at a time. Each task must be fully closed before moving to the next:
 - Implementation complete
 - Docs updated (`STATUS.md` + any relevant plan section)
-- Use `/commit-and-push` to run checks and commit, then `/open-and-merge-pr` to create, merge, and clean up the PR
+- Use `/commit-and-push` to run checks and commit, then `/open-pr` to create the PR and wait for CI
 
 If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
@@ -50,7 +50,7 @@ If a refactor or design question surfaces mid-task, note it but do not act on it
 | Skill | When to use |
 |-------|-------------|
 | `/commit-and-push` | When implementation and doc updates are complete |
-| `/open-and-merge-pr` | After commit is pushed and ready for review |
+| `/open-pr` | After commit is pushed and ready for review |
 
 ### Before writing code
 - For tasks touching multiple files or areas: spawn an Explore subagent to map the affected area with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing

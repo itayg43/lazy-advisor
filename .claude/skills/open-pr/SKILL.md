@@ -1,6 +1,6 @@
 ---
-name: open-and-merge-pr
-description: Create a PR, wait for CI, squash merge, delete the branch, and switch back to main. Use after the commit is pushed and ready for review.
+name: open-pr
+description: Push the branch if needed, create a PR, and wait for CI. Use after the commit is pushed and ready for review.
 ---
 
 ## Steps
@@ -55,16 +55,4 @@ EOF
 gh pr checks --watch
 ```
 
-If CI fails: stop, report what failed, and do not merge. Wait for the user to fix it.
-
-### 5. Merge and clean up
-
-```bash
-BRANCH=$(git branch --show-current)
-gh pr merge --squash --delete-branch
-git checkout main
-git pull
-git branch -d "$BRANCH"
-```
-
-Report the final state: branch merged, now on main.
+Report the result. If CI passes, say so and stop — merging is a separate step. If CI fails, report what failed.
