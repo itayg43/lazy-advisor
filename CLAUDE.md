@@ -2,7 +2,7 @@
 
 ## Agent Usage
 
-- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Git Workflow § Before writing code), and code review
+- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas — see Before Writing Code below), and code review
 - Keep inline: looking up a specific file or function, implementation, small edits, git operations
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style below
@@ -17,7 +17,7 @@
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
-| [Stage Examples](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
+| [Stage Rules](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
 
 ## Feedback Style
 
@@ -40,19 +40,7 @@ Work one task at a time. Each task must be fully closed before moving to the nex
 
 If a refactor or design question surfaces mid-task, note it but do not act on it until the current task is closed. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
-## Git Workflow
-
-- Never commit directly to `main` — create a feature branch first
-- Branch naming: `<type>/<short-description>` (e.g., `feature/2.1-prisma-schema`, `docs/ci-status-update`, `fix/retry-timeout`)
-
-### Git Skills
-
-| Skill | When to use |
-|-------|-------------|
-| `/commit-and-push` | When implementation and doc updates are complete |
-| `/open-pr` | After commit is pushed and ready for review |
-
-### Before writing code
+## Before Writing Code
 - For tasks touching multiple files or areas: spawn an Explore subagent to map the affected area with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
 - Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
