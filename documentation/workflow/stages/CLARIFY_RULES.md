@@ -111,3 +111,13 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 **Scenario:** Young investor (26) with an emergency fund held separately in a קרן כספית outside the portfolio. Wants 100% S&P 500 with no in-portfolio buffer.
 
 **Extracted:** amount: 25000 | age: 26 | risk: aggressive | hasEmergencyFund: true | investmentPreferences: "100% S&P 500 — no buffer; emergency fund held separately outside portfolio"
+
+---
+
+## 12. Knowledge level missing → asked with self-identification anchor
+
+**Rule:** When knowledge level is the only missing required field, the agent asks for it with a brief anchor that helps the user self-identify — e.g., "do you know what an index ETF or expense ratio is?" — rather than just listing bare labels. The user's descriptive answer (not necessarily a label) is sufficient; the extraction maps it to the correct level.
+
+**Scenario:** User provides all required fields upfront except knowledge level.
+
+**Extracted:** knowledgeLevel: intermediate
