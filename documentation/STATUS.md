@@ -9,6 +9,17 @@
 3. **Fix clarify stage phase transition messaging** — After the fields phase, the LLM says "Got it, I have all the details I need." then immediately asks more questions in the preferences phase, then says "Got it, I have everything I need." again. Fix: remove the completion message from the fields phase — it should stop asking questions silently. The single completion signal at the end of preferences is sufficient.
 
 After all three are complete: **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+
+### Flagged from eval review
+- **Preferences Test 1 — wrong riskTolerance extraction:** User said "a 20% drop would stress me but I wouldn't sell" → extracted as `conservative` but this is `moderate` behavior (holds through drawdown, just stressed). Investigate extraction logic.
+
+### Deferred: Crypto ETF support (clarify + research)
+Crypto ETFs (e.g., BlackRock's IBIT for Bitcoin, ETHA for Ethereum) are SEC-regulated ETFs tradeable through a normal brokerage — they should be treated as a legitimate aggressive investment preference, not redirected as out-of-scope alongside direct crypto purchases. Currently the clarify fields prompt groups all crypto together. Deferred until the research stage is otherwise complete.
+
+**When implementing:**
+1. Update clarify fields redirect rule to distinguish direct crypto (out of scope) vs crypto ETFs (valid aggressive preference — capture in `investmentPreferences`)
+2. Update research stage to handle crypto ETF as a portfolio instrument
+
 Tasks 4.4c, 4.4d, 4.7 remaining in Section 4. See [PLAN_SECTION_4.md](plan/plan-sections/PLAN_SECTION_4.md) for full task details.
 
 ## Section Status
