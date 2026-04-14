@@ -1,4 +1,5 @@
 import { createLogger } from "#lib/logger";
+import type { PhaseSourceParams } from "#pipeline/lib/build-source-params";
 import {
   KNOWLEDGE_LEVELS,
   MAX_FIELDS_TOOL_CALLS,
@@ -17,10 +18,7 @@ You are the field-collection phase of an investment advisor pipeline. Your sole 
 - When multiple fields are missing, ask for the most critical ones first (amount, age, timeline, riskTolerance) — ask at most 4 questions per turn. Collect any remaining gaps in a subsequent turn.
 - When asking multiple questions, always use a numbered list — one question per line. Do not combine multiple questions into a single prose sentence.
 - Do not guess or fill in missing information yourself.
-- Keep the tone conversational, beginner-friendly, and non-robotic.
-- If the user gives contradictory information (e.g., "aggressive but I can't lose money"), briefly clarify the tradeoff and ask them to choose.
-- If the request is out of scope (e.g., day trading, direct crypto purchases, individual stock picking), use \`ask_user\` to deliver a redirect explanation and invite the user to accept — do not include any data collection questions in the same call. Explain why: buying a single stock concentrates all risk in one company — if it drops 40% or faces a major setback, the whole investment suffers; a diversified ETF spreads that risk across hundreds of companies. If the user has a sector preference (e.g., tech), offer a sector ETF as a middle ground. End with a question asking if they'd like to proceed with an ETF plan. Begin field collection only once the user accepts.
-- If the user states a return expectation that is unrealistic for passive ETF investing (e.g., doubling capital in 6 months), briefly explain why it is not achievable, then ask if they would like to proceed with a realistic long-term plan. Once the user accepts — by providing a revised timeline, acknowledging the redirect, or proceeding to share profile details — treat the redirect as complete. Do not ask again about the original goal.
+- Keep the tone conversational and non-robotic. Beginner-friendly by default; if the user signals investing experience, match their level — skip introductory explanations.
 - If the user has been asked about the same field twice without providing a specific value, accept the best available answer and move on.
 
 # Required Fields
@@ -28,7 +26,7 @@ Every required field must have a specific, actionable value before this phase en
 
 - **amount**: a specific number. Not \`some money\`, \`a lot\`, or \`not sure\`.
 - **age**: a specific number.
-- **riskTolerance**: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms. When asking, anchor with a concrete scenario rather than just listing labels — e.g., "if your portfolio dropped 20% in a year, would you sell, hold steady, or buy more?"
+- **riskTolerance**: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms. When asking, anchor with a concrete scenario rather than just listing labels — e.g., "if your portfolio dropped 20% in a year, would you sell, hold steady, or buy more?" If the user gives contradictory risk signals mid-conversation, use the same scenario approach to resolve before proceeding.
 - **timeline**: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` are specific enough — do not ask to narrow further.
 - **knowledgeLevel**: map to ${KNOWLEDGE_LEVELS} based on what the user describes. When asking, include a brief anchor to help the user self-identify — e.g., "do you know what an index ETF or expense ratio is?"
 - **hasEmergencyFund**: yes or no.
@@ -73,29 +71,7 @@ Decision Logic:
 
 → "Got it, I have all the details I need."
 
-## Example 3 — out-of-scope redirect (redirect turn first, fields second)
-User message: "Should I buy Tesla stock?"
-
-Decision Logic:
-- Request is out of scope (individual stock picking) → redirect-only turn, no data collection.
-
-→ \`ask_user\`: "Buying a single stock concentrates all your risk in one company — if Tesla drops 40% or hits a major setback, your whole investment suffers with it. A diversified ETF like the S&P 500 spreads that risk across 500 companies, so no single bad year at one company tanks your portfolio. If you're drawn to tech specifically, a tech sector ETF is a middle ground. Would you like to proceed with an ETF-based plan?"
-
-Next turn — user accepts: "ok, let's do ETFs"
-
-Decision Logic:
-- Redirect accepted → begin field collection. amount ✗, age ✗, timeline ✗, riskTolerance ✗ — ask the 4 most critical first.
-
-→ \`ask_user\`:
-"A few details to get started:
-1. How much do you want to invest (a specific amount)?
-2. How old are you?
-3. What's your investment timeline — how many years, or until a specific milestone?
-4. How would you describe your risk comfort — e.g., if your portfolio dropped 20% in a year, would you sell, hold steady, or buy more?"
-
----
-
-## Example 4 — many fields missing (cap + numbered format)
+## Example 3 — many fields missing (cap + numbered format)
 User message: "I want to start investing."
 
 Decision Logic:
@@ -121,15 +97,15 @@ Decision Logic:
 4. How much can you add each month (a specific ₪ amount)?"`;
 
 export const collectFields = async (
-  goal: string,
+  source: PhaseSourceParams,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<string> => {
-  logger.info("Starting fields phase", { goal });
+  logger.info("Starting fields phase");
 
   return await runPhaseLoop(
     FIELDS_PROMPT,
-    { input: goal },
+    source,
     MAX_FIELDS_TOOL_CALLS,
     "Fields phase",
     sendToUser,

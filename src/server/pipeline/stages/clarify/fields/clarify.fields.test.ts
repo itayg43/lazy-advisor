@@ -95,7 +95,11 @@ describe("collectFields", () => {
   it("should return response ID when model needs no clarification", async () => {
     mockedCallOpenAI.mockResolvedValue(createTextResponse());
 
-    const result = await collectFields(mockGoal, mockSendToUser, mockWaitForResponse);
+    const result = await collectFields(
+      { input: mockGoal },
+      mockSendToUser,
+      mockWaitForResponse,
+    );
 
     expect(result).toBe("resp_fields_done");
     expect(mockWaitForResponse).not.toHaveBeenCalled();
@@ -110,7 +114,11 @@ describe("collectFields", () => {
       .mockResolvedValueOnce(createAskUserResponse("fields_1"))
       .mockResolvedValueOnce(createTextResponse());
 
-    const result = await collectFields(mockGoal, mockSendToUser, mockWaitForResponse);
+    const result = await collectFields(
+      { input: mockGoal },
+      mockSendToUser,
+      mockWaitForResponse,
+    );
 
     expect(result).toBe("resp_fields_done");
     expect(mockSendToUser).toHaveBeenCalledTimes(1);
@@ -122,7 +130,7 @@ describe("collectFields", () => {
     mockedCallOpenAI.mockResolvedValue(createUnexpectedToolResponse());
 
     await expect(
-      collectFields(mockGoal, mockSendToUser, mockWaitForResponse),
+      collectFields({ input: mockGoal }, mockSendToUser, mockWaitForResponse),
     ).rejects.toThrow(InternalError);
   });
 
@@ -137,7 +145,7 @@ describe("collectFields", () => {
     });
 
     await expect(
-      collectFields(mockGoal, mockSendToUser, mockWaitForResponse),
+      collectFields({ input: mockGoal }, mockSendToUser, mockWaitForResponse),
     ).rejects.toThrow(InternalError);
 
     expect(mockWaitForResponse).toHaveBeenCalledTimes(MAX_FIELDS_TOOL_CALLS);

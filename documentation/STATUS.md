@@ -2,13 +2,12 @@
 
 ## Up Next
 
-**Before starting 4.4c — three prerequisite tasks:**
+**Before starting 4.4c — two prerequisite tasks:**
 
-1. **Clarify stage eval review** — Review `CLARIFY_FIELDS_LAST_RUN.md` and `CLARIFY_PREFERENCES_LAST_RUN.md` and assess the amount and level of information the LLM returns to users — too brief, too verbose, appropriately detailed? Flag any quality issues.
-2. **Research stage: examples → rules refactor** — Three parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references.
-3. **Fix clarify stage phase transition messaging** — After the fields phase, the LLM says "Got it, I have all the details I need." then immediately asks more questions in the preferences phase, then says "Got it, I have everything I need." again. Fix: remove the completion message from the fields phase — it should stop asking questions silently. The single completion signal at the end of preferences is sufficient.
+1. **Research stage: examples → rules refactor** — Four parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references; (d) review research stage prompts for missing terminal-state steps (e.g. explicit "stop" instructions for rejection/disengagement), following the pattern added to the clarify intake prompts.
+2. **Fix clarify stage phase transition messaging** — Multiple redundant completion messages appear across phases. From the stage eval: intake ends with "Got it.", fields ends with "Got it, I have all the details I need.", preferences ends with "Got it, I have everything I need." The user sees a sequence of "Got it" messages with questions interspersed between them. Fix: silent transitions between phases — no completion message at intake or fields. The single completion signal at the end of preferences is sufficient.
 
-After all three are complete: **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+After both are complete: **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 
 ### Flagged from eval review
 - **Preferences Test 1 — wrong riskTolerance extraction:** User said "a 20% drop would stress me but I wouldn't sell" → extracted as `conservative` but this is `moderate` behavior (holds through drawdown, just stressed). Investigate extraction logic.
