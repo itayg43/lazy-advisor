@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
-import { GoalClassification, KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
+import {
+  GoalClassification,
+  KnowledgeLevel,
+  RiskTolerance,
+} from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
 const {
