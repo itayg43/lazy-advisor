@@ -1,5 +1,7 @@
 # Lazy Advisor
 
+An agentic investment planning CLI for beginner ETF investors — the agent clarifies the user's situation, researches ETF data, and produces a phased investment plan.
+
 ## Agent Usage
 
 - Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas), and code review
