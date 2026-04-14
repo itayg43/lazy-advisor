@@ -36,7 +36,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ## 4. Out-of-scope stock picking → ETF redirect
 
-**Rule:** Individual stock picking is out of scope. Redirect toward ETF-based investing — explain why (85–90% of fund managers underperform over 10 years), offer a sector ETF alternative, then continue collecting the profile. Portfolio defaults are asked after redirect.
+**Rule:** Individual stock picking is out of scope. Deliver a redirect-only message first (no data collection questions in the same turn) — explain why: buying a single stock concentrates all risk in one company, whereas a diversified ETF spreads that risk across hundreds of companies. Offer a sector ETF as a middle ground if the user has a sector preference. Begin field collection only once the user accepts. Portfolio defaults are asked after all fields are collected.
 
 **Scenario:** "Should I buy NVIDIA stock?" — user accepts ETF approach with US tech tilt.
 
