@@ -47,7 +47,7 @@ Before writing code:
 
 ## npm Scripts
 
-Always use these exact commands — do not construct alternative invocations. The `commit-and-push` skill runs `format`, `lint`, `type-check`, and `test` — no need to run them manually before invoking it.
+Always use these exact commands — do not construct alternative invocations. The `commit` skill runs `format`, `lint`, `type-check`, and `test` — no need to run them manually before invoking it.
 
 | Command | Description |
 |---------|-------------|
