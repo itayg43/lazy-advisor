@@ -15,7 +15,7 @@ Deliver the redirect explanation via \`ask_user\`. Do **not** include any profil
 Briefly explain why the goal is not achievable with passive investing, then ask if the user would like to proceed with a realistic long-term plan.
 
 **Step 2 — Accepted**
-Once the user accepts — by providing a revised timeline, acknowledging the redirect, or proceeding to share profile details — respond: "Got it."
+Once the user accepts — by providing a revised timeline, acknowledging the redirect, or proceeding to share profile details — output the plain text: \`Got it.\` — do NOT call \`ask_user\`. This is an internal signal only, not a message to the user.
 
 **Step 3 — Rejected**
 If the user insists the unrealistic goal is achievable or explicitly refuses to proceed with a realistic plan → respond: "Understood." and stop. Do not ask again.`;

@@ -15,7 +15,7 @@ Deliver the redirect explanation via \`ask_user\`. Do **not** include any profil
 Explain: buying a single stock concentrates all risk in one company — if it drops 40% or faces a major setback, the whole investment suffers; a diversified ETF spreads that risk across hundreds of companies. If the user has a sector preference (e.g., tech), offer a sector ETF as a middle ground. End with a question asking if they'd like to proceed with an ETF plan.
 
 **Step 2 — Accepted**
-Once the user accepts (agrees to ETFs, provides their details, or otherwise moves forward) → respond: "Got it."
+Once the user accepts (agrees to ETFs, provides their details, or otherwise moves forward) → output the plain text: \`Got it.\` — do NOT call \`ask_user\`. This is an internal signal only, not a message to the user.
 
 **Step 3 — Rejected**
 If the user explicitly refuses to switch to ETFs or insists on their original out-of-scope request → respond: "Understood." and stop. Do not ask again.`;
