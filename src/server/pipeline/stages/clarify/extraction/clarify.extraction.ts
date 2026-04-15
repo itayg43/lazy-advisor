@@ -26,12 +26,17 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **goal**: build a concise summary of the user's investment goal using context from the entire conversation — not just their initial input. Include specifics the user mentioned (amounts, purpose, constraints). Do not reduce to generic phrases like "start investing."
 - **amount**: extract the exact number. Convert shorthand (e.g., "₪55k" → 55000).
 - **age**: extract the exact number.
-- **riskTolerance**: map to a single value from ${RISK_LEVELS} based on what the user would actually *do* during a market drop — not how they feel:
-  - \`"${RiskTolerance.enum.conservative}"\`: would sell, reduce exposure, or lose sleep enough to act during a significant drop (10–20%)
-  - \`"${RiskTolerance.enum.moderate}"\`: would feel uncomfortable or stressed during a drop but would hold — emotional discomfort, behavioral discipline
-  - \`"${RiskTolerance.enum.aggressive}"\`: comfortable with large swings (30%+), no significant stress, might buy more on dips
+- **riskTolerance**: map to a single value from ${RISK_LEVELS} based on what the user said they would *do* during a market drop — not how they feel, not what label they used:
+  - \`"${RiskTolerance.enum.conservative}"\`: stated intent to sell, reduce exposure, or exit during a significant drop
+  - \`"${RiskTolerance.enum.moderate}"\`: stated intent to hold despite expressed discomfort — emotion acknowledged, behavior disciplined
+  - \`"${RiskTolerance.enum.aggressive}"\`: no meaningful discomfort expressed at all — calm passive hold or opportunistic buy
   - Key: "a 20% drop would stress me but I wouldn't sell" → **${RiskTolerance.enum.moderate}** (stress = emotion; hold = behavior; behavior wins)
-  - When ambiguous between adjacent values, pick the more conservative option. Never output a hedged string like "moderate or aggressive".
+  - If the clarify stage asked a concrete A/B/C drop scenario, map from the user's answer to that scenario — that is the primary signal.
+  - Secondary signals (only when there is no directional behavioral signal at all — e.g. "I don't know what I'd do" with no hold/sell/buy direction stated; any statement containing a behavioral direction, even with uncertainty qualifiers like "probably" or "I think", is treated as that direction):
+    - Short timeline (≤5 years): lean conservative
+    - \`investmentPreferences\` showing high concentration (e.g. 100% NASDAQ): corroborates aggressive
+    - \`hasEmergencyFund: false\`: lean conservative — no financial buffer increases vulnerability to forced selling during a downturn
+  - When still ambiguous after secondary signals, pick the more conservative option. Never output a hedged string like "moderate or aggressive".
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
 - **knowledgeLevel**: map to a single value from ${KNOWLEDGE_LEVELS}. When the user's input is ambiguous (e.g., "intermediate or advanced"), pick the lower level. Never output a hedged string.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
@@ -58,7 +63,7 @@ Output:
 - monthlyContribution: 1800
 
 ## Example 2 — experienced investor with brokerage, goal captures constraints
-Conversation: User has ₪180,000 inheritance, is 35, aggressive risk, investing until retirement at 65, lives in Israel, intermediate, no emergency fund, has student debt, can contribute ₪3,500/month, uses Interactive Brokers. When asked about portfolio defaults, user said: "80% MSCI World and 20% TLV-125. קרן כספית for the buffer."
+Conversation: User has ₪180,000 inheritance, is 35, says "I'm comfortable with large swings — a 30% drop wouldn't stress me, I wouldn't do anything differently", investing until retirement at 65 (30-year horizon), lives in Israel, intermediate, no emergency fund, has student debt, can contribute ₪3,500/month, uses Interactive Brokers. When asked about portfolio defaults, user said: "80% MSCI World and 20% TLV-125. קרן כספית for the buffer."
 Output:
 - goal: "invest ₪180,000 inheritance aggressively until retirement at 65, has student debt and no emergency fund"
 - amount: 180000
@@ -113,7 +118,7 @@ export const extractUserProfile = async (
       format: zodTextFormat(UserProfileSchema, "UserProfileSchema"),
     },
     reasoning: {
-      effort: "low",
+      effort: "medium",
     },
   });
 

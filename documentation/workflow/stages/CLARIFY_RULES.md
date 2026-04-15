@@ -121,3 +121,63 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 **Scenario:** User provides all required fields upfront except knowledge level.
 
 **Extracted:** knowledgeLevel: intermediate
+
+---
+
+## 13. Passive calm holder → aggressive
+
+**Rule:** When the user expresses no meaningful discomfort during a drop scenario — no stress, no sell intent, calm passive hold — extract `aggressive`. The absence of discomfort is itself the signal; buying-on-dips is not required to reach `aggressive`.
+
+**Scenario:** User says "I'd hold and not worry about it — drops don't stress me, I'm in it for the long run." No mention of buying more.
+
+**Extracted:** riskTolerance: aggressive
+
+---
+
+## 14. Short timeline + no directional behavioral signal → conservative (secondary signal)
+
+**Rule:** When the user gives no directional behavioral signal (e.g. "I've never been through a market drop — I genuinely don't know what I'd do"), use `timeline` as a secondary corroborating signal. A timeline of ≤5 years leans conservative — there is insufficient time to recover from a significant downturn. Note: any statement containing a behavioral direction (hold/sell/buy), even with uncertainty qualifiers, is treated as that direction, not as directionless (see Rule 18).
+
+**Scenario:** User has a 5-year timeline and says "I've never experienced a market drop — I honestly don't know what I'd do."
+
+**Extracted:** riskTolerance: conservative
+
+---
+
+## 15. No emergency fund + no directional behavioral signal → conservative (secondary signal)
+
+**Rule:** When the user gives no directional behavioral signal (genuinely "I don't know") and `hasEmergencyFund` is `false`, lean conservative. Without a financial buffer, the user is vulnerable to forced selling during a downturn regardless of stated intent.
+
+**Scenario:** User says "Hard to say — I've never invested before, no idea how I'd react to a big drop", has no emergency fund.
+
+**Extracted:** riskTolerance: conservative
+
+---
+
+## 16. High-concentration investment preference corroborates aggressive
+
+**Rule:** When the user has chosen a high-concentration, high-volatility allocation (e.g. 100% NASDAQ) and the behavioral signal is borderline (e.g. "I think I'd be fine"), treat the preference as a corroborating signal toward `aggressive` — choosing 100% NASDAQ reveals risk appetite.
+
+**Scenario:** User says "I'd probably be fine with drops, wouldn't panic" and has chosen 100% NASDAQ.
+
+**Extracted:** riskTolerance: aggressive
+
+---
+
+## 17. Multiple conservative secondary signals compound → conservative
+
+**Rule:** When the behavioral signal is ambiguous and multiple secondary signals all point conservative (e.g. short timeline + no emergency fund), extract `conservative` with high confidence — the signals compound.
+
+**Scenario:** User has a 4-year timeline, no emergency fund, says "I've never invested before — no idea what I'd do."
+
+**Extracted:** riskTolerance: conservative
+
+---
+
+## 18. Clear primary behavioral signal overrides secondary signals
+
+**Rule:** When the concrete A/B/C scenario produced a clear behavioral answer, secondary signals (timeline, investmentPreferences, hasEmergencyFund) do not override it. Primary signal dominates.
+
+**Scenario:** User answered "C — I'd stay calm and probably buy more" on the drop scenario, but has no emergency fund and a 4-year timeline.
+
+**Extracted:** riskTolerance: aggressive (clear primary signal; secondary signals do not override)
