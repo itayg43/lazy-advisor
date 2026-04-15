@@ -6,13 +6,13 @@ All clarify stage issues are resolved before continuing research stage work.
 
 1. **Fix riskTolerance extraction bug** — User said "a 20% drop would stress me but I wouldn't sell" → extracted as `conservative` but this is `moderate` behavior (holds through drawdown, just stressed). Investigate and fix extraction logic.
 
-3. **Fix equity capture + buffer extraction bugs** — Two related extraction prompt issues:
+2. **Fix equity capture + buffer extraction bugs** — Two related extraction prompt issues:
    - Preferences Test 1: model returned `not specified` for `investmentPreferences` instead of the stated FTSE All-World preference. Flaky; fails intermittently. Investigate preferences prompt adherence.
    - Extraction: model extracted `100% NASDAQ` but omitted the קרן כספית buffer, failing `/כספית|money market/i`. Extraction prompt may not handle the 100% concentration + buffer case correctly.
 
-4. **Research stage: examples → rules refactor** — Four parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references; (d) review research stage prompts for missing terminal-state steps (e.g. explicit "stop" instructions for rejection/disengagement), following the pattern added to the clarify intake prompts.
+3. **Research stage: examples → rules refactor** — Four parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references; (d) review research stage prompts for missing terminal-state steps (e.g. explicit "stop" instructions for rejection/disengagement), following the pattern added to the clarify intake prompts.
 
-5. **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+4. **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 
 ### Deferred: Crypto ETF support (clarify + research)
 Crypto ETFs (e.g., BlackRock's IBIT for Bitcoin, ETHA for Ethereum) are SEC-regulated ETFs tradeable through a normal brokerage — they should be treated as a legitimate aggressive investment preference, not redirected as out-of-scope alongside direct crypto purchases. Currently the clarify fields prompt groups all crypto together. Deferred until the research stage is otherwise complete.

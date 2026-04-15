@@ -93,7 +93,7 @@ Per-stage behavior examples and conversation scenarios are documented in stage-s
 
 ### Clarify stage: intake routing
 
-Before field collection begins, the clarify stage classifies the goal into one of four types: `normal`, `out_of_scope`, `unrealistic`, `contradictory`. Non-normal goals route to a dedicated intake phase first — the agent explains the issue (e.g., stock picking → concentration risk and ETF redirect; unrealistic returns → reality check; contradictory goals → resolution), asks for acceptance, then either chains into field collection (accepted) or ends the session with a closing message (rejected). Normal goals proceed directly to field collection.
+Before field collection begins, the clarify stage classifies the goal into one of four types: `normal`, `out_of_scope`, `unrealistic`, `contradictory`. Non-normal goals route to a dedicated intake phase first — the agent explains the issue (e.g., stock picking → concentration risk and ETF redirect; unrealistic returns → reality check; contradictory goals → resolution), asks for acceptance. If accepted, the intake phase returns silently (internal signal only) and chains into field collection; if rejected, the session ends with a classification-specific closing message. Normal goals proceed directly to field collection.
 
 Intake routing is code-driven, not prompt-embedded: a single structured LLM call (`classifyGoal`) returns the classification, and the stage function dispatches to the appropriate handler accordingly.
 
