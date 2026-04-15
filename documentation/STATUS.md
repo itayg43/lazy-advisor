@@ -4,9 +4,7 @@
 
 All clarify stage issues are resolved before continuing research stage work.
 
-1. **Fix clarify stage phase transition messaging** — Multiple redundant completion messages appear across phases. From the stage eval: intake ends with "Got it.", fields ends with "Got it, I have all the details I need.", preferences ends with "Got it, I have everything I need." The user sees a sequence of "Got it" messages with questions interspersed between them. Fix: silent transitions between phases — no completion message at intake or fields. The single completion signal at the end of preferences is sufficient. Note: `extractAcceptanceFromText` in `clarify.intake.lib.ts` reads the terminal phrase as an internal orchestration signal — it is unaffected by this fix, which only suppresses user-visible output.
-
-2. **Fix riskTolerance extraction bug** — User said "a 20% drop would stress me but I wouldn't sell" → extracted as `conservative` but this is `moderate` behavior (holds through drawdown, just stressed). Investigate and fix extraction logic.
+1. **Fix riskTolerance extraction bug** — User said "a 20% drop would stress me but I wouldn't sell" → extracted as `conservative` but this is `moderate` behavior (holds through drawdown, just stressed). Investigate and fix extraction logic.
 
 3. **Fix equity capture + buffer extraction bugs** — Two related extraction prompt issues:
    - Preferences Test 1: model returned `not specified` for `investmentPreferences` instead of the stated FTSE All-World preference. Flaky; fails intermittently. Investigate preferences prompt adherence.

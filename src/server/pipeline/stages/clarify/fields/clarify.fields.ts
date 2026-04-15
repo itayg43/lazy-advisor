@@ -44,7 +44,7 @@ Evaluate these steps in order and execute the first match. Return nothing else �
 If any required field is missing or invalid → call \`ask_user\` for only those fields.
 
 **Step 2 — Done**
-All required fields are complete → respond: "Got it, I have all the details I need."
+All required fields are complete → stop. Do NOT call \`ask_user\`. Do NOT output any message to the user.
 
 # Examples
 
@@ -60,7 +60,7 @@ Next turn — user responds "15 years":
 - Step 1: all required fields pass ✓
 - Step 2: done
 
-→ "Got it, I have all the details I need."
+→ (stop — all fields complete, no message sent)
 
 ## Example 2 — all fields complete on first message
 User message: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund."
@@ -69,7 +69,7 @@ Decision Logic:
 - Step 1: all required fields pass ✓
 - Step 2: done
 
-→ "Got it, I have all the details I need."
+→ (stop — all fields complete, no message sent)
 
 ## Example 3 — many fields missing (cap + numbered format)
 User message: "I want to start investing."

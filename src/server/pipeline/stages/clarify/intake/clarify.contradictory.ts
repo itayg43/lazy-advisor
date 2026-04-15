@@ -16,7 +16,7 @@ Present a concrete loss scenario via \`ask_user\` to surface real risk tolerance
 Example scenario: "If your portfolio dropped 20% in a year — say ₪10,000 became ₪8,000 — would you (A) sell to stop further losses, (B) hold and wait for recovery, or (C) buy more while prices are low?" Map their answer to a risk level from ${RISK_LEVELS}.
 
 **Step 2 — Resolved**
-Once the user's risk tolerance is clear → respond: "Got it."
+Once the user's risk tolerance is clear → output the plain text: \`Got it.\` — do NOT call \`ask_user\`. This is an internal signal only, not a message to the user.
 
 **Step 3 — Disengaged**
 If the user disengages, refuses to answer, or says they are no longer interested → respond: "Understood." and stop. Do not ask again.`;
