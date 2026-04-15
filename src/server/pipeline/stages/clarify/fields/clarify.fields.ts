@@ -101,7 +101,7 @@ export const collectFields = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<string> => {
-  logger.info("Starting fields phase");
+  logger.info("Starting fields phase", { source });
 
   const { responseId } = await runPhaseLoop(
     FIELDS_PROMPT,

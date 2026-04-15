@@ -23,7 +23,7 @@ const logger = createLogger("clarifyLib");
 // Extracts the model's final plain-text response from a completed phase loop output.
 // The terminal message is a "message" item; reasoning and function_call items are skipped.
 const extractTerminalText = (output: ResponseOutputItem[]): string => {
-  const message = output.find(
+  const message = output.findLast(
     (item): item is ResponseOutputMessage => item.type === "message",
   );
   if (!message) return "";

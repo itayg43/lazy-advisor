@@ -18,15 +18,15 @@ import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");
 
-type GoalClassificationValue = (typeof GoalClassification.options)[number];
-
 type IntakeHandler = (
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ) => Promise<IntakeResult>;
 
-const INTAKE_HANDLERS: Partial<Record<GoalClassificationValue, IntakeHandler>> = {
+const INTAKE_HANDLERS: Partial<
+  Record<(typeof GoalClassification.options)[number], IntakeHandler>
+> = {
   [GoalClassification.enum.out_of_scope]: handleOutOfScopeRedirect,
   [GoalClassification.enum.unrealistic]: handleUnrealisticExpectations,
   [GoalClassification.enum.contradictory]: handleContradictoryRisk,

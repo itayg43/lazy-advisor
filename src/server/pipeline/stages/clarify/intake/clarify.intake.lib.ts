@@ -11,7 +11,7 @@ export type IntakeResult = { accepted: true; responseId: string } | { accepted: 
 // The terminal phrase is the classification signal — no separate API call is needed.
 // The prompts instruct the model to output exactly these phrases, and evals enforce that contract.
 const extractAcceptanceFromText = (terminalText: string): boolean =>
-  /got it/i.test(terminalText);
+  /^\s*got it[.!]?\s*$/i.test(terminalText);
 
 // Runs the tool-call loop for an intake phase and interprets the terminal phrase as an IntakeResult.
 export const runIntakePhase = async (
