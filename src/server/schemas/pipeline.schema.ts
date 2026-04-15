@@ -4,6 +4,17 @@ export const RiskTolerance = z.enum(["conservative", "moderate", "aggressive"]);
 
 export const KnowledgeLevel = z.enum(["beginner", "intermediate", "advanced"]);
 
+export const GoalClassification = z.enum([
+  "normal",
+  "out_of_scope",
+  "unrealistic",
+  "contradictory",
+]);
+
+export const GoalClassificationSchema = z.object({
+  type: GoalClassification,
+});
+
 const MAX_STRING_LENGTH = 256;
 const MAX_AGE = 120;
 const MAX_AMOUNT = 100_000_000;

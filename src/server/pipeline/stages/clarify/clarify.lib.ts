@@ -1,6 +1,8 @@
 import type {
   ResponseFunctionToolCall,
   ResponseInputItem,
+  ResponseOutputItem,
+  ResponseOutputMessage,
 } from "openai/resources/responses/responses";
 
 import { InternalError } from "#errors";
@@ -17,6 +19,19 @@ import {
 import { callOpenAI } from "#services/openai";
 
 const logger = createLogger("clarifyLib");
+
+// Extracts the model's final plain-text response from a completed phase loop output.
+// The terminal message is a "message" item; reasoning and function_call items are skipped.
+const extractTerminalText = (output: ResponseOutputItem[]): string => {
+  const message = output.findLast(
+    (item): item is ResponseOutputMessage => item.type === "message",
+  );
+  if (!message) return "";
+
+  return message.content
+    .flatMap((c) => (c.type === "output_text" ? [c.text] : []))
+    .join("");
+};
 
 export const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
@@ -63,7 +78,7 @@ export const collectToolOutputs = async (
 };
 
 // Runs the tool-call loop for a clarify phase. Enforces: model gpt-5.4-nano,
-// reasoning effort low, clarify tools. Returns the final response ID.
+// reasoning effort low, clarify tools. Returns the final response ID and terminal text.
 export const runPhaseLoop = async (
   instructions: string,
   initialParams: PhaseSourceParams,
@@ -71,7 +86,7 @@ export const runPhaseLoop = async (
   phaseName: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<string> => {
+): Promise<{ responseId: string; terminalText: string }> => {
   const tools = getStageTools("clarify");
 
   let response = await callOpenAI({
@@ -132,7 +147,7 @@ export const runPhaseLoop = async (
     totalToolCalls: toolCallCount,
   });
 
-  return response.id;
+  return { responseId: response.id, terminalText: extractTerminalText(response.output) };
 };
 
 // Converts a ResponseInputItem[] to TranscriptEntry[] for eval last-run files.

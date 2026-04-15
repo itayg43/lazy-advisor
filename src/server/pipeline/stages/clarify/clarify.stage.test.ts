@@ -1,16 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
-import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
+import {
+  GoalClassification,
+  KnowledgeLevel,
+  RiskTolerance,
+} from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
-const { mockedCollectFields, mockedCollectPreferences, mockedExtractUserProfile } =
-  vi.hoisted(() => ({
-    mockedCollectFields: vi.fn(),
-    mockedCollectPreferences: vi.fn(),
-    mockedExtractUserProfile: vi.fn(),
-  }));
+const {
+  mockedClassifyGoal,
+  mockedHandleOutOfScopeRedirect,
+  mockedHandleUnrealisticExpectations,
+  mockedHandleContradictoryRisk,
+  mockedCollectFields,
+  mockedCollectPreferences,
+  mockedExtractUserProfile,
+} = vi.hoisted(() => ({
+  mockedClassifyGoal: vi.fn(),
+  mockedHandleOutOfScopeRedirect: vi.fn(),
+  mockedHandleUnrealisticExpectations: vi.fn(),
+  mockedHandleContradictoryRisk: vi.fn(),
+  mockedCollectFields: vi.fn(),
+  mockedCollectPreferences: vi.fn(),
+  mockedExtractUserProfile: vi.fn(),
+}));
 
+vi.mock("#pipeline/stages/clarify/intake/clarify.classify", () => ({
+  classifyGoal: mockedClassifyGoal,
+}));
+vi.mock("#pipeline/stages/clarify/intake/clarify.out-of-scope", () => ({
+  handleOutOfScopeRedirect: mockedHandleOutOfScopeRedirect,
+}));
+vi.mock("#pipeline/stages/clarify/intake/clarify.unrealistic", () => ({
+  handleUnrealisticExpectations: mockedHandleUnrealisticExpectations,
+}));
+vi.mock("#pipeline/stages/clarify/intake/clarify.contradictory", () => ({
+  handleContradictoryRisk: mockedHandleContradictoryRisk,
+}));
 vi.mock("#pipeline/stages/clarify/fields/clarify.fields", () => ({
   collectFields: mockedCollectFields,
 }));
@@ -42,26 +69,124 @@ describe("runClarifyStage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("should orchestrate fields, preferences, and extraction in order", async () => {
     mockedCollectFields.mockResolvedValue("resp_fields");
     mockedCollectPreferences.mockResolvedValue("resp_prefs");
     mockedExtractUserProfile.mockResolvedValue(mockProfile);
+  });
 
-    const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+  describe("normal classification", () => {
+    it("should pass goal directly to collectFields and return profile", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.normal);
 
-    expect(result).toEqual(mockProfile);
-    expect(mockedCollectFields).toHaveBeenCalledWith(
-      mockGoal,
-      mockSendToUser,
-      mockWaitForResponse,
-    );
-    expect(mockedCollectPreferences).toHaveBeenCalledWith(
-      "resp_fields",
-      mockSendToUser,
-      mockWaitForResponse,
-    );
-    expect(mockedExtractUserProfile).toHaveBeenCalledWith("resp_prefs");
+      const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(result).toEqual(mockProfile);
+      expect(mockedCollectFields).toHaveBeenCalledWith(
+        { input: mockGoal },
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+      expect(mockedHandleOutOfScopeRedirect).not.toHaveBeenCalled();
+      expect(mockedHandleUnrealisticExpectations).not.toHaveBeenCalled();
+      expect(mockedHandleContradictoryRisk).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("intake classifications — accepted", () => {
+    const acceptedResult = { accepted: true as const, responseId: "resp_intake" };
+
+    it("should chain out_of_scope redirect response into collectFields", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.out_of_scope);
+      mockedHandleOutOfScopeRedirect.mockResolvedValue(acceptedResult);
+
+      const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(result).toEqual(mockProfile);
+      expect(mockedHandleOutOfScopeRedirect).toHaveBeenCalledWith(
+        mockGoal,
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+      expect(mockedCollectFields).toHaveBeenCalledWith(
+        { input: [], previous_response_id: "resp_intake" },
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+    });
+
+    it("should chain unrealistic redirect response into collectFields", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.unrealistic);
+      mockedHandleUnrealisticExpectations.mockResolvedValue(acceptedResult);
+
+      await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(mockedHandleUnrealisticExpectations).toHaveBeenCalledWith(
+        mockGoal,
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+      expect(mockedCollectFields).toHaveBeenCalledWith(
+        { input: [], previous_response_id: "resp_intake" },
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+    });
+
+    it("should chain contradictory redirect response into collectFields", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.contradictory);
+      mockedHandleContradictoryRisk.mockResolvedValue(acceptedResult);
+
+      await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(mockedHandleContradictoryRisk).toHaveBeenCalledWith(
+        mockGoal,
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+      expect(mockedCollectFields).toHaveBeenCalledWith(
+        { input: [], previous_response_id: "resp_intake" },
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+    });
+  });
+
+  describe("intake classifications — rejected", () => {
+    const rejectedResult = { accepted: false as const };
+
+    it("should return null and send closing message when out_of_scope is rejected", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.out_of_scope);
+      mockedHandleOutOfScopeRedirect.mockResolvedValue(rejectedResult);
+
+      const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockedCollectFields).not.toHaveBeenCalled();
+      expect(mockedCollectPreferences).not.toHaveBeenCalled();
+      expect(mockedExtractUserProfile).not.toHaveBeenCalled();
+    });
+
+    it("should return null and send closing message when unrealistic is rejected", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.unrealistic);
+      mockedHandleUnrealisticExpectations.mockResolvedValue(rejectedResult);
+
+      const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockedCollectFields).not.toHaveBeenCalled();
+    });
+
+    it("should return null and send closing message when contradictory is rejected", async () => {
+      mockedClassifyGoal.mockResolvedValue(GoalClassification.enum.contradictory);
+      mockedHandleContradictoryRisk.mockResolvedValue(rejectedResult);
+
+      const result = await runClarifyStage(mockGoal, mockSendToUser, mockWaitForResponse);
+
+      expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockedCollectFields).not.toHaveBeenCalled();
+    });
   });
 });
