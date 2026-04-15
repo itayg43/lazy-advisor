@@ -91,6 +91,12 @@ Each stage's contract (input/output, tools, behavior rules) is documented in its
 
 Per-stage behavior examples and conversation scenarios are documented in stage-specific files in the [`stages/`](stages/) directory.
 
+### Clarify stage: intake routing
+
+Before field collection begins, the clarify stage classifies the goal into one of four types: `normal`, `out_of_scope`, `unrealistic`, `contradictory`. Non-normal goals route to a dedicated intake phase first — the agent explains the issue (e.g., stock picking → concentration risk and ETF redirect; unrealistic returns → reality check; contradictory goals → resolution), asks for acceptance, then either chains into field collection (accepted) or ends the session with a closing message (rejected). Normal goals proceed directly to field collection.
+
+Intake routing is code-driven, not prompt-embedded: a single structured LLM call (`classifyGoal`) returns the classification, and the stage function dispatches to the appropriate handler accordingly.
+
 ### Debugging failing evals
 
 When an eval fails, check the `*.last-run.md` file alongside the eval before doing anything else. It contains the full transcript of what the model said and did — this is usually enough to diagnose the failure without rerunning.

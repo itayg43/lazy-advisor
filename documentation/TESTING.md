@@ -65,5 +65,5 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Two eval layers** (applied per stage):
   - **Extraction-only**: tests extraction/parsing prompt quality in isolation by feeding deterministic input directly to the extraction function (e.g., `extractUserProfile` for clarify, `extractResearchSummary` for research). Only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
   - **Full-loop**: tests the full stage end-to-end (e.g., `runClarifyStage` with scripted responder, `runResearchStage` with real web search). Scripted responses (where applicable) are natural and focused, not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the input.
-- Each stage's eval file covers scenarios from the stage-specific example files in [`workflow/stages/`](workflow/stages/).
+- Stages with a single prompt have one eval file. Stages with multiple phases (e.g., clarify with intake routing) have separate eval files per substep; all run via `npm run test:evals`. Scenarios come from the stage-specific rules files in [`workflow/stages/`](workflow/stages/).
 - **Multiple trials per eval deferred** — run history (`.runs.jsonl`) is the prerequisite. Add multi-trial averaging only if the logs show consistent instability on a stable codebase.
