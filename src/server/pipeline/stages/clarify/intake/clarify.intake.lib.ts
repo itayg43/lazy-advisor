@@ -1,32 +1,39 @@
-import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
+import { createLogger } from "#lib/logger";
+import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
+import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
+import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
-import { buildSourceParams } from "#pipeline/lib/build-source-params";
-import { callOpenAIParsed } from "#services/openai";
+const logger = createLogger("clarifyIntake");
 
 export type IntakeResult = { accepted: true; responseId: string } | { accepted: false };
 
-const AcceptanceSchema = z.object({ accepted: z.boolean() });
+// Determines acceptance from the model's terminal phrase: "Got it." → accepted, "Understood." → rejected.
+// The terminal phrase is the classification signal — no separate API call is needed.
+// The prompts instruct the model to output exactly these phrases, and evals enforce that contract.
+const extractAcceptanceFromText = (terminalText: string): boolean =>
+  /got it/i.test(terminalText);
 
-const ACCEPTANCE_PROMPT = `You are an acceptance classifier. Based on the conversation, determine whether the user is ready to proceed.
+// Runs the tool-call loop for an intake phase and interprets the terminal phrase as an IntakeResult.
+export const runIntakePhase = async (
+  instructions: string,
+  phaseName: string,
+  goal: string,
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<IntakeResult> => {
+  logger.info(`Starting ${phaseName}`);
 
-Return \`true\` if:
-- The user agreed to move forward (e.g. "ok", "sure", "let's do it")
-- The user provided their details or answered the agent's clarifying question constructively
-- The user resolved the issue the agent raised (e.g. picked a risk level, accepted a revised timeline)
+  const { responseId, terminalText } = await runPhaseLoop(
+    instructions,
+    { input: goal },
+    MAX_INTAKE_TOOL_CALLS,
+    phaseName,
+    sendToUser,
+    waitForResponse,
+  );
 
-Return \`false\` if the user declined, disengaged, or insisted on their original out-of-scope request without accepting the agent's redirect.`;
+  const accepted = extractAcceptanceFromText(terminalText);
+  logger.info(`${phaseName} complete`, { accepted });
 
-export const extractAcceptance = async (responseId: string): Promise<boolean> => {
-  const { output } = await callOpenAIParsed<z.infer<typeof AcceptanceSchema>>({
-    model: "gpt-5.4-nano",
-    instructions: ACCEPTANCE_PROMPT,
-    ...buildSourceParams(responseId),
-    text: {
-      format: zodTextFormat(AcceptanceSchema, "AcceptanceSchema"),
-    },
-    reasoning: { effort: "low" },
-  });
-
-  return output.accepted;
+  return accepted ? { accepted: true, responseId } : { accepted: false };
 };

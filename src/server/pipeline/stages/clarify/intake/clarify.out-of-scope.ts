@@ -1,13 +1,8 @@
-import { createLogger } from "#lib/logger";
-import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
 import {
-  extractAcceptance,
+  runIntakePhase,
   type IntakeResult,
 } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-
-const logger = createLogger("clarifyOutOfScope");
 
 const OUT_OF_SCOPE_PROMPT = `# Role and Objective
 You are the intake phase of an investment advisor pipeline. The user's goal is out of scope — they asked about individual stock picking, day trading, or direct crypto purchases. Your sole responsibility is to redirect the user toward ETF-based passive investing and get their acceptance before any profile questions are asked.
@@ -30,18 +25,11 @@ export const handleOutOfScopeRedirect = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<IntakeResult> => {
-  logger.info("Starting out-of-scope redirect phase");
-
-  const responseId = await runPhaseLoop(
+  return runIntakePhase(
     OUT_OF_SCOPE_PROMPT,
-    { input: goal },
-    MAX_INTAKE_TOOL_CALLS,
     "Out-of-scope redirect phase",
+    goal,
     sendToUser,
     waitForResponse,
   );
-
-  const accepted = await extractAcceptance(responseId);
-
-  return accepted ? { accepted: true, responseId } : { accepted: false };
 };

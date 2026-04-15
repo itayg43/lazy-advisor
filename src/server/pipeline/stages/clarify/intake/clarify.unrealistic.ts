@@ -1,13 +1,8 @@
-import { createLogger } from "#lib/logger";
-import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
 import {
-  extractAcceptance,
+  runIntakePhase,
   type IntakeResult,
 } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-
-const logger = createLogger("clarifyUnrealistic");
 
 const UNREALISTIC_PROMPT = `# Role and Objective
 You are the intake phase of an investment advisor pipeline. The user has stated a return expectation that is unrealistic for passive ETF investing. Your sole responsibility is to explain why it is not achievable and get their acceptance to proceed with a realistic long-term plan — before any profile questions are asked.
@@ -30,18 +25,11 @@ export const handleUnrealisticExpectations = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<IntakeResult> => {
-  logger.info("Starting unrealistic expectations redirect phase");
-
-  const responseId = await runPhaseLoop(
+  return runIntakePhase(
     UNREALISTIC_PROMPT,
-    { input: goal },
-    MAX_INTAKE_TOOL_CALLS,
     "Unrealistic expectations redirect phase",
+    goal,
     sendToUser,
     waitForResponse,
   );
-
-  const accepted = await extractAcceptance(responseId);
-
-  return accepted ? { accepted: true, responseId } : { accepted: false };
 };

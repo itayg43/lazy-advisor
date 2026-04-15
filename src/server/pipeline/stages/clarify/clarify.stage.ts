@@ -1,7 +1,9 @@
-import { z } from "zod";
-
 import { createLogger } from "#lib/logger";
 import type { PhaseSourceParams } from "#pipeline/lib/build-source-params";
+import {
+  INTAKE_REJECTION_DEFAULT_MESSAGE,
+  INTAKE_REJECTION_MESSAGES,
+} from "#pipeline/stages/clarify/clarify.constants";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/clarify.classify";
@@ -16,15 +18,15 @@ import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");
 
+type GoalClassificationValue = (typeof GoalClassification.options)[number];
+
 type IntakeHandler = (
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ) => Promise<IntakeResult>;
 
-const INTAKE_HANDLERS: Partial<
-  Record<z.infer<typeof GoalClassification>, IntakeHandler>
-> = {
+const INTAKE_HANDLERS: Partial<Record<GoalClassificationValue, IntakeHandler>> = {
   [GoalClassification.enum.out_of_scope]: handleOutOfScopeRedirect,
   [GoalClassification.enum.unrealistic]: handleUnrealisticExpectations,
   [GoalClassification.enum.contradictory]: handleContradictoryRisk,
@@ -38,7 +40,6 @@ export const runClarifyStage = async (
   logger.info("Starting clarify stage", { goal });
 
   const classification = await classifyGoal(goal);
-  logger.info("Goal classified", { classification });
 
   let fieldsSource: PhaseSourceParams;
 
@@ -48,7 +49,7 @@ export const runClarifyStage = async (
     if (!result.accepted) {
       logger.info("User rejected intake redirect, ending session");
       sendToUser(
-        "No problem — feel free to come back when you're ready to explore ETF-based investing.",
+        INTAKE_REJECTION_MESSAGES[classification] ?? INTAKE_REJECTION_DEFAULT_MESSAGE,
       );
 
       return null;

@@ -1,16 +1,9 @@
-import { createLogger } from "#lib/logger";
+import { RISK_LEVELS } from "#pipeline/stages/clarify/clarify.constants";
 import {
-  MAX_INTAKE_TOOL_CALLS,
-  RISK_LEVELS,
-} from "#pipeline/stages/clarify/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
-import {
-  extractAcceptance,
+  runIntakePhase,
   type IntakeResult,
 } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-
-const logger = createLogger("clarifyContradictory");
 
 const CONTRADICTORY_PROMPT = `# Role and Objective
 You are the intake phase of an investment advisor pipeline. The user's goal contains contradictory risk signals (e.g., "maximum returns but I can't lose money"). Your sole responsibility is to resolve the contradiction before any profile questions are asked.
@@ -33,18 +26,11 @@ export const handleContradictoryRisk = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<IntakeResult> => {
-  logger.info("Starting contradictory risk resolution phase");
-
-  const responseId = await runPhaseLoop(
+  return runIntakePhase(
     CONTRADICTORY_PROMPT,
-    { input: goal },
-    MAX_INTAKE_TOOL_CALLS,
     "Contradictory risk resolution phase",
+    goal,
     sendToUser,
     waitForResponse,
   );
-
-  const accepted = await extractAcceptance(responseId);
-
-  return accepted ? { accepted: true, responseId } : { accepted: false };
 };
