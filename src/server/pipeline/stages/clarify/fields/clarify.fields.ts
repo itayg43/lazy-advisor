@@ -103,7 +103,7 @@ export const collectFields = async (
 ): Promise<string> => {
   logger.info("Starting fields phase");
 
-  return await runPhaseLoop(
+  const { responseId } = await runPhaseLoop(
     FIELDS_PROMPT,
     source,
     MAX_FIELDS_TOOL_CALLS,
@@ -111,4 +111,6 @@ export const collectFields = async (
     sendToUser,
     waitForResponse,
   );
+
+  return responseId;
 };

@@ -22,9 +22,9 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
   → collectPreferences → extractUserProfile
 ```
 
-Each intake phase (`runPhaseLoop`) handles its specific conversation, then a follow-up `extractAcceptance` call (same pattern as `extractUserProfile`) determines the outcome. The result is typed as `IntakeResult`:
+Each intake phase (`runPhaseLoop`) handles its specific conversation. Acceptance is determined by regex-matching the model's terminal phrase from the response output — `/got it/i` → accepted, anything else → rejected. This avoids an extra LLM call; the intake prompts instruct the model to respond with exactly `"Got it."` (accepted) or `"Understood."` (rejected), making the signal deterministic enough for regex. The result is typed as `IntakeResult`:
 - `{ accepted: true, responseId }` — chain the response ID into the fields phase
-- `{ accepted: false }` — end the session, send a closing message to the user
+- `{ accepted: false }` — end the session; the stage sends a per-classification closing message from `INTAKE_REJECTION_MESSAGES`
 
 The fields prompt is left with one job: collect required profile fields.
 

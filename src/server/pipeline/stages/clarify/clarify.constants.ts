@@ -1,8 +1,30 @@
-import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
+import {
+  GoalClassification,
+  KnowledgeLevel,
+  RiskTolerance,
+} from "#schemas/pipeline.schema";
 
 export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
 export const KNOWLEDGE_LEVELS = KnowledgeLevel.options.map((o) => `\`${o}\``).join(", ");
+export const GOAL_CLASSIFICATIONS = GoalClassification.options
+  .map((o) => `\`${o}\``)
+  .join(", ");
 
-export const MAX_INTAKE_TOOL_CALLS = 3;
+type GoalClassificationValue = (typeof GoalClassification.options)[number];
+
+export const INTAKE_REJECTION_DEFAULT_MESSAGE =
+  "No problem — feel free to come back when you're ready.";
+
+export const INTAKE_REJECTION_MESSAGES: Partial<Record<GoalClassificationValue, string>> =
+  {
+    [GoalClassification.enum.out_of_scope]:
+      "No problem — feel free to come back when you're ready to explore ETF-based investing.",
+    [GoalClassification.enum.unrealistic]:
+      "No problem — feel free to come back when you're ready to explore a realistic long-term plan.",
+    [GoalClassification.enum.contradictory]:
+      "No problem — feel free to come back when you're ready to explore ETF-based investing.",
+  };
+
+export const MAX_INTAKE_TOOL_CALLS = 5;
 export const MAX_FIELDS_TOOL_CALLS = 10;
 export const MAX_PREFERENCES_TOOL_CALLS = 5;

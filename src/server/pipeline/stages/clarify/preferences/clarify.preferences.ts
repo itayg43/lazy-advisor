@@ -97,7 +97,7 @@ export const collectPreferences = async (
 ): Promise<string> => {
   logger.info("Starting preferences phase");
 
-  return await runPhaseLoop(
+  const { responseId } = await runPhaseLoop(
     PREFERENCES_PROMPT,
     buildSourceParams(source),
     MAX_PREFERENCES_TOOL_CALLS,
@@ -105,4 +105,6 @@ export const collectPreferences = async (
     sendToUser,
     waitForResponse,
   );
+
+  return responseId;
 };
