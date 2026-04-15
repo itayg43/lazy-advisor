@@ -4,7 +4,14 @@
 
 All clarify stage issues are resolved before continuing research stage work.
 
-1. **Fix riskTolerance extraction bug** — User said "a 20% drop would stress me but I wouldn't sell" → extracted as `conservative` but this is `moderate` behavior (holds through drawdown, just stressed). Investigate and fix extraction logic.
+1. **Improve riskTolerance extraction: multi-signal mapping** — PR #81 review identified gaps in the current single-axis (behavioral response to drops) mapping:
+   - `conservative` definition has an emotional leak ("lose sleep enough to act") — should be pure behavior: "would sell or reduce exposure"
+   - `aggressive` definition implies counter-cyclical buying ("might buy more on dips"), causing calm-but-passive holders to fall through to `moderate`
+   - 20–30% drop range is unaddressed — boundary between `moderate` and `aggressive` is a guess zone
+   - `timeline` is available at extraction time but ignored — a 5-year horizon should push toward conservative regardless of stated behavioral preference
+   - `investmentPreferences` (e.g., 100% NASDAQ) is a corroborating behavioral signal not referenced in the riskTolerance rule
+   - Example 2 in the extraction prompt assigns `aggressive` without any behavioral evidence — inconsistent with the new behavior-first framing
+   - `moderate-to-aggressive` ambiguity tie-break (always picks conservative) may be too blunt for long-horizon / high-amount cases
 
 2. **Fix equity capture + buffer extraction bugs** — Two related extraction prompt issues:
    - Preferences Test 1: model returned `not specified` for `investmentPreferences` instead of the stated FTSE All-World preference. Flaky; fails intermittently. Investigate preferences prompt adherence.

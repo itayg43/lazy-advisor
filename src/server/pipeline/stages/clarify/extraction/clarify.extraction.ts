@@ -7,7 +7,7 @@ import {
   KNOWLEDGE_LEVELS,
   RISK_LEVELS,
 } from "#pipeline/stages/clarify/clarify.constants";
-import { UserProfileSchema } from "#schemas/pipeline.schema";
+import { RiskTolerance, UserProfileSchema } from "#schemas/pipeline.schema";
 import { callOpenAIParsed } from "#services/openai";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -26,7 +26,12 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 - **goal**: build a concise summary of the user's investment goal using context from the entire conversation — not just their initial input. Include specifics the user mentioned (amounts, purpose, constraints). Do not reduce to generic phrases like "start investing."
 - **amount**: extract the exact number. Convert shorthand (e.g., "₪55k" → 55000).
 - **age**: extract the exact number.
-- **riskTolerance**: map to a single value from ${RISK_LEVELS} based on what the user described. When the user's input is ambiguous between two adjacent values (e.g., "moderate-to-aggressive"), pick the more conservative option. Never output a hedged string like "moderate or aggressive".
+- **riskTolerance**: map to a single value from ${RISK_LEVELS} based on what the user would actually *do* during a market drop — not how they feel:
+  - \`"${RiskTolerance.enum.conservative}"\`: would sell, reduce exposure, or lose sleep enough to act during a significant drop (10–20%)
+  - \`"${RiskTolerance.enum.moderate}"\`: would feel uncomfortable or stressed during a drop but would hold — emotional discomfort, behavioral discipline
+  - \`"${RiskTolerance.enum.aggressive}"\`: comfortable with large swings (30%+), no significant stress, might buy more on dips
+  - Key: "a 20% drop would stress me but I wouldn't sell" → **${RiskTolerance.enum.moderate}** (stress = emotion; hold = behavior; behavior wins)
+  - When ambiguous between adjacent values, pick the more conservative option. Never output a hedged string like "moderate or aggressive".
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
 - **knowledgeLevel**: map to a single value from ${KNOWLEDGE_LEVELS}. When the user's input is ambiguous (e.g., "intermediate or advanced"), pick the lower level. Never output a hedged string.
 - **brokerage**: extract if mentioned, otherwise default to \`"none"\`.
@@ -38,7 +43,7 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
 # Examples
 
 ## Example 1 — beginner with no brokerage, portfolio defaults answered with custom split
-Conversation: User wants to invest ₪55,000, is 28, moderate risk, plans to invest for about 20 years, Israel-based, beginner, has emergency fund, no debt, ₪1,800/month, no brokerage mentioned. When asked about portfolio defaults, user said: "70% FTSE All-World and 30% TLV-125. קרן כספית is fine."
+Conversation: User wants to invest ₪55,000, is 28, says "a 20% drop would stress me but I wouldn't sell" (→ ${RiskTolerance.enum.moderate}: stressed but holds), plans to invest for about 20 years, Israel-based, beginner, has emergency fund, no debt, ₪1,800/month, no brokerage mentioned. When asked about portfolio defaults, user said: "70% FTSE All-World and 30% TLV-125. קרן כספית is fine."
 Output:
 - goal: "invest ₪55,000 as a complete beginner, moderate risk, 20-year horizon with ₪1,800/month contributions"
 - amount: 55000
