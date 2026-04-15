@@ -1,5 +1,6 @@
 ---
 name: open-pr
+model: haiku
 description: Push the branch if needed and create a PR. Use after the commit is pushed and ready for review.
 ---
 

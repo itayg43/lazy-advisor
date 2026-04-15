@@ -1,5 +1,6 @@
 ---
 name: merge-pr
+model: haiku
 description: Squash-merge the current branch's PR, delete the remote and local branch, and sync main.
 ---
 

@@ -1,5 +1,6 @@
 ---
-name: commit-and-push
+name: commit
+model: haiku
 description: Run all checks, draft a commit message, commit, and push to the current branch. Use when implementation and doc updates are complete.
 ---
 
