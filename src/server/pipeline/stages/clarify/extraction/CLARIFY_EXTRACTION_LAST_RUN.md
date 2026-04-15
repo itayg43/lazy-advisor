@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-15T00:36:23.259Z | Commit: ea5a08f
+Timestamp: 2026-04-15T17:32:14.261Z | Commit: cb92986
 
 ---
 
@@ -41,7 +41,7 @@ Any combination or split works — e.g., 70% FTSE All-World + 30% TLV-125.
 **User:** 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.
 
 **Extracted profile:**
-goal: Start investing ₪55,000 for long-term (about 20 years, maybe until around 50). 70% FTSE All-World and 30% TLV-125, with a קרן כספית buffer. A 20% drop would stress me but I wouldn't sell. | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years, maybe until I'm around 50 | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
+goal: Start investing ₪55,000 with long-term horizon (~20 years, maybe until around 50), building a diversified portfolio with 70% FTSE All-World and 30% TLV-125 and using a קרן כספית buffer; contribute about ₪1,800/month | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years (maybe until around 50) | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
 
 
 ---
@@ -67,7 +67,7 @@ goal: Start investing ₪55,000 for long-term (about 20 years, maybe until aroun
 **User:** FTSE All-World. קרן כספית for the buffer.
 
 **Extracted profile:**
-goal: retirement savings for about 30 years until retirement at 65; invest ₪75,000 with moderate risk, beginner; wants FTSE All-World for equities and קרן כספית for the buffer | amount: 75000 | age: 35 | riskTolerance: moderate | timeline: about 30 years until retirement at 65 | knowledgeLevel: beginner | brokerage: IBI | investmentPreferences: FTSE All-World. קרן כספית for the buffer. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
+goal: ₪75,000 moderate risk retirement savings for about 30 years until retirement at 65 | amount: 75000 | age: 35 | riskTolerance: moderate | timeline: about 30 years until retirement at 65 | knowledgeLevel: beginner | brokerage: IBI | investmentPreferences: FTSE All-World. קרן כספית for the buffer. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
 
 
 ---
@@ -103,7 +103,7 @@ C) Buy more while it's cheap
 **User:** MSCI World. קרן כספית.
 
 **Extracted profile:**
-goal: Maximum returns, while feeling sick but holding on if the investment drops (moderate risk); invest ₪45,000 for about 5 years, with ₪1,000/month contributions, with an in-portfolio קרן כספית buffer | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: MSCI World + קרן כספית | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
+goal: Maximum returns, but if the investment dropped (e.g., ₪40,000 to ₪32,000) you would feel sick but hold on and wait; invest with MSCI World and a קרן כספית buffer; timeline about 5 years | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: MSCI World. קרן כספית. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
 
 
 ---
@@ -129,12 +129,12 @@ goal: Maximum returns, while feeling sick but holding on if the investment drops
 **User:** 80% MSCI World and 20% TLV-125. קרן כספית for the buffer.
 
 **Extracted profile:**
-goal: Invest ₪200,000 with an equity split of 80% MSCI World and 20% TLV-125, plus a קרן כספית buffer, moderate-to-aggressive risk over a long-term timeline of 20+ years, with ₪5,000/month contributions; in Israel; no debt and emergency fund yes | amount: 200000 | age: 34 | riskTolerance: aggressive | timeline: 20+ years | knowledgeLevel: intermediate | brokerage: Interactive Brokers | investmentPreferences: 80% MSCI World and 20% TLV-125, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000
+goal: Invest ₪200,000 with an 80% MSCI World and 20% TLV-125 allocation, using קרן כספית for the buffer, with a long-term 20+ years timeline; moderate risk (moderate-to-aggressive) and ₪5,000/month contributions; in Israel | amount: 200000 | age: 34 | riskTolerance: moderate | timeline: 20+ years | knowledgeLevel: intermediate | brokerage: Interactive Brokers | investmentPreferences: 80% MSCI World and 20% TLV-125. קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000
 
 
 ---
 
-## ✗ should capture 100% single-index concentration as a valid investmentPreferences answer
+## ✓ should capture 100% single-index concentration as a valid investmentPreferences answer
 
 **User:** I have ₪80,000 and I want to start investing
 
@@ -149,9 +149,7 @@ goal: Invest ₪200,000 with an equity split of 80% MSCI World and 20% TLV-125, 
 **User:** 100% NASDAQ. I have strong conviction in tech and a long horizon — I'm fine with the volatility. קרן כספית is fine for the buffer.
 
 **Extracted profile:**
-goal: Invest ₪80,000 aggressively with a strong conviction in tech (100% NASDAQ) over about 15 years; willing to accept volatility; caren kisfit is fine for the buffer | amount: 80000 | age: 32 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 100% NASDAQ — strong conviction in tech; caren kisfit is fine for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
-
-Error: expected '100% nasdaq — strong conviction in te…' to match /כספית|money market/i
+goal: Start investing ₪80,000 for about 15 years; 100% NASDAQ due to strong conviction in tech with long horizon, fine with volatility; קרן כספית is fine for the buffer | amount: 80000 | age: 32 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 100% NASDAQ, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
 
 
 ---
@@ -177,7 +175,7 @@ Error: expected '100% nasdaq — strong conviction in te…' to match /כספי�
 **User:** 70% S&P 500 and 30% TLV-125
 
 **Extracted profile:**
-goal: invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500, 30% TLV-125) | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
+goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500, 30% TLV-125) over about 15 years with moderate risk | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
 
 
 ---
@@ -206,5 +204,5 @@ goal: invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500, 
 **User:** 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.
 
 **Extracted profile:**
-goal: Invest ₪25,000 in the market all-in, 100% S&P 500, aggressive risk, about 15 years, with no buffer because the emergency fund is already in a קרן כספית outside this portfolio | amount: 25000 | age: 26 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 500
+goal: Invest ₪25,000 all in the market (100% S&P 500) with an emergency fund already held outside this portfolio | amount: 25000 | age: 26 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 500
 
