@@ -28,4 +28,10 @@ Each intake phase (`runPhaseLoop`) handles its specific conversation. Acceptance
 
 The fields prompt is left with one job: collect required profile fields.
 
+**Handlers as sub-agents; code as the orchestrator** — The intake handlers (`handleOutOfScopeRedirect`, `handleUnrealisticExpectations`, `handleContradictoryRisk`) are sub-agents in the practical sense: each has its own system prompt, its own `runPhaseLoop` tool-call loop, and returns a typed result (`IntakeResult`). The clarify stage orchestrates them explicitly in code after the classifier runs.
+
+An alternative considered: skip the classifier entirely and expose the handlers as LLM tools, letting a single top-level agent decide which to call (tool-as-router). This collapses classify + route into one inference. It breaks down here because the handlers are multi-turn conversations — the tool's "execution" would itself involve nested LLM calls and user interaction. The outer agent would just wait, contributing nothing, making it a very expensive classifier.
+
+The pattern works when the routed actions are simple and single-shot. When the actions are themselves stateful conversations, explicit code routing after a lightweight classifier is the right call: cheaper, independently testable, and each piece is observable in isolation.
+
 **Edge case — mid-conversation contradiction:** If a user starts with a `normal` goal but gives contradictory risk signals while answering the risk question (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. It's handled inline in the `riskTolerance` field definition in the fields prompt — not as a Decision Logic step.
