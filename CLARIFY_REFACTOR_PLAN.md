@@ -30,48 +30,24 @@ Phases 1 & 2 are parallel. Phases 3–7 are parallel once 1 & 2 are done. Phase 
 
 ---
 
+## Phase Status
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Expand `clarify.constants.ts` | Complete |
+| 2 | Create typed I/O schemas | Complete |
+| 3 | Refactor fields phase to typed I/O | Not started |
+| 4 | Create the risk phase | Not started |
+| 5 | Refactor preferences phase to typed I/O | Not started |
+| 6 | Refactor extraction to thin assembly | Not started |
+| 7 | Intake cleanup: drop contradictory, update out-of-scope and unrealistic | Not started |
+| 8 | Wire new pipeline in `clarify.stage.ts` | Not started |
+| 9 | Eval alignment pass | Not started |
+| 10 | Rules files for remaining phases | Not started |
+
+---
+
 ## Phases
-
-### ~~Phase 1 — Expand `clarify.constants.ts`~~ ✓ Complete
-
----
-
-### Phase 2 — Create typed I/O schemas
-
-**What:** Create `clarify.schemas.ts` with Zod schemas and inferred types for the three new phase outputs.
-
-```ts
-// clarify.schemas.ts
-export const FieldsOutputSchema = z.object({
-  goalText: z.string(),
-  amount: z.number(),
-  age: z.number(),
-  timeline: z.string(),
-  knowledgeLevel: z.enum(["beginner", "intermediate", "advanced"]),
-  hasEmergencyFund: z.boolean(),
-  hasDebt: z.boolean(),
-  monthlyContribution: z.number(),
-});
-
-export const RiskOutputSchema = z.object({
-  riskTolerance: z.enum(["conservative", "moderate", "aggressive"]),
-});
-
-export const PrefsOutputSchema = z.object({
-  investmentPreferences: z.string(),
-});
-
-export type FieldsOutput = z.infer<typeof FieldsOutputSchema>;
-export type RiskOutput = z.infer<typeof RiskOutputSchema>;
-export type PrefsOutput = z.infer<typeof PrefsOutputSchema>;
-```
-
-**Files:**
-- `src/server/pipeline/stages/clarify/clarify.schemas.ts` — new file
-
-**Verify:** `npm run type-check` passes.
-
----
 
 ### Phase 3 — Refactor fields phase to typed I/O
 

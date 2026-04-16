@@ -15,6 +15,7 @@
     "sourceMap": true,
     "paths": {
       "#config": ["./src/server/config"],
+      "#constants/*": ["./src/server/constants/*"],
       "#errors": ["./src/server/errors"],
       "#clients/*": ["./src/server/clients/*"],
       "#lib/*": ["./src/server/lib/*"],

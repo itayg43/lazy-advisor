@@ -62,7 +62,7 @@ describe("collectPreferences", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 28, Israel, yes emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, no brokerage, I'm a complete beginner",
+          "I'm 28, Israel, yes emergency fund, no debt, about 20 years, a 20% drop would stress me but I wouldn't sell, ₪1,800/mo, I'm a complete beginner",
       },
     ];
 
@@ -115,7 +115,7 @@ describe("collectPreferences", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",
+          "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo",
       },
     ];
 
@@ -162,7 +162,7 @@ describe("collectPreferences", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo, no brokerage",
+          "I'm 31, Israel, moderate risk, about 15 years, intermediate, yes emergency fund, no debt, ₪2,500/mo",
       },
     ];
 
@@ -215,7 +215,7 @@ describe("collectPreferences", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo, no brokerage",
+          "I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo",
       },
     ];
 

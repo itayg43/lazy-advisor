@@ -8,11 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { toTranscriptEntries } from "#pipeline/stages/clarify/clarify.lib";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
-import {
-  KnowledgeLevel,
-  RiskTolerance,
-  UserProfileSchema,
-} from "#schemas/pipeline.schema";
+import { RiskTolerance, UserProfileSchema } from "#schemas/pipeline.schema";
 
 const LAST_RUN_PATH = new URL("CLARIFY_EXTRACTION_LAST_RUN.md", import.meta.url).pathname;
 
@@ -104,13 +100,11 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(55_000);
     expect(profile.age).toBe(28);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.monthlyContribution).toBe(1_800);
     expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
     expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
-    expect(profile.brokerage).toBe("none");
     expect(profile.investmentPreferences).not.toBe("none");
     expect(profile.investmentPreferences.toLowerCase()).toMatch(
       /ftse|all.world|world|global/i,
@@ -120,7 +114,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #10: tests extraction when fields are split between goal and response, including brokerage name (IBI).
+  // CLARIFY_RULES #10: tests extraction when fields are split between goal and response.
   // Portfolio defaults are asked and answered after all gaps are collected.
   it("should extract profile with fields split between goal and response", async () => {
     const transcript: ResponseInputItem[] = [
@@ -133,7 +127,7 @@ describe("clarifyExtraction", () => {
         name: "ask_user",
         arguments: JSON.stringify({
           question:
-            'Good detail — just a few gaps:\n1) Do you have an emergency fund?\n2) Any debt?\n3) How much can you invest monthly going forward?\n4) Do you have a brokerage account?\n5) What country are you in?\n6) How long is "long-term" — roughly how many years or until what age?',
+            'Good detail — just a few gaps:\n1) Do you have an emergency fund?\n2) Any debt?\n3) How much can you invest monthly going forward?\n5) What country are you in?\n6) How long is "long-term" — roughly how many years or until what age?',
         }),
         call_id: "call_1",
         id: "fc_1",
@@ -170,10 +164,8 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(75_000);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
     expect(profile.monthlyContribution).toBe(2_000);
-    expect(profile.brokerage.toLowerCase()).toContain("ibi");
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
     expect(profile.timeline.toLowerCase()).toMatch(/30|65|retire/);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/ftse|all.world/i);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
@@ -208,7 +200,7 @@ describe("clarifyExtraction", () => {
         name: "ask_user",
         arguments: JSON.stringify({
           question:
-            "Got it — moderate risk. A few more details I still need:\n1) How much are you investing?\n2) How old are you?\n3) What's your timeline (number of years or a milestone like retirement at age X)?\n4) Emergency fund in place? (yes/no)\n5) Any outstanding debt? (yes/no)\n6) How much can you invest monthly?\n7) Do you have a brokerage account?\n8) What country are you in?\n9) What's your knowledge level about investing (beginner, intermediate, advanced)?",
+            "Got it — moderate risk. A few more details I still need:\n1) How much are you investing?\n2) How old are you?\n3) What's your timeline (number of years or a milestone like retirement at age X)?\n4) Emergency fund in place? (yes/no)\n5) Any outstanding debt? (yes/no)\n6) How much can you invest monthly?\n7) What country are you in?",
         }),
         call_id: "call_2",
         id: "fc_2",
@@ -217,7 +209,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_2",
         output:
-          "₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner",
+          "₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, I'm in Israel, I'm a beginner",
       },
       {
         type: "function_call",
@@ -247,15 +239,13 @@ describe("clarifyExtraction", () => {
     expect(profile.monthlyContribution).toBe(1_000);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
-    expect(profile.brokerage).toBe("none");
     expect(profile.timeline.toLowerCase()).toMatch(/5/);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/msci world/i);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #8: tests knowledge level mapping from experience description, "moderate-to-aggressive" risk, and brokerage extraction.
-  // Mentioning Irish ETFs as knowledge does not set investmentPreferences — portfolio defaults are still asked.
+  // CLARIFY_RULES #8: tests "moderate-to-aggressive" risk mapping and that mentioning Irish ETFs as knowledge
+  // does not set investmentPreferences — portfolio defaults are still asked.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -267,7 +257,7 @@ describe("clarifyExtraction", () => {
         name: "ask_user",
         arguments: JSON.stringify({
           question:
-            "Great — a few questions to understand your situation:\n1) How old are you?\n2) What's your timeline?\n3) Risk tolerance?\n4) Emergency fund and debt status?\n5) How much can you invest monthly?\n6) Do you have a brokerage account?\n7) What's your investing experience?\n8) What country are you in?",
+            "Great — a few questions to understand your situation:\n1) How old are you?\n2) What's your timeline?\n3) Risk tolerance?\n4) Emergency fund and debt status?\n5) How much can you invest monthly?\n7) What's your investing experience?\n8) What country are you in?",
         }),
         call_id: "call_1",
         id: "fc_1",
@@ -303,11 +293,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(200_000);
     expect(profile.age).toBe(34);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect([KnowledgeLevel.enum.intermediate, KnowledgeLevel.enum.advanced]).toContain(
-      profile.knowledgeLevel,
-    );
     expect(profile.monthlyContribution).toBe(5_000);
-    expect(profile.brokerage.toLowerCase()).toContain("interactive brokers");
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
@@ -338,7 +324,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 32, Israel, about 15 years, aggressive, yes emergency fund, no debt, ₪2,000/mo, intermediate, no brokerage",
+          "I'm 32, Israel, about 15 years, aggressive, yes emergency fund, no debt, ₪2,000/mo, intermediate",
       },
       {
         type: "function_call",
@@ -392,7 +378,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 31, Israel, about 15 years, moderate risk, yes emergency fund, no debt, ₪2,500/mo, intermediate. No brokerage yet.",
+          "I'm 31, Israel, about 15 years, moderate risk, yes emergency fund, no debt, ₪2,500/mo, intermediate.",
       },
       {
         type: "function_call",
@@ -419,7 +405,6 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(100_000);
     expect(profile.age).toBe(31);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.intermediate);
     expect(profile.monthlyContribution).toBe(2_500);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
@@ -450,7 +435,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo, no brokerage",
+          "I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo",
       },
       {
         type: "function_call",
@@ -483,7 +468,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
   });
 
-  // CLARIFY_RULES #13: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
+  // CLARIFY_RULES #12: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
   // Absence of discomfort is the signal; buying-on-dips is not required.
   it("should extract aggressive for passive calm holder with no expressed discomfort", async () => {
     const transcript: ResponseInputItem[] = [
@@ -505,7 +490,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 30, about 20 years, I'd hold and not worry about it — drops don't stress me, I'm in it for the long run. Yes emergency fund, no debt, ₪2,000/month, beginner, no brokerage. Israel.",
+          "I'm 30, about 20 years, I'd hold and not worry about it — drops don't stress me, I'm in it for the long run. Yes emergency fund, no debt, ₪2,000/month, beginner. Israel.",
       },
       {
         type: "function_call",
@@ -537,7 +522,7 @@ describe("clarifyExtraction", () => {
     expect(profile.monthlyContribution).toBe(2_000);
   });
 
-  // CLARIFY_RULES #14: short timeline (5 years) + genuinely ambiguous behavioral → conservative via secondary signal.
+  // CLARIFY_RULES #13: short timeline (5 years) + genuinely ambiguous behavioral → conservative via secondary signal.
   // Behavioral statement is uncertain ("not sure how I'd react"), so timeline fires as secondary signal.
   it("should extract conservative for genuinely ambiguous behavioral signal with a 5-year timeline", async () => {
     const transcript: ResponseInputItem[] = [
@@ -559,7 +544,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'm 38, about 5 years — I need this money for a home purchase. I've never been through a market drop — I honestly don't know what I'd do. Yes emergency fund, no debt, ₪1,500/month, beginner, no brokerage, Israel.",
+          "I'm 38, about 5 years — I need this money for a home purchase. I've never been through a market drop — I honestly don't know what I'd do. Yes emergency fund, no debt, ₪1,500/month, beginner, Israel.",
       },
       {
         type: "function_call",
@@ -591,7 +576,7 @@ describe("clarifyExtraction", () => {
     expect(profile.monthlyContribution).toBe(1_500);
   });
 
-  // CLARIFY_RULES #15: genuinely ambiguous behavioral signal + no emergency fund → conservative via secondary signal.
+  // CLARIFY_RULES #14: genuinely ambiguous behavioral signal + no emergency fund → conservative via secondary signal.
   it("should extract conservative for genuinely ambiguous behavioral signal with no emergency fund", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -612,7 +597,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "Hard to say — I've never invested before, no idea how I'd react to a big drop. No emergency fund, no debt, ₪800/month, beginner, no brokerage.",
+          "Hard to say — I've never invested before, no idea how I'd react to a big drop. No emergency fund, no debt, ₪800/month, beginner.",
       },
       {
         type: "function_call",
@@ -643,7 +628,7 @@ describe("clarifyExtraction", () => {
     expect(profile.monthlyContribution).toBe(800);
   });
 
-  // CLARIFY_RULES #16: borderline behavioral signal + 100% NASDAQ → aggressive via preferences corroboration.
+  // CLARIFY_RULES #15: borderline behavioral signal + 100% NASDAQ → aggressive via preferences corroboration.
   it("should extract aggressive when 100% NASDAQ preference corroborates borderline behavioral signal", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -664,7 +649,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I'd probably be fine with drops, wouldn't panic. Yes emergency fund, no debt, ₪1,200/month, intermediate, no brokerage.",
+          "I'd probably be fine with drops, wouldn't panic. Yes emergency fund, no debt, ₪1,200/month, intermediate.",
       },
       {
         type: "function_call",
@@ -694,7 +679,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/nasdaq/i);
   });
 
-  // CLARIFY_RULES #17: multiple conservative secondary signals (short timeline + no emergency fund) compound → conservative.
+  // CLARIFY_RULES #16: multiple conservative secondary signals (short timeline + no emergency fund) compound → conservative.
   it("should extract conservative when multiple conservative secondary signals compound", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -715,7 +700,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "I've never invested before — no idea what I'd do in that situation. No emergency fund, no debt, ₪1,000/month, beginner, no brokerage.",
+          "I've never invested before — no idea what I'd do in that situation. No emergency fund, no debt, ₪1,000/month, beginner.",
       },
       {
         type: "function_call",
@@ -747,7 +732,7 @@ describe("clarifyExtraction", () => {
     expect(profile.monthlyContribution).toBe(1_000);
   });
 
-  // CLARIFY_RULES #18: clear primary A/B/C answer (C = calm/buy more) overrides conservative secondary signals.
+  // CLARIFY_RULES #17: clear primary A/B/C answer (C = calm/buy more) overrides conservative secondary signals.
   // Short timeline and no emergency fund do not override an explicit primary behavioral signal.
   it("should extract aggressive when clear primary signal (C) overrides conservative secondary signals", async () => {
     const transcript: ResponseInputItem[] = [
@@ -769,7 +754,7 @@ describe("clarifyExtraction", () => {
         type: "function_call_output",
         call_id: "call_1",
         output:
-          "C — I'd stay calm and probably buy more while it's cheap. No emergency fund, no debt, ₪2,500/month, intermediate, no brokerage.",
+          "C — I'd stay calm and probably buy more while it's cheap. No emergency fund, no debt, ₪2,500/month, intermediate.",
       },
       {
         type: "function_call",

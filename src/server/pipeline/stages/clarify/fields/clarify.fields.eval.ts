@@ -9,7 +9,7 @@ import {
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarify.out-of-scope";
-import { KnowledgeLevel, RiskTolerance } from "#schemas/pipeline.schema";
+import { RiskTolerance } from "#schemas/pipeline.schema";
 
 const LAST_RUN_PATH = new URL("CLARIFY_FIELDS_LAST_RUN.md", import.meta.url).pathname;
 
@@ -46,7 +46,7 @@ describe("collectFields", () => {
     if (!intakeResult.accepted) throw new Error("Expected intake to be accepted");
 
     const fieldsResponder = createTrackedResponder([
-      "I have ₪30,000, I'm 29, moderate risk, 10 years, beginner, yes emergency fund, no debt, ₪1,000/mo, no brokerage",
+      "I have ₪30,000, I'm 29, moderate risk, 10 years, beginner, yes emergency fund, no debt, ₪1,000/mo",
     ]);
     lastTranscript = [...intakeResponder.transcript, ...fieldsResponder.transcript];
 
@@ -61,7 +61,6 @@ describe("collectFields", () => {
     expect(profile.amount).toBe(30_000);
     expect(profile.age).toBe(29);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.beginner);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.monthlyContribution).toBe(1_000);
@@ -72,7 +71,7 @@ describe("collectFields", () => {
     lastGoal = "I want to invest";
     const responder = createTrackedResponder([
       "I have ₪20,000, I'm 32, I'm in Israel, long-term",
-      "I guess maybe 10-15 years. moderate risk, beginner, yes emergency fund, no debt, ₪800/mo, no brokerage",
+      "I guess maybe 10-15 years. moderate risk, beginner, yes emergency fund, no debt, ₪800/mo",
     ]);
     lastTranscript = responder.transcript;
 
@@ -91,32 +90,5 @@ describe("collectFields", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/10|15/);
-  });
-
-  // CLARIFY_RULES #12: when knowledge level is the only missing field, the agent asks for it
-  // with a self-identification anchor rather than bare labels.
-  it("should ask knowledge level with anchor when it is the only missing field", async () => {
-    lastGoal =
-      "I'm 35, I have ₪50,000 to invest, moderate risk, 15-year horizon, yes emergency fund, no debt, ₪1,500/mo, no brokerage, in Israel";
-    const responder = createTrackedResponder([
-      "Yes, I know what index ETFs and expense ratios are, I understand how diversification works and have been following my portfolio allocation for a year",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const fieldsResponseId = await collectFields(
-      { input: lastGoal },
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    const profile = await extractUserProfile(fieldsResponseId);
-    lastProfile = profile;
-
-    expect(profile.amount).toBe(50_000);
-    expect(profile.age).toBe(35);
-    expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(1_500);
-    expect(profile.hasEmergencyFund).toBe(true);
-    expect(profile.hasDebt).toBe(false);
-    expect(profile.knowledgeLevel).toBe(KnowledgeLevel.enum.intermediate);
   });
 });

@@ -35,7 +35,7 @@ describe("runClarifyStage", () => {
   it("should produce a full profile for a normal goal", async () => {
     lastGoal = "I have ₪55,000 to invest, I'm 28, moderate risk, 20 years, beginner";
     const responder = createTrackedResponder([
-      "yes emergency fund, no debt, ₪1,800/mo, no brokerage",
+      "yes emergency fund, no debt, ₪1,800/mo",
       "FTSE All-World mostly. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;
@@ -61,7 +61,7 @@ describe("runClarifyStage", () => {
     lastGoal = "Should I buy NVIDIA stock?";
     const responder = createTrackedResponder([
       "ok fine, I'm open to ETFs. I have ₪30,000, I'm 29, moderate risk, 10 years",
-      "yes emergency fund, no debt, ₪1,000/mo, no brokerage, beginner",
+      "yes emergency fund, no debt, ₪1,000/mo, beginner",
       "S&P 500. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;

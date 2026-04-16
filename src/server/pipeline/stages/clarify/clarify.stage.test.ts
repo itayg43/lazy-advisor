@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
-import {
-  GoalClassification,
-  KnowledgeLevel,
-  RiskTolerance,
-} from "#schemas/pipeline.schema";
+import { RiskTolerance } from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
 const {
@@ -59,8 +56,6 @@ describe("runClarifyStage", () => {
     age: 28,
     riskTolerance: RiskTolerance.enum.moderate,
     timeline: "20 years",
-    knowledgeLevel: KnowledgeLevel.enum.beginner,
-    brokerage: "none",
     investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
     hasEmergencyFund: true,
     hasDebt: false,
