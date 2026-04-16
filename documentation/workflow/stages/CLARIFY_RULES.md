@@ -80,7 +80,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 **Scenario:** "I have ₪200,000 to invest, I already know the basics" — user mentions Irish ETF knowledge; stage still asks portfolio defaults.
 
-**Extracted:** amount: 200000 | age: 34 | risk: moderate | timeline: 20+ years | brokerage: Interactive Brokers | knowledgeLevel: intermediate | investmentPreferences: "80% MSCI World, 20% TLV-125, קרן כספית buffer"
+**Extracted:** amount: 200000 | age: 34 | risk: moderate | timeline: 20+ years | investmentPreferences: "80% MSCI World, 20% TLV-125, קרן כספית buffer"
 
 ---
 
@@ -98,9 +98,9 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 **Rule:** The agent asks only for gaps — fields already stated in the goal (amount, age, risk, context) are not re-asked. If the goal provides enough to infer a field, treat it as answered. Portfolio defaults are asked if no preference was stated in the goal.
 
-**Scenario:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings" — only gaps (emergency fund, debt, timeline, monthly, brokerage) are asked.
+**Scenario:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings" — only gaps (emergency fund, debt, timeline, monthly contribution) are asked.
 
-**Extracted:** amount: 75000 | age: 35 | risk: moderate | timeline: ~30 years, retirement at 65 | brokerage: IBI | investmentPreferences: "FTSE All-World, קרן כספית buffer"
+**Extracted:** amount: 75000 | age: 35 | risk: moderate | timeline: ~30 years, retirement at 65 | investmentPreferences: "FTSE All-World, קרן כספית buffer"
 
 ---
 
@@ -114,17 +114,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 12. Knowledge level missing → asked with self-identification anchor
-
-**Rule:** When knowledge level is the only missing required field, the agent asks for it with a brief anchor that helps the user self-identify — e.g., "do you know what an index ETF or expense ratio is?" — rather than just listing bare labels. The user's descriptive answer (not necessarily a label) is sufficient; the extraction maps it to the correct level.
-
-**Scenario:** User provides all required fields upfront except knowledge level.
-
-**Extracted:** knowledgeLevel: intermediate
-
----
-
-## 13. Passive calm holder → aggressive
+## 12. Passive calm holder → aggressive
 
 **Rule:** When the user expresses no meaningful discomfort during a drop scenario — no stress, no sell intent, calm passive hold — extract `aggressive`. The absence of discomfort is itself the signal; buying-on-dips is not required to reach `aggressive`.
 
@@ -134,9 +124,9 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 14. Short timeline + no directional behavioral signal → conservative (secondary signal)
+## 13. Short timeline + no directional behavioral signal → conservative (secondary signal)
 
-**Rule:** When the user gives no directional behavioral signal (e.g. "I've never been through a market drop — I genuinely don't know what I'd do"), use `timeline` as a secondary corroborating signal. A timeline of ≤5 years leans conservative — there is insufficient time to recover from a significant downturn. Note: any statement containing a behavioral direction (hold/sell/buy), even with uncertainty qualifiers, is treated as that direction, not as directionless (see Rule 18).
+**Rule:** When the user gives no directional behavioral signal (e.g. "I've never been through a market drop — I genuinely don't know what I'd do"), use `timeline` as a secondary corroborating signal. A timeline of ≤5 years leans conservative — there is insufficient time to recover from a significant downturn. Note: any statement containing a behavioral direction (hold/sell/buy), even with uncertainty qualifiers, is treated as that direction, not as directionless (see Rule 17).
 
 **Scenario:** User has a 5-year timeline and says "I've never experienced a market drop — I honestly don't know what I'd do."
 
@@ -144,7 +134,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 15. No emergency fund + no directional behavioral signal → conservative (secondary signal)
+## 14. No emergency fund + no directional behavioral signal → conservative (secondary signal)
 
 **Rule:** When the user gives no directional behavioral signal (genuinely "I don't know") and `hasEmergencyFund` is `false`, lean conservative. Without a financial buffer, the user is vulnerable to forced selling during a downturn regardless of stated intent.
 
@@ -154,7 +144,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 16. High-concentration investment preference corroborates aggressive
+## 15. High-concentration investment preference corroborates aggressive
 
 **Rule:** When the user has chosen a high-concentration, high-volatility allocation (e.g. 100% NASDAQ) and the behavioral signal is borderline (e.g. "I think I'd be fine"), treat the preference as a corroborating signal toward `aggressive` — choosing 100% NASDAQ reveals risk appetite.
 
@@ -164,7 +154,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 17. Multiple conservative secondary signals compound → conservative
+## 16. Multiple conservative secondary signals compound → conservative
 
 **Rule:** When the behavioral signal is ambiguous and multiple secondary signals all point conservative (e.g. short timeline + no emergency fund), extract `conservative` with high confidence — the signals compound.
 
@@ -174,7 +164,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 18. Clear primary behavioral signal overrides secondary signals
+## 17. Clear primary behavioral signal overrides secondary signals
 
 **Rule:** When the concrete A/B/C scenario produced a clear behavioral answer, secondary signals (timeline, investmentPreferences, hasEmergencyFund) do not override it. Primary signal dominates.
 

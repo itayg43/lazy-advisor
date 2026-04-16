@@ -1,24 +1,13 @@
 import { z } from "zod";
 
+import {
+  MAX_AGE,
+  MAX_AMOUNT,
+  MAX_MONTHLY_CONTRIBUTION,
+  MAX_STRING_LENGTH,
+} from "#constants/validation.constants";
+
 export const RiskTolerance = z.enum(["conservative", "moderate", "aggressive"]);
-
-export const KnowledgeLevel = z.enum(["beginner", "intermediate", "advanced"]);
-
-export const GoalClassification = z.enum([
-  "normal",
-  "out_of_scope",
-  "unrealistic",
-  "contradictory",
-]);
-
-export const GoalClassificationSchema = z.object({
-  type: GoalClassification,
-});
-
-const MAX_STRING_LENGTH = 256;
-const MAX_AGE = 120;
-const MAX_AMOUNT = 100_000_000;
-const MAX_MONTHLY_CONTRIBUTION = 1_000_000;
 
 export const UserProfileSchema = z.object({
   goal: z.string().min(1).max(MAX_STRING_LENGTH),
@@ -26,8 +15,6 @@ export const UserProfileSchema = z.object({
   age: z.number().int().positive().max(MAX_AGE),
   riskTolerance: RiskTolerance,
   timeline: z.string().min(1).max(MAX_STRING_LENGTH),
-  knowledgeLevel: KnowledgeLevel,
-  brokerage: z.string().min(1).max(MAX_STRING_LENGTH).default("none"),
   investmentPreferences: z.string().min(1).max(MAX_STRING_LENGTH),
   hasEmergencyFund: z.boolean(),
   hasDebt: z.boolean(),

@@ -4,6 +4,7 @@ import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
 } from "#pipeline/stages/clarify/clarify.constants";
+import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/clarify.classify";
@@ -13,7 +14,6 @@ import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarif
 import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/clarify.unrealistic";
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { GoalClassification } from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/clarify.classify";
-import { GoalClassification } from "#schemas/pipeline.schema";
 
 describe("classifyGoal", () => {
   // CLARIFY_RULES #4: individual stock picking, day trading, and direct crypto purchases

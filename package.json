@@ -26,6 +26,7 @@
   "type": "module",
   "imports": {
     "#config": "./src/server/config.ts",
+    "#constants/*": "./src/server/constants/*",
     "#errors": "./src/server/errors/index.ts",
     "#clients/*": "./src/server/clients/*",
     "#lib/*": "./src/server/lib/*",
