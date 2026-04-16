@@ -26,7 +26,7 @@ Every required field must have a specific, actionable value before this phase en
 
 - **amount**: a specific number. Not \`some money\`, \`a lot\`, or \`not sure\`.
 - **age**: a specific number.
-- **riskTolerance**: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms. When asking, anchor with a concrete scenario rather than just listing labels — e.g., "if your portfolio dropped 20% in a year, would you sell, hold steady, or buy more?" If the user gives contradictory risk signals mid-conversation, use the same scenario approach to resolve before proceeding.
+- **riskTolerance**: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms. When asking, anchor with a concrete scenario using three options that surface both behavior and emotional register — e.g., "If your portfolio dropped 20% in a year, would you: A) Sell or reduce your position, B) Feel stressed but hold and wait it out, or C) Stay calm — hold without much worry, or buy more while it's cheaper?" If the user gives contradictory risk signals mid-conversation, use the same scenario approach to resolve before proceeding.
 - **timeline**: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` are specific enough — do not ask to narrow further.
 - **knowledgeLevel**: map to ${KNOWLEDGE_LEVELS} based on what the user describes. When asking, include a brief anchor to help the user self-identify — e.g., "do you know what an index ETF or expense ratio is?"
 - **hasEmergencyFund**: yes or no.
@@ -82,7 +82,7 @@ Decision Logic:
 1. How much do you want to invest (a specific amount)?
 2. How old are you?
 3. What's your investment timeline — how many years, or until a specific milestone?
-4. How would you describe your risk comfort — e.g., if your portfolio dropped 20% in a year, would you sell, hold steady, or buy more?"
+4. If your portfolio dropped 20% in a year — would you A) sell, B) feel stressed but hold, or C) stay calm and hold (or buy more)?"
 
 Next turn — user provides amount, age, timeline, and risk. Remaining gaps: knowledgeLevel, hasEmergencyFund, hasDebt, monthlyContribution.
 

@@ -2,24 +2,16 @@
 
 ## Up Next
 
-All clarify stage issues are resolved before continuing research stage work.
+1. **Implement clarify stage redesign** — Per `CLARIFY_REVIEW.md` (finalized spec). Implementation order:
+   1. Structured phase passing (foundation) — typed I/O contracts, remove `buildSourceParams` and cross-phase `previous_response_id` chaining
+   2. Risk phase — new dedicated phase between fields and preferences; resolves `riskTolerance` via personalized A/B drop scenario
+   3. Fields, preferences, extraction updated to new contracts
+   4. Intake phase prompt improvements and eval expansions
+   5. Constants file (`clarify.constants.ts`) — benchmark figures + `buildRiskScenario`
 
-1. **Improve riskTolerance extraction: multi-signal mapping** — PR #81 review identified gaps in the current single-axis (behavioral response to drops) mapping:
-   - `conservative` definition has an emotional leak ("lose sleep enough to act") — should be pure behavior: "would sell or reduce exposure"
-   - `aggressive` definition implies counter-cyclical buying ("might buy more on dips"), causing calm-but-passive holders to fall through to `moderate`
-   - 20–30% drop range is unaddressed — boundary between `moderate` and `aggressive` is a guess zone
-   - `timeline` is available at extraction time but ignored — a 5-year horizon should push toward conservative regardless of stated behavioral preference
-   - `investmentPreferences` (e.g., 100% NASDAQ) is a corroborating behavioral signal not referenced in the riskTolerance rule
-   - Example 2 in the extraction prompt assigns `aggressive` without any behavioral evidence — inconsistent with the new behavior-first framing
-   - `moderate-to-aggressive` ambiguity tie-break (always picks conservative) may be too blunt for long-horizon / high-amount cases
+2. **Research stage: examples → rules refactor** — Four parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references; (d) review research stage prompts for missing terminal-state steps (e.g. explicit "stop" instructions for rejection/disengagement), following the pattern added to the clarify intake prompts.
 
-2. **Fix equity capture + buffer extraction bugs** — Two related extraction prompt issues:
-   - Preferences Test 1: model returned `not specified` for `investmentPreferences` instead of the stated FTSE All-World preference. Flaky; fails intermittently. Investigate preferences prompt adherence.
-   - Extraction: model extracted `100% NASDAQ` but omitted the קרן כספית buffer, failing `/כספית|money market/i`. Extraction prompt may not handle the 100% concentration + buffer case correctly.
-
-3. **Research stage: examples → rules refactor** — Four parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references; (d) review research stage prompts for missing terminal-state steps (e.g. explicit "stop" instructions for rejection/disengagement), following the pattern added to the clarify intake prompts.
-
-4. **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
+3. **4.4c — Phase B + orchestration + unit tests + full-loop eval.**
 
 ### Deferred: Crypto ETF support (clarify + research)
 Crypto ETFs (e.g., BlackRock's IBIT for Bitcoin, ETHA for Ethereum) are SEC-regulated ETFs tradeable through a normal brokerage — they should be treated as a legitimate aggressive investment preference, not redirected as out-of-scope alongside direct crypto purchases. Currently the clarify fields prompt groups all crypto together. Deferred until the research stage is otherwise complete.

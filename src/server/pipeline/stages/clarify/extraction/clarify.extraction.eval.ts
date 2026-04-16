@@ -302,9 +302,7 @@ describe("clarifyExtraction", () => {
     assertValidProfile(profile);
     expect(profile.amount).toBe(200_000);
     expect(profile.age).toBe(34);
-    expect([RiskTolerance.enum.moderate, RiskTolerance.enum.aggressive]).toContain(
-      profile.riskTolerance,
-    );
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
     expect([KnowledgeLevel.enum.intermediate, KnowledgeLevel.enum.advanced]).toContain(
       profile.knowledgeLevel,
     );
@@ -483,5 +481,323 @@ describe("clarifyExtraction", () => {
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500/i);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
+  });
+
+  // CLARIFY_RULES #13: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
+  // Absence of discomfort is the signal; buying-on-dips is not required.
+  it("should extract aggressive for passive calm holder with no expressed discomfort", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪60,000 and want to start investing long term",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Happy to help. A few details:\n1. How old are you?\n2. What's your investment timeline?\n3. If your portfolio dropped 20% in a year — would you A) sell, B) feel stressed but hold, or C) stay calm and hold (or buy more)?\n4. Do you have an emergency fund? Any debt? How much can you invest monthly? Knowledge level? Brokerage?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "I'm 30, about 20 years, I'd hold and not worry about it — drops don't stress me, I'm in it for the long run. Yes emergency fund, no debt, ₪2,000/month, beginner, no brokerage. Israel.",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "Before I hand this off — what equity allocation do you want? Options: FTSE All-World (~10%/yr), MSCI World (~11%/yr), S&P 500 (~13%/yr), NASDAQ-100 (~18%/yr), TLV-125 (~8%/yr in NIS), or any combination. For the buffer, a קרן כספית is the standard choice — does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "80% MSCI World, 20% TLV-125. קרן כספית is fine.",
+      },
+    ];
+    lastTranscript = toTranscriptEntries(transcript);
+
+    const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(60_000);
+    expect(profile.age).toBe(30);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
+    expect(profile.hasEmergencyFund).toBe(true);
+    expect(profile.hasDebt).toBe(false);
+    expect(profile.monthlyContribution).toBe(2_000);
+  });
+
+  // CLARIFY_RULES #14: short timeline (5 years) + genuinely ambiguous behavioral → conservative via secondary signal.
+  // Behavioral statement is uncertain ("not sure how I'd react"), so timeline fires as secondary signal.
+  it("should extract conservative for genuinely ambiguous behavioral signal with a 5-year timeline", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪40,000 to invest",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "A few details:\n1. How old are you?\n2. What's your investment timeline?\n3. If your portfolio dropped 20% in a year — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?\n4. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage? Country?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "I'm 38, about 5 years — I need this money for a home purchase. I've never been through a market drop — I honestly don't know what I'd do. Yes emergency fund, no debt, ₪1,500/month, beginner, no brokerage, Israel.",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "What equity allocation would you like? Options: FTSE All-World, MSCI World, S&P 500, NASDAQ-100, TLV-125, or a combination. For the buffer, a קרן כספית — does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "FTSE All-World. קרן כספית for the buffer.",
+      },
+    ];
+    lastTranscript = toTranscriptEntries(transcript);
+
+    const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(40_000);
+    expect(profile.age).toBe(38);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
+    expect(profile.timeline.toLowerCase()).toMatch(/5/);
+    expect(profile.hasEmergencyFund).toBe(true);
+    expect(profile.monthlyContribution).toBe(1_500);
+  });
+
+  // CLARIFY_RULES #15: genuinely ambiguous behavioral signal + no emergency fund → conservative via secondary signal.
+  it("should extract conservative for genuinely ambiguous behavioral signal with no emergency fund", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪30,000 to invest, I'm 29, Israel, about 10 years",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "A few gaps:\n1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?\n2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "Hard to say — I've never invested before, no idea how I'd react to a big drop. No emergency fund, no debt, ₪800/month, beginner, no brokerage.",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "What equity allocation would you like? And for the buffer, a קרן כספית — does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "FTSE All-World. קרן כספית yes.",
+      },
+    ];
+    lastTranscript = toTranscriptEntries(transcript);
+
+    const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(30_000);
+    expect(profile.age).toBe(29);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
+    expect(profile.hasEmergencyFund).toBe(false);
+    expect(profile.monthlyContribution).toBe(800);
+  });
+
+  // CLARIFY_RULES #16: borderline behavioral signal + 100% NASDAQ → aggressive via preferences corroboration.
+  it("should extract aggressive when 100% NASDAQ preference corroborates borderline behavioral signal", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪50,000 to invest, I'm 27, Israel, 15 years",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "A few gaps:\n1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?\n2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "I'd probably be fine with drops, wouldn't panic. Yes emergency fund, no debt, ₪1,200/month, intermediate, no brokerage.",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "What equity allocation would you like? And for the buffer, a קרן כספית — does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "100% NASDAQ. I have strong conviction in tech. קרן כספית is fine.",
+      },
+    ];
+    lastTranscript = toTranscriptEntries(transcript);
+
+    const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(50_000);
+    expect(profile.age).toBe(27);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
+    expect(profile.investmentPreferences.toLowerCase()).toMatch(/nasdaq/i);
+  });
+
+  // CLARIFY_RULES #17: multiple conservative secondary signals (short timeline + no emergency fund) compound → conservative.
+  it("should extract conservative when multiple conservative secondary signals compound", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪45,000 to invest, I'm 36, Israel, 4 years",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "A few gaps:\n1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?\n2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "I've never invested before — no idea what I'd do in that situation. No emergency fund, no debt, ₪1,000/month, beginner, no brokerage.",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "What equity allocation would you like? And for the buffer, a קרן כספית — does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "FTSE All-World. קרן כספית yes.",
+      },
+    ];
+    lastTranscript = toTranscriptEntries(transcript);
+
+    const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(45_000);
+    expect(profile.age).toBe(36);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
+    expect(profile.timeline.toLowerCase()).toMatch(/4/);
+    expect(profile.hasEmergencyFund).toBe(false);
+    expect(profile.monthlyContribution).toBe(1_000);
+  });
+
+  // CLARIFY_RULES #18: clear primary A/B/C answer (C = calm/buy more) overrides conservative secondary signals.
+  // Short timeline and no emergency fund do not override an explicit primary behavioral signal.
+  it("should extract aggressive when clear primary signal (C) overrides conservative secondary signals", async () => {
+    const transcript: ResponseInputItem[] = [
+      {
+        role: "user",
+        content: "I have ₪70,000 to invest, I'm 40, Israel, 4 years",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "A few gaps:\n1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold (or buy more)?\n2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?",
+        }),
+        call_id: "call_1",
+        id: "fc_1",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output:
+          "C — I'd stay calm and probably buy more while it's cheap. No emergency fund, no debt, ₪2,500/month, intermediate, no brokerage.",
+      },
+      {
+        type: "function_call",
+        name: "ask_user",
+        arguments: JSON.stringify({
+          question:
+            "What equity allocation would you like? And for the buffer, a קרן כספית — does that work?",
+        }),
+        call_id: "call_2",
+        id: "fc_2",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_2",
+        output: "S&P 500. קרן כספית for the buffer.",
+      },
+    ];
+    lastTranscript = toTranscriptEntries(transcript);
+
+    const profile = await extractUserProfile(transcript);
+    lastProfile = profile;
+
+    assertValidProfile(profile);
+    expect(profile.amount).toBe(70_000);
+    expect(profile.age).toBe(40);
+    expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
+    expect(profile.timeline.toLowerCase()).toMatch(/4/);
+    expect(profile.hasEmergencyFund).toBe(false);
+    expect(profile.monthlyContribution).toBe(2_500);
   });
 });
