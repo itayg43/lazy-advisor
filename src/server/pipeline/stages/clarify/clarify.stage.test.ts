@@ -11,6 +11,7 @@ const {
   mockedHandleUnrealisticExpectations,
   mockedHandleContradictoryRisk,
   mockedCollectFields,
+  mockedCollectContribution,
   mockedCollectPreferences,
   mockedExtractUserProfile,
 } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const {
   mockedHandleUnrealisticExpectations: vi.fn(),
   mockedHandleContradictoryRisk: vi.fn(),
   mockedCollectFields: vi.fn(),
+  mockedCollectContribution: vi.fn(),
   mockedCollectPreferences: vi.fn(),
   mockedExtractUserProfile: vi.fn(),
 }));
@@ -38,6 +40,9 @@ vi.mock("#pipeline/stages/clarify/intake/clarify.contradictory", () => ({
 vi.mock("#pipeline/stages/clarify/fields/clarify.fields", () => ({
   collectFields: mockedCollectFields,
 }));
+vi.mock("#pipeline/stages/clarify/contribution/clarify.contribution", () => ({
+  collectContribution: mockedCollectContribution,
+}));
 vi.mock("#pipeline/stages/clarify/preferences/clarify.preferences", () => ({
   collectPreferences: mockedCollectPreferences,
 }));
@@ -51,7 +56,7 @@ describe("runClarifyStage", () => {
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
 
   const mockProfile: UserProfile = {
-    goal: "invest ₪55,000 as a beginner, moderate risk, 20-year horizon with ₪1,800/month contributions",
+    goal: "invest ₪55,000 as a beginner, moderate risk, 20-year horizon, plans to add money periodically",
     amount: 55_000,
     age: 28,
     riskTolerance: RiskTolerance.enum.moderate,
@@ -59,12 +64,20 @@ describe("runClarifyStage", () => {
     investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
     hasEmergencyFund: true,
     hasDebt: false,
-    monthlyContribution: 1_800,
+    plansToContribute: true,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedCollectFields.mockResolvedValue("resp_fields");
+    mockedCollectFields.mockResolvedValue({
+      goal: mockProfile.goal,
+      amount: mockProfile.amount,
+      age: mockProfile.age,
+      timeline: mockProfile.timeline,
+      hasEmergencyFund: mockProfile.hasEmergencyFund,
+      hasDebt: mockProfile.hasDebt,
+    });
+    mockedCollectContribution.mockResolvedValue({ plansToContribute: true });
     mockedCollectPreferences.mockResolvedValue("resp_prefs");
     mockedExtractUserProfile.mockResolvedValue(mockProfile);
   });
@@ -77,7 +90,7 @@ describe("runClarifyStage", () => {
 
       expect(result).toEqual(mockProfile);
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: mockGoal },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );
@@ -103,7 +116,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: [], previous_response_id: "resp_intake" },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );
@@ -121,7 +134,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: [], previous_response_id: "resp_intake" },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );
@@ -139,7 +152,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: [], previous_response_id: "resp_intake" },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );

@@ -32,7 +32,7 @@ describe("collectPreferences", () => {
       name: ctx.task.name,
       passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
-      profile: lastProfile,
+      output: lastProfile,
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastTranscript = lastProfile = undefined;
@@ -93,7 +93,7 @@ describe("collectPreferences", () => {
     }
   });
 
-  // CLARIFY_RULES #5: when an equity preference is already stated in the goal, the equity guard fires
+  // CLARIFY_RULES #4: when an equity preference is already stated in the goal, the equity guard fires
   // and the portfolio defaults question covers buffer only. User accepts קרן כספית.
   it("should skip equity defaults when preference already stated and ask buffer only", async () => {
     const fieldsTranscript: ResponseInputItem[] = [
@@ -140,7 +140,7 @@ describe("collectPreferences", () => {
     }
   });
 
-  // CLARIFY_RULES #6: when multiple instruments are named without a percentage split, the preferences
+  // CLARIFY_RULES #5: when multiple instruments are named without a percentage split, the preferences
   // phase asks for the split before treating investmentPreferences as complete.
   it("should ask for split when multiple instruments are named without one", async () => {
     const fieldsTranscript: ResponseInputItem[] = [
@@ -192,7 +192,7 @@ describe("collectPreferences", () => {
     }
   });
 
-  // CLARIFY_RULES #11: when the user explicitly declines the buffer because their emergency fund is
+  // CLARIFY_RULES #9: when the user explicitly declines the buffer because their emergency fund is
   // held separately outside the portfolio, the stage accepts that without pushback and captures the
   // no-buffer intent in investmentPreferences.
   it("should accept no-buffer preference when emergency fund is external", async () => {

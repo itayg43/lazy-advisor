@@ -29,7 +29,7 @@ describe("handleContradictoryRisk", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // CLARIFY_RULES #3: stage uses a concrete loss scenario to resolve contradictory risk signals.
+  // CLARIFY_RULES #2: stage uses a concrete loss scenario to resolve contradictory risk signals.
   describe("accepted", () => {
     it("should resolve contradiction and return accepted result when user picks a risk level", async () => {
       lastGoal = "I want maximum returns but I can't afford to lose any money";

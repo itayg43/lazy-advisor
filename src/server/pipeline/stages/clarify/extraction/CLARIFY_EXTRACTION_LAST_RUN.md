@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-15T19:19:38.352Z | Commit: 6181747
+Timestamp: 2026-04-17T02:15:21.391Z | Commit: ec1048d
 
 ---
 
@@ -40,8 +40,8 @@ Any combination or split works — e.g., 70% FTSE All-World + 30% TLV-125.
 
 **User:** 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right.
 
-**Extracted profile:**
-goal: Start long-term investing of ₪55,000 with a 70% FTSE All-World + 30% TLV-125 equity mix, using a קרן כספית buffer, contributing about ₪1,800/month; a 20% market drop would stress you but you wouldn't sell. | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years (maybe until around 50) | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1800
+**Output:**
+goal: Start investing ₪55,000 for long-term (about 20 years, maybe until around 50); invest ₪1,800 per month; 70% FTSE All-World and 30% TLV-125; keep a קרן כספית buffer; a 20% drop would stress me but I wouldn't sell | amount: 55000 | age: 28 | riskTolerance: moderate | timeline: about 20 years, maybe until I'm around 50 | investmentPreferences: 70% FTSE All-World and 30% TLV-125. קרן כספית sounds right | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -54,7 +54,6 @@ goal: Start long-term investing of ₪55,000 with a 70% FTSE All-World + 30% TLV
 1) Do you have an emergency fund?
 2) Any debt?
 3) How much can you invest monthly going forward?
-4) Do you have a brokerage account?
 5) What country are you in?
 6) How long is "long-term" — roughly how many years or until what age?
 
@@ -66,8 +65,8 @@ goal: Start long-term investing of ₪55,000 with a 70% FTSE All-World + 30% TLV
 
 **User:** FTSE All-World. קרן כספית for the buffer.
 
-**Extracted profile:**
-goal: Moderate risk long-term retirement savings, investing ₪75,000 with about ₪2,000/mo until retirement at 65 (about 30 years), with a קרן כספית buffer and no debt (has emergency fund). | amount: 75000 | age: 35 | riskTolerance: moderate | timeline: about 30 years until retirement at 65 | knowledgeLevel: beginner | brokerage: IBI | investmentPreferences: FTSE All-World. קרן כספית for the buffer. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
+**Output:**
+goal: Retirement savings: invest ₪75,000 with moderate risk, investing about ₪2,000/month, in Israel, until retirement at 65 | amount: 75000 | age: 35 | riskTolerance: moderate | timeline: about 30 years until retirement at 65 | investmentPreferences: FTSE All-World, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -90,11 +89,9 @@ C) Buy more while it's cheap
 4) Emergency fund in place? (yes/no)
 5) Any outstanding debt? (yes/no)
 6) How much can you invest monthly?
-7) Do you have a brokerage account?
-8) What country are you in?
-9) What's your knowledge level about investing (beginner, intermediate, advanced)?
+7) What country are you in?
 
-**User:** ₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, no brokerage, I'm in Israel, I'm a beginner
+**User:** ₪45,000, I'm 33, about 5 years, yes emergency fund, no debt, ₪1,000/mo, I'm in Israel, I'm a beginner
 
 **Agent:** Before I hand this off, two things to shape the approach:
 1. What do you want your equity allocation to look like? Options include FTSE All-World (~10%/yr), MSCI World (~11%/yr), S&P 500 (~13%/yr), NASDAQ-100 (~18%/yr), TLV-125 (~8%/yr in NIS), or any combination.
@@ -102,8 +99,8 @@ C) Buy more while it's cheap
 
 **User:** MSCI World. קרן כספית.
 
-**Extracted profile:**
-goal: Maximum returns, but not willing to lose any money; invests ₪45,000 with a moderate approach (would feel sick but hold), 5-year timeline | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: MSCI World. קרן כספית. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1000
+**Output:**
+goal: Maximum returns, but can't afford to lose any money; invest ₪45,000 (beginner) for ~5 years, using MSCI World with a קרן כספית buffer | amount: 45000 | age: 33 | riskTolerance: moderate | timeline: about 5 years | investmentPreferences: MSCI World. קרן כספית. | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -118,7 +115,6 @@ goal: Maximum returns, but not willing to lose any money; invests ₪45,000 with
 3) Risk tolerance?
 4) Emergency fund and debt status?
 5) How much can you invest monthly?
-6) Do you have a brokerage account?
 7) What's your investing experience?
 8) What country are you in?
 
@@ -128,8 +124,8 @@ goal: Maximum returns, but not willing to lose any money; invests ₪45,000 with
 
 **User:** 80% MSCI World and 20% TLV-125. קרן כספית for the buffer.
 
-**Extracted profile:**
-goal: Invest ₪200,000 with a 20+ year timeline, targeting an 80% MSCI World and 20% TLV-125 equity split, with a קרן כספית buffer, contributing ₪5,000/month; has an emergency fund and no debt | amount: 200000 | age: 34 | riskTolerance: moderate | timeline: 20+ years | knowledgeLevel: intermediate | brokerage: Interactive Brokers | investmentPreferences: 80% MSCI World and 20% TLV-125. קרן כספית for the buffer. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 5000
+**Output:**
+goal: Invest ₪200,000 for a 20+ year long-term horizon, contributing ₪5,000/month, using an equity split of 80% MSCI World and 20% TLV-125 with a קרן כספית buffer (in Israel). | amount: 200000 | age: 34 | riskTolerance: moderate | timeline: 20+ years | investmentPreferences: 80% MSCI World and 20% TLV-125. קרן כספית for the buffer. | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -140,7 +136,7 @@ goal: Invest ₪200,000 with a 20+ year timeline, targeting an 80% MSCI World an
 
 **Agent:** Happy to help. A few questions: How old are you? What country are you in? When might you need this money? Risk tolerance? Emergency fund? Any debt? Monthly contribution? Knowledge level? Brokerage?
 
-**User:** I'm 32, Israel, about 15 years, aggressive, yes emergency fund, no debt, ₪2,000/mo, intermediate, no brokerage
+**User:** I'm 32, Israel, about 15 years, aggressive, yes emergency fund, no debt, ₪2,000/mo, intermediate
 
 **Agent:** Before I hand this off, two things:
 1. What do you want your equity allocation to look like? Options include FTSE All-World (~10%/yr), S&P 500 (~13%/yr), NASDAQ-100 (~18%/yr, very volatile), TLV-125 (~8%/yr in NIS), or any combination.
@@ -148,8 +144,8 @@ goal: Invest ₪200,000 with a 20+ year timeline, targeting an 80% MSCI World an
 
 **User:** 100% NASDAQ. I have strong conviction in tech and a long horizon — I'm fine with the volatility. קרן כספית is fine for the buffer.
 
-**Extracted profile:**
-goal: Start investing ₪80,000 with an aggressive, long horizon (~15 years), with 100% NASDAQ allocation (tech conviction) and a קרן כספית for the buffer. | amount: 80000 | age: 32 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 100% NASDAQ; קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
+**Output:**
+goal: Start investing ₪80,000 in Israel with an aggressive, tech-focused approach (100% NASDAQ) and a strong conviction in tech, for about 15 years, while contributing ₪2,000/month; uses קרן כספית for the buffer; has an emergency fund and no debt. | amount: 80000 | age: 32 | riskTolerance: aggressive | timeline: about 15 years | investmentPreferences: 100% NASDAQ (tech focus) with קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -168,14 +164,14 @@ goal: Start investing ₪80,000 with an aggressive, long horizon (~15 years), wi
 7) How much can you invest monthly?
 8) Knowledge level (beginner, intermediate, advanced)?
 
-**User:** I'm 31, Israel, about 15 years, moderate risk, yes emergency fund, no debt, ₪2,500/mo, intermediate. No brokerage yet.
+**User:** I'm 31, Israel, about 15 years, moderate risk, yes emergency fund, no debt, ₪2,500/mo, intermediate.
 
 **Agent:** What percentage would you put in each — for example, 70% S&P 500 and 30% TLV-125, or 50/50?
 
 **User:** 70% S&P 500 and 30% TLV-125
 
-**Extracted profile:**
-goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500, 30% TLV-125) with about a 15-year timeline, moderate risk, with an emergency fund and no debt, contributing ₪2,500/month. | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 70% S&P 500 and 30% TLV-125 | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2500
+**Output:**
+goal: invest ₪100,000 mainly in S&P 500 and TLV-125 index funds, with a 15-year timeline and moderate risk | amount: 100000 | age: 31 | riskTolerance: moderate | timeline: about 15 years | investmentPreferences: 70% S&P 500 and 30% TLV-125 | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -195,7 +191,7 @@ goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500, 
 8) Knowledge level?
 9) Brokerage account?
 
-**User:** I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo, no brokerage
+**User:** I'm 26, Israel, aggressive, about 15 years, beginner, yes emergency fund, no debt, ₪500/mo
 
 **Agent:** Before I hand this off, two things:
 1. What equity allocation do you want? Options: FTSE All-World (~10%/yr), MSCI World (~11%/yr), S&P 500 (~13%/yr), NASDAQ-100 (~18%/yr), TLV-125 (~8%/yr in NIS), or any combination.
@@ -203,8 +199,8 @@ goal: Invest ₪100,000 mainly in S&P 500 and TLV-125 index funds (70% S&P 500, 
 
 **User:** 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio.
 
-**Extracted profile:**
-goal: Invest ₪25,000 all in the market, aggressively, over about 15 years, as a beginner; 100% S&P 500 with no in-portfolio buffer (emergency fund already in a קרן כספית outside this portfolio) | amount: 25000 | age: 26 | riskTolerance: aggressive | timeline: about 15 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 500
+**Output:**
+goal: Invest ₪25,000 all in the market with an aggressive approach; invest for about 15 years; 100% S&P 500; no in-portfolio buffer (emergency fund already in a קרן כספית outside this portfolio); plans to add ₪500/month. | amount: 25000 | age: 26 | riskTolerance: aggressive | timeline: about 15 years | investmentPreferences: 100% S&P 500. No buffer — my emergency fund is already in a קרן כספית outside this portfolio. | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -219,14 +215,14 @@ goal: Invest ₪25,000 all in the market, aggressively, over about 15 years, as 
 3. If your portfolio dropped 20% in a year — would you A) sell, B) feel stressed but hold, or C) stay calm and hold (or buy more)?
 4. Do you have an emergency fund? Any debt? How much can you invest monthly? Knowledge level? Brokerage?
 
-**User:** I'm 30, about 20 years, I'd hold and not worry about it — drops don't stress me, I'm in it for the long run. Yes emergency fund, no debt, ₪2,000/month, beginner, no brokerage. Israel.
+**User:** I'm 30, about 20 years, I'd hold and not worry about it — drops don't stress me, I'm in it for the long run. Yes emergency fund, no debt, ₪2,000/month, beginner. Israel.
 
 **Agent:** Before I hand this off — what equity allocation do you want? Options: FTSE All-World (~10%/yr), MSCI World (~11%/yr), S&P 500 (~13%/yr), NASDAQ-100 (~18%/yr), TLV-125 (~8%/yr in NIS), or any combination. For the buffer, a קרן כספית is the standard choice — does that work?
 
 **User:** 80% MSCI World, 20% TLV-125. קרן כספית is fine.
 
-**Extracted profile:**
-goal: Start investing long term with ₪60,000, over about 20 years, contributing ₪2,000/month; 80% MSCI World and 20% TLV-125, using a קרן כספית buffer | amount: 60000 | age: 30 | riskTolerance: aggressive | timeline: about 20 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: 80% MSCI World, 20% TLV-125. קרן כספית is fine. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 2000
+**Output:**
+goal: Start investing ₪60,000 long term (~20 years). Plans to invest ₪2,000/month, has an emergency fund and no debt. Wants 80% MSCI World and 20% TLV-125 (קרן כספית buffer is fine) and will hold through market drops without stress. | amount: 60000 | age: 30 | riskTolerance: aggressive | timeline: about 20 years | investmentPreferences: 80% MSCI World, 20% TLV-125. קרן כספית is fine. | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -241,14 +237,14 @@ goal: Start investing long term with ₪60,000, over about 20 years, contributin
 3. If your portfolio dropped 20% in a year — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?
 4. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage? Country?
 
-**User:** I'm 38, about 5 years — I need this money for a home purchase. I've never been through a market drop — I honestly don't know what I'd do. Yes emergency fund, no debt, ₪1,500/month, beginner, no brokerage, Israel.
+**User:** I'm 38, about 5 years — I need this money for a home purchase. I've never been through a market drop — I honestly don't know what I'd do. Yes emergency fund, no debt, ₪1,500/month, beginner, Israel.
 
 **Agent:** What equity allocation would you like? Options: FTSE All-World, MSCI World, S&P 500, NASDAQ-100, TLV-125, or a combination. For the buffer, a קרן כספית — does that work?
 
 **User:** FTSE All-World. קרן כספית for the buffer.
 
-**Extracted profile:**
-goal: Invest ₪40,000 for a home purchase, needing this money in about 5 years | amount: 40000 | age: 38 | riskTolerance: conservative | timeline: about 5 years (home purchase) | knowledgeLevel: beginner | brokerage: none | investmentPreferences: FTSE All-World, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1500
+**Output:**
+goal: Invest ₪40,000 for a home purchase in about 5 years; beginner; invest ₪1,500/month; FTSE All-World with a קרן כספית buffer. | amount: 40000 | age: 38 | riskTolerance: conservative | timeline: about 5 years | investmentPreferences: FTSE All-World, קרן כספית for the buffer | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -261,14 +257,14 @@ goal: Invest ₪40,000 for a home purchase, needing this money in about 5 years 
 1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?
 2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?
 
-**User:** Hard to say — I've never invested before, no idea how I'd react to a big drop. No emergency fund, no debt, ₪800/month, beginner, no brokerage.
+**User:** Hard to say — I've never invested before, no idea how I'd react to a big drop. No emergency fund, no debt, ₪800/month, beginner.
 
 **Agent:** What equity allocation would you like? And for the buffer, a קרן כספית — does that work?
 
 **User:** FTSE All-World. קרן כספית yes.
 
-**Extracted profile:**
-goal: Invest ₪30,000 for about 10 years as a beginner in Israel, with ₪800/month contributions; wants FTSE All-World and a קרן כספית | amount: 30000 | age: 29 | riskTolerance: conservative | timeline: about 10 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: FTSE All-World. קרן כספית yes. | hasEmergencyFund: false | hasDebt: false | monthlyContribution: 800
+**Output:**
+goal: invest ₪30,000 for about 10 years; in Israel; beginner, planning to contribute ₪800/month; FTSE All-World with קרן כספית buffer | amount: 30000 | age: 29 | riskTolerance: conservative | timeline: about 10 years | investmentPreferences: FTSE All-World. קרן כספית yes. | hasEmergencyFund: false | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -281,14 +277,14 @@ goal: Invest ₪30,000 for about 10 years as a beginner in Israel, with ₪800/m
 1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?
 2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?
 
-**User:** I'd probably be fine with drops, wouldn't panic. Yes emergency fund, no debt, ₪1,200/month, intermediate, no brokerage.
+**User:** I'd probably be fine with drops, wouldn't panic. Yes emergency fund, no debt, ₪1,200/month, intermediate.
 
 **Agent:** What equity allocation would you like? And for the buffer, a קרן כספית — does that work?
 
 **User:** 100% NASDAQ. I have strong conviction in tech. קרן כספית is fine.
 
-**Extracted profile:**
-goal: Invest ₪50,000 for 15 years, with 100% NASDAQ based on strong conviction in tech, while having an emergency fund and no debt, and contributing ₪1,200/month | amount: 50000 | age: 27 | riskTolerance: aggressive | timeline: 15 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: 100% NASDAQ. Strong conviction in tech. קרן כספית buffer is fine. | hasEmergencyFund: true | hasDebt: false | monthlyContribution: 1200
+**Output:**
+goal: invest ₪50,000 in Israel for 15 years; 100% NASDAQ with a קרן כספית buffer; monthly contribution of ₪1,200 | amount: 50000 | age: 27 | riskTolerance: aggressive | timeline: 15 years | investmentPreferences: 100% NASDAQ (strong conviction in tech); קרן כספית is fine for the buffer | hasEmergencyFund: true | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -301,14 +297,14 @@ goal: Invest ₪50,000 for 15 years, with 100% NASDAQ based on strong conviction
 1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold?
 2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?
 
-**User:** I've never invested before — no idea what I'd do in that situation. No emergency fund, no debt, ₪1,000/month, beginner, no brokerage.
+**User:** I've never invested before — no idea what I'd do in that situation. No emergency fund, no debt, ₪1,000/month, beginner.
 
 **Agent:** What equity allocation would you like? And for the buffer, a קרן כספית — does that work?
 
 **User:** FTSE All-World. קרן כספית yes.
 
-**Extracted profile:**
-goal: Invest ₪45,000 in FTSE All-World with a קרן כספית buffer over 4 years, with ₪1,000/month contributions; beginner; no emergency fund and no debt | amount: 45000 | age: 36 | riskTolerance: conservative | timeline: 4 years | knowledgeLevel: beginner | brokerage: none | investmentPreferences: FTSE All-World; קרן כספית yes | hasEmergencyFund: false | hasDebt: false | monthlyContribution: 1000
+**Output:**
+goal: invest ₪45,000 at age 36 in Israel with a 4-year timeline; beginner; plans to contribute ₪1,000/month; FTSE All-World with קרן כספית buffer; no emergency fund and no debt | amount: 45000 | age: 36 | riskTolerance: conservative | timeline: 4 years | investmentPreferences: FTSE All-World. קרן כספית yes. | hasEmergencyFund: false | hasDebt: false | plansToContribute: true
 
 
 ---
@@ -321,12 +317,12 @@ goal: Invest ₪45,000 in FTSE All-World with a קרן כספית buffer over 4 
 1. If your portfolio dropped 20% — would you A) sell, B) feel stressed but hold, or C) stay calm and hold (or buy more)?
 2. Emergency fund? Debt? Monthly contribution? Knowledge level? Brokerage?
 
-**User:** C — I'd stay calm and probably buy more while it's cheap. No emergency fund, no debt, ₪2,500/month, intermediate, no brokerage.
+**User:** C — I'd stay calm and probably buy more while it's cheap. No emergency fund, no debt, ₪2,500/month, intermediate.
 
 **Agent:** What equity allocation would you like? And for the buffer, a קרן כספית — does that work?
 
 **User:** S&P 500. קרן כספית for the buffer.
 
-**Extracted profile:**
-goal: Invest ₪70,000 with a 4-year timeline in S&P 500, using a קרן כספית for the buffer; during a 20% drop you would stay calm and probably buy more. | amount: 70000 | age: 40 | riskTolerance: aggressive | timeline: 4 years | knowledgeLevel: intermediate | brokerage: none | investmentPreferences: S&P 500. קרן כספית for the buffer. | hasEmergencyFund: false | hasDebt: false | monthlyContribution: 2500
+**Output:**
+goal: Invest ₪70,000 in Israel for 4 years; during a 20% drop you stay calm and buy more while it's cheap; S&P 500 with קרן כספית buffer | amount: 70000 | age: 40 | riskTolerance: aggressive | timeline: 4 years | investmentPreferences: S&P 500. קרן כספית for the buffer. | hasEmergencyFund: false | hasDebt: false | plansToContribute: true
 

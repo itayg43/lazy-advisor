@@ -29,7 +29,7 @@ describe("handleOutOfScopeRedirect", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // CLARIFY_RULES #4: redirect explains concentration risk, offers sector ETF middle ground,
+  // CLARIFY_RULES #3: redirect explains concentration risk, offers sector ETF middle ground,
   // and ends with a question. Field collection begins only after acceptance — not in this phase.
   describe("accepted", () => {
     it("should redirect and return accepted result with responseId", async () => {

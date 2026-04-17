@@ -25,7 +25,7 @@ describe("runClarifyStage", () => {
       passed: ctx.task.result?.state === "pass",
       goal: lastGoal,
       transcript: lastTranscript,
-      profile: lastProfile,
+      output: lastProfile,
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastGoal = lastTranscript = lastProfile = undefined;
@@ -36,6 +36,7 @@ describe("runClarifyStage", () => {
     lastGoal = "I have ₪55,000 to invest, I'm 28, moderate risk, 20 years, beginner";
     const responder = createTrackedResponder([
       "yes emergency fund, no debt, ₪1,800/mo",
+      "Yes, I plan to add money every month",
       "FTSE All-World mostly. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;
@@ -56,12 +57,13 @@ describe("runClarifyStage", () => {
     expect(result.hasDebt).toBe(false);
   });
 
-  // CLARIFY_RULES #4: out-of-scope goal → redirect → user accepts → full profile extracted.
+  // CLARIFY_RULES #3: out-of-scope goal → redirect → user accepts → full profile extracted.
   it("should redirect out-of-scope goal and produce a full profile after acceptance", async () => {
     lastGoal = "Should I buy NVIDIA stock?";
     const responder = createTrackedResponder([
       "ok fine, I'm open to ETFs. I have ₪30,000, I'm 29, moderate risk, 10 years",
       "yes emergency fund, no debt, ₪1,000/mo, beginner",
+      "Yes, I plan to add money every month",
       "S&P 500. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;

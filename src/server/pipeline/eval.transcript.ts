@@ -58,7 +58,7 @@ export const appendLastRunEntry = (
     passed: boolean;
     goal?: string;
     transcript: TranscriptEntry[];
-    profile?: unknown;
+    output?: unknown;
     error?: string;
   },
 ): void => {
@@ -74,11 +74,11 @@ export const appendLastRunEntry = (
     lines.push(`${prefix} ${turn.content}`, "");
   }
 
-  if (entry.profile != null && typeof entry.profile === "object") {
-    const fields = Object.entries(entry.profile)
+  if (entry.output != null && typeof entry.output === "object") {
+    const fields = Object.entries(entry.output)
       .map(([k, v]) => `${k}: ${String(v)}`)
       .join(" | ");
-    lines.push("**Extracted profile:**", fields, "");
+    lines.push("**Output:**", fields, "");
   }
 
   if (entry.error) {

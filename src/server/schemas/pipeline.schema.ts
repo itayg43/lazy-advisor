@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-  MAX_AGE,
-  MAX_AMOUNT,
-  MAX_MONTHLY_CONTRIBUTION,
-  MAX_STRING_LENGTH,
-} from "#constants/validation.constants";
+import { MAX_AGE, MAX_AMOUNT, MAX_STRING_LENGTH } from "#constants/validation.constants";
 
 export const RiskTolerance = z.enum(["conservative", "moderate", "aggressive"]);
 
@@ -18,7 +13,7 @@ export const UserProfileSchema = z.object({
   investmentPreferences: z.string().min(1).max(MAX_STRING_LENGTH),
   hasEmergencyFund: z.boolean(),
   hasDebt: z.boolean(),
-  monthlyContribution: z.number().nonnegative().int().max(MAX_MONTHLY_CONTRIBUTION),
+  plansToContribute: z.boolean(),
 });
 
 const AllocationSliceSchema = z.object({

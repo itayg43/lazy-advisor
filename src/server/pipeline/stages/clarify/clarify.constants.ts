@@ -22,5 +22,6 @@ export const INTAKE_REJECTION_MESSAGES: Partial<
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
 export const MAX_FIELDS_TOOL_CALLS = 10;
+export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
 export const MAX_PREFERENCES_TOOL_CALLS = 5;
 export const MAX_RISK_TOOL_CALLS = 5;

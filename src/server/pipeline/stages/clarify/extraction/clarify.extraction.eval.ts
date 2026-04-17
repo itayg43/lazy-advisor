@@ -29,7 +29,7 @@ describe("clarifyExtraction", () => {
       name: ctx.task.name,
       passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
-      profile: lastProfile,
+      output: lastProfile,
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastTranscript = lastProfile = undefined;
@@ -102,7 +102,7 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.monthlyContribution).toBe(1_800);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
     expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
     expect(profile.investmentPreferences).not.toBe("none");
@@ -114,7 +114,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #10: tests extraction when fields are split between goal and response.
+  // CLARIFY_FIELDS_RULES #2: tests extraction when fields are split between goal and response.
   // Portfolio defaults are asked and answered after all gaps are collected.
   it("should extract profile with fields split between goal and response", async () => {
     const transcript: ResponseInputItem[] = [
@@ -163,7 +163,7 @@ describe("clarifyExtraction", () => {
     expect(profile.age).toBe(35);
     expect(profile.amount).toBe(75_000);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(2_000);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/30|65|retire/);
@@ -171,7 +171,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #3: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
+  // CLARIFY_RULES #2: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
   // Portfolio defaults are asked and answered after contradiction is resolved.
   it("should extract resolved risk tolerance from contradictory conversation", async () => {
     const transcript: ResponseInputItem[] = [
@@ -236,7 +236,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(45_000);
     expect(profile.age).toBe(33);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(1_000);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/5/);
@@ -244,7 +244,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #8: tests "moderate-to-aggressive" risk mapping and that mentioning Irish ETFs as knowledge
+  // CLARIFY_RULES #7: tests "moderate-to-aggressive" risk mapping and that mentioning Irish ETFs as knowledge
   // does not set investmentPreferences — portfolio defaults are still asked.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
@@ -293,7 +293,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(200_000);
     expect(profile.age).toBe(34);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(5_000);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
@@ -303,7 +303,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #7: tests that 100% concentration in a single index is captured as-is without modification.
+  // CLARIFY_RULES #6: tests that 100% concentration in a single index is captured as-is without modification.
   it("should capture 100% single-index concentration as a valid investmentPreferences answer", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -356,7 +356,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #6: tests that extraction captures specific instruments with their percentage split.
+  // CLARIFY_RULES #5: tests that extraction captures specific instruments with their percentage split.
   it("should extract investment preferences with percentage split when stated", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -405,7 +405,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(100_000);
     expect(profile.age).toBe(31);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(2_500);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
@@ -413,7 +413,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toMatch(/\d+%/);
   });
 
-  // CLARIFY_RULES #11: tests that "no buffer" intent is captured correctly when user declines the buffer
+  // CLARIFY_RULES #9: tests that "no buffer" intent is captured correctly when user declines the buffer
   // because their emergency fund is held separately outside the portfolio.
   it("should extract no-buffer preference when user declines buffer with external emergency fund", async () => {
     const transcript: ResponseInputItem[] = [
@@ -468,7 +468,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
   });
 
-  // CLARIFY_RULES #12: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
+  // CLARIFY_RULES #10: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
   // Absence of discomfort is the signal; buying-on-dips is not required.
   it("should extract aggressive for passive calm holder with no expressed discomfort", async () => {
     const transcript: ResponseInputItem[] = [
@@ -519,10 +519,10 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.monthlyContribution).toBe(2_000);
+    expect(profile.plansToContribute).toBe(true);
   });
 
-  // CLARIFY_RULES #13: short timeline (5 years) + genuinely ambiguous behavioral → conservative via secondary signal.
+  // CLARIFY_RULES #11: short timeline (5 years) + genuinely ambiguous behavioral → conservative via secondary signal.
   // Behavioral statement is uncertain ("not sure how I'd react"), so timeline fires as secondary signal.
   it("should extract conservative for genuinely ambiguous behavioral signal with a 5-year timeline", async () => {
     const transcript: ResponseInputItem[] = [
@@ -573,10 +573,10 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
     expect(profile.timeline.toLowerCase()).toMatch(/5/);
     expect(profile.hasEmergencyFund).toBe(true);
-    expect(profile.monthlyContribution).toBe(1_500);
+    expect(profile.plansToContribute).toBe(true);
   });
 
-  // CLARIFY_RULES #14: genuinely ambiguous behavioral signal + no emergency fund → conservative via secondary signal.
+  // CLARIFY_RULES #12: genuinely ambiguous behavioral signal + no emergency fund → conservative via secondary signal.
   it("should extract conservative for genuinely ambiguous behavioral signal with no emergency fund", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -625,10 +625,10 @@ describe("clarifyExtraction", () => {
     expect(profile.age).toBe(29);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
     expect(profile.hasEmergencyFund).toBe(false);
-    expect(profile.monthlyContribution).toBe(800);
+    expect(profile.plansToContribute).toBe(true);
   });
 
-  // CLARIFY_RULES #15: borderline behavioral signal + 100% NASDAQ → aggressive via preferences corroboration.
+  // CLARIFY_RULES #13: borderline behavioral signal + 100% NASDAQ → aggressive via preferences corroboration.
   it("should extract aggressive when 100% NASDAQ preference corroborates borderline behavioral signal", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -679,7 +679,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/nasdaq/i);
   });
 
-  // CLARIFY_RULES #16: multiple conservative secondary signals (short timeline + no emergency fund) compound → conservative.
+  // CLARIFY_RULES #14: multiple conservative secondary signals (short timeline + no emergency fund) compound → conservative.
   it("should extract conservative when multiple conservative secondary signals compound", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -729,10 +729,10 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
     expect(profile.timeline.toLowerCase()).toMatch(/4/);
     expect(profile.hasEmergencyFund).toBe(false);
-    expect(profile.monthlyContribution).toBe(1_000);
+    expect(profile.plansToContribute).toBe(true);
   });
 
-  // CLARIFY_RULES #17: clear primary A/B/C answer (C = calm/buy more) overrides conservative secondary signals.
+  // CLARIFY_RULES #15: clear primary A/B/C answer (C = calm/buy more) overrides conservative secondary signals.
   // Short timeline and no emergency fund do not override an explicit primary behavioral signal.
   it("should extract aggressive when clear primary signal (C) overrides conservative secondary signals", async () => {
     const transcript: ResponseInputItem[] = [
@@ -783,6 +783,6 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
     expect(profile.timeline.toLowerCase()).toMatch(/4/);
     expect(profile.hasEmergencyFund).toBe(false);
-    expect(profile.monthlyContribution).toBe(2_500);
+    expect(profile.plansToContribute).toBe(true);
   });
 });

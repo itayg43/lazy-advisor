@@ -24,7 +24,7 @@ describe("researchExtraction", () => {
       name: ctx.task.name,
       passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
-      profile: lastResult,
+      output: lastResult,
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastTranscript = lastResult = undefined;

@@ -29,7 +29,7 @@ describe("handleUnrealisticExpectations", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // CLARIFY_RULES #9: stage explains why doubling in 6 months is unrealistic and asks
+  // CLARIFY_RULES #8: stage explains why doubling in 6 months is unrealistic and asks
   // if the user wants to proceed with a realistic long-term plan.
   describe("accepted", () => {
     it("should redirect and return accepted result when user pivots to long-term", async () => {

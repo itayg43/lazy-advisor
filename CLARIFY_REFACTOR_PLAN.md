@@ -36,7 +36,8 @@ Phases 1 & 2 are parallel. Phases 3–7 are parallel once 1 & 2 are done. Phase 
 |-------|-------------|--------|
 | 1 | Expand `clarify.constants.ts` | Complete |
 | 2 | Create typed I/O schemas | Complete |
-| 3 | Refactor fields phase to typed I/O | Not started |
+| 3 | Refactor fields phase to typed I/O | Complete |
+| 3b | Create the contribution phase | Complete |
 | 4 | Create the risk phase | Not started |
 | 5 | Refactor preferences phase to typed I/O | Not started |
 | 6 | Refactor extraction to thin assembly | Not started |
@@ -48,33 +49,6 @@ Phases 1 & 2 are parallel. Phases 3–7 are parallel once 1 & 2 are done. Phase 
 ---
 
 ## Phases
-
-### Phase 3 — Refactor fields phase to typed I/O
-
-**What:** Change `collectFields` to accept `goalText: string` and return `Promise<FieldsOutput>`.
-
-Internal changes:
-1. Constructs `{ input: goalText }` directly — no `buildSourceParams`.
-2. Calls `runPhaseLoop` as before.
-3. Post-loop: makes a separate `zodTextFormat(FieldsOutputSchema)` extraction call off the loop's `responseId`.
-4. Returns `FieldsOutput`.
-
-Prompt changes:
-- Remove `riskTolerance` from required fields (moves to risk phase).
-- Remove `brokerage` from optional fields (dropped from profile).
-- Add `monthlyContribution: 0` rule: on second ask, append "If you're not planning to contribute monthly, ₪0 is a valid answer." After two asks with no specific value, default to `0`.
-
-Move prompt text to `clarify.fields.rules.md`.
-
-**Files:**
-- `src/server/pipeline/stages/clarify/fields/clarify.fields.ts`
-- `src/server/pipeline/stages/clarify/fields/clarify.fields.rules.md` — new
-- `src/server/pipeline/stages/clarify/fields/clarify.fields.test.ts` — update mocks for extraction call; assert `FieldsOutput`
-- `src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts` — update call signature; assert on `FieldsOutput` directly
-
-**Verify:** `npm test` (unit), `npm run test:evals -- clarify.fields.eval.ts`.
-
----
 
 ### Phase 4 — Create the risk phase
 
@@ -120,7 +94,7 @@ Internal changes:
 Prompt changes:
 - Import return figures from `BENCHMARK_RETURNS` (no hardcoded numbers).
 - Use `riskTolerance` to adjust framing: flag NASDAQ volatility more prominently for conservative users.
-- Handle `monthlyContribution: 0`: show lump-sum-only projections, no DCA examples.
+- Handle `plansToContribute: false`: show lump-sum framing; `true`: include periodic contribution context and compound growth benefit.
 
 Move prompt text to `clarify.preferences.rules.md`.
 
@@ -197,6 +171,10 @@ New content per spec: compute implied annualized return from stated goal (no fix
 
 ### Phase 8 — Wire new pipeline in `clarify.stage.ts`
 
+**Intake→fields context gap (decided during Phase 3):** When a user goes through an intake redirect (out-of-scope, unrealistic) and provides financial details during that conversation, `collectFields` starts fresh from the original goal and will re-ask for those fields. This is intentional — intake's sole job is to confirm the user is willing to proceed with ETF investing, not to gather investment data. The UX regression (re-asking already-stated fields) is acceptable for now.
+
+Fallback if quality proves poor: add a lightweight LLM extraction call at the end of each intake handler to produce a clean goal string (e.g. `"I want to invest ₪30,000 for 10 years via ETFs"`) that is returned as `redirectedGoal` and passed to `collectFields` instead of the original goal.
+
 **What:** Replace the responseId-chaining orchestration with typed I/O:
 
 ```ts
@@ -219,9 +197,10 @@ Remove:
 
 **Files:**
 - `src/server/pipeline/stages/clarify/clarify.stage.ts`
+- `src/server/pipeline/stages/clarify/clarify.stage.test.ts` — rewrite: drop per-phase mocks (`collectFields`, `collectPreferences`, etc.) and mock `callOpenAI`/`callOpenAIParsed` at the boundary instead. This tests the orchestrator's actual coordination logic end-to-end without bypassing phase implementations.
 - `src/lib/build-source-params.ts` — delete if no other importers remain (grep first)
 
-**Verify:** `npm run test:evals -- clarify.stage.eval.ts`.
+**Verify:** `npm run type-check` (removes all `@ts-expect-error` markers added during phases 3–7), `npm test`, `npm run test:evals -- clarify.stage.eval.ts`.
 
 ---
 
@@ -265,6 +244,7 @@ Checklist:
 | `clarify/clarify.schemas.ts` | New I/O types — phase 2 |
 | `clarify/clarify.lib.ts` | Loop utilities — no changes planned |
 | `clarify/fields/clarify.fields.ts` | Fields phase — phase 3 |
+| `clarify/contribution/clarify.contribution.ts` | Contribution phase — phase 3b (new) |
 | `clarify/risk/clarify.risk.ts` | Risk phase — phase 4 (new) |
 | `clarify/preferences/clarify.preferences.ts` | Preferences phase — phase 5 |
 | `clarify/extraction/clarify.extraction.ts` | Thin extraction — phase 6 |
