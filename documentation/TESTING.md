@@ -64,7 +64,8 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
-- **Eval granularity**: stages with multiple phases have one eval file per phase (e.g., `clarify.fields.eval.ts`, `clarify.risk.eval.ts`) plus a stage-level eval for the full pipeline. Stages with a single prompt have one eval file. All run via `npm run test:evals`.
-- **Assertion strength**: tight (exact equality) for values explicitly present in the input. Loose (schema validation, regex) for values the model derives or summarizes.
-- **Scenarios**: come from the phase-specific rules file co-located with the implementation (e.g., `clarify.fields.rules.md`) or the stage rules file in `workflow/stages/` — one test case per rule.
+- **Eval granularity**: stages with multiple phases have one eval file per phase (e.g., `clarify.fields.eval.ts`, `clarify.contribution.eval.ts`) plus a stage-level eval for the full pipeline. Stages with a single prompt have one eval file. All run via `npm run test:evals`.
+- **Unit tests vs evals**: unit tests are only written where there is branching or transformation logic; thin orchestration layers rely on evals for end-to-end verification.
+- **Assertion strength**: tight (exact equality) for values explicitly present in the input. Loose (schema validation, regex) for values the model derives or summarizes. Exception: when stage rules instruct the model to return specific terminal phrases (e.g., `"Got it."` for acceptance signals), use regex matching on those markers — exact equality on the full message is too brittle.
+- **Scenarios**: come from the phase-specific rules file co-located with the implementation (e.g., `clarify.fields.rules.md`, `clarify.contribution.rules.md`) for phases with focused behavior, or the stage rules file in `workflow/stages/` for general stage behavior. One test case per rule.
 - **Multiple trials per eval deferred** — run history (`.runs.jsonl`) is the prerequisite. Add multi-trial averaging only if the logs show consistent instability on a stable codebase.

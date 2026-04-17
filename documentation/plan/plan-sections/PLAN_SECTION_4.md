@@ -30,7 +30,7 @@
 
 - **`sourceUrl` uses plain string** — OpenAI's structured output API rejects `"format": "uri"`. `z.string().url()` produces that format, so `sourceUrl` uses `z.string().min(1)` instead.
 
-- **`buildSourceParams` shared utility** — the `source: string | ResponseInputItem[]` branching (previousResponseId vs transcript) is shared across all extraction functions via `pipeline/lib/build-source-params.ts`.
+- **`buildSourceParams` shared utility** — the `source: string | ResponseInputItem[]` branching (previousResponseId vs transcript) is shared across all extraction functions via `pipeline/lib/build-source-params.ts`. Note: this pattern is being phased out of the clarify stage during the Phase 3–8 typed I/O refactor; it remains in use for the research stage.
 
 - **Models** — `gpt-5.4-mini` for Phase B (nano doesn't support web search), `gpt-5.4-nano` for A and C. `reasoning: low` for all (medium caused timeouts).
 
@@ -41,6 +41,8 @@
 3. `extractResearchSummary(phaseB.id)` → `ResearchSummary` (Phase C — nano, extraction)
 
 ### Remaining Tasks
+
+> **Context:** The Phase 3–8 clarify stage refactor is underway (orchestrator rewired phase-by-phase). Research stage integration may change when the orchestrator wiring is updated after Phase 8 completes. Stage-level evals are currently deferred — see STATUS.md.
 
 **4.4c — Phase B + orchestration + unit tests + full-loop eval**
 

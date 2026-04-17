@@ -2,12 +2,9 @@
 
 ## Up Next
 
-1. **Implement clarify stage redesign** — Per `CLARIFY_REVIEW.md` (finalized spec). Implementation order:
-   1. Structured phase passing (foundation) — typed I/O contracts, remove `buildSourceParams` and cross-phase `previous_response_id` chaining
-   2. Risk phase — new dedicated phase between fields and preferences; resolves `riskTolerance` via personalized A/B drop scenario
-   3. Fields, preferences, extraction updated to new contracts
-   4. Intake phase prompt improvements and eval expansions
-   5. Constants file (`clarify.constants.ts`) — benchmark figures + `buildRiskScenario`
+1. **Clarify stage typed I/O refactor** — Phase 3 PR completed items: structured phase passing (1), fields/preferences/extraction typed I/O (3), intake prompt improvements + eval expansions (4), constants file (5). **Risk phase (item 2) deferred** — a dedicated risk phase between fields and preferences is still planned; risk is currently handled inline in the fields phase prompt.
+
+> **Note:** Stage-level evals (`clarify.stage.eval.ts`) remain broken during the Phase 3–8 refactor window — the orchestrator is being rewired phase-by-phase. Deferred until Phase 8 completes the orchestrator rewire. Broken runs in `clarify.stage.runs.jsonl` are expected.
 
 2. **Research stage: examples → rules refactor** — Four parts: (a) convert `research.allocation.ts` prompt from single-example format to Decision Logic + multi-example format following the clarify stage pattern (`research.extraction.ts` is already converted); (b) rename `RESEARCH_EXAMPLES #N` eval tags to `RESEARCH_RULES #N` in both eval files; (c) update any doc references; (d) review research stage prompts for missing terminal-state steps (e.g. explicit "stop" instructions for rejection/disengagement), following the pattern added to the clarify intake prompts.
 
