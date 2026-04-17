@@ -29,7 +29,6 @@ Every required field must have a specific, actionable value before this phase en
 - **timeline**: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` are specific enough — do not ask to narrow further.
 - **hasEmergencyFund**: yes or no.
 - **hasDebt**: yes or no.
-- **monthlyContribution**: a specific number. Not \`whatever I can\` or \`not much\`. On the second ask, append "If you're not planning to contribute monthly, ₪0 is a valid answer." After two asks with no specific value, accept \`0\`.
 
 # Decision Logic
 
@@ -44,7 +43,7 @@ All required fields are complete → stop. Do NOT call \`ask_user\`. Do NOT outp
 # Examples
 
 ## Example 1 — vague timeline (two-turn flow)
-User message: "I'm 30, beginner, ₪70k to invest, ₪1,200/month, no debt, have emergency fund, this is for long-term investing."
+User message: "I'm 30, beginner, ₪70k to invest, no debt, have emergency fund, this is for long-term investing."
 
 Decision Logic:
 - Step 1: timeline is "long-term" ✗ — not specific → call \`ask_user\` for timeline only.
@@ -58,7 +57,7 @@ Next turn — user responds "15 years":
 → (stop — all fields complete, no message sent)
 
 ## Example 2 — all fields complete on first message
-User message: "I'm 24, ₪18,000, 10-15 years, beginner, ₪700/month, no debt, have emergency fund."
+User message: "I'm 24, ₪18,000, 10-15 years, no debt, have emergency fund."
 
 Decision Logic:
 - Step 1: all required fields pass ✓
@@ -70,7 +69,7 @@ Decision Logic:
 User message: "I want to start investing."
 
 Decision Logic:
-- Step 1: amount ✗, age ✗, timeline ✗, hasEmergencyFund ✗, hasDebt ✗, monthlyContribution ✗ — ask the 4 most critical first.
+- Step 1: amount ✗, age ✗, timeline ✗, hasEmergencyFund ✗, hasDebt ✗ — ask the 4 most critical first.
 
 → \`ask_user\`:
 "A few details to get started:
@@ -79,15 +78,13 @@ Decision Logic:
 3. What's your investment timeline — how many years, or until a specific milestone?
 4. Do you have an emergency fund set aside? (yes/no)"
 
-Next turn — user provides amount, age, timeline, and emergency fund. Remaining gaps: hasDebt, monthlyContribution.
+Next turn — user provides amount, age, timeline, and emergency fund. Remaining gap: hasDebt.
 
 Decision Logic:
-- Step 1: still missing 2 fields → ask both.
+- Step 1: still missing 1 field → ask it.
 
 → \`ask_user\`:
-"A couple more things:
-1. Do you have any debt you're currently paying down? (yes/no)
-2. How much can you add each month (a specific ₪ amount)?"`;
+"One more thing: do you have any debt you're currently paying down? (yes/no)"`;
 
 const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the preceding investment advisor conversation. Extract only what was explicitly stated — do not infer or fabricate.
 
@@ -96,8 +93,7 @@ const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the pre
 - age: exact age (integer)
 - timeline: specific timeframe stated (e.g., "20 years", "until retirement at 65")
 - hasEmergencyFund: true or false
-- hasDebt: true or false
-- monthlyContribution: exact monthly ₪ amount (integer; 0 if not planning to contribute)`;
+- hasDebt: true or false`;
 
 export const collectFields = async (
   goal: string,

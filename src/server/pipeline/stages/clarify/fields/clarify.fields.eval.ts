@@ -31,9 +31,9 @@ describe("collectFields", () => {
     lastGoal = lastTranscript = lastOutput = undefined;
   });
 
-  // CLARIFY_FIELDS_RULES #5: all required fields present in the initial message → no asks made.
+  // CLARIFY_FIELDS_RULES #3: all required fields present in the initial message → no asks made.
   it("should return output immediately when all fields are present in the goal", async () => {
-    lastGoal = "I'm 24, ₪18,000, 10 years, yes emergency fund, no debt, ₪700/month";
+    lastGoal = "I'm 24, ₪18,000, 10 years, yes emergency fund, no debt";
     const responder = createTrackedResponder([]);
     lastTranscript = responder.transcript;
 
@@ -49,7 +49,6 @@ describe("collectFields", () => {
     expect(output.timeline).toMatch(/10/);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
-    expect(output.monthlyContribution).toBe(700);
     expect(responder.transcript).toHaveLength(0);
   });
 
@@ -58,7 +57,7 @@ describe("collectFields", () => {
     lastGoal = "I want to invest";
     const responder = createTrackedResponder([
       "I have ₪20,000, I'm 32, long-term",
-      "I guess maybe 10-15 years. yes emergency fund, no debt, ₪800/mo",
+      "I guess maybe 10-15 years. yes emergency fund, no debt",
     ]);
     lastTranscript = responder.transcript;
 
@@ -74,7 +73,6 @@ describe("collectFields", () => {
     expect(output.timeline.toLowerCase()).toMatch(/10|15/);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
-    expect(output.monthlyContribution).toBe(800);
   });
 
   // CLARIFY_FIELDS_RULES #2: fields already stated in the goal are not re-asked.
@@ -82,7 +80,7 @@ describe("collectFields", () => {
     lastGoal = "I'm 35, ₪75,000, long-term retirement savings";
     const responder = createTrackedResponder([
       "About 30 years — I'll retire at 65",
-      "Yes emergency fund, no debt, ₪2,000/month",
+      "Yes emergency fund, no debt",
     ]);
     lastTranscript = responder.transcript;
 
@@ -98,55 +96,14 @@ describe("collectFields", () => {
     expect(output.timeline.toLowerCase()).toMatch(/30|65/);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
-    expect(output.monthlyContribution).toBe(2_000);
   });
 
-  // CLARIFY_FIELDS_RULES #3: after two vague answers for monthlyContribution, 0 is accepted as default.
-  it("should default monthlyContribution to 0 after two vague answers", async () => {
-    lastGoal = "I want to invest ₪40,000, I'm 28, 15 years, yes emergency fund, no debt";
-    const responder = createTrackedResponder([
-      "Whatever I can, maybe something small",
-      "I'm not sure really, hard to say",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.amount).toBe(40_000);
-    expect(output.age).toBe(28);
-    expect(output.monthlyContribution).toBe(0);
-  });
-
-  // CLARIFY_FIELDS_RULES #4: explicit ₪0 or "not planning to contribute" accepted immediately without a follow-up ask.
-  it("should accept monthlyContribution of 0 when stated upfront without a follow-up ask", async () => {
-    lastGoal =
-      "I have ₪40,000, I'm 28, 15 years, yes emergency fund, no debt, not planning to contribute monthly";
-    const responder = createTrackedResponder([]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.amount).toBe(40_000);
-    expect(output.monthlyContribution).toBe(0);
-    expect(responder.transcript).toHaveLength(0);
-  });
-
-  // CLARIFY_FIELDS_RULES #6: when many fields are missing, at most 4 are asked per turn.
+  // CLARIFY_FIELDS_RULES #4: when many fields are missing, at most 4 are asked per turn.
   it("should ask at most 4 questions in the first turn when many fields are missing", async () => {
     lastGoal = "I want to start investing";
     const responder = createTrackedResponder([
       "₪30,000, I'm 27, 20 years, yes emergency fund",
-      "No debt, ₪500/month",
+      "No debt",
     ]);
     lastTranscript = responder.transcript;
 
@@ -162,7 +119,6 @@ describe("collectFields", () => {
     expect(output.timeline.toLowerCase()).toMatch(/20/);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
-    expect(output.monthlyContribution).toBe(500);
     // First turn asked at most 4 questions — verified by the two-turn scripted flow completing successfully
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });

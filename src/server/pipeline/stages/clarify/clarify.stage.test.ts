@@ -51,7 +51,7 @@ describe("runClarifyStage", () => {
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
 
   const mockProfile: UserProfile = {
-    goal: "invest ₪55,000 as a beginner, moderate risk, 20-year horizon with ₪1,800/month contributions",
+    goal: "invest ₪55,000 as a beginner, moderate risk, 20-year horizon, plans to add money periodically",
     amount: 55_000,
     age: 28,
     riskTolerance: RiskTolerance.enum.moderate,
@@ -59,7 +59,7 @@ describe("runClarifyStage", () => {
     investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
     hasEmergencyFund: true,
     hasDebt: false,
-    monthlyContribution: 1_800,
+    plansToContribute: true,
   };
 
   beforeEach(() => {
@@ -77,7 +77,7 @@ describe("runClarifyStage", () => {
 
       expect(result).toEqual(mockProfile);
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: mockGoal },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );
@@ -103,7 +103,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: [], previous_response_id: "resp_intake" },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );
@@ -121,7 +121,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: [], previous_response_id: "resp_intake" },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );
@@ -139,7 +139,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectFields).toHaveBeenCalledWith(
-        { input: [], previous_response_id: "resp_intake" },
+        mockGoal,
         mockSendToUser,
         mockWaitForResponse,
       );

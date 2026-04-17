@@ -112,7 +112,7 @@ describe("openaiService", () => {
       investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
       hasEmergencyFund: true,
       hasDebt: false,
-      monthlyContribution: 500,
+      plansToContribute: true,
     };
 
     const createMockParsedResponse = (

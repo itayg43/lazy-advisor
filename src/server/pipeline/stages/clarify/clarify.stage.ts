@@ -1,5 +1,4 @@
 import { createLogger } from "#lib/logger";
-import type { PhaseSourceParams } from "#pipeline/lib/build-source-params";
 import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
@@ -41,8 +40,6 @@ export const runClarifyStage = async (
 
   const classification = await classifyGoal(goal);
 
-  let fieldsSource: PhaseSourceParams;
-
   const handler = INTAKE_HANDLERS[classification];
   if (handler) {
     const result = await handler(goal, sendToUser, waitForResponse);
@@ -54,14 +51,9 @@ export const runClarifyStage = async (
 
       return null;
     }
-    fieldsSource = { input: [], previous_response_id: result.responseId };
-  } else {
-    fieldsSource = { input: goal };
   }
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Phase 8: orchestrator will be rewired to typed I/O
-  // @ts-expect-error
-  const fieldsResponseId = await collectFields(fieldsSource, sendToUser, waitForResponse);
+  const fieldsResponseId = await collectFields(goal, sendToUser, waitForResponse);
   const prefsResponseId = await collectPreferences(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Phase 8: orchestrator will be rewired to typed I/O
     // @ts-expect-error

@@ -62,7 +62,7 @@ describe("researchAllocation", () => {
       investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
       hasEmergencyFund: true,
       hasDebt: false,
-      monthlyContribution: 1_800,
+      plansToContribute: true,
     };
 
     lastInputProfile = profile;
@@ -86,7 +86,7 @@ describe("researchAllocation", () => {
         "100% NASDAQ — no buffer; emergency fund held separately outside portfolio",
       hasEmergencyFund: true,
       hasDebt: false,
-      monthlyContribution: 1_500,
+      plansToContribute: true,
     };
 
     lastInputProfile = profile;
@@ -109,7 +109,7 @@ describe("researchAllocation", () => {
       investmentPreferences: "60% MSCI World, 40% קרן כספית",
       hasEmergencyFund: true,
       hasDebt: false,
-      monthlyContribution: 3_000,
+      plansToContribute: true,
     };
 
     lastInputProfile = profile;
@@ -132,7 +132,7 @@ describe("researchAllocation", () => {
       investmentPreferences: "80% S&P 500, 20% TLV-125",
       hasEmergencyFund: true,
       hasDebt: false,
-      monthlyContribution: 2_500,
+      plansToContribute: true,
     };
 
     lastInputProfile = profile;

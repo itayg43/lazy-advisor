@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-15T00:37:08.307Z | Commit: ea5a08f
+Timestamp: 2026-04-17T00:57:06.417Z | Commit: ec1048d
 
 ---
 
@@ -28,7 +28,7 @@ Source: https://maya.tase.co.il/fund/1159235
 Israeli money market fund (קרן כספית). Low-risk, shekel-denominated, highly liquid. Annual management fee: 0.03%.
 Source: https://maya.tase.co.il/fund/5122505
 
-**Extracted profile:**
+**Output:**
 categories: [object Object],[object Object],[object Object]
 
 
@@ -59,6 +59,6 @@ Source: https://www.ishares.com/uk/individual/en/products/264659/ishares-core-ms
 Thematic fund investing in companies developing automation, robotics, and AI technologies. Expense ratio: 0.40% per year. Irish-domiciled accumulating.
 Source: https://www.ishares.com/uk/individual/en/products/279174/ishares-automation-robotics-ucits-etf
 
-**Extracted profile:**
+**Output:**
 categories: [object Object],[object Object],[object Object]
 

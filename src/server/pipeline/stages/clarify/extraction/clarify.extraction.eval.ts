@@ -102,7 +102,7 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.monthlyContribution).toBe(1_800);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.timeline.toLowerCase()).toMatch(/20|50/);
     expect(profile.goal.toLowerCase()).toMatch(/55[,.]?000|invest/);
     expect(profile.investmentPreferences).not.toBe("none");
@@ -163,7 +163,7 @@ describe("clarifyExtraction", () => {
     expect(profile.age).toBe(35);
     expect(profile.amount).toBe(75_000);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(2_000);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/30|65|retire/);
@@ -236,7 +236,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(45_000);
     expect(profile.age).toBe(33);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(1_000);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/5/);
@@ -293,7 +293,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(200_000);
     expect(profile.age).toBe(34);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(5_000);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.timeline.toLowerCase()).toMatch(/20/);
@@ -405,7 +405,7 @@ describe("clarifyExtraction", () => {
     expect(profile.amount).toBe(100_000);
     expect(profile.age).toBe(31);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.moderate);
-    expect(profile.monthlyContribution).toBe(2_500);
+    expect(profile.plansToContribute).toBe(true);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/s&p 500|sp500/i);
@@ -519,7 +519,7 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
     expect(profile.hasEmergencyFund).toBe(true);
     expect(profile.hasDebt).toBe(false);
-    expect(profile.monthlyContribution).toBe(2_000);
+    expect(profile.plansToContribute).toBe(true);
   });
 
   // CLARIFY_RULES #11: short timeline (5 years) + genuinely ambiguous behavioral → conservative via secondary signal.
@@ -573,7 +573,7 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
     expect(profile.timeline.toLowerCase()).toMatch(/5/);
     expect(profile.hasEmergencyFund).toBe(true);
-    expect(profile.monthlyContribution).toBe(1_500);
+    expect(profile.plansToContribute).toBe(true);
   });
 
   // CLARIFY_RULES #12: genuinely ambiguous behavioral signal + no emergency fund → conservative via secondary signal.
@@ -625,7 +625,7 @@ describe("clarifyExtraction", () => {
     expect(profile.age).toBe(29);
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
     expect(profile.hasEmergencyFund).toBe(false);
-    expect(profile.monthlyContribution).toBe(800);
+    expect(profile.plansToContribute).toBe(true);
   });
 
   // CLARIFY_RULES #13: borderline behavioral signal + 100% NASDAQ → aggressive via preferences corroboration.
@@ -729,7 +729,7 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.conservative);
     expect(profile.timeline.toLowerCase()).toMatch(/4/);
     expect(profile.hasEmergencyFund).toBe(false);
-    expect(profile.monthlyContribution).toBe(1_000);
+    expect(profile.plansToContribute).toBe(true);
   });
 
   // CLARIFY_RULES #15: clear primary A/B/C answer (C = calm/buy more) overrides conservative secondary signals.
@@ -783,6 +783,6 @@ describe("clarifyExtraction", () => {
     expect(profile.riskTolerance).toBe(RiskTolerance.enum.aggressive);
     expect(profile.timeline.toLowerCase()).toMatch(/4/);
     expect(profile.hasEmergencyFund).toBe(false);
-    expect(profile.monthlyContribution).toBe(2_500);
+    expect(profile.plansToContribute).toBe(true);
   });
 });
