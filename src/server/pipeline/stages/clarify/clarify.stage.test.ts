@@ -11,6 +11,7 @@ const {
   mockedHandleUnrealisticExpectations,
   mockedHandleContradictoryRisk,
   mockedCollectFields,
+  mockedCollectContribution,
   mockedCollectPreferences,
   mockedExtractUserProfile,
 } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const {
   mockedHandleUnrealisticExpectations: vi.fn(),
   mockedHandleContradictoryRisk: vi.fn(),
   mockedCollectFields: vi.fn(),
+  mockedCollectContribution: vi.fn(),
   mockedCollectPreferences: vi.fn(),
   mockedExtractUserProfile: vi.fn(),
 }));
@@ -37,6 +39,9 @@ vi.mock("#pipeline/stages/clarify/intake/clarify.contradictory", () => ({
 }));
 vi.mock("#pipeline/stages/clarify/fields/clarify.fields", () => ({
   collectFields: mockedCollectFields,
+}));
+vi.mock("#pipeline/stages/clarify/contribution/clarify.contribution", () => ({
+  collectContribution: mockedCollectContribution,
 }));
 vi.mock("#pipeline/stages/clarify/preferences/clarify.preferences", () => ({
   collectPreferences: mockedCollectPreferences,
@@ -64,7 +69,15 @@ describe("runClarifyStage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedCollectFields.mockResolvedValue("resp_fields");
+    mockedCollectFields.mockResolvedValue({
+      goal: mockProfile.goal,
+      amount: mockProfile.amount,
+      age: mockProfile.age,
+      timeline: mockProfile.timeline,
+      hasEmergencyFund: mockProfile.hasEmergencyFund,
+      hasDebt: mockProfile.hasDebt,
+    });
+    mockedCollectContribution.mockResolvedValue({ plansToContribute: true });
     mockedCollectPreferences.mockResolvedValue("resp_prefs");
     mockedExtractUserProfile.mockResolvedValue(mockProfile);
   });
