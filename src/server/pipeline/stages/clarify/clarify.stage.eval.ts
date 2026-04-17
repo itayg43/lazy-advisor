@@ -36,6 +36,7 @@ describe("runClarifyStage", () => {
     lastGoal = "I have ₪55,000 to invest, I'm 28, moderate risk, 20 years, beginner";
     const responder = createTrackedResponder([
       "yes emergency fund, no debt, ₪1,800/mo",
+      "Yes, I plan to add money every month",
       "FTSE All-World mostly. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;
@@ -62,6 +63,7 @@ describe("runClarifyStage", () => {
     const responder = createTrackedResponder([
       "ok fine, I'm open to ETFs. I have ₪30,000, I'm 29, moderate risk, 10 years",
       "yes emergency fund, no debt, ₪1,000/mo, beginner",
+      "Yes, I plan to add money every month",
       "S&P 500. קרן כספית for the buffer.",
     ]);
     lastTranscript = responder.transcript;
