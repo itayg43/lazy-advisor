@@ -38,7 +38,7 @@ Phases 1 & 2 are parallel. Phases 3–7 are parallel once 1 & 2 are done. Phase 
 | 2 | Create typed I/O schemas | Complete |
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
-| 4 | Create the risk phase | Not started |
+| 4 | Create the risk phase | Complete |
 | 5 | Refactor preferences phase to typed I/O | Not started |
 | 6 | Refactor extraction to thin assembly | Not started |
 | 7 | Intake cleanup: drop contradictory, update out-of-scope and unrealistic | Not started |
@@ -50,36 +50,6 @@ Phases 1 & 2 are parallel. Phases 3–7 are parallel once 1 & 2 are done. Phase 
 
 ## Phases
 
-### Phase 4 — Create the risk phase
-
-**What:** New `collectRisk(amount: number, sendToUser, waitForResponse): Promise<RiskOutput>`.
-
-Two-step resolution flow per spec:
-- Turn 1: present A/B scenario from `buildRiskScenario(amount)`. A → conservative (exit), B → proceed to follow-up.
-- Follow-up: "Would you find that stressful to watch, or stay pretty calm?" Stressed → moderate, calm → aggressive (exit).
-- Educational fallbacks: "I don't know" or market-timing answers get explanation + re-ask (no exit).
-- After 3 turns with no clear signal: default to `conservative`.
-
-Post-loop: `zodTextFormat(RiskOutputSchema)` extraction off loop's `responseId`.
-
-Prompt in `clarify.risk.rules.md`. Internal taxonomy (conservative/moderate/aggressive) never shown to user.
-
-**Files:**
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` — new
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md` — new
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts` — new
-- `src/server/pipeline/stages/clarify/clarify.constants.ts` — `MAX_RISK_TOOL_CALLS` (if not already added in phase 1)
-
-Eval cases:
-- User picks A → conservative
-- User picks B then "stressful" → moderate
-- User picks B then "calm" → aggressive
-- "I don't know" → educational fallback → re-ask → conservative
-- Market-timing answer → redirect → picks B + calm → aggressive
-
-**Verify:** `npm run test:evals -- clarify.risk.eval.ts`.
-
----
 
 ### Phase 5 — Refactor preferences phase to typed I/O
 

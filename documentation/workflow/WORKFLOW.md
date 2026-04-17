@@ -95,7 +95,7 @@ Per-stage behavior examples and conversation scenarios are documented in stage-s
 
 Before field collection begins, the clarify stage classifies the goal into one of four types: `normal`, `out_of_scope`, `unrealistic`, `contradictory`. Non-normal goals route to a dedicated intake phase first — the agent explains the issue (e.g., stock picking → concentration risk and ETF redirect; unrealistic returns → reality check; contradictory goals → resolution), asks for acceptance. If accepted, the intake phase returns silently (internal signal only) and chains into field collection; if rejected, the session ends with a classification-specific closing message. Normal goals proceed directly to field collection.
 
-After field collection, the stage runs: **contribution collection** (whether the user plans to add money over time) → **preference collection** → **profile extraction**. Full phase sequence: intake routing → fields → contribution → preferences → extraction.
+After field collection, the stage runs: **risk tolerance** (scenario-based A/B question) → **contribution collection** (whether the user plans to add money over time) → **preference collection** → **profile extraction**. Full phase sequence: intake routing → fields → risk → contribution → preferences → extraction.
 
 Intake routing is code-driven, not prompt-embedded: a single structured LLM call (`classifyGoal`) returns the classification, and the stage function dispatches to the appropriate handler accordingly.
 

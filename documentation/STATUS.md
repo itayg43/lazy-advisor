@@ -2,7 +2,7 @@
 
 ## Up Next
 
-1. **Clarify stage typed I/O refactor** — Phase 3 PR completed items: structured phase passing (1), fields/preferences/extraction typed I/O (3), intake prompt improvements + eval expansions (4), constants file (5). **Risk phase (item 2) deferred** — a dedicated risk phase between fields and preferences is still planned; risk is currently handled inline in the fields phase prompt.
+1. **Clarify stage typed I/O refactor** — Phase 3 PR completed items: structured phase passing (1), fields/preferences/extraction typed I/O (3), intake prompt improvements + eval expansions (4), constants file (5). Phase 4 (risk phase) complete — dedicated risk phase implemented between fields and contribution. Phases 5–10 remaining.
 
 > **Note:** Stage-level evals (`clarify.stage.eval.ts`) remain broken during the Phase 3–8 refactor window — the orchestrator is being rewired phase-by-phase. Deferred until Phase 8 completes the orchestrator rewire. Broken runs in `clarify.stage.runs.jsonl` are expected.
 
