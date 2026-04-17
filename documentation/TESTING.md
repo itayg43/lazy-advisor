@@ -12,9 +12,11 @@
 - **Default language behavior**: Don't test that errors propagate when there's no `try/catch` or error transformation in the code under test — that's JavaScript, not application logic.
 - **Parameter variations on the same branch**: Don't add a second test for the same code path with a different numeric input (e.g. `attempts: 2` vs `attempts: 3`). Varying a value without hitting a new branch adds no safety net.
 - **Mock delegation without logic**: Don't write tests that only assert a mock was called with the same arguments passed in. If a function has no conditionals, transformations, or error handling of its own, there is nothing to assert — add tests when logic is added.
+- **Thin orchestration**: If a function only calls other functions in sequence with no branching or transformation, skip the unit test — it would only verify call order on mocks. Use evals to test the real behavior end-to-end.
 
 ## Mocking
 
+- **Mock at the lowest boundary possible**: prefer testing real implementations end-to-end. When mocking is unavoidable (e.g., to avoid real API calls), mock at the outermost external boundary — the OpenAI client/service — not at internal module boundaries. Mocking internal collaborators only tests that mocks are called in order, not that the real code works.
 - Mock external services (OpenAI); use a real DB for repository tests (see [Repository Tests](#repository-tests))
 - Use proper types for all mock data and options objects (e.g., `const options: RetryOptions = { ... }`, not untyped object literals)
 - **Mock data placement**: shared across all `describe` blocks → top-level `describe`. Used in only one block → inside that block. Mock factories (e.g., `createMockResponse`) always go inside the block that uses them
@@ -62,8 +64,7 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
-- **Two eval layers** (applied per stage):
-  - **Extraction-only**: tests extraction/parsing prompt quality in isolation by feeding deterministic input directly to the extraction function (e.g., `extractUserProfile` for clarify, `extractResearchSummary` for research). Only model extraction variance affects output. Tight assertions (exact equality for numbers/booleans/enums).
-  - **Full-loop**: tests the full stage end-to-end (e.g., `runClarifyStage` with scripted responder, `runResearchStage` with real web search). Scripted responses (where applicable) are natural and focused, not info dumps. Looser assertions — schema validation is primary, exact equality only for values explicitly in the input.
-- Stages with a single prompt have one eval file. Stages with multiple phases (e.g., clarify with intake routing) have separate eval files per substep; all run via `npm run test:evals`. Scenarios come from the stage-specific rules files in [`workflow/stages/`](workflow/stages/).
+- **Eval granularity**: stages with multiple phases have one eval file per phase (e.g., `clarify.fields.eval.ts`, `clarify.risk.eval.ts`) plus a stage-level eval for the full pipeline. Stages with a single prompt have one eval file. All run via `npm run test:evals`.
+- **Assertion strength**: tight (exact equality) for values explicitly present in the input. Loose (schema validation, regex) for values the model derives or summarizes.
+- **Scenarios**: come from the phase-specific rules file co-located with the implementation (e.g., `clarify.fields.rules.md`) or the stage rules file in `workflow/stages/` — one test case per rule.
 - **Multiple trials per eval deferred** — run history (`.runs.jsonl`) is the prerequisite. Add multi-trial averaging only if the logs show consistent instability on a stable codebase.

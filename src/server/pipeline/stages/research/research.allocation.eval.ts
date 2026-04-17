@@ -31,7 +31,7 @@ describe("researchAllocation", () => {
       passed: ctx.task.result?.state === "pass",
       goal: lastInputProfile.goal,
       transcript: [],
-      profile: lastPlan,
+      output: lastPlan,
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastInputProfile = lastPlan = undefined;

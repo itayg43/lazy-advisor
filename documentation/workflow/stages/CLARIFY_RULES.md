@@ -14,17 +14,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 2. Vague timeline → accepted after second ask
-
-**Rule:** If a field has been asked twice without a specific value, accept the best available answer and move on — do not probe a third time.
-
-**Scenario:** "I want to invest" — user says "long-term" on first response, "10-15 years" on second.
-
-**Extracted:** amount: 20000 | age: 32 | risk: moderate | timeline: "10-15 years" | investmentPreferences: "100% FTSE All-World, קרן כספית buffer"
-
----
-
-## 3. Contradictory risk → scenario-based resolution
+## 2. Contradictory risk → scenario-based resolution
 
 **Rule:** When risk signals contradict, use a concrete loss scenario (A/B/C) to discover real tolerance rather than guessing or refusing. Portfolio defaults are asked after contradiction is resolved.
 
@@ -34,7 +24,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 4. Out-of-scope stock picking → ETF redirect
+## 3. Out-of-scope stock picking → ETF redirect
 
 **Rule:** Individual stock picking is out of scope. Deliver a redirect-only message first (no data collection questions in the same turn) — explain why: buying a single stock concentrates all risk in one company, whereas a diversified ETF spreads that risk across hundreds of companies. Offer a sector ETF as a middle ground if the user has a sector preference. Begin field collection only once the user accepts. Portfolio defaults are asked after all fields are collected.
 
@@ -44,7 +34,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 5. Stated equity in goal → equity defaults skipped, buffer still asked
+## 4. Stated equity in goal → equity defaults skipped, buffer still asked
 
 **Rule:** If an equity preference is already stated in the goal (e.g., a specific index, sector, or market), the equity sub-question of the portfolio defaults is skipped — the stage does not ask twice. The buffer sub-question is still asked if the user has not already addressed it, since buffer is a separate concern from equity allocation.
 
@@ -54,7 +44,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 6. Multiple instruments without split → split required
+## 5. Multiple instruments without split → split required
 
 **Rule:** If the user names two or more instruments without specifying percentages, ask for the split before treating `investmentPreferences` as complete. Ask only for the split — do not bundle it with other questions.
 
@@ -64,7 +54,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 7. 100% single-index concentration → valid, captured as-is
+## 6. 100% single-index concentration → valid, captured as-is
 
 **Rule:** 100% concentration in a single index is a valid answer to the portfolio defaults question. The stage does not push back or suggest diversification.
 
@@ -74,7 +64,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 8. Advanced user → explanation depth matched, portfolio defaults still asked
+## 7. Advanced user → explanation depth matched, portfolio defaults still asked
 
 **Rule:** When the user signals investing experience, match explanation depth to their level — skip introductory explanations and engage directly on specifics. Portfolio defaults are still asked if no preference has been stated; mentioning knowledge of an instrument (e.g., Irish ETFs) is not the same as expressing a preference to invest in it.
 
@@ -84,7 +74,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 9. Unrealistic expectations → redirect to realistic plan
+## 8. Unrealistic expectations → redirect to realistic plan
 
 **Rule:** When the user states an unrealistic financial goal (e.g., doubling capital in 6 months), redirect honestly — explain why it's not achievable, ask if they want to proceed with a realistic long-term plan, then collect the profile as normal. Once the user accepts, treat the redirect as complete and do not ask about the original goal again.
 
@@ -94,17 +84,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 10. Rich initial goal → agent asks only for gaps
-
-**Rule:** The agent asks only for gaps — fields already stated in the goal (amount, age, risk, context) are not re-asked. If the goal provides enough to infer a field, treat it as answered. Portfolio defaults are asked if no preference was stated in the goal.
-
-**Scenario:** "I'm 35, ₪75,000, moderate risk, long-term retirement savings" — only gaps (emergency fund, debt, timeline, monthly contribution) are asked.
-
-**Extracted:** amount: 75000 | age: 35 | risk: moderate | timeline: ~30 years, retirement at 65 | investmentPreferences: "FTSE All-World, קרן כספית buffer"
-
----
-
-## 11. User declines buffer → 100% equity accepted, no-buffer intent captured
+## 9. User declines buffer → 100% equity accepted, no-buffer intent captured
 
 **Rule:** If the user explicitly declines the buffer — for example, because they already hold an emergency fund outside this portfolio — accept that as a complete answer. Do not push back or suggest adding a buffer. The no-buffer intent must be captured in `investmentPreferences`.
 
@@ -114,7 +94,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 12. Passive calm holder → aggressive
+## 10. Passive calm holder → aggressive
 
 **Rule:** When the user expresses no meaningful discomfort during a drop scenario — no stress, no sell intent, calm passive hold — extract `aggressive`. The absence of discomfort is itself the signal; buying-on-dips is not required to reach `aggressive`.
 
@@ -124,9 +104,9 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 13. Short timeline + no directional behavioral signal → conservative (secondary signal)
+## 11. Short timeline + no directional behavioral signal → conservative (secondary signal)
 
-**Rule:** When the user gives no directional behavioral signal (e.g. "I've never been through a market drop — I genuinely don't know what I'd do"), use `timeline` as a secondary corroborating signal. A timeline of ≤5 years leans conservative — there is insufficient time to recover from a significant downturn. Note: any statement containing a behavioral direction (hold/sell/buy), even with uncertainty qualifiers, is treated as that direction, not as directionless (see Rule 17).
+**Rule:** When the user gives no directional behavioral signal (e.g. "I've never been through a market drop — I genuinely don't know what I'd do"), use `timeline` as a secondary corroborating signal. A timeline of ≤5 years leans conservative — there is insufficient time to recover from a significant downturn. Note: any statement containing a behavioral direction (hold/sell/buy), even with uncertainty qualifiers, is treated as that direction, not as directionless (see Rule 15).
 
 **Scenario:** User has a 5-year timeline and says "I've never experienced a market drop — I honestly don't know what I'd do."
 
@@ -134,7 +114,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 14. No emergency fund + no directional behavioral signal → conservative (secondary signal)
+## 12. No emergency fund + no directional behavioral signal → conservative (secondary signal)
 
 **Rule:** When the user gives no directional behavioral signal (genuinely "I don't know") and `hasEmergencyFund` is `false`, lean conservative. Without a financial buffer, the user is vulnerable to forced selling during a downturn regardless of stated intent.
 
@@ -144,7 +124,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 15. High-concentration investment preference corroborates aggressive
+## 13. High-concentration investment preference corroborates aggressive
 
 **Rule:** When the user has chosen a high-concentration, high-volatility allocation (e.g. 100% NASDAQ) and the behavioral signal is borderline (e.g. "I think I'd be fine"), treat the preference as a corroborating signal toward `aggressive` — choosing 100% NASDAQ reveals risk appetite.
 
@@ -154,7 +134,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 16. Multiple conservative secondary signals compound → conservative
+## 14. Multiple conservative secondary signals compound → conservative
 
 **Rule:** When the behavioral signal is ambiguous and multiple secondary signals all point conservative (e.g. short timeline + no emergency fund), extract `conservative` with high confidence — the signals compound.
 
@@ -164,7 +144,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 
 ---
 
-## 17. Clear primary behavioral signal overrides secondary signals
+## 15. Clear primary behavioral signal overrides secondary signals
 
 **Rule:** When the concrete A/B/C scenario produced a clear behavioral answer, secondary signals (timeline, investmentPreferences, hasEmergencyFund) do not override it. Primary signal dominates.
 

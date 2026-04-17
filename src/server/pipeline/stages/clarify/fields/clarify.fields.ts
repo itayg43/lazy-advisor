@@ -1,20 +1,21 @@
+import { zodTextFormat } from "openai/helpers/zod";
+
 import { createLogger } from "#lib/logger";
-import type { PhaseSourceParams } from "#pipeline/lib/build-source-params";
-import {
-  MAX_FIELDS_TOOL_CALLS,
-  RISK_LEVELS,
-} from "#pipeline/stages/clarify/clarify.constants";
+import { MAX_FIELDS_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
 import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
+import { FieldsPhaseOutputSchema } from "#pipeline/stages/clarify/clarify.schemas";
+import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyFields");
 
 const FIELDS_PROMPT = `# Role and Objective
-You are the field-collection phase of an investment advisor pipeline. Your sole responsibility is to collect any missing user information needed for a later recommendation stage. Do **not** provide investment advice, portfolio suggestions, fund names, or action plans. Do **not** mention investment preferences — those are handled in a separate phase after this one completes.
+You are the field-collection phase of an investment advisor pipeline. Your sole responsibility is to collect any missing user information needed for a later recommendation stage. Do **not** provide investment advice, portfolio suggestions, fund names, or action plans. Do **not** mention investment preferences or risk tolerance — those are handled in separate phases after this one completes.
 
 # Behavior
 - Use the \`ask_user\` tool to gather only information that is missing, unclear, vague, or contradictory. Do **not** ask a fixed checklist of questions.
-- When multiple fields are missing, ask for the most critical ones first (amount, age, timeline, riskTolerance) — ask at most 4 questions per turn. Collect any remaining gaps in a subsequent turn.
+- When multiple fields are missing, ask for the most critical ones first (amount, age, timeline) — ask at most 4 questions per turn. Collect any remaining gaps in a subsequent turn.
 - When asking multiple questions, always use a numbered list — one question per line. Do not combine multiple questions into a single prose sentence.
 - Do not guess or fill in missing information yourself.
 - Keep the tone conversational and non-robotic. Beginner-friendly by default; if the user signals investing experience, match their level — skip introductory explanations.
@@ -25,11 +26,10 @@ Every required field must have a specific, actionable value before this phase en
 
 - **amount**: a specific number. Not \`some money\`, \`a lot\`, or \`not sure\`.
 - **age**: a specific number.
-- **riskTolerance**: map the user's description to ${RISK_LEVELS}. The user does not need to use these exact terms. When asking, anchor with a concrete scenario using three options that surface both behavior and emotional register — e.g., "If your portfolio dropped 20% in a year, would you: A) Sell or reduce your position, B) Feel stressed but hold and wait it out, or C) Stay calm — hold without much worry, or buy more while it's cheaper?" If the user gives contradictory risk signals mid-conversation, use the same scenario approach to resolve before proceeding.
 - **timeline**: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` are specific enough — do not ask to narrow further.
 - **hasEmergencyFund**: yes or no.
 - **hasDebt**: yes or no.
-- **monthlyContribution**: a specific number. Not \`whatever I can\` or \`not much\`.
+- **monthlyContribution**: a specific number. Not \`whatever I can\` or \`not much\`. On the second ask, append "If you're not planning to contribute monthly, ₪0 is a valid answer." After two asks with no specific value, accept \`0\`.
 
 # Decision Logic
 
@@ -44,7 +44,7 @@ All required fields are complete → stop. Do NOT call \`ask_user\`. Do NOT outp
 # Examples
 
 ## Example 1 — vague timeline (two-turn flow)
-User message: "I'm 30, in Israel, moderate risk, beginner, ₪70k to invest, ₪1,200/month, no debt, have emergency fund, this is for long-term investing."
+User message: "I'm 30, beginner, ₪70k to invest, ₪1,200/month, no debt, have emergency fund, this is for long-term investing."
 
 Decision Logic:
 - Step 1: timeline is "long-term" ✗ — not specific → call \`ask_user\` for timeline only.
@@ -58,7 +58,7 @@ Next turn — user responds "15 years":
 → (stop — all fields complete, no message sent)
 
 ## Example 2 — all fields complete on first message
-User message: "I'm 24, Israel, ₪18,000, moderate risk, 10-15 years, beginner, ₪700/month, no debt, have emergency fund."
+User message: "I'm 24, ₪18,000, 10-15 years, beginner, ₪700/month, no debt, have emergency fund."
 
 Decision Logic:
 - Step 1: all required fields pass ✓
@@ -70,41 +70,62 @@ Decision Logic:
 User message: "I want to start investing."
 
 Decision Logic:
-- Step 1: amount ✗, age ✗, timeline ✗, riskTolerance ✗, hasEmergencyFund ✗, hasDebt ✗, monthlyContribution ✗ — ask the 4 most critical first.
+- Step 1: amount ✗, age ✗, timeline ✗, hasEmergencyFund ✗, hasDebt ✗, monthlyContribution ✗ — ask the 4 most critical first.
 
 → \`ask_user\`:
 "A few details to get started:
 1. How much do you want to invest (a specific amount)?
 2. How old are you?
 3. What's your investment timeline — how many years, or until a specific milestone?
-4. If your portfolio dropped 20% in a year — would you A) sell, B) feel stressed but hold, or C) stay calm and hold (or buy more)?"
+4. Do you have an emergency fund set aside? (yes/no)"
 
-Next turn — user provides amount, age, timeline, and risk. Remaining gaps: hasEmergencyFund, hasDebt, monthlyContribution.
+Next turn — user provides amount, age, timeline, and emergency fund. Remaining gaps: hasDebt, monthlyContribution.
 
 Decision Logic:
-- Step 1: still missing 3 fields → ask all of them.
+- Step 1: still missing 2 fields → ask both.
 
 → \`ask_user\`:
 "A couple more things:
-1. Do you have an emergency fund? (yes/no)
-2. Do you have any debt you're currently paying down? (yes/no)
-3. How much can you add each month (a specific ₪ amount)?"`;
+1. Do you have any debt you're currently paying down? (yes/no)
+2. How much can you add each month (a specific ₪ amount)?"`;
+
+const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the preceding investment advisor conversation. Extract only what was explicitly stated — do not infer or fabricate.
+
+- goal: concise summary of the user's investment goal (include specifics: amount, purpose, constraints)
+- amount: exact ₪ amount (integer; convert shorthand: "₪50k" → 50000)
+- age: exact age (integer)
+- timeline: specific timeframe stated (e.g., "20 years", "until retirement at 65")
+- hasEmergencyFund: true or false
+- hasDebt: true or false
+- monthlyContribution: exact monthly ₪ amount (integer; 0 if not planning to contribute)`;
 
 export const collectFields = async (
-  source: PhaseSourceParams,
+  goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<string> => {
-  logger.info("Starting fields phase", { source });
+): Promise<FieldsPhaseOutput> => {
+  logger.info("Starting fields phase", { goal });
 
   const { responseId } = await runPhaseLoop(
     FIELDS_PROMPT,
-    source,
+    { input: goal },
     MAX_FIELDS_TOOL_CALLS,
     "Fields phase",
     sendToUser,
     waitForResponse,
   );
 
-  return responseId;
+  const { id, usage, output } = await callOpenAIParsed<FieldsPhaseOutput>({
+    model: "gpt-5.4-nano",
+    instructions: FIELDS_EXTRACTION_INSTRUCTIONS,
+    input: [],
+    previous_response_id: responseId,
+    text: { format: zodTextFormat(FieldsPhaseOutputSchema, "FieldsPhaseOutput") },
+    reasoning: { effort: "low" },
+  });
+
+  logger.info("Fields extraction complete", { responseId: id, usage });
+  logger.debug("Fields output", { output });
+
+  return output;
 };

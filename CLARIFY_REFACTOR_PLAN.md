@@ -219,9 +219,10 @@ Remove:
 
 **Files:**
 - `src/server/pipeline/stages/clarify/clarify.stage.ts`
+- `src/server/pipeline/stages/clarify/clarify.stage.test.ts` — rewrite: drop per-phase mocks (`collectFields`, `collectPreferences`, etc.) and mock `callOpenAI`/`callOpenAIParsed` at the boundary instead. This tests the orchestrator's actual coordination logic end-to-end without bypassing phase implementations.
 - `src/lib/build-source-params.ts` — delete if no other importers remain (grep first)
 
-**Verify:** `npm run test:evals -- clarify.stage.eval.ts`.
+**Verify:** `npm run type-check` (removes all `@ts-expect-error` markers added during phases 3–7), `npm test`, `npm run test:evals -- clarify.stage.eval.ts`.
 
 ---
 

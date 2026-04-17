@@ -25,7 +25,7 @@ describe("runClarifyStage", () => {
       passed: ctx.task.result?.state === "pass",
       goal: lastGoal,
       transcript: lastTranscript,
-      profile: lastProfile,
+      output: lastProfile,
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastGoal = lastTranscript = lastProfile = undefined;
@@ -56,7 +56,7 @@ describe("runClarifyStage", () => {
     expect(result.hasDebt).toBe(false);
   });
 
-  // CLARIFY_RULES #4: out-of-scope goal → redirect → user accepts → full profile extracted.
+  // CLARIFY_RULES #3: out-of-scope goal → redirect → user accepts → full profile extracted.
   it("should redirect out-of-scope goal and produce a full profile after acceptance", async () => {
     lastGoal = "Should I buy NVIDIA stock?";
     const responder = createTrackedResponder([

@@ -59,8 +59,12 @@ export const runClarifyStage = async (
     fieldsSource = { input: goal };
   }
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Phase 8: orchestrator will be rewired to typed I/O
+  // @ts-expect-error
   const fieldsResponseId = await collectFields(fieldsSource, sendToUser, waitForResponse);
   const prefsResponseId = await collectPreferences(
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Phase 8: orchestrator will be rewired to typed I/O
+    // @ts-expect-error
     fieldsResponseId,
     sendToUser,
     waitForResponse,

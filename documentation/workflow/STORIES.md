@@ -59,7 +59,7 @@ All users are based in Israel. The agent tailors recommendations to Israeli inve
 
 **Stage 1 — Clarify (intake):** The agent classifies the goal as `contradictory` — maximum returns and capital safety are fundamentally incompatible. It presents a concrete loss scenario to surface real risk tolerance: "If your portfolio dropped 20% in a year — say ₪18,000 became ₪14,400 — would you (A) sell to stop further losses, (B) hold and wait for recovery, or (C) buy more while prices are low?" The user answers B. The agent maps this to `moderate` and returns the internal signal `Got it.` to proceed.
 
-*Note: this intake handles contradictions stated upfront in the initial goal. Mid-conversation contradictions that emerge while answering the risk question are handled inline by the fields phase (CLARIFY_RULES #3).*
+*Note: this intake handles contradictions stated upfront in the initial goal. Mid-conversation contradictions that emerge while answering the risk question are handled inline by the fields phase (CLARIFY_RULES #2).*
 
 **Field collection begins**, chaining from the intake response (the intake phase returned silently with an internal signal). Risk tolerance is already resolved — the fields phase does not re-ask it.
 
