@@ -1,5 +1,7 @@
 # Clarify Stage — Behavior Rules
 
+> **Note:** Rules in this file cover field collection, preferences, and risk extraction. The contribution phase has its own rules file co-located with the implementation: [`clarify.contribution.rules.md`](../../../src/server/pipeline/stages/clarify/contribution/clarify.contribution.rules.md).
+
 Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenario, and the fields that matter for verifying correctness.
 
 ---
@@ -151,3 +153,7 @@ Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenari
 **Scenario:** User answered "C — I'd stay calm and probably buy more" on the drop scenario, but has no emergency fund and a 4-year timeline.
 
 **Extracted:** riskTolerance: aggressive (clear primary signal; secondary signals do not override)
+
+---
+
+> **Rule numbering note (Phase 3 refactor):** Old rules #2 ("Vague timeline") and #10 ("Rich initial goal") were removed. All subsequent rule numbers shifted down by 2. See git log for prior numbering if needed.

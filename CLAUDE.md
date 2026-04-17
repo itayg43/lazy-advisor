@@ -32,7 +32,7 @@ An agentic investment planning CLI for beginner ETF investors — the agent clar
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Decisions](documentation/DECISIONS.md) | Before implementing a new stage or cross-cutting change |
 | [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
-| [Stage Rules](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals |
+| [Stage Rules](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals — phases with focused behavior also have co-located `*.rules.md` files (e.g., `clarify.fields.rules.md`, `clarify.contribution.rules.md`) |
 
 ## How to Work
 
