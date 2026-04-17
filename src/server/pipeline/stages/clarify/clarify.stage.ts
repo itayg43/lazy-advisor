@@ -13,6 +13,7 @@ import type { IntakeResult } from "#pipeline/stages/clarify/intake/clarify.intak
 import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarify.out-of-scope";
 import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/clarify.unrealistic";
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
+import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -56,6 +57,8 @@ export const runClarifyStage = async (
   }
 
   const fieldsOutput = await collectFields(goal, sendToUser, waitForResponse);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Phase 8: riskOutput will be passed to extractUserProfile
+  const riskOutput = await collectRisk(fieldsOutput.amount, sendToUser, waitForResponse);
   const contributionOutput = await collectContribution(
     fieldsOutput,
     sendToUser,

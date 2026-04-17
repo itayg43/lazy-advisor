@@ -27,12 +27,8 @@ You are the extraction stage of an investment advisor pipeline. Your sole respon
   - \`"${RiskTolerance.enum.moderate}"\`: stated intent to hold despite expressed discomfort — emotion acknowledged, behavior disciplined
   - \`"${RiskTolerance.enum.aggressive}"\`: no meaningful discomfort expressed at all — calm passive hold or opportunistic buy
   - Key: "a 20% drop would stress me but I wouldn't sell" → **${RiskTolerance.enum.moderate}** (stress = emotion; hold = behavior; behavior wins)
-  - If the clarify stage asked a concrete A/B/C drop scenario, map from the user's answer to that scenario — that is the primary signal.
-  - Secondary signals (only when there is no directional behavioral signal at all — e.g. "I don't know what I'd do" with no hold/sell/buy direction stated; any statement containing a behavioral direction, even with uncertainty qualifiers like "probably" or "I think", is treated as that direction):
-    - Short timeline (≤5 years): lean conservative
-    - \`investmentPreferences\` showing high concentration (e.g. 100% NASDAQ): corroborates aggressive
-    - \`hasEmergencyFund: false\`: lean conservative — no financial buffer increases vulnerability to forced selling during a downturn
-  - When still ambiguous after secondary signals, pick the more conservative option. Never output a hedged string like "moderate or aggressive".
+  - If the clarify stage asked a concrete A/B drop scenario, map from the user's answer to that scenario — that is the primary signal.
+  - Never output a hedged string like "moderate or aggressive".
 - **timeline**: extract the specific timeframe the user stated (e.g., "20 years", "until retirement at 65"). Do not use vague terms like "long-term" unless that is the only information available.
 - **investmentPreferences**: extract the user's stated investment preference from the conversation — sectors, markets, indices, instruments, percentage splits, and any explicit buffer choice (e.g., "60% S&P 500, 40% TLV-125", "100% NASDAQ — no buffer; emergency fund held separately"). Use the user's own words. This field must always be extracted from the conversation; if no preference appears in the transcript, the clarification phase was incomplete.
 - **hasEmergencyFund**: \`true\` or \`false\` based on what the user said.

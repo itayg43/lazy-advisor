@@ -11,6 +11,7 @@ const {
   mockedHandleUnrealisticExpectations,
   mockedHandleContradictoryRisk,
   mockedCollectFields,
+  mockedCollectRisk,
   mockedCollectContribution,
   mockedCollectPreferences,
   mockedExtractUserProfile,
@@ -20,6 +21,7 @@ const {
   mockedHandleUnrealisticExpectations: vi.fn(),
   mockedHandleContradictoryRisk: vi.fn(),
   mockedCollectFields: vi.fn(),
+  mockedCollectRisk: vi.fn(),
   mockedCollectContribution: vi.fn(),
   mockedCollectPreferences: vi.fn(),
   mockedExtractUserProfile: vi.fn(),
@@ -39,6 +41,9 @@ vi.mock("#pipeline/stages/clarify/intake/clarify.contradictory", () => ({
 }));
 vi.mock("#pipeline/stages/clarify/fields/clarify.fields", () => ({
   collectFields: mockedCollectFields,
+}));
+vi.mock("#pipeline/stages/clarify/risk/clarify.risk", () => ({
+  collectRisk: mockedCollectRisk,
 }));
 vi.mock("#pipeline/stages/clarify/contribution/clarify.contribution", () => ({
   collectContribution: mockedCollectContribution,
@@ -77,6 +82,7 @@ describe("runClarifyStage", () => {
       hasEmergencyFund: mockProfile.hasEmergencyFund,
       hasDebt: mockProfile.hasDebt,
     });
+    mockedCollectRisk.mockResolvedValue({ riskTolerance: mockProfile.riskTolerance });
     mockedCollectContribution.mockResolvedValue({ plansToContribute: true });
     mockedCollectPreferences.mockResolvedValue("resp_prefs");
     mockedExtractUserProfile.mockResolvedValue(mockProfile);
@@ -91,6 +97,11 @@ describe("runClarifyStage", () => {
       expect(result).toEqual(mockProfile);
       expect(mockedCollectFields).toHaveBeenCalledWith(
         mockGoal,
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+      expect(mockedCollectRisk).toHaveBeenCalledWith(
+        mockProfile.amount,
         mockSendToUser,
         mockWaitForResponse,
       );
