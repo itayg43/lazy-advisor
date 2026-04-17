@@ -1,6 +1,6 @@
 # Clarify Stage — Behavior Rules
 
-> **Note:** Rules in this file cover field collection, preferences, and risk extraction. The contribution phase has its own rules file co-located with the implementation: [`clarify.contribution.rules.md`](../../../src/server/pipeline/stages/clarify/contribution/clarify.contribution.rules.md).
+> **Note:** Rules in this file cover field collection and preferences. The risk phase has its own rules file co-located with the implementation: [`clarify.risk.rules.md`](../../../src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md). The contribution phase has its own rules file co-located with the implementation: [`clarify.contribution.rules.md`](../../../src/server/pipeline/stages/clarify/contribution/clarify.contribution.rules.md).
 
 Behavioral rules for the clarify stage. Each entry: the rule, a one-line scenario, and the fields that matter for verifying correctness.
 
