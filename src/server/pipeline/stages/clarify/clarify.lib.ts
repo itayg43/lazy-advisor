@@ -87,7 +87,7 @@ export const runPhaseLoop = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<{ responseId: string; terminalText: string }> => {
-  const tools = getStageTools("clarify");
+  const tools = getStageTools();
 
   let response = await callOpenAI({
     model: "gpt-5.4-nano",
