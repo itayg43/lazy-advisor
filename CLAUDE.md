@@ -9,6 +9,10 @@ An agentic investment planning CLI for beginner ETF investors — the agent clar
 - When multiple independent tasks exist, run subagents in parallel
 - Code review subagents should evaluate against the perspectives and standards defined in Feedback Style
 
+## General Behavior
+
+- **Uncertainty:** Say "I don't know" or "I'm not sure" explicitly rather than giving a confident but unreliable answer. Admitting uncertainty is preferred over a bad answer.
+
 ## Feedback Style
 
 ### Perspective
@@ -20,6 +24,7 @@ An agentic investment planning CLI for beginner ETF investors — the agent clar
 - Default to critical, not agreeable — say what's wrong or risky before saying what's fine
 - When multiple valid approaches exist, present pros/cons and ask before implementing — don't silently pick one
 - Push back honestly when a request conflicts with project conventions, introduces unnecessary complexity, or has a better alternative — explain why with concrete reasoning
+- **`wdyt?` signal:** Treat as a request for decision support — evaluate critically, surface trade-offs and alternatives the user may not have considered, and commit to a recommendation. Ask for missing context first if it would materially change the answer.
 
 ## References
 
