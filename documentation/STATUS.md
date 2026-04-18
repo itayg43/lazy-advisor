@@ -2,7 +2,12 @@
 
 ## Up Next
 
-1. **Clarify stage typed I/O refactor** — Phases 1–4 complete (constants, schemas, fields, contribution, risk). Preferences phase being split into dedicated **equity** + **buffer** phases to eliminate bundled decision logic. See `CLARIFY_REFACTOR_PLAN.md` for full detail.
+1. **Cleanup (prerequisite to Phase 5a)** — See `CLEANUP_PLAN.md`.
+   - Phase A (code deletion) — **Complete.** Deleted research stage, plan/step repos+services, Prisma, Docker, Redis. Stripped research schemas from `pipeline.schema.ts`. Clarify-only env vars.
+   - Phase B (doc alignment) — Not started.
+   - Phase C (fields eval Case 1 rewrite) — Not started.
+
+2. **Clarify stage typed I/O refactor** — Phases 1–4 complete (constants, schemas, fields, contribution, risk). Preferences phase being split into dedicated **equity** + **buffer** phases to eliminate bundled decision logic. See `CLARIFY_REFACTOR_PLAN.md` for full detail.
 
    **Remaining implementation order:**
 
