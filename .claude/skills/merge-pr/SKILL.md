@@ -1,7 +1,8 @@
 ---
 name: merge-pr
-model: haiku
-description: Squash-merge the current branch's PR, delete the remote and local branch, and sync main.
+model: sonnet
+effort: low
+description: Merge the current branch's PR, delete the remote and local branch, and sync main.
 ---
 
 ## Steps
@@ -42,16 +43,12 @@ git push --force-with-lease
 
 Then wait for CI to re-run and re-run Step 2 to confirm all checks pass before continuing.
 
-### 4. Confirm
-
-Show the PR number and title, then ask the user to confirm before merging.
-
-### 5. Merge
+### 4. Merge
 
 ```bash
-gh pr merge --squash --delete-branch
+gh pr merge --merge --delete-branch
 ```
 
-### 6. Report
+### 5. Report
 
 Report the merge and stop. (`gh pr merge` handles switching to main, pulling, and deleting the local branch automatically.)

@@ -1,6 +1,7 @@
 ---
 name: open-pr
-model: haiku
+model: sonnet
+effort: medium
 description: Push the branch if needed and create a PR. Use after the commit is pushed and ready for review.
 ---
 
@@ -38,8 +39,6 @@ Write the PR title and description:
 - Title: ≤70 chars, describes what the PR does (not "fix" unless it's a bug fix)
 - Description: descriptive, detailed, and self-contained — no "Generated with Claude Code", no "Test plan" section
 - Suggested structure: `## Summary` with bullet points, plus any relevant context on decisions or trade-offs
-
-Present the draft to the user for approval before creating.
 
 ### 3. Create PR
 

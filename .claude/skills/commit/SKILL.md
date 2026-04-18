@@ -1,6 +1,7 @@
 ---
 name: commit
-model: haiku
+model: sonnet
+effort: medium
 description: Run all checks, draft a commit message, commit, and push to the current branch. Use when implementation and doc updates are complete.
 ---
 
@@ -43,8 +44,6 @@ Write a commit message:
 - No `Co-Authored-By` lines
 - No links to external documents or plan files (they can break)
 
-Present the draft to the user for approval before committing.
-
 ### 5. Commit and push
 
-Stage relevant files by name (never `git add .` or `git add -A`). Commit with the approved message. Push to the current branch.
+Stage relevant files by name (never `git add .` or `git add -A`). Commit with the drafted message. Push to the current branch.
