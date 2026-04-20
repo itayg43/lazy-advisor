@@ -21,20 +21,4 @@
 
    > **Note:** Stage-level evals (`clarify.stage.eval.ts`) remain broken during the Phase 5–8 refactor window — the orchestrator is being rewired phase-by-phase. Deferred until Phase 8 completes the orchestrator rewire. Broken runs in `clarify.stage.runs.jsonl` are expected.
 
-## Section Status
-
-| Section | Status |
-|---------|--------|
-| 1 — Project Setup | Complete (task 1.6 deferred to Section 7) |
-| 2 — Database Layer | Complete |
-| 3 — Stage 1 — Clarify | Complete |
-| 4 — Stage 2 — Research | Deferred |
-| 5 — Stage 3 — Plan | Deferred |
-| 6 — Stage 4 — Iterate | Deferred |
-| 7 — WebSocket + Session Lifecycle | Not started |
-| 8 — CLI Client | Not started |
-| 9 — Middleware Layer | Not started |
-| 10 — Observability | Not started |
-| 11 — Integration Testing + Polish | Not started |
-| 12 — Eval Infrastructure | Complete |
 

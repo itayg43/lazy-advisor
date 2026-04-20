@@ -8,7 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/clarify.contradictory";
 
-const LAST_RUN_PATH = new URL("CLARIFY_CONTRADICTORY_LAST_RUN.md", import.meta.url)
+const LAST_RUN_PATH = new URL("clarify.contradictory.last-run.md", import.meta.url)
   .pathname;
 
 describe("handleContradictoryRisk", () => {
@@ -29,7 +29,7 @@ describe("handleContradictoryRisk", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // CLARIFY_RULES #2: stage uses a concrete loss scenario to resolve contradictory risk signals.
+  // clarify.stage.rules.md rule 4: stage uses a concrete loss scenario to resolve contradictory risk signals.
   describe("accepted", () => {
     it("should resolve contradiction and return accepted result when user picks a risk level", async () => {
       lastGoal = "I want maximum returns but I can't afford to lose any money";

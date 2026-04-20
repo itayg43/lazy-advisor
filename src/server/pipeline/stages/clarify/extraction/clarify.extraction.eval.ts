@@ -10,7 +10,7 @@ import { toTranscriptEntries } from "#pipeline/stages/clarify/clarify.lib";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { RiskTolerance, UserProfileSchema } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("CLARIFY_EXTRACTION_LAST_RUN.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("clarify.extraction.last-run.md", import.meta.url).pathname;
 
 describe("clarifyExtraction", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -35,7 +35,7 @@ describe("clarifyExtraction", () => {
     lastTranscript = lastProfile = undefined;
   });
 
-  // CLARIFY_RULES #1: tests full clarify flow for a beginner — required fields collected, portfolio defaults
+  // clarify.stage.rules.md rule 5: tests full clarify flow for a beginner — required fields collected, portfolio defaults
   // question asked and answered with a custom equity split + buffer preference.
   it("should extract profile from a beginner conversation including portfolio defaults answers", async () => {
     const transcript: ResponseInputItem[] = [
@@ -171,7 +171,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #2: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
+  // clarify.stage.rules.md rule 4: tests that extraction picks up the resolved risk tolerance, not the contradictory initial signals.
   // Portfolio defaults are asked and answered after contradiction is resolved.
   it("should extract resolved risk tolerance from contradictory conversation", async () => {
     const transcript: ResponseInputItem[] = [
@@ -244,7 +244,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #7: tests "moderate-to-aggressive" risk mapping and that mentioning Irish ETFs as knowledge
+  // clarify.stage.rules.md rule 3: tests "moderate-to-aggressive" risk mapping and that mentioning Irish ETFs as knowledge
   // does not set investmentPreferences — portfolio defaults are still asked.
   it("should extract profile from advanced investor conversation", async () => {
     const transcript: ResponseInputItem[] = [
@@ -303,7 +303,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #6: tests that 100% concentration in a single index is captured as-is without modification.
+  // clarify.stage.rules.md rule 8: tests that 100% concentration in a single index is captured as-is without modification.
   it("should capture 100% single-index concentration as a valid investmentPreferences answer", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -356,7 +356,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_RULES #5: tests that extraction captures specific instruments with their percentage split.
+  // clarify.stage.rules.md rule 7: tests that extraction captures specific instruments with their percentage split.
   it("should extract investment preferences with percentage split when stated", async () => {
     const transcript: ResponseInputItem[] = [
       {
@@ -413,7 +413,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences).toMatch(/\d+%/);
   });
 
-  // CLARIFY_RULES #9: tests that "no buffer" intent is captured correctly when user declines the buffer
+  // clarify.stage.rules.md rule 9: tests that "no buffer" intent is captured correctly when user declines the buffer
   // because their emergency fund is held separately outside the portfolio.
   it("should extract no-buffer preference when user declines buffer with external emergency fund", async () => {
     const transcript: ResponseInputItem[] = [
@@ -468,7 +468,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/no buffer|separately/i);
   });
 
-  // CLARIFY_RULES #10: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
+  // clarify.risk.rules.md rule 3: passive calm holder (no discomfort, no buying-on-dips) → aggressive.
   // Absence of discomfort is the signal; buying-on-dips is not required.
   it("should extract aggressive for passive calm holder with no expressed discomfort", async () => {
     const transcript: ResponseInputItem[] = [

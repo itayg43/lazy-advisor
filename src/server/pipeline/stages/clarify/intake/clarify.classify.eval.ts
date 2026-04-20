@@ -4,7 +4,7 @@ import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/clarify.classify";
 
 describe("classifyGoal", () => {
-  // CLARIFY_RULES #3: individual stock picking, day trading, and direct crypto purchases
+  // clarify.stage.rules.md rule 1: individual stock picking, day trading, and direct crypto purchases
   // are out of scope — redirect to ETF-based investing.
   describe(GoalClassification.enum.out_of_scope, () => {
     it("should classify individual stock picking as out_of_scope", async () => {
@@ -23,7 +23,7 @@ describe("classifyGoal", () => {
     });
   });
 
-  // CLARIFY_RULES #8: unrealistic return expectations are redirected before field collection.
+  // clarify.stage.rules.md rule 2: unrealistic return expectations are redirected before field collection.
   describe(GoalClassification.enum.unrealistic, () => {
     it("should classify doubling capital in 6 months as unrealistic", async () => {
       const result = await classifyGoal(
@@ -33,7 +33,7 @@ describe("classifyGoal", () => {
     });
   });
 
-  // CLARIFY_RULES #2: contradictory risk signals in the goal are resolved before field collection.
+  // clarify.stage.rules.md rule 4: contradictory risk signals in the goal are resolved before field collection.
   describe(GoalClassification.enum.contradictory, () => {
     it("should classify conflicting risk signals as contradictory", async () => {
       const result = await classifyGoal(

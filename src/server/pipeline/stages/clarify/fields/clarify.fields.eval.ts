@@ -9,7 +9,7 @@ import {
 import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/clarify.types";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 
-const LAST_RUN_PATH = new URL("CLARIFY_FIELDS_LAST_RUN.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("clarify.fields.last-run.md", import.meta.url).pathname;
 
 describe("collectFields", () => {
   let lastGoal: string | undefined;

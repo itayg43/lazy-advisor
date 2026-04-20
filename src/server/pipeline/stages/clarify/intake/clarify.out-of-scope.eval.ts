@@ -8,7 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarify.out-of-scope";
 
-const LAST_RUN_PATH = new URL("CLARIFY_OUT_OF_SCOPE_LAST_RUN.md", import.meta.url)
+const LAST_RUN_PATH = new URL("clarify.out-of-scope.last-run.md", import.meta.url)
   .pathname;
 
 describe("handleOutOfScopeRedirect", () => {
@@ -29,7 +29,7 @@ describe("handleOutOfScopeRedirect", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // CLARIFY_RULES #3: redirect explains concentration risk, offers sector ETF middle ground,
+  // clarify.stage.rules.md rule 1: redirect explains concentration risk, offers sector ETF middle ground,
   // and ends with a question. Field collection begins only after acceptance — not in this phase.
   describe("accepted", () => {
     it("should redirect and return accepted result with responseId", async () => {

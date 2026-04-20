@@ -12,7 +12,7 @@ import type {
 } from "#pipeline/stages/clarify/clarify.types";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 
-const LAST_RUN_PATH = new URL("CLARIFY_CONTRIBUTION_LAST_RUN.md", import.meta.url)
+const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.url)
   .pathname;
 
 describe("collectContribution", () => {

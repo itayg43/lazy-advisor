@@ -31,13 +31,10 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 | Document | Read when |
 |----------|-----------|
 | [Status](documentation/STATUS.md) | At the start of each session |
-| [Plan](documentation/plan/PLAN.md) | When starting a new task — confirms scope and task definition; read before the exploration step |
+| [Architecture](documentation/ARCHITECTURE.md) | Before implementing any feature — pipeline overview, phase map, and design decisions |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
-| [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
-| [Decisions](documentation/DECISIONS.md) | Before implementing a new stage or cross-cutting change |
-| [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
-| [Stage Rules](documentation/workflow/stages/) | When implementing clarify stage behavior, prompts, or evals — phases with focused behavior also have co-located `*.rules.md` files (e.g., `clarify.fields.rules.md`, `clarify.contribution.rules.md`) |
+| [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files are co-located with each phase (e.g., `clarify.stage.rules.md`, `clarify.fields.rules.md`, `clarify.risk.rules.md`) |
 
 ## How to Work
 
@@ -60,7 +57,6 @@ Always use these exact commands — do not construct alternative invocations. Th
 | `npm run lint` | Lint source files |
 | `npm run type-check` | TypeScript type checking (no emit) |
 | `npm test` | Run unit tests |
-| `npm run test:repositories` | Run repository integration tests (resets test DB first) — Prisma's AI safety guard will prompt for confirmation before `db push --force-reset`; respond with "yes" to proceed |
 | `npm run test:evals` | Run all eval tests |
 | `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts`) |
 | `npm run dev:server` | Start the server in dev/watch mode |

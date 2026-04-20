@@ -24,7 +24,7 @@
 - Module declaration order: logger (treated as import-level dependency) → types → constants → helpers → exports
 - Dependency injection via function parameters (not classes), except where the plan explicitly uses classes (e.g., `Session`)
 - Async functions return typed `Promise<T>`, no bare `any`
-- More than 3 domain params → group them into a typed object. Infrastructure dependencies (e.g., `prisma`) and identifiers (e.g., `planId`) stay positional — they are not counted
+- More than 3 domain params → group them into a typed object. Infrastructure dependencies (e.g., an API client) and identifiers stay positional — they are not counted
 
 ## Error Handling
 
@@ -50,7 +50,6 @@
 ## Types
 
 - Zod schemas as source of truth at stage boundaries; define in `[domain].schema.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts`. Schema is the single source of truth — types are derived, never hand-written duplicates
-- Domain types in `domain.types.ts` re-exported from `@prisma/client`; `PlanStatus` exported as a value (not `export type`) so it can be used at runtime
 - No `any` — use `unknown` when type is uncertain
 
 ## Comments
