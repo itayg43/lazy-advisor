@@ -1,6 +1,6 @@
 # Lazy Advisor
 
-An agentic investment planning CLI for beginner ETF investors — the agent clarifies the user's situation, researches ETF data, and produces a phased investment plan.
+An agentic investment planning CLI for beginner ETF investors — current scope is the clarify stage, which builds a structured investment profile through adaptive multi-turn conversation.
 
 ## Agent Usage
 
@@ -37,7 +37,7 @@ An agentic investment planning CLI for beginner ETF investors — the agent clar
 | [Workflow](documentation/workflow/WORKFLOW.md) | Before implementing pipeline features, stages, or session behavior |
 | [Decisions](documentation/DECISIONS.md) | Before implementing a new stage or cross-cutting change |
 | [Usage Stories](documentation/workflow/STORIES.md) | When implementing stage behavior or LLM prompts |
-| [Stage Rules](documentation/workflow/stages/) | When implementing any stage's behavior, prompts, or evals — phases with focused behavior also have co-located `*.rules.md` files (e.g., `clarify.fields.rules.md`, `clarify.contribution.rules.md`) |
+| [Stage Rules](documentation/workflow/stages/) | When implementing clarify stage behavior, prompts, or evals — phases with focused behavior also have co-located `*.rules.md` files (e.g., `clarify.fields.rules.md`, `clarify.contribution.rules.md`) |
 
 ## How to Work
 
@@ -62,5 +62,5 @@ Always use these exact commands — do not construct alternative invocations. Th
 | `npm test` | Run unit tests |
 | `npm run test:repositories` | Run repository integration tests (resets test DB first) — Prisma's AI safety guard will prompt for confirmation before `db push --force-reset`; respond with "yes" to proceed |
 | `npm run test:evals` | Run all eval tests |
-| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/research/research.extraction.eval.ts`) |
+| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts`) |
 | `npm run dev:server` | Start the server in dev/watch mode |

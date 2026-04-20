@@ -34,7 +34,7 @@ The gap between "best practice" and "typical practice" at big companies is wider
 2. **Lead with the evals.** Screenshot eval output, or record a 30-second clip of the eval workflow. Most candidates cannot show this.
 3. **One visible end-to-end moment.** Clean minimal UI, or a recorded demo of full clarify → research → plan. Does not need autonomy — needs one coherent run a human can watch.
 4. **Own the framing verbally.** Not "I built a chatbot." Rather: "I built a multi-stage LLM pipeline with typed I/O between phases and an eval-driven development workflow. The interesting engineering is keeping non-deterministic model calls reliable and testable."
-5. **Where "autonomy" fits naturally:** not the clarify stage (deliberately constrained) — the research and plan stages, which have legitimate agentic loops (tool use, iterative refinement, self-correction). If the project needs more "magical" surface after clarify, push hard there.
+5. **Where "autonomy" fits naturally:** not the clarify stage (deliberately constrained) — the research and plan stages, which have legitimate agentic loops (tool use, iterative refinement, self-correction). Research and plan stages are currently out of scope — deferred until the clarify refactor is complete. If the project needs more "magical" surface after clarify, push hard there.
 
 ## TL;DR
 
