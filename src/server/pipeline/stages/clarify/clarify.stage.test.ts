@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
+import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { RiskTolerance } from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -27,16 +27,16 @@ const {
   mockedExtractUserProfile: vi.fn(),
 }));
 
-vi.mock("#pipeline/stages/clarify/intake/clarify.classify", () => ({
+vi.mock("#pipeline/stages/clarify/intake/classify/clarify.classify", () => ({
   classifyGoal: mockedClassifyGoal,
 }));
-vi.mock("#pipeline/stages/clarify/intake/clarify.out-of-scope", () => ({
+vi.mock("#pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope", () => ({
   handleOutOfScopeRedirect: mockedHandleOutOfScopeRedirect,
 }));
-vi.mock("#pipeline/stages/clarify/intake/clarify.unrealistic", () => ({
+vi.mock("#pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic", () => ({
   handleUnrealisticExpectations: mockedHandleUnrealisticExpectations,
 }));
-vi.mock("#pipeline/stages/clarify/intake/clarify.contradictory", () => ({
+vi.mock("#pipeline/stages/clarify/intake/contradictory/clarify.contradictory", () => ({
   handleContradictoryRisk: mockedHandleContradictoryRisk,
 }));
 vi.mock("#pipeline/stages/clarify/fields/clarify.fields", () => ({

@@ -1,8 +1,8 @@
-import { RISK_LEVELS } from "#pipeline/stages/clarify/clarify.constants";
 import {
   runIntakePhase,
   type IntakeResult,
 } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import { RISK_LEVELS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
 const CONTRADICTORY_PROMPT = `# Role and Objective

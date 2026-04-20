@@ -1,19 +1,19 @@
 import { createLogger } from "#lib/logger";
-import {
-  INTAKE_REJECTION_DEFAULT_MESSAGE,
-  INTAKE_REJECTION_MESSAGES,
-} from "#pipeline/stages/clarify/clarify.constants";
-import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
-import { classifyGoal } from "#pipeline/stages/clarify/intake/clarify.classify";
-import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/clarify.contradictory";
 import type { IntakeResult } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
-import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarify.out-of-scope";
-import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/clarify.unrealistic";
+import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
+import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/contradictory/clarify.contradictory";
+import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope";
+import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic";
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
+import {
+  INTAKE_REJECTION_DEFAULT_MESSAGE,
+  INTAKE_REJECTION_MESSAGES,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
+import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import type { UserProfile } from "#types/pipeline.types";
 

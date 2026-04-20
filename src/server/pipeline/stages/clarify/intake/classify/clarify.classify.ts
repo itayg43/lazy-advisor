@@ -2,11 +2,11 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
 import { createLogger } from "#lib/logger";
-import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/clarify.constants";
+import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
   GoalClassification,
   GoalClassificationSchema,
-} from "#pipeline/stages/clarify/clarify.schemas";
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyClassify");

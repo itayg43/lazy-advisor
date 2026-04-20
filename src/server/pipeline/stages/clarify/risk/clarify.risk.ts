@@ -1,10 +1,13 @@
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { createLogger } from "#lib/logger";
-import { MAX_RISK_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { buildRiskScenario, runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
-import { RiskPhaseOutputSchema } from "#pipeline/stages/clarify/clarify.schemas";
-import type { RiskPhaseOutput } from "#pipeline/stages/clarify/clarify.types";
+import { MAX_RISK_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import {
+  buildRiskScenario,
+  runPhaseLoop,
+} from "#pipeline/stages/clarify/shared/clarify.lib";
+import { RiskPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { RiskPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { RiskTolerance } from "#schemas/pipeline.schema";
 import { callOpenAIParsed } from "#services/openai";

@@ -3,7 +3,7 @@ import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
 import { buildSourceParams } from "#pipeline/lib/build-source-params";
-import { RISK_LEVELS } from "#pipeline/stages/clarify/clarify.constants";
+import { RISK_LEVELS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { RiskTolerance, UserProfileSchema } from "#schemas/pipeline.schema";
 import { callOpenAIParsed } from "#services/openai";
 import type { UserProfile } from "#types/pipeline.types";

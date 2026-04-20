@@ -6,8 +6,8 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import { toTranscriptEntries } from "#pipeline/stages/clarify/clarify.lib";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
+import { toTranscriptEntries } from "#pipeline/stages/clarify/shared/clarify.lib";
 import { RiskTolerance, UserProfileSchema } from "#schemas/pipeline.schema";
 
 const LAST_RUN_PATH = new URL("clarify.extraction.last-run.md", import.meta.url).pathname;

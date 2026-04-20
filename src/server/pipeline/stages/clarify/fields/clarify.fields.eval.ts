@@ -6,8 +6,8 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/clarify.types";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
+import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 
 const LAST_RUN_PATH = new URL("clarify.fields.last-run.md", import.meta.url).pathname;
 

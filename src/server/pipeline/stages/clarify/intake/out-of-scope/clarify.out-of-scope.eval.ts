@@ -6,7 +6,7 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarify.out-of-scope";
+import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope";
 
 const LAST_RUN_PATH = new URL("clarify.out-of-scope.last-run.md", import.meta.url)
   .pathname;

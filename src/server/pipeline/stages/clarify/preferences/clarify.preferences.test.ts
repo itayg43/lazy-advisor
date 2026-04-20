@@ -5,8 +5,8 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError } from "#errors";
-import { MAX_PREFERENCES_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
+import { MAX_PREFERENCES_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAI } = vi.hoisted(() => ({
