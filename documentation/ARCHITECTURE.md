@@ -28,7 +28,7 @@ Execution order: **classify → intake (conditional) → fields → risk → con
 | preferences | Collect equity allocation and buffer preferences | conversation → `responseId` |
 | extraction | Produce a fully typed `UserProfile` from the full conversation | `responseId` → `UserProfile` |
 
-Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt. Rules files are co-located: `clarify.fields.rules.md`, `clarify.contribution.rules.md`, `clarify.risk.rules.md`, `clarify.stage.rules.md`.
+Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt. A `*.rules.md` file is co-located with each phase (and at the stage root) as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
 
 ## Stage Boundary Validation
 
@@ -72,7 +72,7 @@ The fields prompt is left with one job: collect required profile fields.
 
 ### Handlers as sub-agents; code as orchestrator
 
-The intake handlers (`handleOutOfScopeRedirect`, `handleUnrealisticExpectations`, `handleContradictoryRisk`) are sub-agents in the practical sense: each has its own system prompt, its own `runPhaseLoop` tool-call loop, and returns a typed result (`IntakeResult`). The clarify stage orchestrates them explicitly in code after the classifier runs.
+The classifier (`classifyGoal`) and intake handlers (`handleOutOfScopeRedirect`, `handleUnrealisticExpectations`, `handleContradictoryRisk`) each live in their own subfolder under `clarify/intake/` alongside their evals and run logs. Each handler is a sub-agent in the practical sense: its own system prompt, its own `runPhaseLoop` tool-call loop, and a typed result (`IntakeResult`). The clarify stage orchestrates them explicitly in code after the classifier runs.
 
 An alternative considered: skip the classifier entirely and expose the handlers as LLM tools, letting a single top-level agent decide which to call (tool-as-router). This collapses classify + route into one inference. It breaks down here because the handlers are multi-turn conversations — the tool's "execution" would itself involve nested LLM calls and user interaction. The outer agent would just wait, contributing nothing, making it a very expensive classifier.
 

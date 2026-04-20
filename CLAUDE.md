@@ -34,7 +34,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 | [Architecture](documentation/ARCHITECTURE.md) | Before implementing any feature — pipeline overview, phase map, and design decisions |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
-| [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files are co-located with each phase (e.g., `clarify.stage.rules.md`, `clarify.fields.rules.md`, `clarify.risk.rules.md`) |
+| [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files (`*.rules.md`) are co-located with each phase and at the stage root |
 
 ## How to Work
 
@@ -58,5 +58,5 @@ Always use these exact commands — do not construct alternative invocations. Th
 | `npm run type-check` | TypeScript type checking (no emit) |
 | `npm test` | Run unit tests |
 | `npm run test:evals` | Run all eval tests |
-| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts`) |
+| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts` or `…/clarify/intake/classify/clarify.classify.eval.ts`) |
 | `npm run dev:server` | Start the server in dev/watch mode |
