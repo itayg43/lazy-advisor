@@ -34,7 +34,7 @@ Phases 1 & 2 are parallel. Phases 3, 4, 5a, 6, 7 are parallel once 1 & 2 are don
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | Expand `clarify.constants.ts` | Complete |
+| 1 | Expand `clarify/shared/clarify.constants.ts` | Complete |
 | 2 | Create typed I/O schemas | Complete |
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
@@ -103,7 +103,7 @@ Zod validation: `allocations.length >= 1`, each `percentage` is an integer in [0
 
 The optional `preStatedBuffer` is captured by the post-loop extraction when the user volunteers buffer info during the equity conversation (e.g., "FTSE All-World. קרן כספית for the buffer." or "100% S&P 500. No buffer — emergency fund is outside this portfolio."). Phase 5b receives it as input and skips its conversation loop when present.
 
-Replace `PreferencesPhaseOutputSchema` with `EquityAllocationSchema` + `EquityPhaseOutputSchema` in `clarify.schemas.ts`.
+Replace `PreferencesPhaseOutputSchema` with `EquityAllocationSchema` + `EquityPhaseOutputSchema` in `clarify/shared/clarify.schemas.ts`.
 
 #### Context string format
 
@@ -223,7 +223,7 @@ No dedicated unit test for 5a beyond Phase 8's orchestrator test. Behavior verif
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.classify.ts` — `classifyEquityIntent`: lightweight LLM classifier
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md` — behavioral rules per classification case
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts` — eval cases covering all 4 classification cases, conservative warning, pre-stated buffer capture
-- `src/server/pipeline/stages/clarify/clarify.schemas.ts` — replace `PreferencesPhaseOutputSchema` with `EquityAllocationSchema` + `EquityPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — replace `PreferencesPhaseOutputSchema` with `EquityAllocationSchema` + `EquityPhaseOutputSchema`
 
 **Verify:** `npm run test:evals -- clarify.equity.eval.ts`.
 
@@ -310,7 +310,7 @@ One unit test for the `preStatedBuffer` early-exit branch (assert no `sendToUser
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.rules.md` — new
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.eval.ts` — new (cases: full flow with mid-conversation Q&A, decline, named alternative, early-exit via pre-stated buffer)
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.test.ts` — new (early-exit branch)
-- `src/server/pipeline/stages/clarify/clarify.schemas.ts` — add `BufferPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `BufferPhaseOutputSchema`
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.buffer.eval.ts`.
 
@@ -372,7 +372,7 @@ UserProfileSchema = {
 **What:** Three targeted changes.
 
 **7a — Drop contradictory:**
-- Delete `intake/clarify.contradictory.ts` and `intake/clarify.contradictory.eval.ts`.
+- Delete `intake/contradictory/clarify.contradictory.ts` and `intake/contradictory/clarify.contradictory.eval.ts`.
 - Remove `contradictory` from `GoalClassification` enum in `pipeline.schema.ts`.
 - Update classifier prompt in `clarify.classify.ts` (remove contradictory case; these goals now classify as `normal`).
 - Remove `contradictory` entry from `INTAKE_REJECTION_MESSAGES` in constants.
@@ -397,22 +397,22 @@ return { accepted: true, redirectedGoal };
 The orchestrator passes `redirectedGoal ?? goal` to `collectFields`.
 
 **Files:**
-- `src/server/pipeline/stages/clarify/intake/clarify.out-of-scope.ts` — add post-acceptance extraction
-- `src/server/pipeline/stages/clarify/intake/clarify.unrealistic.ts` — add post-acceptance extraction
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.ts` — add post-acceptance extraction
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.ts` — add post-acceptance extraction
 - `src/server/pipeline/stages/clarify/clarify.stage.ts` — pass `redirectedGoal ?? goal` to `collectFields`
 
 **Verify:** `npm run test:evals -- clarify.classify.eval.ts` (contradictory goals should now classify as `normal`). Run out-of-scope and unrealistic evals.
 
 **Files (full list):**
-- `src/server/pipeline/stages/clarify/intake/clarify.contradictory.ts` — delete
-- `src/server/pipeline/stages/clarify/intake/clarify.contradictory.eval.ts` — delete
-- `src/server/pipeline/stages/clarify/intake/clarify.classify.ts` — update prompt, update `GoalClassification` import
+- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.ts` — delete
+- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.eval.ts` — delete
+- `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.ts` — update prompt, update `GoalClassification` import
 - `src/server/schemas/pipeline.schema.ts` — remove `contradictory` from enum
-- `src/server/pipeline/stages/clarify/clarify.constants.ts` — remove contradictory rejection message, update `GOAL_CLASSIFICATIONS`
-- `src/server/pipeline/stages/clarify/intake/clarify.out-of-scope.ts` — updated prompt + post-acceptance extraction
-- `src/server/pipeline/stages/clarify/intake/clarify.out-of-scope.eval.ts` — new eval cases
-- `src/server/pipeline/stages/clarify/intake/clarify.unrealistic.ts` — updated prompt + post-acceptance extraction
-- `src/server/pipeline/stages/clarify/intake/clarify.unrealistic.eval.ts` — new eval cases
+- `src/server/pipeline/stages/clarify/shared/clarify.constants.ts` — remove contradictory rejection message, update `GOAL_CLASSIFICATIONS`
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.ts` — updated prompt + post-acceptance extraction
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.eval.ts` — new eval cases
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.ts` — updated prompt + post-acceptance extraction
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.eval.ts` — new eval cases
 
 ---
 
@@ -472,9 +472,9 @@ Checklist:
 **What:** Move inline prompts from `clarify.classify.ts`, `clarify.out-of-scope.ts`, and `clarify.unrealistic.ts` into co-located `.rules.md` files (if not already done in phase 7). No behavior changes — purely structural.
 
 **Files:**
-- `src/server/pipeline/stages/clarify/intake/clarify.classify.rules.md` — new
-- `src/server/pipeline/stages/clarify/intake/clarify.out-of-scope.rules.md` — new (if not extracted in phase 7)
-- `src/server/pipeline/stages/clarify/intake/clarify.unrealistic.rules.md` — new (if not extracted in phase 7)
+- `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.rules.md` — new
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.rules.md` — new (if not extracted in phase 7)
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.rules.md` — new (if not extracted in phase 7)
 - Corresponding `.ts` files updated to import from rules files
 
 **Verify:** `npm run type-check` passes. All previously-passing tests still pass.
@@ -501,7 +501,7 @@ These are not part of the current refactor phases but were identified during Pha
 
 **Files (when implementing):**
 - `src/server/pipeline/stages/clarify/clarify.stage.ts` — add opening message before phase sequence
-- OR `src/server/pipeline/stages/clarify/intake/clarify.classify.ts` — integrate into classifier opening
+- OR `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.ts` — integrate into classifier opening
 
 ---
 
@@ -512,9 +512,9 @@ Phase 7d adds clean goal extraction to intake handlers. If the extracted `redire
 | File | Role |
 |------|------|
 | `clarify/clarify.stage.ts` | Orchestrator — phases 7–8 |
-| `clarify/clarify.constants.ts` | Constants — phase 1 |
-| `clarify/clarify.schemas.ts` | New I/O types — phase 2 |
-| `clarify/clarify.lib.ts` | Loop utilities — no changes planned |
+| `clarify/shared/clarify.constants.ts` | Constants — phase 1 |
+| `clarify/shared/clarify.schemas.ts` | New I/O types — phase 2 |
+| `clarify/shared/clarify.lib.ts` | Loop utilities — no changes planned |
 | `clarify/fields/clarify.fields.ts` | Fields phase — phase 3 |
 | `clarify/contribution/clarify.contribution.ts` | Contribution phase — phase 3b (new) |
 | `clarify/risk/clarify.risk.ts` | Risk phase — phase 4 (new) |
@@ -522,7 +522,7 @@ Phase 7d adds clean goal extraction to intake handlers. If the extracted `redire
 | `clarify/buffer/clarify.buffer.ts` | Buffer phase — phase 5b (new) |
 | `clarify/preferences/` | Directory deleted in phase 5a (renamed to `equity/`) |
 | `clarify/extraction/clarify.extraction.ts` | Thin extraction — phase 6 |
-| `clarify/intake/clarify.classify.ts` | Classifier — phase 7 |
-| `clarify/intake/clarify.contradictory.ts` | Delete in phase 7 |
+| `clarify/intake/classify/clarify.classify.ts` | Classifier — phase 7 |
+| `clarify/intake/contradictory/clarify.contradictory.ts` | Delete in phase 7 |
 | `src/server/schemas/pipeline.schema.ts` | `UserProfileSchema` (flat `equity` + `buffer`, no `investmentPreferences`), `GoalClassification` — phases 6, 7 |
 | `src/lib/build-source-params.ts` | Delete in phase 8 if unused |
