@@ -15,6 +15,7 @@ const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathn
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
 describe("collectRisk", () => {
+  const mockGoal = "Invest ₪50,000 for long-term growth";
   const mockAmount = 50_000;
 
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -40,6 +41,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
+      mockGoal,
       mockAmount,
       responder.sendToUser,
       responder.waitForResponse,
@@ -58,6 +60,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
+      mockGoal,
       mockAmount,
       responder.sendToUser,
       responder.waitForResponse,
@@ -76,6 +79,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
+      mockGoal,
       mockAmount,
       responder.sendToUser,
       responder.waitForResponse,
@@ -94,6 +98,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
+      mockGoal,
       mockAmount,
       responder.sendToUser,
       responder.waitForResponse,
@@ -114,6 +119,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
+      mockGoal,
       mockAmount,
       responder.sendToUser,
       responder.waitForResponse,

@@ -15,7 +15,6 @@ export const GoalClassificationSchema = z.object({
 });
 
 export const FieldsPhaseOutputSchema = z.object({
-  goal: z.string().min(1).max(MAX_STRING_LENGTH),
   amount: z.number().int().positive().max(MAX_AMOUNT),
   age: z.number().int().positive().max(MAX_AGE),
   timeline: z.string().min(1).max(MAX_STRING_LENGTH),

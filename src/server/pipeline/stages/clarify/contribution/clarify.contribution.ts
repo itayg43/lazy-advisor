@@ -47,13 +47,14 @@ const CONTRIBUTION_EXTRACTION_INSTRUCTIONS = `Extract a structured record from t
 - plansToContribute: true if the user confirmed they plan to add money periodically, false otherwise (explicit no, vague answer, or no clear signal)`;
 
 export const collectContribution = async (
+  goal: string,
   fields: FieldsPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<ContributionPhaseOutput> => {
-  logger.info("Starting contribution phase", { goal: fields.goal });
+  logger.info("Starting contribution phase", { goal, fields });
 
-  const context = `User goal: ${fields.goal}. Investment amount: ₪${fields.amount.toLocaleString()}. Timeline: ${fields.timeline}.`;
+  const context = `User goal: ${goal}. Investment amount: ₪${fields.amount.toLocaleString()}. Timeline: ${fields.timeline}.`;
 
   const { responseId } = await runPhaseLoop(
     CONTRIBUTION_PROMPT,

@@ -88,7 +88,6 @@ Decision Logic:
 
 const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the preceding investment advisor conversation. Extract only what was explicitly stated — do not infer or fabricate.
 
-- goal: concise summary of the user's investment goal (include specifics: amount, purpose, constraints)
 - amount: exact ₪ amount (integer; convert shorthand: "₪50k" → 50000)
 - age: exact age (integer)
 - timeline: specific timeframe stated (e.g., "20 years", "until retirement at 65")

@@ -60,11 +60,12 @@ const RISK_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the prece
   - "${aggressive}": user chose to stay invested (option B) and expressed calm or indifference to the drop`;
 
 export const collectRisk = async (
+  goal: string,
   amount: number,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<RiskPhaseOutput> => {
-  logger.info("Starting risk phase", { amount });
+  logger.info("Starting risk phase", { goal, amount });
 
   const scenario = buildRiskScenario(amount, RISK_DROP_PERCENTAGE);
   const prompt = `${RISK_PROMPT_HEADER}\n\n${scenario}${RISK_PROMPT_BODY}`;

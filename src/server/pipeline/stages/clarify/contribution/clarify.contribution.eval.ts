@@ -16,8 +16,8 @@ const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.ur
   .pathname;
 
 describe("collectContribution", () => {
+  const mockGoal = "Invest ₪30,000 for long-term retirement savings";
   const mockFields: FieldsPhaseOutput = {
-    goal: "Invest ₪30,000 for long-term retirement savings",
     amount: 30_000,
     age: 35,
     timeline: "30 years",
@@ -48,6 +48,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
+      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -63,6 +64,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
+      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -78,6 +80,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
+      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -96,6 +99,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
+      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -115,6 +119,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
+      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -133,6 +138,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
+      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,

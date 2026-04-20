@@ -1,11 +1,13 @@
 # Eval Last Run
-Timestamp: 2026-04-17T19:08:06.245Z | Commit: ba880db
+Timestamp: 2026-04-20T18:47:11.673Z | Commit: e576188
 
 ---
 
 ## ✓ should return conservative when user chooses to sell
 
-**Agent:** Imagine your ₪50,000 portfolio drops 20% (₪10,000) in a market downturn. Do you: A) Sell — exit the position and move to cash, or B) Stay invested — you accept short-term drops as part of long-term growth?
+**Agent:** Imagine your ₪50,000 portfolio drops 20% (₪10,000) in a market downturn. Do you:
+A) Sell — exit the position and move to cash, or
+B) Stay invested — you accept short-term drops as part of long-term growth?
 
 **User:** A — I'd sell and move to cash
 
@@ -49,13 +51,16 @@ riskTolerance: aggressive
 
 ## ✓ should give educational fallback on uncertain answer and default to conservative
 
-**Agent:** Imagine your ₪50,000 portfolio drops 20% (₪10,000) in a market downturn. Do you: A) Sell — exit the position and move to cash, or B) Stay invested — you accept short-term drops as part of long-term growth?
+**Agent:** Imagine your ₪50,000 portfolio drops 20% (₪10,000) in a market downturn. Do you:
+A) Sell — exit the position and move to cash, or 
+B) Stay invested — you accept short-term drops as part of long-term growth?
 
 **User:** I don't know, it's hard to say
 
-**Agent:** That’s a common feeling—it's hard to know until it happens. The reason it matters is that your tolerance for short‑term losses should influence how you’re set up for downturns. If a 20% drop would make you want to sell out of panic, that suggests you’ll need a structure designed to reduce those swings. If you think you could ride it out without panicking, then you can better tolerate more volatility.
+**Agent:** That’s a common feeling — it’s hard to know until it happens. The reason it matters is that your tolerance for short-term losses should influence how you handle your portfolio during downturns. To picture it: your ₪50,000 is now down ₪10,000 on paper. What's your gut reaction in that moment — sell to stop the bleeding, or stay invested and trust the recovery?
 
-Try to picture it concretely: it’s down on paper by ₪10,000, and you have no certainty about what the next few months will look like. What’s your gut reaction—sell to stop the bleeding, or stay invested and trust the recovery? A) Sell, or B) Stay invested?
+A) Sell — exit the position and move to cash, or
+B) Stay invested — accept short-term drops as part of long-term growth?
 
 **User:** Hmm, I still don't know honestly
 
@@ -71,9 +76,9 @@ riskTolerance: conservative
 
 **User:** I'd check the news and see if it's a temporary dip
 
-**Agent:** That’s a natural instinct, but trying to time the market—deciding what to do based on news or predictions—often becomes unreliable, especially during sharp drops. Even when people mean well, it’s difficult to know whether a move is temporary or the start of something worse. Research has also found that consistent “getting the timing right” is hard even for professionals.
+**Agent:** That’s a natural instinct, but trying to time the market—selling because of the news or economic conditions—often backfires, because it’s hard to know in advance when declines will end or how far they’ll go. The question is really about your default behavior when you don’t have certainty: if your portfolio was down and you had no idea whether it would recover next month or in three years, would your instinct be to sell, or to stay invested?
 
-Let’s reset to the core behavior question: if your portfolio is down 20% and you don’t know how fast it will recover, would your default be A) Sell — move to cash, or B) Stay invested — accept short-term drops as part of long-term growth?
+Would you choose A) Sell — exit the position and move to cash, or B) Stay invested — accept short-term drops as part of long-term growth?
 
 **User:** Ok fair point. B — I'd stay invested
 
