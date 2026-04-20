@@ -8,7 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/clarify.unrealistic";
 
-const LAST_RUN_PATH = new URL("CLARIFY_UNREALISTIC_LAST_RUN.md", import.meta.url)
+const LAST_RUN_PATH = new URL("clarify.unrealistic.last-run.md", import.meta.url)
   .pathname;
 
 describe("handleUnrealisticExpectations", () => {
@@ -29,7 +29,7 @@ describe("handleUnrealisticExpectations", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // CLARIFY_RULES #8: stage explains why doubling in 6 months is unrealistic and asks
+  // clarify.stage.rules.md rule 2: stage explains why doubling in 6 months is unrealistic and asks
   // if the user wants to proceed with a realistic long-term plan.
   describe("accepted", () => {
     it("should redirect and return accepted result when user pivots to long-term", async () => {

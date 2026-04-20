@@ -12,7 +12,7 @@ import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
 import { UserProfileSchema } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("CLARIFY_PREFERENCES_LAST_RUN.md", import.meta.url)
+const LAST_RUN_PATH = new URL("clarify.preferences.last-run.md", import.meta.url)
   .pathname;
 
 describe("collectPreferences", () => {
@@ -38,7 +38,7 @@ describe("collectPreferences", () => {
     lastTranscript = lastProfile = undefined;
   });
 
-  // CLARIFY_RULES #1: when no preference has been stated after field collection, the portfolio defaults
+  // clarify.stage.rules.md rule 5: when no preference has been stated after field collection, the portfolio defaults
   // question is presented — equity allocation options with compound projections and a קרן כספית buffer
   // suggestion. User picks a custom equity split and accepts the buffer.
   it("should present portfolio defaults and capture equity split and buffer", async () => {
@@ -93,7 +93,7 @@ describe("collectPreferences", () => {
     }
   });
 
-  // CLARIFY_RULES #4: when an equity preference is already stated in the goal, the equity guard fires
+  // clarify.stage.rules.md rule 6: when an equity preference is already stated in the goal, the equity guard fires
   // and the portfolio defaults question covers buffer only. User accepts קרן כספית.
   it("should skip equity defaults when preference already stated and ask buffer only", async () => {
     const fieldsTranscript: ResponseInputItem[] = [
@@ -140,7 +140,7 @@ describe("collectPreferences", () => {
     }
   });
 
-  // CLARIFY_RULES #5: when multiple instruments are named without a percentage split, the preferences
+  // clarify.stage.rules.md rule 7: when multiple instruments are named without a percentage split, the preferences
   // phase asks for the split before treating investmentPreferences as complete.
   it("should ask for split when multiple instruments are named without one", async () => {
     const fieldsTranscript: ResponseInputItem[] = [
@@ -192,7 +192,7 @@ describe("collectPreferences", () => {
     }
   });
 
-  // CLARIFY_RULES #9: when the user explicitly declines the buffer because their emergency fund is
+  // clarify.stage.rules.md rule 9: when the user explicitly declines the buffer because their emergency fund is
   // held separately outside the portfolio, the stage accepts that without pushback and captures the
   // no-buffer intent in investmentPreferences.
   it("should accept no-buffer preference when emergency fund is external", async () => {

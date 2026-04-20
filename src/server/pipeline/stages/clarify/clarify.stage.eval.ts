@@ -9,7 +9,7 @@ import {
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import { RiskTolerance } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("CLARIFY_STAGE_LAST_RUN.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("clarify.stage.last-run.md", import.meta.url).pathname;
 
 describe("runClarifyStage", () => {
   let lastGoal: string | undefined;
@@ -57,7 +57,7 @@ describe("runClarifyStage", () => {
     expect(result.hasDebt).toBe(false);
   });
 
-  // CLARIFY_RULES #3: out-of-scope goal → redirect → user accepts → full profile extracted.
+  // clarify.stage.rules.md rule 1: out-of-scope goal → redirect → user accepts → full profile extracted.
   it("should redirect out-of-scope goal and produce a full profile after acceptance", async () => {
     lastGoal = "Should I buy NVIDIA stock?";
     const responder = createTrackedResponder([

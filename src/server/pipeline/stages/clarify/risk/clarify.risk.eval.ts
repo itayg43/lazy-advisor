@@ -10,7 +10,7 @@ import type { RiskPhaseOutput } from "#pipeline/stages/clarify/clarify.types";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import { RiskTolerance } from "#schemas/pipeline.schema";
 
-const LAST_RUN_PATH = new URL("CLARIFY_RISK_LAST_RUN.md", import.meta.url).pathname;
+const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathname;
 
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
