@@ -16,19 +16,25 @@ Stage behavior, prompts, and rules are co-located with the stage at `src/server/
 
 ## Clarify Stage — Phases
 
-Execution order: **classify → intake (conditional) → fields → risk → contribution → preferences → extraction**
+> **Refactor in progress.** The stage is being rewritten from `previous_response_id` chaining to a typed I/O pipeline. See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase specs and status. The phase map below reflects the **target state**; current `main` still has the monolithic `preferences` phase and `riskTolerance` collected inside `fields`.
+
+Target execution order: **classify → intake (conditional) → fields → risk → allocation → contribution → equity → buffer → extraction**
 
 | Phase | Job | Input → Output |
 |-------|-----|----------------|
-| classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
-| intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakeResult` |
+| classify | Label the goal: `normal`, `out_of_scope`, or `unrealistic` (contradictory dropped) | `goal` → `GoalClassification` |
+| intake | Redirect misclassified goals; reject if user declines; extract clean `redirectedGoal` on acceptance | `goal`, classification → `IntakeResult` |
 | fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
-| risk | Determine risk tolerance via scenario questions | `amount` → `RiskPhaseOutput` |
-| contribution | Establish one-time vs. periodic intent | `FieldsPhaseOutput` → `ContributionPhaseOutput` |
-| preferences | Collect equity allocation and buffer preferences | conversation → `responseId` |
-| extraction | Produce a fully typed `UserProfile` from the full conversation | `responseId` → `UserProfile` |
+| risk | Determine risk tolerance via two-tier drop scenario (20% → 35%) | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
+| allocation | Size the total-portfolio equity/buffer split using multi-factor anchor (risk, timeline, age, emergency fund, debt) | `goal`, fields, risk → `AllocationPhaseOutput` |
+| contribution | Establish one-time vs. periodic intent | `goal`, fields → `ContributionPhaseOutput` |
+| equity | Resolve which equity instruments fill the equity bucket + within-equity split (classify-then-route) | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
+| buffer | Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
+| extraction | Thin assembly into `UserProfile` (only remaining LLM call: goal summary) | all phase outputs → `UserProfile` |
 
-Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt. A `*.rules.md` file is co-located with each phase (and at the stage root) as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
+Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt, then a post-loop structured extraction call produces the phase's typed output. A `*.rules.md` file is co-located with each phase (and at the stage root) as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
+
+**Why allocation is its own phase:** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which is what protects against the panic-sell behavior they self-reported. Cramming this decision into the equity phase would recreate the "preferences phase bloat" the refactor is built to eliminate.
 
 ## Stage Boundary Validation
 
@@ -44,7 +50,9 @@ All OpenAI API calls use retry with exponential backoff (3 attempts). If all ret
 
 ### Multi-phase split
 
-Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Each phase has its own system prompt scoped to a single job; conversation context accumulates naturally via `previous_response_id` chaining so each phase sees exactly the history it needs. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate to a specific phase.
+Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Each phase has its own system prompt scoped to a single job, runs its own `runPhaseLoop`, and returns a typed structured output consumed by the next phase. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate to a specific phase.
+
+(Historical note: the initial implementation chained phases via `previous_response_id` with a single extraction call at the end. The refactor in [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) replaces that with the typed I/O pipeline described above.)
 
 ### Phase loop guardrails
 
@@ -52,27 +60,29 @@ Splitting by responsibility keeps each prompt short and focused, improving instr
 
 ### Classifier + intake routing
 
-Some goals require handling before field collection can begin: stock picking requests need an ETF redirect, unrealistic return expectations need a reality check, and explicit contradictions ("maximum returns but I can't lose money") need resolution. Embedding this branching logic in the fields prompt would create a "mega prompt" where routing decisions compete with field-collection instructions, degrading adherence (frontier models follow ~150–200 instructions reliably; complex branching consumes that budget fast).
+Some goals require handling before field collection can begin: stock picking requests need an ETF redirect, and unrealistic return expectations need a reality check. Embedding this branching logic in the fields prompt would create a "mega prompt" where routing decisions compete with field-collection instructions, degrading adherence (frontier models follow ~150–200 instructions reliably; complex branching consumes that budget fast).
 
-The solution: move routing into code. A lightweight classifier (`classifyGoal`) makes a single structured LLM call and returns one of four values — `normal`, `out_of_scope`, `unrealistic`, or `contradictory`. Code then routes to the appropriate intake phase before field collection begins:
+The solution: move routing into code. A lightweight classifier (`classifyGoal`) makes a single structured LLM call and returns one of three values — `normal`, `out_of_scope`, or `unrealistic`. Code then routes to the appropriate intake phase before field collection begins:
 
 ```
 "Should I buy NVIDIA stock?"
   → classifyGoal()             → out_of_scope
-  → handleOutOfScopeRedirect   → IntakeResult { accepted: true, responseId }
-  → collectFields({ goal })
-  → collectPreferences → extractUserProfile
+  → handleOutOfScopeRedirect   → IntakeResult { accepted: true, redirectedGoal }
+  → collectFields(redirectedGoal ?? goal)
+  → collectRisk → collectAllocation → ... → extractUserProfile
 ```
 
 Each intake phase (`runPhaseLoop`) handles its specific conversation. Acceptance is determined by regex-matching the model's terminal phrase — `/got it/i` → accepted, anything else → rejected. The intake prompts instruct the model to respond with exactly `"Got it."` (accepted) or `"Understood."` (rejected, visible to user), making the signal deterministic enough for regex. The result is typed as `IntakeResult`:
-- `{ accepted: true, responseId }` — chain the response ID into the fields phase
+- `{ accepted: true, redirectedGoal }` — the intake handler extracts a clean goal string capturing the accepted ETF redirect; orchestrator passes `redirectedGoal ?? goal` to `collectFields`
 - `{ accepted: false }` — end the session; the stage sends a per-classification closing message from `INTAKE_REJECTION_MESSAGES`
 
 The fields prompt is left with one job: collect required profile fields.
 
+(The earlier pipeline included a `contradictory` classification for goals with conflicting risk signals like "maximum returns but I can't lose money." This path has been dropped — the risk phase's two-tier probe handles these cases naturally as part of behavioral classification.)
+
 ### Handlers as sub-agents; code as orchestrator
 
-The classifier (`classifyGoal`) and intake handlers (`handleOutOfScopeRedirect`, `handleUnrealisticExpectations`, `handleContradictoryRisk`) each live in their own subfolder under `clarify/intake/` alongside their evals and run logs. Each handler is a sub-agent in the practical sense: its own system prompt, its own `runPhaseLoop` tool-call loop, and a typed result (`IntakeResult`). The clarify stage orchestrates them explicitly in code after the classifier runs.
+The classifier (`classifyGoal`) and intake handlers (`handleOutOfScopeRedirect`, `handleUnrealisticExpectations`) each live in their own subfolder under `clarify/intake/` alongside their evals and run logs. Each handler is a sub-agent in the practical sense: its own system prompt, its own `runPhaseLoop` tool-call loop, and a typed result (`IntakeResult`). The clarify stage orchestrates them explicitly in code after the classifier runs.
 
 An alternative considered: skip the classifier entirely and expose the handlers as LLM tools, letting a single top-level agent decide which to call (tool-as-router). This collapses classify + route into one inference. It breaks down here because the handlers are multi-turn conversations — the tool's "execution" would itself involve nested LLM calls and user interaction. The outer agent would just wait, contributing nothing, making it a very expensive classifier.
 
@@ -80,7 +90,7 @@ The pattern works when the routed actions are simple and single-shot. When the a
 
 ### Edge case — mid-conversation contradiction
 
-If a user starts with a `normal` goal but gives contradictory risk signals while answering the risk question (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. It's handled inline in the `riskTolerance` field definition in the risk phase prompt — not as a classifier route.
+If a user starts with a `normal` goal but gives contradictory risk signals during the risk phase (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. The risk phase's two-tier A/B probe handles it purely behaviorally: whichever way the user actually responds to the 20% drop (and the 35% follow-up) is the signal. Self-reported stated preference is ignored in favor of demonstrated behavior. The allocation phase (Phase 4b) further protects against any residual mismatch by sizing the equity bucket to the resulting risk tolerance — so the user's panic-sell behavior is contained regardless of how they initially described themselves.
 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 

@@ -11,22 +11,21 @@ The spec (`CLARIFY_REVIEW.md`) redesigns this as a typed I/O pipeline: each phas
 ## Dependency Graph
 
 ```
-Phase 1 (constants)  ──────────────────────────────────────┐
-Phase 2 (schemas)    ─────────────────────────────────┐    │
-                                                       ↓    ↓
-Phase 3 (fields refactor)  ─────────────────────────► Phase 8 (orchestrator)
-Phase 4 (risk phase)  ──────────────────────────────► Phase 8
-Phase 5a (equity phase)  ──► Phase 5b (buffer phase) ► Phase 8
-Phase 6 (thin extraction)  ─────────────────────────► Phase 8
-Phase 7 (intake cleanup)  ──────────────────────────► Phase 8
-                                                          │
-                                          ┌───────────────┘
-                                          ▼
-                                   Phase 9 (eval alignment)
-                                   Phase 10 (rules files)
+Phase 1 (constants)  ──────────────────────────────────────────────────────────┐
+Phase 2 (schemas)    ─────────────────────────────────────────────────────┐    │
+                                                                           ↓    ↓
+Phase 3 (fields refactor)  ─────────────────────────────────────────────► Phase 8 (orchestrator)
+Phase 4 (risk) ─► Phase 4b (allocation) ─► Phase 5a (equity) ─► Phase 5b (buffer) ─► Phase 8
+Phase 6 (thin extraction)  ─────────────────────────────────────────────► Phase 8
+Phase 7 (intake cleanup)  ──────────────────────────────────────────────► Phase 8
+                                                                              │
+                                                      ┌───────────────────────┘
+                                                      ▼
+                                              Phase 9 (eval alignment)
+                                              Phase 10 (rules files)
 ```
 
-Phases 1 & 2 are parallel. Phases 3, 4, 5a, 6, 7 are parallel once 1 & 2 are done. Phase 5b depends on 5a (needs `EquityPhaseOutput`). Phase 8 gates everything. Phases 9 & 10 are post-integration cleanup.
+Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phase 4 → 4b → 5a → 5b is a strict chain: 4b depends on `RiskPhaseOutput`, 5a depends on `AllocationPhaseOutput`, 5b depends on `EquityPhaseOutput` (and `AllocationPhaseOutput`). Phase 8 gates everything. Phases 9 & 10 are post-integration cleanup.
 
 ---
 
@@ -39,9 +38,10 @@ Phases 1 & 2 are parallel. Phases 3, 4, 5a, 6, 7 are parallel once 1 & 2 are don
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
 | 4 | Create the risk phase | Complete (single 20% probe) |
-| 4 re-open | Two-tier risk probe | Next — see Phase 4 re-open section below |
-| 5a | Create the equity phase (split from preferences) | In progress — prompt redesign + split pending |
-| 5b | Create the buffer phase (split from preferences) | Not started |
+| 4 re-open | Two-tier risk probe | In progress — prompt-based flow landed; code-based refactor next (see Phase 4 re-open section below) |
+| 4b | Create the allocation phase (equity vs. buffer sizing) | Not started — see Phase 4b section below |
+| 5a | Create the equity phase (split from preferences) | Paused — scope revised; now depends on Phase 4b |
+| 5b | Create the buffer phase (split from preferences) | Not started — depends on Phase 4b and 5a |
 | 6 | Refactor extraction to thin assembly | Not started |
 | 7 | Intake cleanup: drop contradictory, update out-of-scope and unrealistic | Not started |
 | 8 | Wire new pipeline in `clarify.stage.ts` | Not started |
@@ -55,38 +55,164 @@ Phases 1 & 2 are parallel. Phases 3, 4, 5a, 6, 7 are parallel once 1 & 2 are don
 
 ### Phase 4 re-open — Two-tier risk probe
 
-**Why re-open:** The initial risk phase anchored on a single 20% drop scenario. A user who says "I'd sell at 20%" is classified conservative, but NASDAQ-100 has dropped ~33% in a single year — the 20% probe doesn't reveal whether the user has thought about that magnitude. This creates conservative + aggressive-instrument mismatches that would otherwise force reactive warning logic inside the equity phase (breaking the typed-I/O premise).
+**Status:** Prompt-based two-tier flow is landed — signature change (`collectRisk` takes full `fields`), rules file rewrite, 9 eval cases (8 rule-keyed + 1 short-timeline framing fidelity), prompts extracted to `clarify.risk.prompts.ts`. Evals stabilized at 8/9–9/9 after prompt stacking; uncertain-on-Turn-1 → Step 4 path has an intermittent adherence flake (~1 in 3–4 runs, model short-circuits to Step 6). Output is still correct (`conservative`) but the mandatory educational re-ask is skipped. Additional prompt stacking has diminishing returns.
 
-**Signature unchanged:** `collectRisk(goal, amount, sendToUser, waitForResponse): Promise<RiskPhaseOutput>`. The `goal` param (already wired as part of the goal-relocation change) is threaded into the scenario prompt as grounding context — never as classifier input. The A/B/stressed/calm classification stays purely behavioral.
+**Next step (the code-based refactor):** Move the state machine out of the prompt into code. Each user reply runs through a lightweight LLM classifier (`"A" | "B" | "uncertain" | "market-timing"`); code branches deterministically on the classification and the phase's tracked state (current turn, whether educational fallback already delivered). Prompts shrink to per-node generation (Turn 1 ask, Turn 2 ask, educational fallback, market-timing redirect) + the classifier. Rules file remains the spec; it now drives code transitions instead of prompt instructions. The post-loop extraction call is likely removable — the code already knows the outcome. See design sketch at end of this section.
+
+**Why re-open:** The initial risk phase anchored on a single 20% drop scenario. A user who says "I'd sell at 20%" is classified conservative, but stock markets have dropped 30–40% in single drawdowns historically — the 20% probe doesn't reveal whether the user has thought about deeper magnitudes. This creates under-probing. A two-tier probe addresses it without introducing reactive warning logic downstream.
+
+**Signature change:** `collectRisk(goal, fields, sendToUser, waitForResponse): Promise<RiskPhaseOutput>`. Takes the full `fields` object instead of just `amount` so the phase can ground its educational framing in `fields.timeline` (and use `fields.amount` for concrete figures). `goal` is grounding context only — never classifier input. The A/B classification stays purely behavioral.
 
 **Output enum unchanged:** `conservative` | `moderate` | `aggressive`.
 
-**Two-tier flow:**
+**Two-turn flow (no Turn 3):**
 
 ```
 Turn 1: 20% drop — A (sell) or B (stay)?
   A → conservative, end.
   B → Turn 2.
-Turn 2: 35% drop (e.g., like NASDAQ in 2022) — A or B?
-  A → moderate (would hold normal drop, not severe), end.
-  B → Turn 3.
-Turn 3: "Watching that 35% drop — stressful or calm?"
-  stressed → moderate.
-  calm → aggressive.
+Turn 2: 35% drop — A or B?
+  A → moderate (tolerant of normal drops, not severe), end.
+  B → aggressive (tolerant of severe drops), end.
 ```
 
-The richer probe means `riskTolerance` is robust enough that the equity phase does **not** need conservative-warning logic — the mismatch becomes nearly impossible to reach (a user who lasted calmly through 35% is already aggressive).
+Turn 3 (stress/calm follow-up) from the earlier re-open draft is **dropped**. Rationale: self-reported emotion is weaker signal than demonstrated behavior through a 35% drop. Someone who held calmly and someone who held "but found it stressful" behaved identically — classifying them differently introduces noise. Two-tier A/B carries the needed signal.
 
-**Existing rules preserved:**
+#### Educational framing (Turn 1)
+
+Turn 1 includes timeline-grounded context to calibrate the user's intuition against real market history. The prompt provides two templates; the agent chooses based on `fields.timeline`:
+
+- **Long timeline (~10+ years):** "Historically, diversified stock markets have weathered multiple major drops (like 2008 and 2020) and still averaged ~10%/year over 20+ year windows — drops are part of the ride, and longer timelines have historically had time to recover."
+- **Short timeline (<10 years):** "Historically, recovery from major drops has ranged from months (2020) to several years (2008 took ~4; 2000 took ~7) — a shorter window doesn't guarantee enough time to recover from a late drop."
+
+Turn 1 also opens with a "no right answer" bridge to reduce performance anxiety:
+
+> "Let's work through a scenario to understand how you'd react to drops — this shapes how your portfolio should be structured, and there's no right answer."
+
+#### Turn 2 anchoring
+
+Turn 2 references the user's Turn 1 answer for continuity and uses beginner-legible market context instead of jargon:
+
+> "You said you'd stay at 20%. What if it got worse — a 35% drop (₪17,500 off your ₪50,000). Major tech stocks fell about this much in 2022. Still A (sell) or B (stay)?"
+
+Drop amounts in both turns are derived from `fields.amount`; the 35% math is computed in the risk file (mirrors `buildRiskScenario`). `buildRiskScenario` is used for Turn 1 only; Turn 2 framing is inlined as a continuation.
+
+#### Existing rules preserved
+
 - Educational fallback on first uncertain answer (re-ask with explanation). Second uncertain → default conservative.
-- Market-timing answer → redirect with explanation, then re-ask original scenario.
+- Market-timing answer → redirect with explanation, then re-ask current turn's scenario.
 
-**Files:**
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` — rewrite `RISK_PROMPT_BODY` and `RISK_EXTRACTION_INSTRUCTIONS` for the two-tier flow; thread `goal` into the scenario header
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md` — update rules to reflect new turn-by-turn flow
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts` — add 35%-drop cases (survives 20% but sells at 35% → moderate; survives both calmly → aggressive); update existing cases where flow semantics changed
+#### Calibration concern (eval-time)
+
+A/B wording ("sell" vs. "stay invested") and historical framing both mildly prime toward B. Two-tier helps (Turn 2 forces a harder decision), but expect some lean toward `aggressive` vs. a fully neutral probe. Evals should account for this; do not over-correct in the prompt. Allocation sizing (Phase 4b) is the real behavioral protection — not prompt neutrality.
+
+#### Files
+
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` — rewrite `RISK_PROMPT_BODY` for two-turn flow; add educational framing templates; change signature to `(goal, fields, sendToUser, waitForResponse)`; build Turn 1 scenario via `buildRiskScenario`, inline Turn 2 continuation with computed drop amount
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md` — rewrite with rule-per-case structure covering: A@20%→conservative; B@20%+A@35%→moderate; B@20%+B@35%→aggressive; uncertain + educational fallback; second uncertain → default conservative; market-timing redirect. Each rule includes at least one example case.
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts` — update test cases for two-turn flow:
+  - A at 20% → conservative
+  - B at 20%, A at 35% → moderate (new)
+  - B at 20%, B at 35% → aggressive (new semantics — no stress/calm follow-up)
+  - Educational fallback on uncertain → default conservative after second uncertain
+  - Market-timing redirect → continues through both turns
+
+**Tool-call budget:** `MAX_RISK_TOOL_CALLS` stays at 5. Worst case: 2 turns + 1 edu re-ask + 1 market-timing redirect = 4.
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`.
+
+---
+
+### Phase 4b — Create the allocation phase (equity vs. buffer sizing)
+
+**What:** New dedicated phase resolving the user's equity-vs-buffer split at the **total portfolio level**. Sits between the risk phase and the equity phase.
+
+**Why this is its own phase:** Risk tolerance isn't just classification — it's **behavioral protection**. A user who says "I'd sell at 20%" shouldn't land at 100% equity, because the first 20% drop would trigger exactly the panic-sell behavior they self-reported. Sizing the equity bucket to tolerance (with the rest in a stable buffer like קרן כספית) is what makes risk classification actionable: a 20% stock drop on 40% equity is an 8% total portfolio drop — tolerable enough to hold through. This sizing decision is distinct from instrument selection, depends on multiple fields, and deserves its own phase. Cramming it into equity recreates the "preferences phase bloat" the refactor is built to eliminate.
+
+#### Signature
+
+```ts
+export const collectAllocation = async (
+  goal: string,
+  fields: FieldsPhaseOutput,
+  risk: RiskPhaseOutput,
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<AllocationPhaseOutput>
+```
+
+Phase 8 call site: `collectAllocation(activeGoal, fieldsOutput, riskOutput, sendToUser, waitForResponse)`.
+
+#### Output schema
+
+```ts
+type AllocationPhaseOutput = {
+  equityPercentage: number;   // 0–100, integer
+  bufferPercentage: number;   // 100 - equityPercentage
+};
+```
+
+Zod validation: both integers in [0, 100], `equityPercentage + bufferPercentage === 100`.
+
+Add `AllocationPhaseOutputSchema` to `clarify/shared/clarify.schemas.ts`.
+
+#### Multi-factor anchor logic
+
+The prompt guides the agent to propose a sizing anchor derived from multiple params, not a single-variable lookup. Factors and directional effects:
+
+| Factor | Effect on anchor equity % |
+|--------|----------------------------|
+| `risk.riskTolerance` (primary) | Lower tolerance → lower anchor |
+| `fields.timeline` (primary) | Shorter timeline → lower anchor (less time to recover from a late drop) |
+| `fields.age` | Older → slightly lower anchor on the margin (fewer earning years to recover from bad outcomes) |
+| `fields.hasEmergencyFund` | If false → lower anchor (less cushion against forced sales) |
+| `fields.hasDebt` | If true → lower anchor marginally (opportunity cost of equity vs. paying debt) |
+| `goal` | Grounding only unless the goal specifies a hard deadline; do not use goal wording as risk signal |
+
+Illustrative anchor ranges (prompt should compute from the combination, not hard-code a lookup):
+
+| Risk | Short timeline (<5yr) | Long timeline (>10yr) |
+|------|------------------------|------------------------|
+| Conservative | 20–40% | 40–60% |
+| Moderate | 40–60% | 60–80% |
+| Aggressive | 50–70% | 80–100% |
+
+These are **starting points for the conversation**, not caps. Further modulation from age / emergency fund / debt is applied on top.
+
+#### Conversation principles
+
+- **Informative and clear about trade-offs.** The agent opens by computing an anchor from the profile and presenting it with concrete rationale using `fields.amount` + historical drawdown figures:
+  > "Based on your risk profile, 25-year timeline, and comfort with drops, around 70% of your ₪50,000 in stocks and 30% in a stable buffer (like קרן כספית) makes sense as a starting point. A 20% stock drop would mean roughly ₪7,000 off your total portfolio — not ₪10,000 — because the buffer holds steady. Does 70/30 feel right, or would you want more or less in stocks?"
+- **User has final say.** The anchor is informed, not prescriptive. User can accept, nudge up/down, or pick a different split entirely.
+- **Both sides of the trade-off, honestly.** More equity → higher expected return over long horizons, bigger drawdowns. Less equity → smaller drawdowns, lower expected return. Agent explains both when user questions the anchor or proposes a deviation.
+- **Pre-stated case:** if the user's goal stated a split ("60% stocks 40% buffer", "put half in קרן כספית"), extract directly; skip the conversation loop. Unit-test this early-exit.
+
+#### Context string format
+
+```
+User goal: <goal>
+Investment amount: ₪<fields.amount>
+Investment timeline: <fields.timeline>
+Age: <fields.age>
+Has emergency fund: <fields.hasEmergencyFund>
+Has debt: <fields.hasDebt>
+Risk tolerance: <risk.riskTolerance>
+```
+
+#### Unit test
+
+One unit test for the pre-stated-split early-exit branch (assert no `sendToUser` call, assert output matches extracted values). Rest of behavior via evals.
+
+#### Files
+
+- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.ts` — new
+- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md` — new (rule-per-case structure: pre-stated split early-exit; anchor acceptance; user nudges up; user nudges down; user asks why; user proposes radically different split)
+- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.eval.ts` — new (cases per rule)
+- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.test.ts` — new (pre-stated split early-exit)
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `AllocationPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/shared/clarify.constants.ts` — add `MAX_ALLOCATION_TOOL_CALLS` (suggest 5)
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.allocation.eval.ts`.
 
 ---
 
@@ -110,13 +236,16 @@ export const collectEquity = async (
   goal: string,
   fields: FieldsPhaseOutput,
   risk: RiskPhaseOutput,
+  allocation: AllocationPhaseOutput,
   contribution: ContributionPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<EquityPhaseOutput>
 ```
 
-Phase 8 call site: `collectEquity(goal, fieldsOutput, riskOutput, contributionOutput, sendToUser, waitForResponse)`.
+Phase 8 call site: `collectEquity(activeGoal, fieldsOutput, riskOutput, allocationOutput, contributionOutput, sendToUser, waitForResponse)`.
+
+**Scope boundary:** Phase 5a resolves **which equity instruments** fill the equity bucket and **how they split within it**. It does **not** resolve how much of the total portfolio is equity — that's Phase 4b's job. `allocation.equityPercentage` is passed as grounding ("you've chosen X% of your portfolio in stocks — which stocks?"), not as something this phase negotiates.
 
 #### Output schema
 
@@ -129,12 +258,16 @@ type EquityAllocation = {
 
 type EquityPhaseOutput = {
   allocations: EquityAllocation[];   // length ≥ 1; sum of percentages === 100
+                                     // percentages are WITHIN-EQUITY — they split the equity
+                                     // bucket sized by Phase 4b, not the total portfolio
   preStatedBuffer?: string;          // incidentally-stated buffer preference, if any
                                      // e.g. "קרן כספית" or "no buffer — emergency fund held separately"
 };
 ```
 
 Zod validation: `allocations.length >= 1`, each `percentage` is an integer in [0, 100], sum of percentages === 100.
+
+**Note on semantics:** `allocations[].percentage` represents the **within-equity split** (summing to 100). Total-portfolio exposure for a given instrument is `allocation.equityPercentage × allocations[i].percentage / 100`. Downstream consumers (research, plan, extraction) do this conversion when they need total-portfolio figures.
 
 **Why structured over string:** an allocation is literally a list of (instrument, weight) pairs — the string `"70% FTSE All-World, 30% TLV-125"` is a lossy serialization. Downstream stages (research, plan) need to iterate per-instrument; parsing prose is fragile. Schema-level validation also catches "percentages don't sum to 100" at the boundary rather than trusting the prompt.
 
@@ -151,6 +284,7 @@ User goal: <goal>
 Investment amount: ₪<fields.amount>
 Investment timeline: <fields.timeline>
 Risk tolerance: <risk.riskTolerance>
+Equity portion of portfolio: <allocation.equityPercentage>% (buffer is <allocation.bufferPercentage>%)
 Plans to contribute periodically: yes | no (lump-sum investment)
 ```
 
@@ -185,9 +319,11 @@ The classify call happens once at the start. Each focused prompt handles its nat
 #### Conversation principles
 
 - **This is a conversation, not a form.** The agent is informative and educational — it provides context, explains trade-offs, and answers follow-up questions fully before asking for a decision.
-- Use the user's actual amount and timeline to make compounding examples concrete.
+- **Use real data.** Make compounding examples concrete with `fields.amount`, `fields.timeline`, and historical return rates (e.g., "₪50,000 at ~10%/yr over 25 years ≈ ₪540,000"). Abstract percentages don't land for beginners; shekel figures do.
+- **Ground framing in `allocation.equityPercentage`.** The equity bucket is already sized. Frame choices against it: "You've chosen 70% of your ₪50,000 in stocks — ₪35,000. Which stocks fill that?"
 - Each focused prompt stays under ~40 instructions.
-- No conservative-warning rule. The two-tier risk probe (Phase 4 re-open) makes conservative + aggressive-instrument mismatches nearly impossible; reactive warning logic here would violate the typed-I/O premise. Residual mismatch handling is captured in the Open question section below.
+- **No risk-based instrument filtering.** A conservative user can pick NASDAQ-100 for their equity bucket if they want. Sizing is what protects behavior (Phase 4b). Instrument presentation should be neutral on risk — classify-then-route is about goal signals, not risk signals.
+- **No conservative-warning rule.** Allocation sizing (Phase 4b) is the primary behavioral safeguard. A conservative user at 40% equity holding NASDAQ-100 has the same total-portfolio drawdown exposure as an aggressive user at 40% in broad-market — the phase has done its job upstream. Reactive warning logic here would violate the typed-I/O premise.
 
 #### Examples
 
@@ -256,14 +392,14 @@ Output: { allocations: [{ name: "FTSE All-World", percentage: 70 }, { name: "TLV
 
 No dedicated unit test for 5a beyond Phase 8's orchestrator test. Behavior verified through evals.
 
-#### Open question — risk/instrument mismatch
+#### Resolved — risk/instrument mismatch
 
-The two-tier risk probe reduces but doesn't eliminate conservative + aggressive-instrument mismatches. Instrument choice in the initial goal is often a *popularity* signal ("everyone says NASDAQ"), not a risk signal — so a user can name NASDAQ-100 upfront and still probe conservative. Two options to decide between when 5a resumes (ranked):
+Previously open. **Resolved by the introduction of Phase 4b (allocation).** The concern was: a conservative user naming NASDAQ-100 upfront would end up over-exposed. With allocation sizing upstream, this is no longer a behavioral harm: a conservative user lands at (e.g.) 40% equity regardless of which equity instrument fills that bucket. NASDAQ-100 at 40% of portfolio has the same total drawdown exposure as broad-market at 40%. The mismatch concern dissolves into "user's preferred instrument for their sized equity bucket" — which is exactly what Phase 5a is for.
 
-1. **Primary — 5th `classifyEquityIntent` branch (`resolved_with_risk_mismatch`).** Routes to a reconciliation prompt ("you said X, your risk profile suggests Y — let's align"). Keeps classify-then-route architecture intact; no cross-cutting warning logic. The "pollution" is one classification branch in an architecture built for branching.
-2. **Fallback — tiny conditional `reconcileGoal(goal, fields, risk)` phase between risk and equity.** Runs only when a mismatch heuristic trips; no-op otherwise. Produces a possibly-refined goal passed into equity. Keeps both risk and equity single-responsibility, at the cost of a new phase for a rare case. Use if option 1's 5th branch proves awkward to express cleanly (e.g., if the reconciliation flow is longer than one focused prompt).
-
-Rejected: reconcile-in-risk-phase — either breaks risk's purely-behavioral mandate (if tolerance shifts based on instrument) or still passes mutated goal downstream (if goal is refined). Doesn't actually avoid downstream coupling.
+Rejected options kept for record:
+- `resolved_with_risk_mismatch` classification branch — no longer needed.
+- `reconcileGoal` conditional phase — no longer needed.
+- Reconcile-in-risk-phase — still rejected; would break risk's purely-behavioral mandate.
 
 #### Files
 
@@ -296,13 +432,16 @@ export const collectBuffer = async (
   goal: string,
   fields: FieldsPhaseOutput,
   risk: RiskPhaseOutput,
+  allocation: AllocationPhaseOutput,
   equity: EquityPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<BufferPhaseOutput>
 ```
 
-Phase 8 call site: `collectBuffer(goal, fieldsOutput, riskOutput, equityOutput, sendToUser, waitForResponse)`.
+Phase 8 call site: `collectBuffer(activeGoal, fieldsOutput, riskOutput, allocationOutput, equityOutput, sendToUser, waitForResponse)`.
+
+**Scope boundary:** Phase 5b resolves **which buffer instrument** fills the buffer bucket. The buffer percentage is already sized by Phase 4b and passed as grounding ("you've chosen X% of your portfolio as a stable buffer — what goes in it?").
 
 #### Output schema
 
@@ -320,8 +459,10 @@ type BufferPhaseOutput = {
 
 ```
 User goal: <goal>
+Investment amount: ₪<fields.amount>
 Risk tolerance: <risk.riskTolerance>
-Equity allocation: <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
+Buffer portion of portfolio: <allocation.bufferPercentage>% (₪<fields.amount × allocation.bufferPercentage / 100>)
+Equity allocation (the other <allocation.equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
 ```
 
 #### Early-exit branch
@@ -373,14 +514,17 @@ One unit test for the `preStatedBuffer` early-exit branch (assert no `sendToUser
   goal: string,
   fields: FieldsPhaseOutput,
   risk: RiskPhaseOutput,
+  allocation: AllocationPhaseOutput,
   equity: EquityPhaseOutput,
   buffer: BufferPhaseOutput,
 ): Promise<UserProfile>
 ```
 
 The only remaining LLM call: generate the `goal` summary string from the `goal` param (plus grounding context from the other structured inputs). Everything else is assembled directly:
-- Copy `amount`, `age`, `timeline`, `knowledgeLevel`, `hasEmergencyFund`, `hasDebt`, `monthlyContribution` from `fields`.
+- Copy `amount`, `age`, `timeline`, `hasEmergencyFund`, `hasDebt` from `fields`. (Note: `knowledgeLevel` is no longer collected; `monthlyContribution` moved to `plansToContribute` earlier in the refactor.)
+- Copy `plansToContribute` from `contribution`.
 - Copy `riskTolerance` from `risk`.
+- Copy `equityPercentage` and `bufferPercentage` from `allocation`.
 - Copy `equity: equity.allocations` onto the profile (flat — see schema change below).
 - Copy `buffer: buffer.buffer` onto the profile.
 - Drop `brokerage` from `UserProfileSchema`.
@@ -391,27 +535,32 @@ Move short prompt to `clarify.extraction.rules.md`.
 
 #### UserProfile schema change
 
-Replace the old `investmentPreferences: string` field with two flat, phase-aligned fields:
+Replace the old `investmentPreferences: string` field with flat, phase-aligned fields reflecting the full post-refactor pipeline:
 
 ```ts
 UserProfileSchema = {
-  // ... unchanged fields (amount, age, timeline, knowledgeLevel, hasEmergencyFund,
-  //                      hasDebt, monthlyContribution, riskTolerance, goal)
-  equity: EquityAllocation[];   // from phase 5a
-  buffer: string;               // from phase 5b
-  // brokerage removed
+  // ... unchanged fields (amount, age, timeline, hasEmergencyFund, hasDebt, goal)
+  riskTolerance: RiskTolerance;       // from phase 4
+  equityPercentage: number;           // from phase 4b (allocation) — 0–100
+  bufferPercentage: number;           // from phase 4b (allocation) — 100 - equityPercentage
+  equity: EquityAllocation[];         // from phase 5a — within-equity split
+  buffer: string;                     // from phase 5b
+  plansToContribute: boolean;         // from phase 3b (contribution)
+  // brokerage removed, knowledgeLevel already removed earlier in refactor
 };
 ```
 
-**Why flat, not nested under `investmentPreferences`:** the rest of `UserProfile` is flat (`amount`, `riskTolerance`, `knowledgeLevel`, etc.). The old nested container was an accident of the monolithic preferences phase, not a deliberate grouping. Flattening gives 1:1 phase→field mapping (`collectEquity` → `profile.equity`, `collectBuffer` → `profile.buffer`) and consistency with the rest of the schema. Name `investmentPreferences` is retired — `equity` and `buffer` are specific and self-documenting.
+**Why flat, not nested under `investmentPreferences`:** the rest of `UserProfile` is flat. The old nested container was an accident of the monolithic preferences phase. Flattening gives 1:1 phase→field mapping (`collectAllocation` → `profile.equityPercentage`/`bufferPercentage`; `collectEquity` → `profile.equity`; `collectBuffer` → `profile.buffer`) and consistency with the rest of the schema.
+
+**Computing total-portfolio exposure:** downstream consumers (research, plan) that need per-instrument portfolio percentages compute them as `equityPercentage × equity[i].percentage / 100`. Kept as a derived view rather than a stored field to avoid denormalization drift.
 
 **Files:**
 - `src/server/pipeline/stages/clarify/extraction/clarify.extraction.ts`
 - `src/server/pipeline/stages/clarify/extraction/clarify.extraction.rules.md` — new
-- `src/server/pipeline/stages/clarify/extraction/clarify.extraction.eval.ts` — update to pass structured inputs; remove brokerage and secondary-signal cases; assert on `equity: EquityAllocation[]` and `buffer: string` instead of `investmentPreferences`
-- `src/server/schemas/pipeline.schema.ts` — remove `brokerage`; replace `investmentPreferences` with flat `equity: EquityAllocationSchema[]` and `buffer: z.string()`
+- `src/server/pipeline/stages/clarify/extraction/clarify.extraction.eval.ts` — update to pass structured inputs; remove brokerage and secondary-signal cases; assert on `equityPercentage`, `bufferPercentage`, `equity: EquityAllocation[]`, `buffer: string` instead of `investmentPreferences`
+- `src/server/schemas/pipeline.schema.ts` — remove `brokerage`; replace `investmentPreferences` with flat `equityPercentage`, `bufferPercentage`, `equity: EquityAllocationSchema[]`, `buffer: z.string()`
 
-**Watch:** Removing `brokerage` and changing `investmentPreferences` → `equity` + `buffer` both have downstream blast radius. Grep for all `UserProfile` consumers (research stage, profile summary builders, plan stage, any logging) — fix references to `.brokerage` and `.investmentPreferences`. Do this grep **before** starting Phase 6 so the full scope is known.
+**Watch:** Removing `brokerage` and changing `investmentPreferences` → `equityPercentage` + `bufferPercentage` + `equity` + `buffer` has downstream blast radius. Grep for all `UserProfile` consumers (research stage, profile summary builders, plan stage, any logging) — fix references to `.brokerage` and `.investmentPreferences`. Do this grep **before** starting Phase 6 so the full scope is known.
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.extraction.eval.ts`.
 
@@ -479,12 +628,15 @@ const classification = await classifyGoal(goal);
 
 const activeGoal = redirectedGoal ?? goal;
 const fieldsOutput = await collectFields(activeGoal, sendToUser, waitForResponse);
-const riskOutput = await collectRisk(activeGoal, fieldsOutput.amount, sendToUser, waitForResponse);
+const riskOutput = await collectRisk(activeGoal, fieldsOutput, sendToUser, waitForResponse);
+const allocationOutput = await collectAllocation(activeGoal, fieldsOutput, riskOutput, sendToUser, waitForResponse);
 const contributionOutput = await collectContribution(activeGoal, fieldsOutput, sendToUser, waitForResponse);
-const equityOutput = await collectEquity(activeGoal, fieldsOutput, riskOutput, contributionOutput, sendToUser, waitForResponse);
-const bufferOutput = await collectBuffer(activeGoal, fieldsOutput, riskOutput, equityOutput, sendToUser, waitForResponse);
-const profile = await extractUserProfile(activeGoal, fieldsOutput, riskOutput, equityOutput, bufferOutput);
+const equityOutput = await collectEquity(activeGoal, fieldsOutput, riskOutput, allocationOutput, contributionOutput, sendToUser, waitForResponse);
+const bufferOutput = await collectBuffer(activeGoal, fieldsOutput, riskOutput, allocationOutput, equityOutput, sendToUser, waitForResponse);
+const profile = await extractUserProfile(activeGoal, fieldsOutput, riskOutput, allocationOutput, equityOutput, bufferOutput);
 ```
+
+**Phase ordering rationale:** `collectAllocation` runs immediately after `collectRisk` because allocation is the direct behavioral continuation of risk classification (sizing the equity bucket to tolerance). `collectContribution` is independent of allocation — it sits before equity/buffer since both downstream phases may want to frame periodic contribution in the conversation, but it doesn't feed allocation's factor table.
 
 Remove:
 - All `PhaseSourceParams` intermediate variables.
