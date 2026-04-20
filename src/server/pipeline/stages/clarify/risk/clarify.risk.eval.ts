@@ -34,7 +34,7 @@ describe("collectRisk", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // CLARIFY_RISK_RULES #1: user picks A → conservative
+  // clarify.risk.rules.md rule 1: user picks A → conservative
   it("should return conservative when user chooses to sell", async () => {
     const responder = createTrackedResponder(["A — I'd sell and move to cash"]);
     lastTranscript = responder.transcript;
@@ -49,7 +49,7 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(conservative);
   });
 
-  // CLARIFY_RISK_RULES #2: user picks B then stressed → moderate
+  // clarify.risk.rules.md rule 2: user picks B then stressed → moderate
   it("should return moderate when user stays invested but finds it stressful", async () => {
     const responder = createTrackedResponder([
       "B — I'd stay invested",
@@ -67,7 +67,7 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(moderate);
   });
 
-  // CLARIFY_RISK_RULES #3: user picks B then calm → aggressive
+  // clarify.risk.rules.md rule 3: user picks B then calm → aggressive
   it("should return aggressive when user stays invested and stays calm", async () => {
     const responder = createTrackedResponder([
       "B — I'd stay invested",
@@ -85,7 +85,7 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(aggressive);
   });
 
-  // CLARIFY_RISK_RULES #4: "I don't know" → educational fallback → re-ask → conservative
+  // clarify.risk.rules.md rule 4 + rule 6: first uncertain → educational fallback; second uncertain → default conservative.
   it("should give educational fallback on uncertain answer and default to conservative", async () => {
     const responder = createTrackedResponder([
       "I don't know, it's hard to say",
@@ -104,7 +104,7 @@ describe("collectRisk", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // CLARIFY_RISK_RULES #5: market-timing answer → redirect → picks B + calm → aggressive
+  // clarify.risk.rules.md rule 5: market-timing answer → redirect → picks B + calm → aggressive
   it("should redirect market-timing answer then return aggressive after B + calm", async () => {
     const responder = createTrackedResponder([
       "I'd check the news and see if it's a temporary dip",

@@ -31,33 +31,11 @@ describe("collectFields", () => {
     lastGoal = lastTranscript = lastOutput = undefined;
   });
 
-  // CLARIFY_FIELDS_RULES #3: all required fields present in the initial message → no asks made.
-  it("should return output immediately when all fields are present in the goal", async () => {
-    lastGoal = "I'm 24, ₪18,000, 10 years, yes emergency fund, no debt";
-    const responder = createTrackedResponder([]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.amount).toBe(18_000);
-    expect(output.age).toBe(24);
-    expect(output.timeline).toMatch(/10/);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
-    expect(responder.transcript).toHaveLength(0);
-  });
-
-  // CLARIFY_FIELDS_RULES #1: a soft answer on the second ask for timeline is accepted without a third probe.
-  it("should stop probing timeline after 2 asks and accept best available answer", async () => {
-    lastGoal = "I want to invest";
+  // clarify.fields.rules.md rule 1: fields stated in the goal (amount, timeline) are not re-asked.
+  it("should ask only for gaps when goal includes amount and timeline", async () => {
+    lastGoal = "I want to start investing, I have about ₪18,000 and maybe 10 years";
     const responder = createTrackedResponder([
-      "I have ₪20,000, I'm 32, long-term",
-      "I guess maybe 10-15 years. yes emergency fund, no debt",
+      "I'm 27, yes I have an emergency fund, no debt",
     ]);
     lastTranscript = responder.transcript;
 
@@ -68,14 +46,14 @@ describe("collectFields", () => {
     );
     lastOutput = output;
 
-    expect(output.amount).toBe(20_000);
-    expect(output.age).toBe(32);
-    expect(output.timeline.toLowerCase()).toMatch(/10|15/);
+    expect(output.amount).toBe(18_000);
+    expect(output.age).toBe(27);
+    expect(output.timeline).toMatch(/10/);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
   });
 
-  // CLARIFY_FIELDS_RULES #2: fields already stated in the goal are not re-asked.
+  // clarify.fields.rules.md rule 1: fields already stated in the goal are not re-asked.
   it("should ask only for gaps when goal already contains several fields", async () => {
     lastGoal = "I'm 35, ₪75,000, long-term retirement savings";
     const responder = createTrackedResponder([
@@ -98,7 +76,7 @@ describe("collectFields", () => {
     expect(output.hasDebt).toBe(false);
   });
 
-  // CLARIFY_FIELDS_RULES #4: when many fields are missing, at most 4 are asked per turn.
+  // clarify.fields.rules.md rule 2: when many fields are missing, at most 4 are asked per turn.
   it("should ask at most 4 questions in the first turn when many fields are missing", async () => {
     lastGoal = "I want to start investing";
     const responder = createTrackedResponder([
@@ -121,5 +99,28 @@ describe("collectFields", () => {
     expect(output.hasDebt).toBe(false);
     // First turn asked at most 4 questions — verified by the two-turn scripted flow completing successfully
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+  });
+
+  // clarify.fields.rules.md rule 3: a soft answer on the second ask for timeline is accepted without a third probe.
+  it("should stop probing timeline after 2 asks and accept best available answer", async () => {
+    lastGoal = "I want to invest";
+    const responder = createTrackedResponder([
+      "I have ₪20,000, I'm 32, long-term",
+      "I guess maybe 10-15 years. yes emergency fund, no debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.amount).toBe(20_000);
+    expect(output.age).toBe(32);
+    expect(output.timeline.toLowerCase()).toMatch(/10|15/);
+    expect(output.hasEmergencyFund).toBe(true);
+    expect(output.hasDebt).toBe(false);
   });
 });

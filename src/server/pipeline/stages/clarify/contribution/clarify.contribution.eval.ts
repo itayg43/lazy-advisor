@@ -42,7 +42,7 @@ describe("collectContribution", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // CLARIFY_CONTRIBUTION_RULES #1: explicit yes → plansToContribute: true
+  // clarify.contribution.rules.md rule 1: explicit yes → plansToContribute: true
   it("should return true when user explicitly confirms periodic contributions", async () => {
     const responder = createTrackedResponder(["Yes, I plan to add ₪500 every month"]);
     lastTranscript = responder.transcript;
@@ -57,7 +57,7 @@ describe("collectContribution", () => {
     expect(output.plansToContribute).toBe(true);
   });
 
-  // CLARIFY_CONTRIBUTION_RULES #2: explicit no → plansToContribute: false
+  // clarify.contribution.rules.md rule 2: explicit no → plansToContribute: false
   it("should return false when user explicitly declines periodic contributions", async () => {
     const responder = createTrackedResponder(["No, this is a one-time investment"]);
     lastTranscript = responder.transcript;
@@ -72,7 +72,7 @@ describe("collectContribution", () => {
     expect(output.plansToContribute).toBe(false);
   });
 
-  // CLARIFY_CONTRIBUTION_RULES #3: vague answer → acknowledge briefly, resolve to false
+  // clarify.contribution.rules.md rule 3: vague answer → acknowledge briefly, resolve to false
   it("should return false and acknowledge when user gives a vague answer", async () => {
     const responder = createTrackedResponder(["Maybe someday, but not regularly"]);
     lastTranscript = responder.transcript;
@@ -87,7 +87,7 @@ describe("collectContribution", () => {
     expect(output.plansToContribute).toBe(false);
   });
 
-  // CLARIFY_CONTRIBUTION_RULES #4: user asks what DCA means → explanation → yes
+  // clarify.contribution.rules.md rule 4: user asks what DCA means → explanation → yes
   it("should explain DCA when asked and return true after user confirms", async () => {
     const responder = createTrackedResponder([
       "What does contributing periodically mean?",
@@ -106,7 +106,7 @@ describe("collectContribution", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // CLARIFY_CONTRIBUTION_RULES #4: user asks what DCA means → explanation → no
+  // clarify.contribution.rules.md rule 4: user asks what DCA means → explanation → no
   it("should explain DCA when asked and return false after user declines", async () => {
     const responder = createTrackedResponder([
       "What's DCA?",
@@ -124,7 +124,7 @@ describe("collectContribution", () => {
     expect(output.plansToContribute).toBe(false);
   });
 
-  // CLARIFY_CONTRIBUTION_RULES #5: Israel-specific concern → address accurately → yes
+  // clarify.contribution.rules.md rule 5: Israel-specific concern → address accurately → yes
   it("should address fractional share concern and return true after user confirms", async () => {
     const responder = createTrackedResponder([
       "In Israel you can't buy partial ETF units so it's hard to invest small amounts",
