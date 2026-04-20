@@ -1,9 +1,4 @@
 import { createLogger } from "#lib/logger";
-import {
-  INTAKE_REJECTION_DEFAULT_MESSAGE,
-  INTAKE_REJECTION_MESSAGES,
-} from "#pipeline/stages/clarify/clarify.constants";
-import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
@@ -14,6 +9,11 @@ import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/clarif
 import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/clarify.unrealistic";
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
+import {
+  INTAKE_REJECTION_DEFAULT_MESSAGE,
+  INTAKE_REJECTION_MESSAGES,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
+import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import type { UserProfile } from "#types/pipeline.types";
 

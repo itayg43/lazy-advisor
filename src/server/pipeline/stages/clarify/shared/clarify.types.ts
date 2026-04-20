@@ -5,7 +5,7 @@ import type {
   FieldsPhaseOutputSchema,
   PreferencesPhaseOutputSchema,
   RiskPhaseOutputSchema,
-} from "#pipeline/stages/clarify/clarify.schemas";
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
 
 export type FieldsPhaseOutput = z.infer<typeof FieldsPhaseOutputSchema>;
 export type ContributionPhaseOutput = z.infer<typeof ContributionPhaseOutputSchema>;

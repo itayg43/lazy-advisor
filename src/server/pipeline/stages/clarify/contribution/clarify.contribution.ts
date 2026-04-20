@@ -1,13 +1,13 @@
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { createLogger } from "#lib/logger";
-import { MAX_CONTRIBUTION_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
-import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/clarify.schemas";
+import { MAX_CONTRIBUTION_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ContributionPhaseOutput,
   FieldsPhaseOutput,
-} from "#pipeline/stages/clarify/clarify.types";
+} from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { callOpenAIParsed } from "#services/openai";
 

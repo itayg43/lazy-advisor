@@ -6,11 +6,11 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
+import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
   ContributionPhaseOutput,
   FieldsPhaseOutput,
-} from "#pipeline/stages/clarify/clarify.types";
-import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
+} from "#pipeline/stages/clarify/shared/clarify.types";
 
 const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.url)
   .pathname;

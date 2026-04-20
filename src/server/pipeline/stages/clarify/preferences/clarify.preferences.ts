@@ -2,8 +2,8 @@ import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
 import { buildSourceParams } from "#pipeline/lib/build-source-params";
-import { MAX_PREFERENCES_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
+import { MAX_PREFERENCES_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyPreferences");

@@ -7,9 +7,9 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import { toTranscriptEntries } from "#pipeline/stages/clarify/clarify.lib";
 import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
+import { toTranscriptEntries } from "#pipeline/stages/clarify/shared/clarify.lib";
 import { UserProfileSchema } from "#schemas/pipeline.schema";
 
 const LAST_RUN_PATH = new URL("clarify.preferences.last-run.md", import.meta.url)

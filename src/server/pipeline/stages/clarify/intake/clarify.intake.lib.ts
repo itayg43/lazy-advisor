@@ -1,6 +1,6 @@
 import { createLogger } from "#lib/logger";
-import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/clarify.lib";
+import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyIntake");

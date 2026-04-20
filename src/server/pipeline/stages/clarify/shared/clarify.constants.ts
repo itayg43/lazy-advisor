@@ -1,4 +1,4 @@
-import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
+import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { RiskTolerance } from "#schemas/pipeline.schema";
 
 export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");

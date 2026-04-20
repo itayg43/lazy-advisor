@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GoalClassification } from "#pipeline/stages/clarify/clarify.schemas";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
+import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { RiskTolerance } from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
