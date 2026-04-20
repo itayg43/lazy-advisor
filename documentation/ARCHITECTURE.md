@@ -28,7 +28,7 @@ Execution order: **classify → intake (conditional) → fields → risk → con
 | preferences | Collect equity allocation and buffer preferences | conversation → `responseId` |
 | extraction | Produce a fully typed `UserProfile` from the full conversation | `responseId` → `UserProfile` |
 
-Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt. Rules files are co-located: `clarify.fields.rules.md`, `clarify.risk.rules.md`, `clarify.stage.rules.md`.
+Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt. Rules files are co-located: `clarify.fields.rules.md`, `clarify.contribution.rules.md`, `clarify.risk.rules.md`, `clarify.stage.rules.md`.
 
 ## Stage Boundary Validation
 
