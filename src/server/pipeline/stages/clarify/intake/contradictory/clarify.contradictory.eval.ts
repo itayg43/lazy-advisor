@@ -6,12 +6,12 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/clarify.unrealistic";
+import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/contradictory/clarify.contradictory";
 
-const LAST_RUN_PATH = new URL("clarify.unrealistic.last-run.md", import.meta.url)
+const LAST_RUN_PATH = new URL("clarify.contradictory.last-run.md", import.meta.url)
   .pathname;
 
-describe("handleUnrealisticExpectations", () => {
+describe("handleContradictoryRisk", () => {
   let lastGoal: string | undefined;
   let lastTranscript: TranscriptEntry[] | undefined;
 
@@ -29,17 +29,16 @@ describe("handleUnrealisticExpectations", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // clarify.stage.rules.md rule 2: stage explains why doubling in 6 months is unrealistic and asks
-  // if the user wants to proceed with a realistic long-term plan.
+  // clarify.stage.rules.md rule 4: stage uses a concrete loss scenario to resolve contradictory risk signals.
   describe("accepted", () => {
-    it("should redirect and return accepted result when user pivots to long-term", async () => {
-      lastGoal = "I have ₪18,000 and I want to double it in 6 months";
+    it("should resolve contradiction and return accepted result when user picks a risk level", async () => {
+      lastGoal = "I want maximum returns but I can't afford to lose any money";
       const responder = createTrackedResponder([
-        "ok fine, long term then, maybe 10-15 years",
+        "If my portfolio dropped 20% I'd feel sick but I'd hold and wait for recovery. I guess I'm moderate.",
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
+      const result = await handleContradictoryRisk(
         lastGoal,
         responder.sendToUser,
         responder.waitForResponse,
@@ -53,14 +52,14 @@ describe("handleUnrealisticExpectations", () => {
   });
 
   describe("rejected", () => {
-    it("should return rejected result when user insists on unrealistic goal", async () => {
-      lastGoal = "I have ₪18,000 and I want to double it in 6 months";
+    it("should return rejected result when user disengages without resolving", async () => {
+      lastGoal = "I want maximum returns but I can't afford to lose any money";
       const responder = createTrackedResponder([
-        "No, I'm sure I can double it, I've seen people do it online",
+        "I don't know, forget it, I'm not interested anymore",
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
+      const result = await handleContradictoryRisk(
         lastGoal,
         responder.sendToUser,
         responder.waitForResponse,

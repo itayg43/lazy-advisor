@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyGoal } from "#pipeline/stages/clarify/intake/clarify.classify";
+import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 
 describe("classifyGoal", () => {
