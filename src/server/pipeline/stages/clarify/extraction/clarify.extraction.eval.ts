@@ -114,7 +114,7 @@ describe("clarifyExtraction", () => {
     expect(profile.investmentPreferences.toLowerCase()).toMatch(/כספית|money market/i);
   });
 
-  // CLARIFY_FIELDS_RULES #2: tests extraction when fields are split between goal and response.
+  // clarify.fields.rules.md rule 1: tests extraction when fields are split between goal and response.
   // Portfolio defaults are asked and answered after all gaps are collected.
   it("should extract profile with fields split between goal and response", async () => {
     const transcript: ResponseInputItem[] = [
