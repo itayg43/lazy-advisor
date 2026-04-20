@@ -75,7 +75,6 @@ describe("runClarifyStage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedCollectFields.mockResolvedValue({
-      goal: mockProfile.goal,
       amount: mockProfile.amount,
       age: mockProfile.age,
       timeline: mockProfile.timeline,
@@ -101,6 +100,7 @@ describe("runClarifyStage", () => {
         mockWaitForResponse,
       );
       expect(mockedCollectRisk).toHaveBeenCalledWith(
+        mockGoal,
         mockProfile.amount,
         mockSendToUser,
         mockWaitForResponse,
