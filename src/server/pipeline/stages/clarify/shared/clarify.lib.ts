@@ -150,14 +150,6 @@ export const runPhaseLoop = async (
   return { responseId: response.id, terminalText: extractTerminalText(response.output) };
 };
 
-// Injects the user's actual amount and drop percentage into a formatted A/B scenario string.
-// dropPercentage is a whole number (e.g. 20 for 20%).
-export const buildRiskScenario = (amount: number, dropPercentage: number): string => {
-  const drop = Math.round(amount * (dropPercentage / 100));
-
-  return `Imagine your ₪${amount.toLocaleString()} portfolio drops ${dropPercentage}% (₪${drop.toLocaleString()}) in a market downturn. Do you: A) Sell — exit the position and move to cash, or B) Stay invested — you accept short-term drops as part of long-term growth?`;
-};
-
 // Converts a ResponseInputItem[] to TranscriptEntry[] for eval last-run files.
 // Includes the initial user message, agent questions, and user responses.
 export const toTranscriptEntries = (items: ResponseInputItem[]): TranscriptEntry[] =>

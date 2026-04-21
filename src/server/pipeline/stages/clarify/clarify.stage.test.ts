@@ -72,15 +72,17 @@ describe("runClarifyStage", () => {
     plansToContribute: true,
   };
 
+  const mockFields = {
+    amount: mockProfile.amount,
+    age: mockProfile.age,
+    timeline: mockProfile.timeline,
+    hasEmergencyFund: mockProfile.hasEmergencyFund,
+    hasDebt: mockProfile.hasDebt,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedCollectFields.mockResolvedValue({
-      amount: mockProfile.amount,
-      age: mockProfile.age,
-      timeline: mockProfile.timeline,
-      hasEmergencyFund: mockProfile.hasEmergencyFund,
-      hasDebt: mockProfile.hasDebt,
-    });
+    mockedCollectFields.mockResolvedValue(mockFields);
     mockedCollectRisk.mockResolvedValue({ riskTolerance: mockProfile.riskTolerance });
     mockedCollectContribution.mockResolvedValue({ plansToContribute: true });
     mockedCollectPreferences.mockResolvedValue("resp_prefs");
@@ -101,7 +103,7 @@ describe("runClarifyStage", () => {
       );
       expect(mockedCollectRisk).toHaveBeenCalledWith(
         mockGoal,
-        mockProfile.amount,
+        mockFields,
         mockSendToUser,
         mockWaitForResponse,
       );

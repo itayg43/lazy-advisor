@@ -58,12 +58,7 @@ export const runClarifyStage = async (
 
   const fieldsOutput = await collectFields(goal, sendToUser, waitForResponse);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Phase 8: riskOutput will be passed to extractUserProfile
-  const riskOutput = await collectRisk(
-    goal,
-    fieldsOutput.amount,
-    sendToUser,
-    waitForResponse,
-  );
+  const riskOutput = await collectRisk(goal, fieldsOutput, sendToUser, waitForResponse);
   const contributionOutput = await collectContribution(
     goal,
     fieldsOutput,
