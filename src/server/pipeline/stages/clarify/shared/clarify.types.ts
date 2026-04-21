@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import type {
+  AllocationPhaseOutputSchema,
   ContributionPhaseOutputSchema,
   FieldsPhaseOutputSchema,
   PreferencesPhaseOutputSchema,
@@ -11,5 +12,6 @@ import type {
 export type FieldsPhaseOutput = z.infer<typeof FieldsPhaseOutputSchema>;
 export type RiskScore = z.infer<typeof RiskScoreSchema>;
 export type RiskPhaseOutput = z.infer<typeof RiskPhaseOutputSchema>;
+export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
 export type ContributionPhaseOutput = z.infer<typeof ContributionPhaseOutputSchema>;
 export type PreferencesPhaseOutput = z.infer<typeof PreferencesPhaseOutputSchema>;
