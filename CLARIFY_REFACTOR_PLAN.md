@@ -38,7 +38,7 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
 | 4 | Create the risk phase (single-question 1-5 self-rating) | Complete |
-| 4b | Create the allocation phase (equity vs. buffer sizing) | Not started — see Phase 4b section below |
+| 4b | Create the allocation phase (equity vs. buffer sizing) | Complete — 2-axis risk × timeline anchor, 4 behavioral rules, all evals passing. Not yet wired into `clarify.stage.ts` (Phase 8). |
 | 5a | Create the equity phase (split from preferences) | Paused — scope revised; now depends on Phase 4b |
 | 5b | Create the buffer phase (split from preferences) | Not started — depends on Phase 4b and 5a |
 | 6 | Refactor extraction to thin assembly | Not started |
@@ -51,99 +51,6 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 
 ## Phases
 
-
-### Phase 4b — Create the allocation phase (equity vs. buffer sizing)
-
-**What:** New dedicated phase resolving the user's equity-vs-buffer split at the **total portfolio level**. Sits between the risk phase and the equity phase.
-
-**Why this is its own phase:** Risk tolerance isn't just classification — it's **behavioral protection**. A user who says "I'd sell at 20%" shouldn't land at 100% equity, because the first 20% drop would trigger exactly the panic-sell behavior they self-reported. Sizing the equity bucket to tolerance (with the rest in a stable buffer like קרן כספית) is what makes risk classification actionable: a 20% stock drop on 40% equity is an 8% total portfolio drop — tolerable enough to hold through. This sizing decision is distinct from instrument selection, depends on multiple fields, and deserves its own phase. Cramming it into equity recreates the "preferences phase bloat" the refactor is built to eliminate.
-
-#### Signature
-
-```ts
-export const collectAllocation = async (
-  goal: string,
-  fields: FieldsPhaseOutput,
-  risk: RiskPhaseOutput,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<AllocationPhaseOutput>
-```
-
-Phase 8 call site: `collectAllocation(activeGoal, fieldsOutput, riskOutput, sendToUser, waitForResponse)`.
-
-#### Output schema
-
-```ts
-type AllocationPhaseOutput = {
-  equityPercentage: number;   // 0–100, integer
-  bufferPercentage: number;   // 100 - equityPercentage
-};
-```
-
-Zod validation: both integers in [0, 100], `equityPercentage + bufferPercentage === 100`.
-
-Add `AllocationPhaseOutputSchema` to `clarify/shared/clarify.schemas.ts`.
-
-#### Multi-factor anchor logic
-
-The prompt guides the agent to propose a sizing anchor derived from multiple params, not a single-variable lookup. Factors and directional effects:
-
-| Factor | Effect on anchor equity % |
-|--------|----------------------------|
-| `risk.riskTolerance` (primary) | Lower tolerance → lower anchor |
-| `fields.timeline` (primary) | Shorter timeline → lower anchor (less time to recover from a late drop) |
-| `fields.age` | Older → slightly lower anchor on the margin (fewer earning years to recover from bad outcomes) |
-| `fields.hasEmergencyFund` | If false → lower anchor (less cushion against forced sales) |
-| `fields.hasDebt` | If true → lower anchor marginally (opportunity cost of equity vs. paying debt) |
-| `goal` | Grounding only unless the goal specifies a hard deadline; do not use goal wording as risk signal |
-
-Illustrative anchor ranges (prompt should compute from the combination, not hard-code a lookup):
-
-| Risk | Short timeline (<5yr) | Long timeline (>10yr) |
-|------|------------------------|------------------------|
-| Conservative | 20–40% | 40–60% |
-| Moderate | 40–60% | 60–80% |
-| Aggressive | 50–70% | 80–100% |
-
-These are **starting points for the conversation**, not caps. Further modulation from age / emergency fund / debt is applied on top.
-
-#### Conversation principles
-
-- **Informative and clear about trade-offs.** The agent opens by computing an anchor from the profile and presenting it with concrete rationale using `fields.amount` + historical drawdown figures:
-  > "Based on your risk profile, 25-year timeline, and comfort with drops, around 70% of your ₪50,000 in stocks and 30% in a stable buffer (like קרן כספית) makes sense as a starting point. A 20% stock drop would mean roughly ₪7,000 off your total portfolio — not ₪10,000 — because the buffer holds steady. Does 70/30 feel right, or would you want more or less in stocks?"
-- **User has final say.** The anchor is informed, not prescriptive. User can accept, nudge up/down, or pick a different split entirely.
-- **Both sides of the trade-off, honestly.** More equity → higher expected return over long horizons, bigger drawdowns. Less equity → smaller drawdowns, lower expected return. Agent explains both when user questions the anchor or proposes a deviation.
-- **Pre-stated case:** if the user's goal stated a split ("60% stocks 40% buffer", "put half in קרן כספית"), extract directly; skip the conversation loop. Unit-test this early-exit.
-
-#### Context string format
-
-```
-User goal: <goal>
-Investment amount: ₪<fields.amount>
-Investment timeline: <fields.timeline>
-Age: <fields.age>
-Has emergency fund: <fields.hasEmergencyFund>
-Has debt: <fields.hasDebt>
-Risk tolerance: <risk.riskTolerance>
-```
-
-#### Unit test
-
-One unit test for the pre-stated-split early-exit branch (assert no `sendToUser` call, assert output matches extracted values). Rest of behavior via evals.
-
-#### Files
-
-- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.ts` — new
-- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md` — new (rule-per-case structure: pre-stated split early-exit; anchor acceptance; user nudges up; user nudges down; user asks why; user proposes radically different split)
-- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.eval.ts` — new (cases per rule)
-- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.test.ts` — new (pre-stated split early-exit)
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `AllocationPhaseOutputSchema`
-- `src/server/pipeline/stages/clarify/shared/clarify.constants.ts` — add `MAX_ALLOCATION_TOOL_CALLS` (suggest 5)
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.allocation.eval.ts`.
-
----
 
 ### Phase 5a — Create the equity phase (split from preferences)
 

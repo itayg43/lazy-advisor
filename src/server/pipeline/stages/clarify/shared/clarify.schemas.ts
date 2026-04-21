@@ -30,6 +30,15 @@ export const RiskPhaseOutputSchema = RiskScoreSchema.extend({
   riskTolerance: RiskTolerance,
 });
 
+export const AllocationPhaseOutputSchema = z
+  .object({
+    equityPercentage: z.number().int().min(0).max(100),
+    bufferPercentage: z.number().int().min(0).max(100),
+  })
+  .refine((v) => v.equityPercentage + v.bufferPercentage === 100, {
+    message: "equityPercentage + bufferPercentage must equal 100",
+  });
+
 export const ContributionPhaseOutputSchema = z.object({
   plansToContribute: z.boolean(),
 });

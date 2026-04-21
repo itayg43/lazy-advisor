@@ -25,3 +25,4 @@ export const MAX_FIELDS_TOOL_CALLS = 10;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
 export const MAX_PREFERENCES_TOOL_CALLS = 5;
 export const MAX_RISK_TOOL_CALLS = 2;
+export const MAX_ALLOCATION_TOOL_CALLS = 5;

@@ -26,7 +26,7 @@ Target execution order: **classify → intake (conditional) → fields → risk 
 | intake | Redirect misclassified goals; reject if user declines; extract clean `redirectedGoal` on acceptance | `goal`, classification → `IntakeResult` |
 | fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
-| allocation | Size the total-portfolio equity/buffer split using multi-factor anchor (risk, timeline, age, emergency fund, debt) | `goal`, fields, risk → `AllocationPhaseOutput` |
+| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | `goal`, fields, risk → `AllocationPhaseOutput` |
 | contribution | Establish one-time vs. periodic intent | `goal`, fields → `ContributionPhaseOutput` |
 | equity | Resolve which equity instruments fill the equity bucket + within-equity split (classify-then-route) | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
 | buffer | Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
@@ -97,6 +97,37 @@ The risk phase asks one question: a 1–5 self-rating of the user's comfort with
 **Default-on-unresolved is conservative, not moderate.** If the user gives an out-of-range or non-mappable answer twice (after one re-ask), the extraction defaults to `selfRatingScore: 1` → `conservative`. Under-sizing equity is recoverable; oversizing toward intolerance triggers exactly the panic-sell behavior the phase is meant to detect. The safer default does the right thing under uncertainty.
 
 **`selfRatingScore` is preserved on the output** so the allocation phase (Phase 4b) can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — instrument granularity belongs to allocation, not classification.
+
+### Allocation phase — 2-axis anchor (risk tolerance × timeline)
+
+The allocation phase resolves the total-portfolio split between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to phases 5a and 5b.
+
+**Anchor table.** The model locates the user's cell from `risk.riskTolerance` × interpreted timeline bucket, then picks a specific integer inside the cell's range based on qualitative signal:
+
+| Willingness \ Timeline | < 3 yr | 3–5 yr | 5–10 yr | 10+ yr |
+|---|---|---|---|---|
+| conservative | 0–10% | 10–20% | 30–40% | 40–50% |
+| moderate     | 0–10% | 20–30% | 50–60% | 60–70% |
+| aggressive   | 0–10% | 30–40% | 60–70% | 80–90% |
+
+The `<3yr` column collapses across all tolerances — at that horizon, capacity (the money still being there when needed) dominates risk tolerance per Vanguard, Fidelity, and Bogleheads guidance. Full reasoning, alternatives, and sources live in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
+
+**Behavior.** Four rules drive the conversation:
+
+1. **Propose the cell-appropriate anchor.** One `ask_user` call stating the split in shekels against `fields.amount` (the two shekel amounts must sum exactly), one directional trade-off sentence in relative terms (no specific drawdown percentages in the routine proposal — they age badly and invite false precision), "sizing to your comfort level tends to reduce the chance of panic-selling" framing, and a question asking whether to accept, nudge up, or nudge down.
+2. **User accepts → end the phase.** No wrap-up message.
+3. **User proposes a different split → honor the exact number** (not snapped to the cell edge). In the same turn: confirm in shekels and percent, directional trade-off sentence, end on acceptance. **Extreme-mismatch exception:** if the proposal is significantly outside the cell range (conservative asking for 100% equity, short-horizon asking for all equity, aggressive 10+ yr asking for 0% equity), surface the mismatch once with concrete drawdown framing (e.g., "30–50% in a bad year"), then accept. Qualitative judgment — trusted to the model, evals catch drift.
+4. **User asks a clarifying question → answer briefly, then re-ask** in the same `ask_user` call. Concept questions (what a buffer is) get one or two sentences; method questions ("how did you get 70/30?") name the two inputs — timeline and comfort with drops — without surfacing internal risk labels or the table; instrument questions ("which ETF?") are deflected to later phases.
+
+**Why honor-exact-number, not snap-to-cell.** Haggling with the user undermines the "user has final say" principle. The extreme-mismatch exception is the guardrail for the far tail.
+
+**Why no specific drawdown percentages in the routine proposal.** Concrete numbers age badly and invite false precision. They are explicitly allowed *only* in the Rule 3 sanity check, where the whole point is to convey seriousness.
+
+**Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains the correct shekel amounts. A follow-up refactor to move the math from the model into code (passing pre-computed shekels into the prompt as grounding) is a deferred architecture improvement — tracked in `STATUS.md`.
+
+**What's not used by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but the allocation phase does not consume them. An earlier design treated them as mid-conversation suitability qualifiers; the heads-up was dropped as weak ROI. Whether to gate the clarify stage on EF/debt *before* field collection — an intake-rejection-style suitability gate — is a separate decision tracked in `STATUS.md` as a Phase 7 follow-up. Age is also unused: redundant with timeline per TDF glidepath literature.
+
+**Extraction fallback.** No safe default exists for allocation (unlike risk's conservative default). If the phase loop exhausts its tool-call budget without an agreed split, extraction runs anyway via `previous_response_id` chaining; if the output fails `AllocationPhaseOutputSchema`'s `equityPercentage + bufferPercentage === 100` refine, it throws. Guessing a default would override user intent.
 
 ### Edge case — mid-conversation contradiction
 
