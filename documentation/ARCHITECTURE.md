@@ -100,7 +100,7 @@ The risk phase asks one question: a 1–5 self-rating of the user's comfort with
 
 ### Edge case — mid-conversation contradiction
 
-If a user states a `normal` goal but expresses contradictory risk wording during the risk phase (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. The 1–5 self-rating collapses the contradiction into a single number — the user picks one point on the scale, and that's the signal. Strong wording at extremes ("absolutely not" → 1, "buying opportunity" → 5) is mapped during extraction. The allocation phase (Phase 4b) further protects against any residual mismatch by sizing the equity bucket to the resulting risk tolerance — so panic-sell behavior is contained regardless of how the goal was initially phrased.
+If a user states a `normal` goal but expresses contradictory risk wording during the risk phase (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. The 1–5 self-rating collapses the contradiction into a single number — the user picks one point on the scale, and that's the signal. Non-numeric wording is not interpreted as a score; the phase re-asks once, and the user gives a digit. If they still don't, extraction defaults to `1` (conservative). The allocation phase (Phase 4b) further protects against any residual mismatch by sizing the equity bucket to the resulting risk tolerance — so panic-sell behavior is contained regardless of how the goal was initially phrased.
 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 

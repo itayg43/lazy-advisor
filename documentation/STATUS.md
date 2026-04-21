@@ -20,3 +20,5 @@ See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase deta
 **Strict chain:** Phase 4 re-open → 4b → 5a → 5b. Allocation output feeds both equity and buffer as grounding context.
 
 > **Note:** Stage-level evals (`clarify.stage.eval.ts`) remain broken through the Phase 8 orchestrator rewire. Broken runs in `clarify.stage.runs.jsonl` are expected until then.
+
+> **Doc drift to resolve in Phase 7:** `clarify.stage.rules.md` rule 4 ("Contradictory risk → scenario-based resolution") still describes the removed A/B/C loss-scenario path. Contradiction is now handled by the risk phase's 1–5 self-rating (ARCHITECTURE.md:81). Remove or rewrite this rule when Phase 7 (intake cleanup — drop `contradictory`) runs.

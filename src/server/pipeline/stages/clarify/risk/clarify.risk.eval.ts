@@ -44,8 +44,8 @@ describe("collectRisk", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.risk.rules.md rule 1: numeric 1 → conservative
-  it("should map score 1 to conservative", async () => {
+  // clarify.risk.rules.md rule 1: digit 1 → conservative
+  it("should map digit 1 to conservative", async () => {
     const responder = createTrackedResponder(["1"]);
     lastTranscript = responder.transcript;
 
@@ -62,8 +62,8 @@ describe("collectRisk", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
 
-  // clarify.risk.rules.md rule 1: numeric 2 → conservative
-  it("should map score 2 to conservative", async () => {
+  // clarify.risk.rules.md rule 1: digit 2 → conservative
+  it("should map digit 2 to conservative", async () => {
     const responder = createTrackedResponder(["2"]);
     lastTranscript = responder.transcript;
 
@@ -79,8 +79,8 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(conservative);
   });
 
-  // clarify.risk.rules.md rule 1: numeric 3 → moderate
-  it("should map score 3 to moderate", async () => {
+  // clarify.risk.rules.md rule 1: digit 3 → moderate
+  it("should map digit 3 to moderate", async () => {
     const responder = createTrackedResponder(["3"]);
     lastTranscript = responder.transcript;
 
@@ -96,8 +96,8 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(moderate);
   });
 
-  // clarify.risk.rules.md rule 1: numeric 4 → aggressive
-  it("should map score 4 to aggressive", async () => {
+  // clarify.risk.rules.md rule 1: digit 4 → aggressive
+  it("should map digit 4 to aggressive", async () => {
     const responder = createTrackedResponder(["4"]);
     lastTranscript = responder.transcript;
 
@@ -113,8 +113,8 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(aggressive);
   });
 
-  // clarify.risk.rules.md rule 1: numeric 5 → aggressive
-  it("should map score 5 to aggressive", async () => {
+  // clarify.risk.rules.md rule 1: digit 5 → aggressive
+  it("should map digit 5 to aggressive", async () => {
     const responder = createTrackedResponder(["5"]);
     lastTranscript = responder.transcript;
 
@@ -130,9 +130,9 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(aggressive);
   });
 
-  // clarify.risk.rules.md rule 2: extreme wording maps to extreme score
-  it("should map 'absolutely not' wording to score 1 (conservative)", async () => {
-    const responder = createTrackedResponder(["absolutely not, I'd want to sell"]);
+  // clarify.risk.rules.md rule 1: spelled-out English word → accepted
+  it("should accept spelled-out 'three' as score 3 (moderate)", async () => {
+    const responder = createTrackedResponder(["three"]);
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
@@ -143,30 +143,12 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
-    expect(output.selfRatingScore).toBe(1);
-    expect(output.riskTolerance).toBe(conservative);
+    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(moderate);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
 
-  // clarify.risk.rules.md rule 2: 'buying opportunity' → 5 (aggressive)
-  it("should map 'buying opportunity' wording to score 5 (aggressive)", async () => {
-    const responder = createTrackedResponder([
-      "completely comfortable, I'd see it as a buying opportunity",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockGoal,
-      mockFields,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.selfRatingScore).toBe(5);
-    expect(output.riskTolerance).toBe(aggressive);
-  });
-
-  // clarify.risk.rules.md rule 3: clarifying question → answer + re-present → numeric answer
+  // clarify.risk.rules.md rule 2: clarifying question → answer + re-present → numeric answer
   it("should answer a clarifying question then return the user's score", async () => {
     const responder = createTrackedResponder([
       "What do you mean by drop temporarily?",
@@ -187,7 +169,7 @@ describe("collectRisk", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // clarify.risk.rules.md rule 4: out-of-range number → re-ask once → valid answer
+  // clarify.risk.rules.md rule 3: out-of-range number → re-ask once → valid answer
   it("should re-ask when user gives a number outside 1-5 then accept the corrected answer", async () => {
     const responder = createTrackedResponder(["7", "4"]);
     lastTranscript = responder.transcript;
@@ -205,7 +187,25 @@ describe("collectRisk", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // clarify.risk.rules.md rule 4: still vague after re-ask → default conservative
+  // clarify.risk.rules.md rule 3: non-numeric wording → re-ask → numeric answer
+  it("should re-ask when user answers with non-numeric wording then accept the numeric answer", async () => {
+    const responder = createTrackedResponder(["I'd panic and want to sell", "1"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(1);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+  });
+
+  // clarify.risk.rules.md rule 3: still invalid after re-ask → default conservative
   it("should default to conservative when user remains vague after one re-ask", async () => {
     const responder = createTrackedResponder([
       "I don't know, it's hard to say",
