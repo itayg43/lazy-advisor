@@ -1,71 +1,74 @@
 # Clarify Risk Phase — Behavior Rules
 
-Behavioral rules for the risk phase. This phase resolves one value: the user's risk tolerance (conservative, moderate, or aggressive). These internal labels are **never shown to the user** — they are inferred from behavior across a two-tier probe: a 20% drop scenario on Turn 1, escalating to a 35% drop on Turn 2 if the user stays invested.
+Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The numeric score is mapped deterministically to one of three internal labels (`conservative`, `moderate`, `aggressive`) — these labels are **never shown to the user**.
+
+The phase is willingness-only. Capacity factors (timeline, age, emergency fund, debt) are not used here — they belong to the allocation phase downstream.
+
+## Score → bucket mapping
+
+Mapping is deterministic and lives in code, not in prompts:
+
+- 1–2 → `conservative`
+- 3 → `moderate`
+- 4–5 → `aggressive`
+
+## Neutrality requirements
+
+- Do **not** suggest a "typical" answer or imply a socially-desired response.
+- Do **not** add historical reassurance ("markets have recovered from 2008 and 2020"). Historical-recovery framing is a documented priming bias on risk-tolerance questionnaires and is the specific bias this design avoids.
+- Do **not** introduce hypothetical drop scenarios. The scale itself is the elicitation; scenarios re-introduce the framing problem.
+- If evals reveal misclassification, tighten the score→bucket mapping in code before adding scenario content back into the prompt.
 
 ---
 
-## 1. User picks A (sell) on Turn 1 → conservative
+## 1. User gives a clear 1–5 number → end the phase
 
-**Rule:** If the user picks option A on the 20% drop scenario — exit the position and move to cash — end the phase immediately. The internal resolution is `conservative`.
+**Rule:** If the user replies with one of the integers 1, 2, 3, 4, or 5 (with or without surrounding text), accept it and end the phase. The score → bucket mapping is applied in code.
 
-**Scenario:** "A — I'd sell and move to cash."
+**Scenario:** "3"
 
-**Extracted:** riskTolerance: conservative
-
----
-
-## 2. User picks B on Turn 1, then A on Turn 2 → moderate
-
-**Rule:** If the user picks option B on the 20% drop scenario (stay invested), then picks option A on the 35% drop scenario (sell), end the phase. The internal resolution is `moderate`.
-
-**Scenario:** "B. I'd stay invested." → Turn 2 35% scenario → "A. That's too much, I'd sell."
-
-**Extracted:** riskTolerance: moderate
+**Extracted:** selfRatingScore: 3 → riskTolerance: moderate
 
 ---
 
-## 3. User picks B on Turn 1, then B on Turn 2 → aggressive
+## 2. Strong wording maps clearly to an extreme → end the phase
 
-**Rule:** If the user picks option B on both the 20% and 35% drop scenarios (stay invested through both), end the phase. The internal resolution is `aggressive`.
+**Rule:** If the user does not give a number but uses wording that maps unambiguously to an extreme on the scale, accept it and end the phase. The extraction step is responsible for translating the wording to an integer.
 
-**Scenario:** "B. I'd stay invested." → Turn 2 35% scenario → "B. Still stay — long-term growth."
+**Examples (illustrative, not exhaustive):**
 
-**Extracted:** riskTolerance: aggressive
+- "Absolutely not" / "I'd panic and sell" / "I'd hate that" → 1
+- "Completely comfortable" / "I'd see it as a buying opportunity" → 5
+- "Neutral" / "in the middle" / "uneasy but I'd hold" → 3
 
----
+**Scenario:** "absolutely not, I'd want to sell"
 
-## 4. "I don't know" or uncertain answer → educational fallback, re-ask current turn
-
-**Rule:** If the user gives a vague or uncertain answer ("I don't know", "not sure", "hard to say") and the educational fallback has not been given yet in this phase, do not resolve the phase. Explain briefly why this matters, then re-ask the **current turn's** scenario (Turn 1 or Turn 2, whichever was just asked). Do not end the phase.
-
-**Explanation to use (adapt tone):** "That's a common feeling — it's hard to know until it happens. The reason it matters is that your tolerance for short-term losses should influence how your portfolio is structured. If a drop would make you anxious to the point of wanting to sell, a more conservative mix reduces those swings. If you think you'd weather it without panic, you can take on more growth-oriented funds. Try to picture it: your portfolio is down on paper. What's your gut reaction — sell to stop the bleeding, or stay invested and trust the recovery?"
-
-Then re-ask the current turn's A/B scenario.
-
-**Scenario:** "I don't know — it depends."
-
-**Agent response:** [educational explanation] then re-ask the current turn's A/B scenario.
+**Extracted:** selfRatingScore: 1 → riskTolerance: conservative
 
 ---
 
-## 5. Market-timing answer → redirect, re-ask current turn
+## 3. User asks a clarifying question before answering → answer briefly, then re-present the scale
 
-**Rule:** If the user gives a market-timing answer — suggesting they'd evaluate based on the news, economic conditions, or what they expect the market to do — do not accept this as A or B. Explain why market timing is unreliable, then re-ask the **current turn's** A/B scenario. This does not consume the educational fallback budget.
+**Rule:** If the user asks for clarification (what the scale means, why we're asking, what "drop temporarily" means), answer briefly and honestly, then re-present the same 1–5 question with all three anchors in the same `ask_user` call. Do not skip the re-presentation.
 
-**Explanation to use (adapt tone):** "That's a natural instinct, but research consistently shows that trying to time the market — selling before it falls further or buying at the bottom — usually backfires. Even professional fund managers underperform simple index strategies over the long run. The question is really about your default behavior in the absence of certainty: if your portfolio was down and you had no idea whether it would recover next month or in three years, would your instinct be to sell, or to stay invested?"
+**Scenario:** "What do you mean by drop temporarily?"
 
-Then re-ask the current turn's A/B scenario.
-
-**Scenario:** "I'd check the news and see if it seems like a temporary dip or something more serious."
-
-**Agent response:** [redirect explanation] then re-ask the current turn's A/B scenario.
+**Agent response:** brief explanation, then re-present the scale.
 
 ---
 
-## 6. Still uncertain after the educational fallback → end phase, default to conservative
+## 4. Number outside 1–5 or non-numeric, non-mappable answer → re-ask once, then default to conservative
 
-**Rule:** If the educational explanation has already been given once during this phase and the user is still uncertain, end the phase. Do not ask again. The internal resolution defaults to `conservative`.
+**Rule:** If the user gives a number outside 1–5 (e.g., "7", "0") or a vague answer that does not map to a point on the scale (e.g., "I don't know", "depends"), re-ask once with the full scale (anchors included). If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently. The extraction step will default to 1 (`conservative`).
 
-**Scenario:** User gives an uncertain answer, agent delivers the educational fallback + re-ask, user is still uncertain on the follow-up.
+**Why default conservative:** when willingness is genuinely unknown, the safer behavioral default is the lower-risk bucket. Defaulting to `moderate` would size a user toward an equity allocation they may not actually tolerate; defaulting to `conservative` errs toward a sizing they are more likely to hold through.
 
-**Extracted:** riskTolerance: conservative
+**Scenario:** "7" → re-ask → "I don't know" → end (default conservative).
+
+**Extracted:** selfRatingScore: 1 → riskTolerance: conservative
+
+---
+
+## Tool-call budget
+
+`MAX_RISK_TOOL_CALLS = 2`. Worst case is one re-ask after an invalid answer (initial ask + re-ask = 2) or one clarifying-question answer (initial ask containing answer + re-presentation, then user replies = 2). The budget does not accommodate both edge cases occurring in the same conversation.

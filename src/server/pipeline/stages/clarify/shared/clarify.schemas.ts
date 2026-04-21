@@ -22,12 +22,16 @@ export const FieldsPhaseOutputSchema = z.object({
   hasDebt: z.boolean(),
 });
 
-export const ContributionPhaseOutputSchema = z.object({
-  plansToContribute: z.boolean(),
+export const RiskScoreSchema = z.object({
+  selfRatingScore: z.number().int().min(1).max(5),
 });
 
-export const RiskPhaseOutputSchema = z.object({
+export const RiskPhaseOutputSchema = RiskScoreSchema.extend({
   riskTolerance: RiskTolerance,
+});
+
+export const ContributionPhaseOutputSchema = z.object({
+  plansToContribute: z.boolean(),
 });
 
 export const PreferencesPhaseOutputSchema = z.object({

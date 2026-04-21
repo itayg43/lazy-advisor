@@ -37,8 +37,7 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 | 2 | Create typed I/O schemas | Complete |
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
-| 4 | Create the risk phase | Complete (single 20% probe) |
-| 4 re-open | Single-question 1-5 self-rating (supersedes two-tier A/B) | In progress — design decided 2026-04-21; implementation pending (see Phase 4 re-open section below) |
+| 4 | Create the risk phase (single-question 1-5 self-rating) | Complete |
 | 4b | Create the allocation phase (equity vs. buffer sizing) | Not started — see Phase 4b section below |
 | 5a | Create the equity phase (split from preferences) | Paused — scope revised; now depends on Phase 4b |
 | 5b | Create the buffer phase (split from preferences) | Not started — depends on Phase 4b and 5a |
@@ -52,72 +51,6 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 
 ## Phases
 
-
-### Phase 4 re-open — Single-question 1-5 self-rating (supersedes two-tier A/B)
-
-**Status:** Design decided 2026-04-21 after a web-verified research pass. The prior two-tier A/B design is superseded. Implementation pending.
-
-**What changed and why:** The previous Phase 4 re-open design (two-turn A/B drop scenarios with historical-recovery framing) has been replaced with a single-question 1–5 self-rating. The switch was driven by research: direct self-rating items have higher predictive validity than hypothetical scenario questions (Statman, Kitces, CFA Institute *Psychometric Review*), and historical-recovery framing is a documented priming bias specific to risk-tolerance questionnaires. The prior design also exhibited an intermittent prompt-adherence flake (~1 in 3–4 runs); the new single-turn shape removes the multi-step flow entirely, so the flake disappears structurally. Full rationale, sources, trade-offs, and rejected alternatives (including a pension-past-behavior probe) are in [`src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md`](src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
-
-**Signature unchanged:** `collectRisk(goal, fields, sendToUser, waitForResponse): Promise<RiskPhaseOutput>`. `goal` remains grounding only; `fields` is kept in the signature for consistency and future extensibility but is not read by the classifier (the scale is willingness-only; capacity stays in Phase 4b).
-
-**Output schema (updated):**
-
-```ts
-type RiskPhaseOutput = {
-  riskTolerance: 'conservative' | 'moderate' | 'aggressive';
-  selfRatingScore: 1 | 2 | 3 | 4 | 5;   // preserved so Phase 4b can calibrate if needed
-};
-```
-
-**Flow:** single turn. Phase asks one question: a 1–5 self-rating of comfort with temporary drops, with concrete behavioral anchors at 1, 3, and 5. User responds with a number. Deterministic mapping:
-
-- 1–2 → `conservative`
-- 3 → `moderate`
-- 4–5 → `aggressive`
-
-**Anchor wording (draft — rules file owns final text):**
-
-> "Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
->
-> 1 = very uncomfortable — I'd want to sell immediately
-> 3 = neutral — I'd be uneasy but try to hold
-> 5 = completely comfortable — I'd see it as a buying opportunity"
-
-**Edge cases:**
-
-- Number outside 1–5 or non-numeric answer → re-ask once with the scale; still unresolved → default to `moderate`.
-- User asks a clarifying question before answering → answer it honestly (what the scale means, why we're asking), then re-present the scale.
-- No market-timing redirect needed — no scenario framing to redirect from.
-- No educational fallback needed — the anchors are the education.
-
-**Neutrality guidance (for the rules file):**
-
-- Do not suggest a "typical" answer or imply a socially-desired response.
-- Do not add historical reassurance ("markets have recovered") — this re-introduces the priming bias the new design avoids.
-- If evals reveal misclassification, tighten the score→bucket mapping before adding scenario content back into the prompt.
-
-**What this eliminates (compared with the superseded two-turn A/B design):**
-
-- Two-turn A/B flow, educational fallback, market-timing redirect, prompt-based state machine.
-- Historical-recovery framing (source of the priming concern).
-- Post-loop extraction call (mapping is deterministic).
-- The planned code-based state-machine refactor — the complexity it was meant to solve no longer exists.
-
-**Files:**
-
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` — rewrite as single-question flow. Remove two-turn logic, educational fallback, market-timing redirect, post-loop extraction. Add deterministic score→bucket mapping.
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md` — rewrite: single-turn flow, final anchor wording, neutrality guidance, edge-case handling.
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.prompts.ts` — rewrite as a single prompt; may be small enough to inline into `clarify.risk.ts` (decide at implementation time).
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts` — rewrite: 5 core cases (one per score 1–5), plus edge cases (out-of-range, clarifying question, non-numeric → default, extreme wording like "absolutely not" → map to 1).
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — update `RiskPhaseOutputSchema` to add `selfRatingScore`.
-- `src/server/pipeline/stages/clarify/shared/clarify.constants.ts` — reduce `MAX_RISK_TOOL_CALLS` (suggest 2; worst case: clarifying question + answer).
-
-**Tool-call budget:** `MAX_RISK_TOOL_CALLS` drops to 2.
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`.
-
----
 
 ### Phase 4b — Create the allocation phase (equity vs. buffer sizing)
 

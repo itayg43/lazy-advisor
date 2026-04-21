@@ -1,26 +1,71 @@
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { createLogger } from "#lib/logger";
-import {
-  DROP_TURN_1,
-  DROP_TURN_2,
-  EXTRACTION_INSTRUCTIONS,
-  INSTRUCTIONS,
-} from "#pipeline/stages/clarify/risk/clarify.risk.prompts";
 import { MAX_RISK_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
-import { RiskPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { RiskScoreSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   FieldsPhaseOutput,
   RiskPhaseOutput,
+  RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { RiskTolerance } from "#schemas/pipeline.schema";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyRisk");
 
-const computeDropAmount = (amount: number, dropPercentage: number): number =>
-  Math.round(amount * (dropPercentage / 100));
+const { conservative, moderate, aggressive } = RiskTolerance.enum;
+
+const RISK_PROMPT = `# Role and Objective
+You are the risk-tolerance phase of an investment advisor pipeline. Your sole responsibility is to elicit a 1–5 self-rating of the user's comfort with seeing their investments drop temporarily. Do **not** provide investment advice, portfolio suggestions, or fund names. Do **not** mention internal risk labels (${conservative}, ${moderate}, ${aggressive}) at any point.
+
+# The Question to Ask
+
+All messages to the user must be sent via the \`ask_user\` tool. Never output a question as plain text.
+
+Send one \`ask_user\` call with this exact text (or near-verbatim — keep the three anchor lines verbatim):
+
+"Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity"
+
+# Decision Logic
+
+Evaluate in order. Execute the first match.
+
+**Step 1 — User gives a clear 1–5 number, OR strong wording that maps unambiguously to a point on the scale**
+End the phase. Do not send a closing message — just stop calling tools.
+- "1", "2", "3", "4", "5" (with or without surrounding text) → end.
+- Strong wording at extremes ("absolutely not", "I'd panic", "very uncomfortable" → effectively 1; "buying opportunity", "completely comfortable" → effectively 5; "neutral", "uneasy but I'd hold" → effectively 3) → end. The post-loop extraction will translate the wording to an integer.
+
+**Step 2 — User asks a clarifying question before answering**
+Answer briefly and honestly (what the scale means, why we're asking, what "drop temporarily" means), then re-present the same 1–5 question with all three anchors in the same \`ask_user\` call. Do not skip the re-presentation.
+
+**Step 3 — Number outside 1–5, OR vague answer that does not map to a point on the scale**
+("7", "0", "I don't know", "depends", "hard to say"): re-ask once with the full scale (anchors included). If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently. The extraction will default to 1 (the safer behavioral default when willingness is unknown).
+
+# Neutrality
+
+- Do not suggest a "typical" answer or imply a socially-desired response.
+- Do not add historical reassurance ("markets have recovered") — neutral framing is the entire point of this design.
+- Do not introduce hypothetical drop scenarios. The scale itself is the elicitation.`;
+
+const RISK_EXTRACTION_INSTRUCTIONS = `Extract a single integer from the preceding investment advisor conversation: the user's self-rating on the 1–5 comfort-with-drops scale.
+
+- selfRatingScore: integer in [1, 5]
+  - If the user gave a number 1–5, use it directly.
+  - If the user used strong wording at an extreme, map it: "absolutely not" / "I'd panic" / "very uncomfortable" → 1. "Completely comfortable" / "buying opportunity" → 5. "Neutral" / "in the middle" / "uneasy but I'd hold" → 3.
+  - If the user never gave a clear signal (asked clarifying questions repeatedly, gave invalid or vague answers throughout), default to 1. This is the safer default when willingness is unknown.`;
+
+const mapScoreToBucket = (score: number): RiskPhaseOutput["riskTolerance"] => {
+  if (score <= 2) return conservative;
+  if (score === 3) return moderate;
+
+  return aggressive;
+};
 
 export const collectRisk = async (
   goal: string,
@@ -30,37 +75,31 @@ export const collectRisk = async (
 ): Promise<RiskPhaseOutput> => {
   logger.info("Starting risk phase", { goal, fields });
 
-  const drop1Amount = computeDropAmount(fields.amount, DROP_TURN_1);
-  const drop2Amount = computeDropAmount(fields.amount, DROP_TURN_2);
-
-  const context = [
-    `User goal: ${goal}`,
-    `Investment amount: ₪${fields.amount.toLocaleString()}`,
-    `Investment timeline: ${fields.timeline}`,
-    `${DROP_TURN_1}% drop amount: ₪${drop1Amount.toLocaleString()}`,
-    `${DROP_TURN_2}% drop amount: ₪${drop2Amount.toLocaleString()}`,
-  ].join("\n");
-
   const { responseId } = await runPhaseLoop(
-    INSTRUCTIONS,
-    { input: context },
+    RISK_PROMPT,
+    { input: goal },
     MAX_RISK_TOOL_CALLS,
     "Risk phase",
     sendToUser,
     waitForResponse,
   );
 
-  const { id, usage, output } = await callOpenAIParsed<RiskPhaseOutput>({
+  const { id, usage, output } = await callOpenAIParsed<RiskScore>({
     model: "gpt-5.4-nano",
-    instructions: EXTRACTION_INSTRUCTIONS,
+    instructions: RISK_EXTRACTION_INSTRUCTIONS,
     input: [],
     previous_response_id: responseId,
-    text: { format: zodTextFormat(RiskPhaseOutputSchema, "RiskPhaseOutput") },
+    text: { format: zodTextFormat(RiskScoreSchema, "RiskScoreSchema") },
     reasoning: { effort: "low" },
   });
 
-  logger.info("Risk extraction complete", { responseId: id, usage });
-  logger.debug("Risk output", { output });
+  const result: RiskPhaseOutput = {
+    selfRatingScore: output.selfRatingScore,
+    riskTolerance: mapScoreToBucket(output.selfRatingScore),
+  };
 
-  return output;
+  logger.info("Risk extraction complete", { responseId: id, usage });
+  logger.debug("Risk output", { output: result });
+
+  return result;
 };
