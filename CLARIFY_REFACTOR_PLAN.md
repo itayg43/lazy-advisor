@@ -38,7 +38,7 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
 | 4 | Create the risk phase | Complete (single 20% probe) |
-| 4 re-open | Two-tier risk probe | In progress — prompt-based flow landed; code-based refactor next (see Phase 4 re-open section below) |
+| 4 re-open | Single-question 1-5 self-rating (supersedes two-tier A/B) | In progress — design decided 2026-04-21; implementation pending (see Phase 4 re-open section below) |
 | 4b | Create the allocation phase (equity vs. buffer sizing) | Not started — see Phase 4b section below |
 | 5a | Create the equity phase (split from preferences) | Paused — scope revised; now depends on Phase 4b |
 | 5b | Create the buffer phase (split from preferences) | Not started — depends on Phase 4b and 5a |
@@ -53,71 +53,67 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 ## Phases
 
 
-### Phase 4 re-open — Two-tier risk probe
+### Phase 4 re-open — Single-question 1-5 self-rating (supersedes two-tier A/B)
 
-**Status:** Prompt-based two-tier flow is landed — signature change (`collectRisk` takes full `fields`), rules file rewrite, 9 eval cases (8 rule-keyed + 1 short-timeline framing fidelity), prompts extracted to `clarify.risk.prompts.ts`. Evals stabilized at 8/9–9/9 after prompt stacking; uncertain-on-Turn-1 → Step 4 path has an intermittent adherence flake (~1 in 3–4 runs, model short-circuits to Step 6). Output is still correct (`conservative`) but the mandatory educational re-ask is skipped. Additional prompt stacking has diminishing returns.
+**Status:** Design decided 2026-04-21 after a web-verified research pass. The prior two-tier A/B design is superseded. Implementation pending.
 
-**Next step (the code-based refactor):** Move the state machine out of the prompt into code. Each user reply runs through a lightweight LLM classifier (`"A" | "B" | "uncertain" | "market-timing"`); code branches deterministically on the classification and the phase's tracked state (current turn, whether educational fallback already delivered). Prompts shrink to per-node generation (Turn 1 ask, Turn 2 ask, educational fallback, market-timing redirect) + the classifier. Rules file remains the spec; it now drives code transitions instead of prompt instructions. The post-loop extraction call is likely removable — the code already knows the outcome. See design sketch at end of this section.
+**What changed and why:** The previous Phase 4 re-open design (two-turn A/B drop scenarios with historical-recovery framing) has been replaced with a single-question 1–5 self-rating. The switch was driven by research: direct self-rating items have higher predictive validity than hypothetical scenario questions (Statman, Kitces, CFA Institute *Psychometric Review*), and historical-recovery framing is a documented priming bias specific to risk-tolerance questionnaires. The prior design also exhibited an intermittent prompt-adherence flake (~1 in 3–4 runs); the new single-turn shape removes the multi-step flow entirely, so the flake disappears structurally. Full rationale, sources, trade-offs, and rejected alternatives (including a pension-past-behavior probe) are in [`src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md`](src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
-**Why re-open:** The initial risk phase anchored on a single 20% drop scenario. A user who says "I'd sell at 20%" is classified conservative, but stock markets have dropped 30–40% in single drawdowns historically — the 20% probe doesn't reveal whether the user has thought about deeper magnitudes. This creates under-probing. A two-tier probe addresses it without introducing reactive warning logic downstream.
+**Signature unchanged:** `collectRisk(goal, fields, sendToUser, waitForResponse): Promise<RiskPhaseOutput>`. `goal` remains grounding only; `fields` is kept in the signature for consistency and future extensibility but is not read by the classifier (the scale is willingness-only; capacity stays in Phase 4b).
 
-**Signature change:** `collectRisk(goal, fields, sendToUser, waitForResponse): Promise<RiskPhaseOutput>`. Takes the full `fields` object instead of just `amount` so the phase can ground its educational framing in `fields.timeline` (and use `fields.amount` for concrete figures). `goal` is grounding context only — never classifier input. The A/B classification stays purely behavioral.
+**Output schema (updated):**
 
-**Output enum unchanged:** `conservative` | `moderate` | `aggressive`.
-
-**Two-turn flow (no Turn 3):**
-
-```
-Turn 1: 20% drop — A (sell) or B (stay)?
-  A → conservative, end.
-  B → Turn 2.
-Turn 2: 35% drop — A or B?
-  A → moderate (tolerant of normal drops, not severe), end.
-  B → aggressive (tolerant of severe drops), end.
+```ts
+type RiskPhaseOutput = {
+  riskTolerance: 'conservative' | 'moderate' | 'aggressive';
+  selfRatingScore: 1 | 2 | 3 | 4 | 5;   // preserved so Phase 4b can calibrate if needed
+};
 ```
 
-Turn 3 (stress/calm follow-up) from the earlier re-open draft is **dropped**. Rationale: self-reported emotion is weaker signal than demonstrated behavior through a 35% drop. Someone who held calmly and someone who held "but found it stressful" behaved identically — classifying them differently introduces noise. Two-tier A/B carries the needed signal.
+**Flow:** single turn. Phase asks one question: a 1–5 self-rating of comfort with temporary drops, with concrete behavioral anchors at 1, 3, and 5. User responds with a number. Deterministic mapping:
 
-#### Educational framing (Turn 1)
+- 1–2 → `conservative`
+- 3 → `moderate`
+- 4–5 → `aggressive`
 
-Turn 1 includes timeline-grounded context to calibrate the user's intuition against real market history. The prompt provides two templates; the agent chooses based on `fields.timeline`:
+**Anchor wording (draft — rules file owns final text):**
 
-- **Long timeline (~10+ years):** "Historically, diversified stock markets have weathered multiple major drops (like 2008 and 2020) and still averaged ~10%/year over 20+ year windows — drops are part of the ride, and longer timelines have historically had time to recover."
-- **Short timeline (<10 years):** "Historically, recovery from major drops has ranged from months (2020) to several years (2008 took ~4; 2000 took ~7) — a shorter window doesn't guarantee enough time to recover from a late drop."
+> "Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+>
+> 1 = very uncomfortable — I'd want to sell immediately
+> 3 = neutral — I'd be uneasy but try to hold
+> 5 = completely comfortable — I'd see it as a buying opportunity"
 
-Turn 1 also opens with a "no right answer" bridge to reduce performance anxiety:
+**Edge cases:**
 
-> "Let's work through a scenario to understand how you'd react to drops — this shapes how your portfolio should be structured, and there's no right answer."
+- Number outside 1–5 or non-numeric answer → re-ask once with the scale; still unresolved → default to `moderate`.
+- User asks a clarifying question before answering → answer it honestly (what the scale means, why we're asking), then re-present the scale.
+- No market-timing redirect needed — no scenario framing to redirect from.
+- No educational fallback needed — the anchors are the education.
 
-#### Turn 2 anchoring
+**Neutrality guidance (for the rules file):**
 
-Turn 2 references the user's Turn 1 answer for continuity and uses beginner-legible market context instead of jargon:
+- Do not suggest a "typical" answer or imply a socially-desired response.
+- Do not add historical reassurance ("markets have recovered") — this re-introduces the priming bias the new design avoids.
+- If evals reveal misclassification, tighten the score→bucket mapping before adding scenario content back into the prompt.
 
-> "You said you'd stay at 20%. What if it got worse — a 35% drop (₪17,500 off your ₪50,000). Major tech stocks fell about this much in 2022. Still A (sell) or B (stay)?"
+**What this eliminates (compared with the superseded two-turn A/B design):**
 
-Drop amounts in both turns are derived from `fields.amount`; the 35% math is computed in the risk file (mirrors `buildRiskScenario`). `buildRiskScenario` is used for Turn 1 only; Turn 2 framing is inlined as a continuation.
+- Two-turn A/B flow, educational fallback, market-timing redirect, prompt-based state machine.
+- Historical-recovery framing (source of the priming concern).
+- Post-loop extraction call (mapping is deterministic).
+- The planned code-based state-machine refactor — the complexity it was meant to solve no longer exists.
 
-#### Existing rules preserved
+**Files:**
 
-- Educational fallback on first uncertain answer (re-ask with explanation). Second uncertain → default conservative.
-- Market-timing answer → redirect with explanation, then re-ask current turn's scenario.
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` — rewrite as single-question flow. Remove two-turn logic, educational fallback, market-timing redirect, post-loop extraction. Add deterministic score→bucket mapping.
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md` — rewrite: single-turn flow, final anchor wording, neutrality guidance, edge-case handling.
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.prompts.ts` — rewrite as a single prompt; may be small enough to inline into `clarify.risk.ts` (decide at implementation time).
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts` — rewrite: 5 core cases (one per score 1–5), plus edge cases (out-of-range, clarifying question, non-numeric → default, extreme wording like "absolutely not" → map to 1).
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — update `RiskPhaseOutputSchema` to add `selfRatingScore`.
+- `src/server/pipeline/stages/clarify/shared/clarify.constants.ts` — reduce `MAX_RISK_TOOL_CALLS` (suggest 2; worst case: clarifying question + answer).
 
-#### Calibration concern (eval-time)
-
-A/B wording ("sell" vs. "stay invested") and historical framing both mildly prime toward B. Two-tier helps (Turn 2 forces a harder decision), but expect some lean toward `aggressive` vs. a fully neutral probe. Evals should account for this; do not over-correct in the prompt. Allocation sizing (Phase 4b) is the real behavioral protection — not prompt neutrality.
-
-#### Files
-
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` — rewrite `RISK_PROMPT_BODY` for two-turn flow; add educational framing templates; change signature to `(goal, fields, sendToUser, waitForResponse)`; build Turn 1 scenario via `buildRiskScenario`, inline Turn 2 continuation with computed drop amount
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md` — rewrite with rule-per-case structure covering: A@20%→conservative; B@20%+A@35%→moderate; B@20%+B@35%→aggressive; uncertain + educational fallback; second uncertain → default conservative; market-timing redirect. Each rule includes at least one example case.
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts` — update test cases for two-turn flow:
-  - A at 20% → conservative
-  - B at 20%, A at 35% → moderate (new)
-  - B at 20%, B at 35% → aggressive (new semantics — no stress/calm follow-up)
-  - Educational fallback on uncertain → default conservative after second uncertain
-  - Market-timing redirect → continues through both turns
-
-**Tool-call budget:** `MAX_RISK_TOOL_CALLS` stays at 5. Worst case: 2 turns + 1 edu re-ask + 1 market-timing redirect = 4.
+**Tool-call budget:** `MAX_RISK_TOOL_CALLS` drops to 2.
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`.
 
