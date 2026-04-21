@@ -44,9 +44,9 @@ describe("collectRisk", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.risk.rules.md rule 1: user picks A on Turn 1 → conservative
-  it("should return conservative when user chooses to sell on Turn 1", async () => {
-    const responder = createTrackedResponder(["A — I'd sell and move to cash"]);
+  // clarify.risk.rules.md rule 1: numeric 1 → conservative
+  it("should map score 1 to conservative", async () => {
+    const responder = createTrackedResponder(["1"]);
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
@@ -57,15 +57,100 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
+    expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
 
-  // clarify.risk.rules.md rule 2: user picks B on Turn 1, then A on Turn 2 → moderate
-  it("should return moderate when user stays at 20% but sells at 35%", async () => {
+  // clarify.risk.rules.md rule 1: numeric 2 → conservative
+  it("should map score 2 to conservative", async () => {
+    const responder = createTrackedResponder(["2"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(conservative);
+  });
+
+  // clarify.risk.rules.md rule 1: numeric 3 → moderate
+  it("should map score 3 to moderate", async () => {
+    const responder = createTrackedResponder(["3"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(moderate);
+  });
+
+  // clarify.risk.rules.md rule 1: numeric 4 → aggressive
+  it("should map score 4 to aggressive", async () => {
+    const responder = createTrackedResponder(["4"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(4);
+    expect(output.riskTolerance).toBe(aggressive);
+  });
+
+  // clarify.risk.rules.md rule 1: numeric 5 → aggressive
+  it("should map score 5 to aggressive", async () => {
+    const responder = createTrackedResponder(["5"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(5);
+    expect(output.riskTolerance).toBe(aggressive);
+  });
+
+  // clarify.risk.rules.md rule 2: extreme wording maps to extreme score
+  it("should map 'absolutely not' wording to score 1 (conservative)", async () => {
+    const responder = createTrackedResponder(["absolutely not, I'd want to sell"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(1);
+    expect(output.riskTolerance).toBe(conservative);
+  });
+
+  // clarify.risk.rules.md rule 2: 'buying opportunity' → 5 (aggressive)
+  it("should map 'buying opportunity' wording to score 5 (aggressive)", async () => {
     const responder = createTrackedResponder([
-      "B — I'd stay invested",
-      "A — that's too much, I'd sell at that point",
+      "completely comfortable, I'd see it as a buying opportunity",
     ]);
     lastTranscript = responder.transcript;
 
@@ -77,16 +162,34 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
+    expect(output.selfRatingScore).toBe(5);
+    expect(output.riskTolerance).toBe(aggressive);
+  });
+
+  // clarify.risk.rules.md rule 3: clarifying question → answer + re-present → numeric answer
+  it("should answer a clarifying question then return the user's score", async () => {
+    const responder = createTrackedResponder([
+      "What do you mean by drop temporarily?",
+      "3",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // clarify.risk.rules.md rule 3: user picks B on Turn 1, then B on Turn 2 → aggressive
-  it("should return aggressive when user stays invested through both turns", async () => {
-    const responder = createTrackedResponder([
-      "B — I'd stay invested",
-      "B — still stay, I trust the long-term recovery",
-    ]);
+  // clarify.risk.rules.md rule 4: out-of-range number → re-ask once → valid answer
+  it("should re-ask when user gives a number outside 1-5 then accept the corrected answer", async () => {
+    const responder = createTrackedResponder(["7", "4"]);
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
@@ -97,99 +200,16 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
+    expect(output.selfRatingScore).toBe(4);
     expect(output.riskTolerance).toBe(aggressive);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // clarify.risk.rules.md rule 4 on Turn 1: uncertain on Turn 1 → educational fallback → B on Turn 1 → A on Turn 2 → moderate
-  it("should proceed through both turns after educational fallback resolves uncertainty on Turn 1", async () => {
-    const responder = createTrackedResponder([
-      "I'm not sure honestly",
-      "B — I'd stay invested",
-      "A — 35% is too much for me",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockGoal,
-      mockFields,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.riskTolerance).toBe(moderate);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
-  // clarify.risk.rules.md rule 4 on Turn 2: B on Turn 1 → uncertain on Turn 2 → educational fallback → B on Turn 2 → aggressive
-  it("should give educational fallback on uncertain Turn 2 answer", async () => {
-    const responder = createTrackedResponder([
-      "B — I'd stay invested",
-      "Hmm, I don't know about a 35% drop",
-      "B — I'll still stay",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockGoal,
-      mockFields,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.riskTolerance).toBe(aggressive);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
-  // clarify.risk.rules.md rule 5 on Turn 1: market-timing on Turn 1 → redirect → B on Turn 1 → B on Turn 2 → aggressive
-  it("should redirect market-timing answer on Turn 1 then return aggressive after B + B", async () => {
-    const responder = createTrackedResponder([
-      "I'd check the news and see if it's a temporary dip",
-      "Ok fair point. B — I'd stay invested",
-      "B — still stay, I'd trust the recovery",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockGoal,
-      mockFields,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.riskTolerance).toBe(aggressive);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
-  // clarify.risk.rules.md rule 5 on Turn 2: B on Turn 1 → market-timing on Turn 2 → redirect → A on Turn 2 → moderate
-  it("should redirect market-timing answer on Turn 2", async () => {
-    const responder = createTrackedResponder([
-      "B — I'd stay invested",
-      "I'd look at what's happening in the economy to decide",
-      "A — at 35% I'd sell",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockGoal,
-      mockFields,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.riskTolerance).toBe(moderate);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
-  // clarify.risk.rules.md rule 6: uncertain → educational fallback → still uncertain → default conservative
-  it("should default to conservative when user remains uncertain after educational fallback", async () => {
+  // clarify.risk.rules.md rule 4: still vague after re-ask → default conservative
+  it("should default to conservative when user remains vague after one re-ask", async () => {
     const responder = createTrackedResponder([
       "I don't know, it's hard to say",
-      "Hmm, I still don't know honestly",
+      "Honestly I still can't say",
     ]);
     lastTranscript = responder.transcript;
 
@@ -201,31 +221,8 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
+    expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-  });
-
-  // Prompt fidelity: short-timeline (<10 years) framing template selected on Turn 1.
-  // Not keyed to a rule in clarify.risk.rules.md — timeline framing is educational, not behavioral.
-  it("should use short-timeline framing on Turn 1 when timeline is < 10 years", async () => {
-    const shortFields: FieldsPhaseOutput = { ...mockFields, timeline: "3 years" };
-    const responder = createTrackedResponder(["A — I'd sell and move to cash"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockGoal,
-      shortFields,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.riskTolerance).toBe(conservative);
-    const firstAgentMsg =
-      responder.transcript.find((t) => t.role === "agent")?.content ?? "";
-    // Short-timeline template uniquely references 2000 and "shorter window"
-    expect(firstAgentMsg).toMatch(/2000|shorter window/);
-    // Long-timeline template phrasing should not appear
-    expect(firstAgentMsg).not.toMatch(/10%\/year|20\+ year/);
   });
 });

@@ -83,7 +83,10 @@ describe("runClarifyStage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedCollectFields.mockResolvedValue(mockFields);
-    mockedCollectRisk.mockResolvedValue({ riskTolerance: mockProfile.riskTolerance });
+    mockedCollectRisk.mockResolvedValue({
+      riskTolerance: mockProfile.riskTolerance,
+      selfRatingScore: 3,
+    });
     mockedCollectContribution.mockResolvedValue({ plansToContribute: true });
     mockedCollectPreferences.mockResolvedValue("resp_prefs");
     mockedExtractUserProfile.mockResolvedValue(mockProfile);

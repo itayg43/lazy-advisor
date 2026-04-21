@@ -25,7 +25,7 @@ Target execution order: **classify → intake (conditional) → fields → risk 
 | classify | Label the goal: `normal`, `out_of_scope`, or `unrealistic` (contradictory dropped) | `goal` → `GoalClassification` |
 | intake | Redirect misclassified goals; reject if user declines; extract clean `redirectedGoal` on acceptance | `goal`, classification → `IntakeResult` |
 | fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
-| risk | Determine risk tolerance via two-tier drop scenario (20% → 35%) | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
+| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split using multi-factor anchor (risk, timeline, age, emergency fund, debt) | `goal`, fields, risk → `AllocationPhaseOutput` |
 | contribution | Establish one-time vs. periodic intent | `goal`, fields → `ContributionPhaseOutput` |
 | equity | Resolve which equity instruments fill the equity bucket + within-equity split (classify-then-route) | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
@@ -78,7 +78,7 @@ Each intake phase (`runPhaseLoop`) handles its specific conversation. Acceptance
 
 The fields prompt is left with one job: collect required profile fields.
 
-(The earlier pipeline included a `contradictory` classification for goals with conflicting risk signals like "maximum returns but I can't lose money." This path has been dropped — the risk phase's two-tier probe handles these cases naturally as part of behavioral classification.)
+(The earlier pipeline included a `contradictory` classification for goals with conflicting risk signals like "maximum returns but I can't lose money." This path has been dropped — the risk phase's 1–5 self-rating collapses any goal-stated contradiction into the user's own comfort score.)
 
 ### Handlers as sub-agents; code as orchestrator
 
@@ -88,9 +88,19 @@ An alternative considered: skip the classifier entirely and expose the handlers 
 
 The pattern works when the routed actions are simple and single-shot. When the actions are themselves stateful conversations, explicit code routing after a lightweight classifier is the right call: cheaper, independently testable, and each piece is observable in isolation.
 
+### Risk phase — single 1–5 self-rating
+
+The risk phase asks one question: a 1–5 self-rating of the user's comfort with seeing investments drop temporarily, with concrete behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The integer is mapped deterministically in code: 1–2 → `conservative`, 3 → `moderate`, 4–5 → `aggressive`. The post-loop extraction call returns only `selfRatingScore`; `riskTolerance` is computed in TypeScript, not produced by an LLM.
+
+**Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating items have higher predictive validity than hypothetical scenario questions, and historical-recovery framing ("markets recovered from 2008 and 2020") is a documented priming bias specific to risk-tolerance questionnaires. An earlier two-turn A/B drop-scenario design also exhibited an intermittent prompt-adherence flake (~1 in 3–4 runs); the single-turn shape removes the multi-step flow entirely, so the flake disappears structurally. Full sources, trade-offs, and rejected alternatives (including a pension-past-behavior probe) live in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
+
+**Default-on-unresolved is conservative, not moderate.** If the user gives an out-of-range or non-mappable answer twice (after one re-ask), the extraction defaults to `selfRatingScore: 1` → `conservative`. Under-sizing equity is recoverable; oversizing toward intolerance triggers exactly the panic-sell behavior the phase is meant to detect. The safer default does the right thing under uncertainty.
+
+**`selfRatingScore` is preserved on the output** so the allocation phase (Phase 4b) can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — instrument granularity belongs to allocation, not classification.
+
 ### Edge case — mid-conversation contradiction
 
-If a user starts with a `normal` goal but gives contradictory risk signals during the risk phase (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. The risk phase's two-tier A/B probe handles it purely behaviorally: whichever way the user actually responds to the 20% drop (and the 35% follow-up) is the signal. Self-reported stated preference is ignored in favor of demonstrated behavior. The allocation phase (Phase 4b) further protects against any residual mismatch by sizing the equity bucket to the resulting risk tolerance — so the user's panic-sell behavior is contained regardless of how they initially described themselves.
+If a user states a `normal` goal but expresses contradictory risk wording during the risk phase (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. The 1–5 self-rating collapses the contradiction into a single number — the user picks one point on the scale, and that's the signal. Strong wording at extremes ("absolutely not" → 1, "buying opportunity" → 5) is mapped during extraction. The allocation phase (Phase 4b) further protects against any residual mismatch by sizing the equity bucket to the resulting risk tolerance — so panic-sell behavior is contained regardless of how the goal was initially phrased.
 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 
