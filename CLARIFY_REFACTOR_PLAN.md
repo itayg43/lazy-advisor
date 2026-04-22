@@ -100,7 +100,9 @@ No `??` fallback — if intake ran and accepted, `alignedGoal` is always present
 - `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.rules.md` — new
 - `src/server/pipeline/stages/clarify/clarify.stage.ts` — wire `alignedGoal` branch
 
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.out-of-scope.eval.ts`, `npm run test:evals -- clarify.unrealistic.eval.ts`, `npm run test:evals -- clarify.contradictory.eval.ts`
+Each intake handler (`classify`, `out-of-scope`, `unrealistic`, `contradictory`) must have a co-located `*.rules.md` file before its eval is considered complete. Evals must align with their rules file per TESTING.md conventions: one test case per rule, rule reference comment on each case (`// clarify.<phase>.rules.md rule N: <summary>`), and test case order mirrors rule order. All intake evals are picked up automatically by `npm run test:evals` (the config includes all `*.eval.ts`).
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.classify.eval.ts`, `npm run test:evals -- clarify.out-of-scope.eval.ts`, `npm run test:evals -- clarify.unrealistic.eval.ts`, `npm run test:evals -- clarify.contradictory.eval.ts`
 
 ---
 
