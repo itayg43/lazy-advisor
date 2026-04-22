@@ -34,7 +34,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 | [Architecture](documentation/ARCHITECTURE.md) | Before implementing any feature — pipeline overview, phase map, and design decisions |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
-| [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files (`*.rules.md`) are co-located with each phase and at the stage root |
+| [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files (`*.rules.md`) are co-located with each phase |
 
 ## How to Work
 
