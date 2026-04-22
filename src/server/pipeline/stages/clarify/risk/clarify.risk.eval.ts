@@ -226,10 +226,7 @@ describe("collectRisk", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // Validates correct deflection behavior: model must acknowledge capacity ≠ willingness
-  // and re-present the 1–5 scale — NOT use age/timeline as framing for what score to give.
-  // After running, open clarify.risk.last-run.md to verify the second turn deflects
-  // (no "with your timeline you can afford X") and re-presents the scale anchors.
+  // clarify.risk.rules.md capacity-context rule: deflect age/timeline questions, re-present 1–5 scale
   it("should deflect age/timeline capacity question and re-present the scale", async () => {
     const responder = createTrackedResponder([
       "Does my age or investment timeline change what score I should give?",

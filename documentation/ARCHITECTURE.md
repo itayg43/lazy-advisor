@@ -121,7 +121,7 @@ The `<3yr` column collapses across all tolerances — at that horizon, capacity 
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
-**What's not consumed by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but not used as anchor inputs — whether to gate the clarify stage on them is tracked in [STATUS.md § Deferred follow-ups](./STATUS.md#deferred-follow-ups). `age` is unused: redundant with timeline per TDF glidepath literature.
+**What's not consumed by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but not used as anchor inputs — whether to gate the clarify stage on them is tracked in [STATUS.md § Improvements](./STATUS.md#improvements). `age` is unused: redundant with timeline per TDF glidepath literature.
 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 
