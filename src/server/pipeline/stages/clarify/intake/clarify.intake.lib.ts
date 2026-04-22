@@ -5,7 +5,22 @@ import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool"
 
 const logger = createLogger("clarifyIntake");
 
-export type IntakeResult = { accepted: true; responseId: string } | { accepted: false };
+// responseId: the final OpenAI response ID from the intake loop. Carried for Phase 7d,
+// which will make a post-acceptance extraction call against it to produce redirectedGoal.
+// Not consumed by the orchestrator directly.
+//
+// redirectedGoal: clean goal string produced by Phase 7d after the user accepts an ETF
+// redirect. When present, the orchestrator passes it to all downstream phases instead of
+// the original raw goal. Absent until Phase 7d lands — orchestrator falls back to goal.
+export type IntakeResult =
+  | { accepted: true; responseId: string; redirectedGoal?: string }
+  | { accepted: false };
+
+export type IntakeHandler = (
+  goal: string,
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+) => Promise<IntakeResult>;
 
 // Determines acceptance from the model's terminal phrase: "Got it." → accepted, "Understood." → rejected.
 // The terminal phrase is the classification signal — no separate API call is needed.

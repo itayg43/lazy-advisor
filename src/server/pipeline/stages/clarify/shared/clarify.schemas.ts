@@ -42,7 +42,3 @@ export const AllocationPhaseOutputSchema = z
 export const ContributionPhaseOutputSchema = z.object({
   plansToContribute: z.boolean(),
 });
-
-export const PreferencesPhaseOutputSchema = z.object({
-  investmentPreferences: z.string().min(1).max(MAX_STRING_LENGTH),
-});
