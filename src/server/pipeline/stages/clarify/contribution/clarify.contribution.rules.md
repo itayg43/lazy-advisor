@@ -28,7 +28,7 @@ Behavioral rules for the contribution phase. This phase resolves one boolean: wh
 
 **Rule:** Any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly" — resolves to `false`. Acknowledge briefly so the user doesn't feel cut off, then end the phase. Do not re-ask.
 
-**Acknowledgment to use:** "No problem — you can always start with a one-time investment and add more later when you're ready."
+**Acknowledgment to use:** "No problem — you can always start with a one-time investment and add more later when you're ready." Send this via `ask_user` and stop calling tools immediately — do not respond to any follow-up from the user.
 
 **Scenario:** "Maybe someday, but not regularly."
 
