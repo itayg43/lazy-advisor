@@ -2,28 +2,7 @@
 
 ## Context
 
-Replaces responseId-chaining with a **typed I/O pipeline**: each phase produces structured output via a post-loop extraction call and receives plain typed inputs from the orchestrator. New dedicated phases isolate risk, allocation, equity, and buffer. The `contradictory` intake path is dropped. Brokerage is removed from the profile.
-
----
-
-## Dependency Graph
-
-```
-Phase 1 (constants)  ──────────────────────────────────────────────────────────┐
-Phase 2 (schemas)    ─────────────────────────────────────────────────────┐    │
-                                                                           ↓    ↓
-Phase 3 (fields refactor)  ─────────────────────────────────────────────► Phase 8 (orchestrator)
-Phase 4 (risk) ─► Phase 4b (allocation) ─► Phase 5a (equity) ─► Phase 5b (buffer) ─► Phase 8
-Phase 6 (thin extraction)  ─────────────────────────────────────────────► Phase 8
-Phase 7 (intake cleanup)  ──────────────────────────────────────────────► Phase 8
-                                                                              │
-                                                      ┌───────────────────────┘
-                                                      ▼
-                                              Phase 9 (eval alignment)
-                                              Phase 10 (rules files)
-```
-
-Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phase 4 → 4b → 5a → 5b is a strict chain. Phase 8 gates everything. Phases 9 & 10 are post-integration cleanup.
+Replaces responseId-chaining with a **typed I/O pipeline**: each phase produces structured output via a post-loop extraction call and receives plain typed inputs from the orchestrator. New dedicated phases isolate risk, allocation, equity, and buffer. Brokerage is removed from the profile.
 
 ---
 
@@ -36,24 +15,125 @@ Phases 1 & 2 are parallel. Phases 3, 6, 7 are parallel once 1 & 2 are done. Phas
 | 3 | Refactor fields phase to typed I/O | Complete |
 | 3b | Create the contribution phase | Complete |
 | 4 | Create the risk phase (single-question 1-5 self-rating) | Complete |
-| 4b | Create the allocation phase (equity vs. buffer sizing) | Complete — 2-axis risk × timeline anchor, 4 behavioral rules, all evals passing. Not yet wired into `clarify.stage.ts` (Phase 8). |
-| 5a | Create the equity phase (split from preferences) | Paused — scope revised; now depends on Phase 4b |
-| 5b | Create the buffer phase (split from preferences) | Not started — depends on Phase 4b and 5a |
-| 6 | Refactor extraction to thin assembly | Not started |
-| 7 | Intake cleanup: drop contradictory, update out-of-scope and unrealistic | Not started |
-| 8 | Wire new pipeline in `clarify.stage.ts` | Not started |
-| 9 | Eval alignment pass | Not started |
-| 10 | Rules files for remaining phases | Not started |
+| 4b | Create the allocation phase (equity vs. buffer sizing) | Complete |
+| T1 | Fields timeline → 4-bucket enum | Not started |
+| T2 | Intake cleanup | Not started |
+| T3 | EF/debt gate | Not started |
+| T4 | Phase 5a — equity | Not started |
+| T5 | Phase 5b — buffer | Not started |
+| T6 | Wire equity/buffer in orchestrator | Not started |
+
+Phases 6 (extraction), 8 (wiring), 9 (eval alignment), 10 (rules files) dissolved — work absorbed inline into each task.
 
 ---
 
-## Phases
+## Tasks
 
-### Phase 5a — Create the equity phase
+### T1 — Fields timeline → 4-bucket enum
 
-**What:** Resolves which equity instruments fill the equity bucket and how they split within it. Does **not** negotiate the equity percentage — that's Phase 4b's job. `allocation.equityPercentage` is passed as grounding context ("you've chosen X% in stocks — which stocks?").
+Replace `timeline: string` with a presented-choice enum that maps 1:1 to the allocation anchor table. The phase presents four options explicitly rather than inferring a bucket from free-form text.
 
-Rename `clarify/preferences/` → `clarify/equity/`.
+**Enum:** `"under 3 years" | "3–5 years" | "5–10 years" | "10+ years"`
+
+#### Files
+
+- `src/server/pipeline/stages/clarify/fields/clarify.fields.ts` — update prompt to present the four choices
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — update `FieldsPhaseOutputSchema.timeline`
+- `src/server/pipeline/stages/clarify/allocation/clarify.allocation.ts` — update prompt; timeline bucket now arrives pre-classified
+- `src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts` — update eval cases
+- `src/server/pipeline/stages/clarify/fields/clarify.fields.rules.md` — update rules
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.fields.eval.ts`
+
+---
+
+### T2 — Intake cleanup
+
+Scope: keep contradictory; switch accept/reject detection from regex to a single post-loop LLM structured extraction call; clean prompts; wire `alignedGoal` through the orchestrator.
+
+#### Accept/reject + alignedGoal extraction
+
+Replace `extractAcceptanceFromText` (regex) with a post-loop structured extraction call that returns:
+
+```ts
+type IntakeExtraction =
+  | { accepted: true; alignedGoal: string }
+  | { accepted: false };
+```
+
+`IntakeResult` becomes:
+
+```ts
+export type IntakeResult =
+  | { accepted: true; alignedGoal: string }
+  | { accepted: false };
+```
+
+`alignedGoal` is required (not optional) when `accepted: true` — no silent fallback to the original goal. The original goal was classified as problematic; using it downstream would carry the problem through.
+
+#### Prompt cleanup
+
+Remove "Got it." / "Understood." terminal phrase mechanic from all intake prompts (out-of-scope, unrealistic, contradictory). Those instructions exist solely to satisfy the regex — with structured extraction they are unnecessary. Rewrite the decision logic sections to describe acceptance behavior naturally.
+
+#### Orchestrator wiring
+
+Update `clarify.stage.ts` to branch on intake result:
+
+```ts
+const activeGoal = handler ? intakeResult.alignedGoal : goal;
+```
+
+No `??` fallback — if intake ran and accepted, `alignedGoal` is always present by contract. All downstream phase calls (`collectFields`, `collectRisk`, `collectAllocation`, `collectContribution`) switch from `goal` to `activeGoal`.
+
+#### Files
+
+- `src/server/pipeline/stages/clarify/intake/clarify.intake.lib.ts` — replace regex with structured extraction; update `IntakeResult` type
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.ts` — update prompt; update out-of-scope eval cases
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.eval.ts`
+- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.rules.md` — new
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.ts` — update prompt; update eval cases
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.eval.ts`
+- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.rules.md` — new
+- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.ts` — update prompt; update eval cases
+- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.eval.ts`
+- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.rules.md` — new
+- `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.rules.md` — new
+- `src/server/pipeline/stages/clarify/clarify.stage.ts` — wire `alignedGoal` branch
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.out-of-scope.eval.ts`, `npm run test:evals -- clarify.unrealistic.eval.ts`, `npm run test:evals -- clarify.contradictory.eval.ts`
+
+---
+
+### T3 — EF/debt gate
+
+A new pre-fields suitability step, modeled on the intake rejection pattern. Educates or warns the user about emergency fund and debt before field collection proceeds. `hasEmergencyFund` and `hasDebt` are removed from fields and `UserProfileSchema` — they are not consumed downstream and can be added back if a future consumer requires them.
+
+#### Behavior
+
+1. Ask if the user has an emergency fund and any significant outstanding debt.
+2. If either risk is present, educate briefly (why investing without an EF or while carrying high-interest debt is suboptimal) and ask if they want to proceed anyway.
+3. Proceed regardless of answer — this is educational, not a hard gate. No rejection path.
+
+#### Files
+
+- `src/server/pipeline/stages/clarify/ef-debt/clarify.ef-debt.ts` — new phase
+- `src/server/pipeline/stages/clarify/ef-debt/clarify.ef-debt.rules.md` — new
+- `src/server/pipeline/stages/clarify/ef-debt/clarify.ef-debt.eval.ts` — new
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — remove `hasEmergencyFund`, `hasDebt` from `FieldsPhaseOutputSchema`
+- `src/server/schemas/pipeline.schema.ts` — remove `hasEmergencyFund`, `hasDebt` from `UserProfileSchema`
+- `src/server/pipeline/stages/clarify/fields/clarify.fields.ts` — remove EF/debt questions from prompt
+- `src/server/pipeline/stages/clarify/fields/clarify.fields.rules.md` — update rules
+- `src/server/pipeline/stages/clarify/clarify.stage.ts` — insert `collectEfDebt` call before `collectFields`
+
+`collectEfDebt` returns `void` — it is purely educational with no data flowing downstream, unlike every other phase.
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.ef-debt.eval.ts`
+
+---
+
+### T4 — Phase 5a: equity
+
+Resolves which equity instruments fill the equity bucket and how they split within it. Does not negotiate the equity percentage — that is Phase 4b's job. `allocation.equityPercentage` is passed as grounding context.
 
 #### Signature
 
@@ -81,21 +161,18 @@ type EquityAllocation = {
 type EquityPhaseOutput = {
   allocations: EquityAllocation[];  // length ≥ 1; sum === 100
   preStatedBuffer?: string;         // incidentally-stated buffer preference, if any
-                                    // e.g. "קרן כספית" or "no buffer — emergency fund held separately"
 };
 ```
 
 Zod: `allocations.length >= 1`, each `percentage` integer in [0, 100], sum === 100.
 
-`allocations[].percentage` is the **within-equity split**. Total-portfolio exposure per instrument is `allocation.equityPercentage × allocations[i].percentage / 100` — computed by downstream consumers when needed.
+`preStatedBuffer` is captured when the user volunteers buffer info during the equity conversation. Phase T5 skips its conversation loop when present.
 
-`preStatedBuffer` is captured when the user volunteers buffer info during the equity conversation. Phase 5b skips its conversation loop when present.
-
-Replace `PreferencesPhaseOutputSchema` with `EquityAllocationSchema` + `EquityPhaseOutputSchema` in `clarify/shared/clarify.schemas.ts`.
+Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to `clarify/shared/clarify.schemas.ts`. Add `equity: EquityAllocation[]` to `UserProfileSchema`.
 
 #### Architecture: classify-then-route
 
-`classifyEquityIntent` (in `clarify.equity.classify.ts`) runs once at the start and returns one of four classifications. Code routes to a focused prompt per classification.
+`classifyEquityIntent` runs once at the start and returns one of four classifications:
 
 | Case | Condition |
 |------|-----------|
@@ -105,17 +182,10 @@ Replace `PreferencesPhaseOutputSchema` with `EquityAllocationSchema` + `EquityPh
 | `no_equity_stated` | Nothing stated about equity — primary path for most beginners |
 
 Key decisions:
-- A single named instrument (e.g., "S&P 500") is `resolved` at 100% — no complement push.
-- `no_equity_stated` is the dominant path for beginners starting with "I want to invest" or "I don't know where to start."
-- TLV-125 is presented as an anchor option in `no_specific_instrument` and `no_equity_stated` prompts only — not suggested as a complement when equity is already `resolved`.
-- For tech direction: NASDAQ-100 is the primary answer (broad); sector ETFs mentioned as a more concentrated alternative.
-- No risk-based instrument filtering. Allocation sizing (Phase 4b) is the behavioral safeguard — instrument presentation is neutral on risk.
-
-#### Conversation principles
-
-- Educational: provide context, trade-offs, and concrete compounding examples using `fields.amount`, `fields.timeline`, and historical return rates. Shekel figures land better than abstract percentages for beginners.
-- Ground framing in `allocation.equityPercentage`: "You've chosen 70% of your ₪50,000 in stocks — ₪35,000. Which stocks fill that?"
-- Each focused prompt stays under ~40 instructions.
+- A single named instrument is `resolved` at 100% — no complement push.
+- TLV-125 is presented as an anchor option in `no_specific_instrument` and `no_equity_stated` prompts only.
+- For tech direction: NASDAQ-100 is the primary answer; sector ETFs mentioned as a more concentrated alternative.
+- No risk-based instrument filtering — allocation sizing is the behavioral safeguard.
 
 #### Context string format
 
@@ -130,19 +200,20 @@ Plans to contribute periodically: yes | no (lump-sum investment)
 
 #### Files
 
-- `src/server/pipeline/stages/clarify/equity/clarify.equity.ts` — `collectEquity`: routing logic, focused prompts, extraction
-- `src/server/pipeline/stages/clarify/equity/clarify.equity.classify.ts` — `classifyEquityIntent`: lightweight LLM classifier
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.ts`
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.classify.ts`
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md`
-- `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts` — cases covering all 4 classification cases and pre-stated buffer capture
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — replace `PreferencesPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts`
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `EquityAllocationSchema`, `EquityPhaseOutputSchema`
+- `src/server/schemas/pipeline.schema.ts` — add `equity` field
 
-**Verify:** `npm run test:evals -- clarify.equity.eval.ts`
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.equity.eval.ts`
 
 ---
 
-### Phase 5b — Create the buffer phase
+### T5 — Phase 5b: buffer
 
-**What:** Resolves which instrument fills the buffer bucket. Receives `preStatedBuffer` from Phase 5a; skips its conversation loop when present.
+Resolves which instrument fills the buffer bucket. Receives `preStatedBuffer` from T4; skips conversation loop when present.
 
 #### Signature
 
@@ -177,8 +248,6 @@ If `equity.preStatedBuffer` is present → return `{ buffer: equity.preStatedBuf
 3. Simple confirmation → resolved.
 4. Named alternative (bonds, AGGU) → capture and accept.
 
-Answer mid-conversation follow-up questions fully before expecting a decision. Do not push back on declines or named alternatives.
-
 #### Context string format
 
 ```
@@ -193,167 +262,39 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.ts`
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.rules.md`
-- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.eval.ts` — cases: full flow with Q&A, decline, named alternative, early-exit via pre-stated buffer
+- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.eval.ts`
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.test.ts` — unit test for early-exit branch
 - `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `BufferPhaseOutputSchema`
+- `src/server/schemas/pipeline.schema.ts` — add `buffer` field
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.buffer.eval.ts`
 
 ---
 
-### Phase 6 — Refactor extraction to thin assembly
+### T6 — Wire equity/buffer in orchestrator
 
-**What:** `extractUserProfile` becomes a thin assembler. The only remaining LLM call generates the `goal` summary string. Everything else is copied directly from phase outputs.
-
-```ts
-(
-  goal: string,
-  fields: FieldsPhaseOutput,
-  risk: RiskPhaseOutput,
-  allocation: AllocationPhaseOutput,
-  equity: EquityPhaseOutput,
-  buffer: BufferPhaseOutput,
-): Promise<UserProfile>
-```
-
-Assembly:
-- `amount`, `age`, `timeline`, `hasEmergencyFund`, `hasDebt` ← `fields`
-- `plansToContribute` ← `contribution`
-- `riskTolerance` ← `risk`
-- `equityPercentage`, `bufferPercentage` ← `allocation`
-- `equity: equity.allocations` ← `equity`
-- `buffer: buffer.buffer` ← `buffer`
-- Drop `brokerage` from `UserProfileSchema`
-
-Strip `EXTRACTION_SYSTEM_PROMPT` to a minimal "generate a concise goal summary" prompt. Delete all riskTolerance derivation rules and secondary signal logic.
-
-Move short prompt to `clarify.extraction.rules.md`.
-
-#### UserProfile schema change
-
-Replace `investmentPreferences: string` with flat phase-aligned fields:
+Add `collectEquity` and `collectBuffer` calls to `clarify.stage.ts` and spread their outputs into the assembled profile.
 
 ```ts
-UserProfileSchema = {
-  // ... unchanged (amount, age, timeline, hasEmergencyFund, hasDebt, goal)
-  riskTolerance: RiskTolerance;
-  equityPercentage: number;      // 0–100
-  bufferPercentage: number;      // 100 - equityPercentage
-  equity: EquityAllocation[];    // within-equity split
-  buffer: string;
-  plansToContribute: boolean;
-  // brokerage removed, knowledgeLevel already removed
+const equityOutput = await collectEquity(activeGoal, fields, risk, allocation, contribution, sendToUser, waitForResponse);
+const bufferOutput = await collectBuffer(activeGoal, fields, risk, allocation, equityOutput, sendToUser, waitForResponse);
+
+const profile = {
+  ...fields,
+  riskTolerance: risk.riskTolerance,
+  ...allocation,
+  ...contribution,
+  equity: equityOutput.allocations,
+  buffer: bufferOutput.buffer,
 };
 ```
-
-Downstream consumers compute total-portfolio per-instrument exposure as `equityPercentage × equity[i].percentage / 100`.
-
-**Blast radius:** grep for all `UserProfile` consumers (research, plan, profile summary, logging) before starting. Fix all references to `.brokerage` and `.investmentPreferences`.
-
-#### Files
-
-- `src/server/pipeline/stages/clarify/extraction/clarify.extraction.ts`
-- `src/server/pipeline/stages/clarify/extraction/clarify.extraction.rules.md` — new
-- `src/server/pipeline/stages/clarify/extraction/clarify.extraction.eval.ts` — update to pass structured inputs; remove brokerage and secondary-signal cases; assert on flat `equity` + `buffer` fields
-- `src/server/schemas/pipeline.schema.ts` — remove `brokerage`; replace `investmentPreferences` with flat fields
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.extraction.eval.ts`
-
----
-
-### Phase 7 — Intake cleanup
-
-**7a — Drop contradictory:**
-- Delete `intake/contradictory/clarify.contradictory.ts` and `clarify.contradictory.eval.ts`.
-- Remove `contradictory` from `GoalClassification` enum in `pipeline.schema.ts`.
-- Update classifier prompt (contradictory goals now classify as `normal`).
-- Remove `contradictory` entry from `INTAKE_REJECTION_MESSAGES`.
-
-**7b — Update out-of-scope prompt:** explain concentration risk vs. diversification, offer sector ETF as middle ground, end with explicit yes/no. Add eval cases: multi-turn acceptance, ambiguous then accepted, partial acceptance with crypto, hard rejection.
-
-**7c — Update unrealistic prompt:** compute implied annualized return from the stated goal (no fixed threshold), use rule of 72 for achievable illustration. Add eval cases: challenge then accepts, ambiguous then accepted, hard rejection.
-
-**7d — Clean goal extraction after intake redirect:** after a user accepts the ETF redirect, make a lightweight LLM call to produce a clean structured goal string (e.g. `"I want to invest ₪30,000 for 10 years via ETFs"`). Return as `redirectedGoal`; orchestrator passes `redirectedGoal ?? goal` to `collectFields`. This prevents noisy or conflicting intake content from polluting all downstream phases.
-
-```ts
-const redirectedGoal = await extractCleanGoal(conversation);
-return { accepted: true, redirectedGoal };
-```
-
-#### Files
-
-- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.ts` — delete
-- `src/server/pipeline/stages/clarify/intake/contradictory/clarify.contradictory.eval.ts` — delete
-- `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.ts` — update prompt, update `GoalClassification` import
-- `src/server/schemas/pipeline.schema.ts` — remove `contradictory` from enum
-- `src/server/pipeline/stages/clarify/shared/clarify.constants.ts` — remove contradictory rejection message
-- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.ts` — updated prompt + post-acceptance extraction
-- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.eval.ts` — new eval cases
-- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.ts` — updated prompt + post-acceptance extraction
-- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.eval.ts` — new eval cases
-
-**Verify:** `npm run test:evals -- clarify.classify.eval.ts` (contradictory goals → `normal`). Run out-of-scope and unrealistic evals.
-
----
-
-### Phase 8 — Wire new pipeline in `clarify.stage.ts`
-
-```ts
-const classification = await classifyGoal(goal);
-// handle out_of_scope, unrealistic (each now returns redirectedGoal via Phase 7d)
-
-const activeGoal = redirectedGoal ?? goal;
-const fieldsOutput      = await collectFields(activeGoal, sendToUser, waitForResponse);
-const riskOutput        = await collectRisk(activeGoal, fieldsOutput, sendToUser, waitForResponse);
-const allocationOutput  = await collectAllocation(activeGoal, fieldsOutput, riskOutput, sendToUser, waitForResponse);
-const contributionOutput = await collectContribution(activeGoal, fieldsOutput, sendToUser, waitForResponse);
-const equityOutput      = await collectEquity(activeGoal, fieldsOutput, riskOutput, allocationOutput, contributionOutput, sendToUser, waitForResponse);
-const bufferOutput      = await collectBuffer(activeGoal, fieldsOutput, riskOutput, allocationOutput, equityOutput, sendToUser, waitForResponse);
-const profile           = await extractUserProfile(activeGoal, fieldsOutput, riskOutput, allocationOutput, equityOutput, bufferOutput);
-```
-
-`collectAllocation` runs immediately after `collectRisk` — allocation is the direct behavioral continuation of risk classification. `collectContribution` is independent of allocation and runs before equity/buffer so downstream phases can frame periodic contribution in conversation.
-
-Remove: all `PhaseSourceParams` intermediate variables, `buildSourceParams` import (delete `src/lib/build-source-params.ts` if no other importers — grep first), `contradictory` handler import.
-
-**Note on intake→fields context gap:** when a user provides financial details during an intake redirect conversation, `collectFields` will re-ask for those fields — intake's sole job is confirming willingness to proceed with ETF investing, not gathering investment data. The `redirectedGoal` from Phase 7d partially mitigates this.
 
 #### Files
 
 - `src/server/pipeline/stages/clarify/clarify.stage.ts`
-- `src/server/pipeline/stages/clarify/clarify.stage.test.ts` — rewrite: mock `callOpenAI`/`callOpenAIParsed` at the boundary instead of per-phase mocks
-- `src/lib/build-source-params.ts` — delete if no other importers (grep first)
+- `src/server/pipeline/stages/clarify/clarify.stage.test.ts` — update mocks
 
-**Verify:** `npm run type-check` (removes all `@ts-expect-error` markers added during phases 3–7), `npm test`, `npm run test:evals -- clarify.stage.eval.ts`
-
----
-
-### Phase 9 — Eval alignment pass
-
-Final sweep of all clarify eval files.
-
-Checklist:
-- `clarify.fields.eval.ts` — add `monthlyContribution: 0` case (vague then ₪0, explicit ₪0 on first ask)
-- `clarify.equity.eval.ts` — add lump-sum framing case, verify riskTolerance framing cases, verify structured `allocations` output
-- `clarify.buffer.eval.ts` — verify early-exit via `preStatedBuffer` and full-flow cases
-- `clarify.extraction.eval.ts` — remove secondary-signal riskTolerance cases, remove brokerage assertions, assert on flat `equity` + `buffer` fields
-- `clarify.stage.eval.ts` — remove brokerage assertions, update to new `equity`/`buffer` field shape, verify end-to-end with new phase sequence
-
-**Verify:** `npm run test:evals` — full suite passes.
-
----
-
-### Phase 10 — Rules files for remaining phases
-
-Move inline prompts from `clarify.classify.ts`, `clarify.out-of-scope.ts`, and `clarify.unrealistic.ts` into co-located `.rules.md` files (if not already done in Phase 7). No behavior changes.
-
-#### Files
-
-- `src/server/pipeline/stages/clarify/intake/classify/clarify.classify.rules.md` — new
-- `src/server/pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope.rules.md` — new (if not extracted in Phase 7)
-- `src/server/pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic.rules.md` — new (if not extracted in Phase 7)
-
-**Verify:** `npm run type-check` passes. All previously-passing tests still pass.
+**Verify:** `npm run type-check`, `npm test`
 
 ---
 
@@ -361,10 +302,8 @@ Move inline prompts from `clarify.classify.ts`, `clarify.out-of-scope.ts`, and `
 
 ### A — Hint/example at start of conversation
 
-Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal (amount, timeline, any preferences). Reduces unnecessary clarification turns in `collectFields` and improves downstream phase quality.
+Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal. Reduces unnecessary clarification turns in `collectFields`.
 
-Placement: either a one-time message at the start of `runClarifyStage`, or integrated into the intake classification step.
+### B — `print_to_user` tool (fire-and-forget)
 
-### B — Goal context gap after intake redirect
-
-If Phase 7d's `redirectedGoal` quality proves poor in practice, a stronger fallback is having the intake handler return a structured summary of what was discussed (amount, timeline, preferences) so `collectFields` can skip re-asking already-stated information. Deferred until Phase 7d eval results are known.
+Add a second tool alongside `ask_user` for sending a terminal message without waiting for a user response. Fixes the class of bugs where a phase sends a closing acknowledgment via `ask_user` and inadvertently waits for input. Requires changes to `ask-user.tool.ts`, `clarify.lib.ts`, and all phase prompts + evals that send terminal messages.
