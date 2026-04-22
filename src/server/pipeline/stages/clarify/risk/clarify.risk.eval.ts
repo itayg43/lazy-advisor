@@ -44,6 +44,21 @@ describe("collectRisk", () => {
     lastTranscript = lastOutput = undefined;
   });
 
+  // clarify.risk.rules.md neutrality requirements: no historical-recovery framing.
+  // Applied to rule-1 tests to catch regression on the initial question itself.
+  const expectNoNeutralityViolation = (transcript: TranscriptEntry[]) => {
+    const agentText = transcript
+      .filter((t) => t.role === "agent")
+      .map((t) => t.content.toLowerCase())
+      .join(" ");
+    expect(agentText).not.toContain("recovered");
+    expect(agentText).not.toContain("2008");
+    expect(agentText).not.toContain("2020");
+    expect(agentText).not.toContain("historically");
+    expect(agentText).not.toContain("bounce back");
+    expect(agentText).not.toContain("markets have");
+  };
+
   // clarify.risk.rules.md rule 1: digit 1 → conservative
   it("should map digit 1 to conservative", async () => {
     const responder = createTrackedResponder(["1"]);
@@ -60,6 +75,7 @@ describe("collectRisk", () => {
     expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
+    expectNoNeutralityViolation(responder.transcript);
   });
 
   // clarify.risk.rules.md rule 1: digit 2 → conservative
@@ -77,6 +93,7 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(2);
     expect(output.riskTolerance).toBe(conservative);
+    expectNoNeutralityViolation(responder.transcript);
   });
 
   // clarify.risk.rules.md rule 1: digit 3 → moderate
@@ -94,6 +111,7 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
+    expectNoNeutralityViolation(responder.transcript);
   });
 
   // clarify.risk.rules.md rule 1: digit 4 → aggressive
@@ -111,6 +129,7 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(4);
     expect(output.riskTolerance).toBe(aggressive);
+    expectNoNeutralityViolation(responder.transcript);
   });
 
   // clarify.risk.rules.md rule 1: digit 5 → aggressive
@@ -128,6 +147,7 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(5);
     expect(output.riskTolerance).toBe(aggressive);
+    expectNoNeutralityViolation(responder.transcript);
   });
 
   // clarify.risk.rules.md rule 1: spelled-out English word → accepted
@@ -145,6 +165,97 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
+    expectNoNeutralityViolation(responder.transcript);
+  });
+
+  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (one)
+  it("should accept spelled-out 'one' as score 1 (conservative)", async () => {
+    const responder = createTrackedResponder(["one"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(1);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
+  });
+
+  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (two)
+  it("should accept spelled-out 'two' as score 2 (conservative)", async () => {
+    const responder = createTrackedResponder(["two"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
+  });
+
+  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (four)
+  it("should accept spelled-out 'four' as score 4 (aggressive)", async () => {
+    const responder = createTrackedResponder(["four"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(4);
+    expect(output.riskTolerance).toBe(aggressive);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
+  });
+
+  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (five)
+  it("should accept spelled-out 'five' as score 5 (aggressive)", async () => {
+    const responder = createTrackedResponder(["five"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(5);
+    expect(output.riskTolerance).toBe(aggressive);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
+  });
+
+  // clarify.risk.rules.md rule 1: number embedded in surrounding text → accepted
+  it("should accept a number embedded in surrounding text", async () => {
+    const responder = createTrackedResponder(["I'd say 4"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(4);
+    expect(output.riskTolerance).toBe(aggressive);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
 
@@ -221,6 +332,64 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
+    expect(output.selfRatingScore).toBe(1);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+  });
+
+  // clarify.risk.rules.md rule 3: decimal input → re-ask → valid answer
+  it("should re-ask on a decimal input then accept the corrected answer", async () => {
+    const responder = createTrackedResponder(["3.5", "3"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(moderate);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+  });
+
+  // clarify.risk.rules.md rule 3: range input → re-ask → valid answer
+  it("should re-ask on a range input then accept the corrected answer", async () => {
+    const responder = createTrackedResponder(["2-3", "2"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+  });
+
+  // clarify.risk.rules.md rule 3 + tool-call budget: clarifying question followed by invalid answer exhausts budget → default conservative
+  it("should default to conservative when a clarifying question exhausts the budget before a valid answer", async () => {
+    const responder = createTrackedResponder([
+      "What does drop temporarily mean?",
+      "I still can't decide",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    // budget = 2: initial ask (turn 1) + re-present after clarifying Q (turn 2) → invalid answer, budget exhausted, silent end
     expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);

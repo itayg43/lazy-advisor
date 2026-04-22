@@ -99,6 +99,10 @@ describe("collectFields", () => {
     expect(output.hasDebt).toBe(false);
     // First turn asked at most 4 questions — verified by the two-turn scripted flow completing successfully
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+    // debt is lower-priority than amount/age/timeline — must not appear in the first turn.
+    // Remove this check once EF/debt collection is removed from the fields phase (T3 gate).
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    expect(agentTurns[0].content.toLowerCase()).not.toContain("debt");
   });
 
   // clarify.fields.rules.md rule 3: a soft answer on the second ask for timeline is accepted without a third probe.

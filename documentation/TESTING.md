@@ -64,6 +64,8 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
+- **After each eval run**: check the co-located `*.last-run.md` file for LLM output quality — verify responses are sensible, not just that assertions passed.
+- **On eval failure**: `*.last-run.md` is the first place to look — it contains the raw LLM output for every case. Use it to determine whether the fix belongs in the prompt, the eval assertion, or the rules, then re-run to validate.
 - **Eval granularity**: stages with multiple phases have one `.eval.ts` file per phase, co-located with the phase. Stages with a single prompt have one eval file. All run via `npm run test:evals`.
 - **Unit tests vs evals**: unit tests are only written where there is branching or transformation logic; thin orchestration layers rely on evals for end-to-end verification.
 - **Assertion strength**: tight (exact equality) for values explicitly present in the input. Loose (schema validation, regex) for values the model derives or summarizes. Exception: when stage rules instruct the model to return specific terminal phrases (e.g., `"Got it."` for acceptance signals), use regex matching on those markers — exact equality on the full message is too brittle.

@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-22T19:09:22.813Z | Commit: 20ea632
+Timestamp: 2026-04-22T22:40:01.221Z | Commit: 064bbc8
 
 ---
 
@@ -99,6 +99,86 @@ selfRatingScore: 3 | riskTolerance: moderate
 
 ---
 
+## ✓ should accept spelled-out 'one' as score 1 (conservative)
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** one
+
+**Output:**
+selfRatingScore: 1 | riskTolerance: conservative
+
+
+---
+
+## ✓ should accept spelled-out 'two' as score 2 (conservative)
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** two
+
+**Output:**
+selfRatingScore: 2 | riskTolerance: conservative
+
+
+---
+
+## ✓ should accept spelled-out 'four' as score 4 (aggressive)
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** four
+
+**Output:**
+selfRatingScore: 4 | riskTolerance: aggressive
+
+
+---
+
+## ✓ should accept spelled-out 'five' as score 5 (aggressive)
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** five
+
+**Output:**
+selfRatingScore: 5 | riskTolerance: aggressive
+
+
+---
+
+## ✓ should accept a number embedded in surrounding text
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** I'd say 4
+
+**Output:**
+selfRatingScore: 4 | riskTolerance: aggressive
+
+
+---
+
 ## ✓ should answer a clarifying question then return the user's score
 
 **Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
@@ -109,9 +189,9 @@ selfRatingScore: 3 | riskTolerance: moderate
 
 **User:** What do you mean by drop temporarily?
 
-**Agent:** Good question. By “drop temporarily,” I mean a period where the value of your investments falls from a recent level. We ask this to understand how you might react during a normal market decline so we can match your allocation to your comfort level.
+**Agent:** Good question—by “drop temporarily” I mean a period where the value of your investments falls from a recent level. I’m asking because your ability to stick with the plan during ups and downs depends on how uncomfortable that kind of short-term decline would feel to you.
 
-On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
@@ -197,6 +277,80 @@ selfRatingScore: 1 | riskTolerance: conservative
 
 ---
 
+## ✓ should re-ask on a decimal input then accept the corrected answer
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** 3.5
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** 3
+
+**Output:**
+selfRatingScore: 3 | riskTolerance: moderate
+
+
+---
+
+## ✓ should re-ask on a range input then accept the corrected answer
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** 2-3
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** 2
+
+**Output:**
+selfRatingScore: 2 | riskTolerance: conservative
+
+
+---
+
+## ✓ should default to conservative when a clarifying question exhausts the budget before a valid answer
+
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** What does drop temporarily mean?
+
+**Agent:** On the scale of 1–5, we’re asking how comfortable you are with the value of your investments falling from a recent level for a period of time (a temporary drop in value). This helps match the allocation to your ability to stay invested through volatility.
+
+Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+
+1 = very uncomfortable — I'd want to sell immediately
+3 = neutral — I'd be uneasy but try to hold
+5 = completely comfortable — I'd see it as a buying opportunity
+
+**User:** I still can't decide
+
+**Output:**
+selfRatingScore: 1 | riskTolerance: conservative
+
+
+---
+
 ## ✓ should deflect age/timeline capacity question and re-present the scale
 
 **Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
@@ -207,9 +361,9 @@ selfRatingScore: 1 | riskTolerance: conservative
 
 **User:** Does my age or investment timeline change what score I should give?
 
-**Agent:** Your age and timeline don’t determine the number for you directly—the score is about how you personally would feel and react if your account’s value fell for a period. We’re asking this so the plan fits your willingness to stay invested during volatility.
+**Agent:** Your age and timeline can affect your ability to stay invested, but this question is about your personal comfort right now with watching the value go down temporarily, regardless of timeframe.
 
-“Drop temporarily” means a period where the value of your investments falls from a recent level.
+By “drop temporarily,” I mean a period where the value of your investments falls from a recent level.
 
 On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 

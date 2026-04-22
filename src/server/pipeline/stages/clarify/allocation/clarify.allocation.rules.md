@@ -2,7 +2,7 @@
 
 Behavioral rules for the allocation phase. This phase converts the user's risk-tolerance bucket (from the risk phase) and timeline (from the fields phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100.
 
-This phase does **not** pick instruments. Ticker selection belongs to Phase 5a (equity) and Phase 5b (buffer).
+This phase does **not** pick instruments. Ticker selection belongs to T4 (equity) and T5 (buffer).
 
 ## Anchor Table (risk tolerance × timeline)
 
@@ -102,5 +102,5 @@ If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS` without reaching an agree
 
 ## Out of scope
 
-- **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (Phase 5a equity / Phase 5b buffer) and bring the conversation back to sizing.
-- **EF / debt suitability gating.** `hasEmergencyFund` and `hasDebt` are collected upstream but this phase does not consume them. Whether to treat them as a stage-level suitability gate is a separate Phase 7 decision tracked in `STATUS.md`.
+- **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (T4 equity / T5 buffer) and bring the conversation back to sizing.
+- **EF / debt collection.** Emergency fund and debt status are collected and addressed in a separate educational gate (T3) before the fields phase. This phase does not consume them.
