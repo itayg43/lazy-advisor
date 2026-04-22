@@ -8,7 +8,7 @@ An agentic investment planning CLI for beginner ETF investors. Inspired by the I
 
 Stage behavior, prompts, and rules are co-located with the stage at `src/server/pipeline/stages/clarify/`.
 
-> Phases 1–8 shipped. `preferences` and `extraction` phases removed; classify → intake → fields → risk → allocation → contribution wired with typed I/O. Remaining: Phase 5a (equity) and 5b (buffer), after which `UserProfile` gains `equity` and `buffer` fields. See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase specs and status.
+> Phases 1–8 shipped. `preferences` and `extraction` phases removed; classify → intake → fields → risk → allocation → contribution wired with typed I/O. Remaining: T4 (equity) and T5 (buffer), after which `UserProfile` gains `equity` and `buffer` fields. See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase specs and status.
 
 ```mermaid
 flowchart TD
@@ -29,21 +29,21 @@ flowchart TD
     Risk --> Allocation[allocation]
     Allocation --> Contribution[contribution]
     Contribution --> Profile([UserProfile])
-    Contribution -.->|Phase 5a planned| Equity[equity]
-    Equity -.->|Phase 5b planned| Buffer[buffer]
+    Contribution -.->|T4 planned| Equity[equity]
+    Equity -.->|T5 planned| Buffer[buffer]
     Buffer -.-> Profile
 ```
 
 | Phase | Job | Input → Output |
 |-------|-----|----------------|
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
-| intake | Redirect misclassified goals; reject if user declines; extract clean `redirectedGoal` on acceptance (Phase 7d) | `goal`, classification → `IntakeResult` |
+| intake | Redirect misclassified goals; reject if user declines; extract clean `alignedGoal` on acceptance | `goal`, classification → `IntakeResult` |
 | fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | `goal`, fields, risk → `AllocationPhaseOutput` |
 | contribution | Establish one-time vs. periodic intent | `goal`, fields, allocation → `ContributionPhaseOutput` |
-| equity | *(Phase 5a — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
-| buffer | *(Phase 5b — planned)* Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
+| equity | *(T4 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
+| buffer | *(T5 — planned)* Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
 
 Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt, then a post-loop structured extraction call produces the phase's typed output. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
 
@@ -78,13 +78,13 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
 ```
 "Should I buy NVIDIA stock?"
   → classifyGoal()             → out_of_scope
-  → handleOutOfScopeRedirect   → IntakeResult { accepted: true, redirectedGoal }
-  → collectFields(redirectedGoal ?? goal)
+  → handleOutOfScopeRedirect   → IntakeResult { accepted: true, alignedGoal }
+  → collectFields(alignedGoal)
   → collectRisk → collectAllocation → ... → UserProfile
 ```
 
-Each intake phase handles its specific conversation via `runPhaseLoop`. Acceptance is determined by regex-matching the model's terminal phrase — `/got it/i` → accepted, anything else → rejected. The prompts instruct the model to respond with exactly `"Got it."` (accepted) or `"Understood."` (rejected, visible to user). Result is typed as `IntakeResult`:
-- `{ accepted: true, redirectedGoal }` — clean goal string capturing the accepted ETF redirect; orchestrator passes `redirectedGoal ?? goal` to `collectFields`
+Each intake phase handles its specific conversation via `runPhaseLoop`. Acceptance and `alignedGoal` extraction are determined by a post-loop structured LLM call returning `{ accepted: true; alignedGoal: string } | { accepted: false }`. Result is typed as `IntakeResult`:
+- `{ accepted: true, alignedGoal }` — clean goal string produced after the user accepts; orchestrator passes `alignedGoal` to all downstream phases
 - `{ accepted: false }` — end the session; stage sends a per-classification closing message from `INTAKE_REJECTION_MESSAGES`
 
 The fields prompt is left with one job: collect required profile fields.
@@ -121,7 +121,7 @@ The `<3yr` column collapses across all tolerances — at that horizon, capacity 
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
-**What's not consumed by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but not used as anchor inputs — whether to gate the clarify stage on them is tracked in [STATUS.md § Improvements](./STATUS.md#improvements). `age` is unused: redundant with timeline per TDF glidepath literature.
+**What's not consumed by this phase.** `age` is unused: redundant with timeline per TDF glidepath literature. Emergency fund and debt status are addressed in a separate educational gate (T3, not yet implemented) and will not be passed to this phase.
 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 
