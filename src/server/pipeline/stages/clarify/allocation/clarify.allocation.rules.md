@@ -96,9 +96,9 @@ In the sanity-check turn, **concrete drawdown percentages are allowed** — the 
 - **Sanity-check path:** 1 proposal + 1 extreme counter-proposal sanity check + 1 final confirm = 3 tool calls.
 - **Worst case** (clarifying question followed by extreme counter-proposal) = 4 tool calls, still within budget.
 
-## Extraction fallback
+## Budget exhaustion
 
-If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS` without reaching an agreed split, the phase returns whatever was last discussed; that output is validated in the stage orchestrator via `AllocationPhaseOutputSchema.refine()` when the profile is assembled. There is **no safe default** for allocation (unlike risk's "default to conservative when willingness is unknown"), so if the output is non-sensible, the `refine()` check (`equityPercentage + bufferPercentage === 100`) will fail and throw. Guessing a default would override user intent.
+If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws `InternalError`. Budget exhaustion is treated as a hard failure — retrying the same prompt is not expected to converge.
 
 ## Out of scope
 

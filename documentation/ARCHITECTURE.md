@@ -18,9 +18,9 @@ flowchart TD
     Classify -->|unrealistic| Unreal[intake: handleUnrealisticExpectations]
     Classify -->|contradictory| Contra[intake: handleContradictoryRisk]
 
-    OOS -->|accepted: redirectedGoal| Fields
+    OOS -->|accepted: alignedGoal| Fields
     OOS -->|rejected| End([end session])
-    Unreal -->|accepted: redirectedGoal| Fields
+    Unreal -->|accepted: alignedGoal| Fields
     Unreal -->|rejected| End
     Contra -->|accepted| Fields
     Contra -->|rejected| End
@@ -111,7 +111,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 ### Allocation phase — 2-axis anchor (risk tolerance × timeline)
 
-The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to phases 5a and 5b.
+The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to T4 (equity) and T5 (buffer).
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
