@@ -42,7 +42,7 @@ Mission:
 >
 > For every issue report: file path, section heading, issue type, the current text, and a concrete proposed replacement or action. Number findings sequentially across all files.
 >
-> **Severity note:** `*.rules.md` files are behavior specs — they drive prompts and evals, not just human reading. Drift in a rules file means the runtime contract is stale, which is higher severity than drift in `documentation/*` prose. Flag rules-file findings prominently.
+> **Severity note:** Drift in a `*.rules.md` file is higher severity — it's a live runtime contract, not just documentation.
 
 ### 4. Present findings
 

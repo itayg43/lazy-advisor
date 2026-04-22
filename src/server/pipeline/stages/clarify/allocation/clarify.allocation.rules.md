@@ -98,10 +98,9 @@ In the sanity-check turn, **concrete drawdown percentages are allowed** — the 
 
 ## Extraction fallback
 
-If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS` without reaching an agreed split, the extraction step is called anyway with `previous_response_id` chaining — same pattern as the risk phase. There is **no safe default** for allocation (unlike risk's "default to conservative when willingness is unknown"), so if extraction returns something non-sensible, the `AllocationPhaseOutputSchema.refine()` check (`equityPercentage + bufferPercentage === 100`) will fail and throw. Guessing a default would override user intent.
+If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS` without reaching an agreed split, the phase returns whatever was last discussed; that output is validated in the stage orchestrator via `AllocationPhaseOutputSchema.refine()` when the profile is assembled. There is **no safe default** for allocation (unlike risk's "default to conservative when willingness is unknown"), so if the output is non-sensible, the `refine()` check (`equityPercentage + bufferPercentage === 100`) will fail and throw. Guessing a default would override user intent.
 
 ## Out of scope
 
 - **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (Phase 5a equity / Phase 5b buffer) and bring the conversation back to sizing.
 - **EF / debt suitability gating.** `hasEmergencyFund` and `hasDebt` are collected upstream but this phase does not consume them. Whether to treat them as a stage-level suitability gate is a separate Phase 7 decision tracked in `STATUS.md`.
-- **Emitting to `UserProfile`.** Phase 6 (thin extraction) flattens `AllocationPhaseOutput.equityPercentage` and `.bufferPercentage` onto `UserProfile`.

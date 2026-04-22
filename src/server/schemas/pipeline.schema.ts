@@ -11,6 +11,7 @@ export const UserProfileSchema = z.object({
   hasEmergencyFund: z.boolean(),
   hasDebt: z.boolean(),
   riskTolerance: RiskTolerance,
+  // sum-to-100 is validated in AllocationPhaseOutputSchema, not here
   equityPercentage: z.number().int().min(0).max(100),
   bufferPercentage: z.number().int().min(0).max(100),
   plansToContribute: z.boolean(),
