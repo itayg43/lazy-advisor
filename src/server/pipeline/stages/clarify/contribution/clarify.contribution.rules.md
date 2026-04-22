@@ -54,3 +54,17 @@ Behavioral rules for the contribution phase. This phase resolves one boolean: wh
 
 **Scenario:** "In Israel you can't buy partial ETF shares so it's hard to invest small amounts regularly." → agent addresses concern with practical context → user answers.
 
+---
+
+## Last-run review
+
+After every eval run, open `clarify.contribution.last-run.md` and check the following tests:
+
+**"should explain DCA when asked and return true after user confirms"**
+- Agent's **second turn** (DCA explanation) should reference the actual equity and/or buffer shekel amounts (e.g., ₪21,000 equity / ₪9,000 buffer for the default mock fixtures).
+- Fail signal: explanation uses only generic amounts (e.g., "₪300 or ₪500") with no reference to the user's actual split.
+
+**"should address fractional share concern and return true after user confirms"**
+- Agent's **second turn** (Israel-specific response) should reference the actual equity and/or buffer shekel amounts.
+- Fail signal: same as above.
+

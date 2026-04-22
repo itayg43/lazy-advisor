@@ -41,7 +41,7 @@ flowchart TD
 | fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | `goal`, fields, risk → `AllocationPhaseOutput` |
-| contribution | Establish one-time vs. periodic intent | `goal`, fields → `ContributionPhaseOutput` |
+| contribution | Establish one-time vs. periodic intent | `goal`, fields, allocation → `ContributionPhaseOutput` |
 | equity | *(Phase 5a — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
 | buffer | *(Phase 5b — planned)* Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
 
@@ -107,6 +107,8 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 
+**Capacity context available, not surfaced in responses.** Age and timeline are passed to the risk phase as grounding context but the phase prompt does not instruct the model to reference them. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Prompting the model to say "with your 20-year timeline, you can afford more risk" would reintroduce the framing bias the design avoids.
+
 ### Allocation phase — 2-axis anchor (risk tolerance × timeline)
 
 The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to phases 5a and 5b.
@@ -124,6 +126,8 @@ The `<3yr` column collapses across all tolerances — at that horizon, capacity 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
+
+**Allocation context passed to contribution.** The contribution phase receives `AllocationPhaseOutput` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
 
 ### No extraction phase — inline assembly from typed outputs
 

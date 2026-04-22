@@ -8,6 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
+  AllocationPhaseOutput,
   ContributionPhaseOutput,
   FieldsPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -23,6 +24,11 @@ describe("collectContribution", () => {
     timeline: "30 years",
     hasEmergencyFund: true,
     hasDebt: false,
+  };
+
+  const mockAllocation: AllocationPhaseOutput = {
+    equityPercentage: 70,
+    bufferPercentage: 30,
   };
 
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -50,6 +56,7 @@ describe("collectContribution", () => {
     const output = await collectContribution(
       mockGoal,
       mockFields,
+      mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -66,6 +73,7 @@ describe("collectContribution", () => {
     const output = await collectContribution(
       mockGoal,
       mockFields,
+      mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -76,12 +84,13 @@ describe("collectContribution", () => {
 
   // clarify.contribution.rules.md rule 3: vague answer → acknowledge briefly, resolve to false
   it("should return false and acknowledge when user gives a vague answer", async () => {
-    const responder = createTrackedResponder(["Maybe someday, but not regularly"]);
+    const responder = createTrackedResponder(["Maybe someday, but not regularly", ""]);
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
       mockGoal,
       mockFields,
+      mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -91,6 +100,9 @@ describe("collectContribution", () => {
   });
 
   // clarify.contribution.rules.md rule 4: user asks what DCA means → explanation → yes
+  // Context enrichment check — after running, open clarify.contribution.last-run.md and verify
+  // the agent's DCA explanation references actual amounts: ₪21,000 equity / ₪9,000 buffer
+  // (mockFields.amount=30,000 × mockAllocation.equityPercentage=70%). Generic amounts only = no effect.
   it("should explain DCA when asked and return true after user confirms", async () => {
     const responder = createTrackedResponder([
       "What does contributing periodically mean?",
@@ -101,6 +113,7 @@ describe("collectContribution", () => {
     const output = await collectContribution(
       mockGoal,
       mockFields,
+      mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -121,6 +134,7 @@ describe("collectContribution", () => {
     const output = await collectContribution(
       mockGoal,
       mockFields,
+      mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -130,6 +144,8 @@ describe("collectContribution", () => {
   });
 
   // clarify.contribution.rules.md rule 5: Israel-specific concern → address accurately → yes
+  // Context enrichment check — after running, open clarify.contribution.last-run.md and verify
+  // the Israel-specific response references actual amounts: ₪21,000 equity / ₪9,000 buffer.
   it("should address fractional share concern and return true after user confirms", async () => {
     const responder = createTrackedResponder([
       "In Israel you can't buy partial ETF units so it's hard to invest small amounts",
@@ -140,6 +156,7 @@ describe("collectContribution", () => {
     const output = await collectContribution(
       mockGoal,
       mockFields,
+      mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
     );

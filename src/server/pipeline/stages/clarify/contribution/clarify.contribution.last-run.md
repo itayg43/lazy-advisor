@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-20T18:44:25.336Z | Commit: e576188
+Timestamp: 2026-04-22T19:05:36.339Z | Commit: 20ea632
 
 ---
 
@@ -33,6 +33,10 @@ plansToContribute: false
 
 **User:** Maybe someday, but not regularly
 
+**Agent:** No problem — you can always start with a one-time investment and add more later when you're ready.
+
+**User:** 
+
 **Output:**
 plansToContribute: false
 
@@ -45,7 +49,7 @@ plansToContribute: false
 
 **User:** What does contributing periodically mean?
 
-**Agent:** It means adding a fixed amount — like ₪300 or ₪500 — to your investment every month or quarter, on top of what you're investing now. The main benefit is that you buy more units when prices are low and fewer when prices are high, which smooths out the effect of market swings over time. It also builds the habit of saving regularly, which compounds significantly over years. So — do you think you'd want to add money periodically, or is this a one-time investment for now?
+**Agent:** It means adding a fixed amount to your ₪21,000 equity position every month or quarter after your initial ₪30,000 investment (using your available cash/buffer as appropriate). Mechanically, that makes you buy more units when prices are low and fewer units when prices are high, which helps smooth out the effect of market swings over time. It also builds a regular saving habit, which can compound over the long 30-year period. So — do you think you'd want to add money periodically, or is this a one-time investment for now?
 
 **User:** Oh that makes sense, yes I'd like to do that
 
@@ -61,7 +65,7 @@ plansToContribute: true
 
 **User:** What's DCA?
 
-**Agent:** Great question. “DCA” (dollar-cost averaging) or periodic contributing means adding a fixed amount—like ₪300 or ₪500—into your investments on a schedule (every month or every quarter), on top of what you’re investing now. The benefit is that you buy more units when prices are lower and fewer when prices are higher, which can smooth out the impact of market ups and downs over time. It also helps you build a consistent savings habit that compounds over the long term. So—after your initial investment, do you plan to add money to your portfolio periodically, for example every month or quarter?
+**Agent:** It means adding a fixed amount to your ₪21,000 equity position every month or quarter. The main benefit is that you buy more units when prices are low and fewer when prices are high, which smooths out the effect of market swings over time. It also builds the habit of saving regularly, which compounds significantly over years. So — do you think you'd want to add money periodically, or is this a one-time investment for now?
 
 **User:** I see, but I think I'll just invest once for now
 
@@ -77,7 +81,7 @@ plansToContribute: false
 
 **User:** In Israel you can't buy partial ETF units so it's hard to invest small amounts
 
-**Agent:** After your initial investment, do you plan to add money to your portfolio periodically — for example, every month or quarter?
+**Agent:** The main practical consideration in Israel is that most brokerages don’t support fractional ETF units—so you generally need enough saved up to buy at least one full unit each time. With your ₪21,000 equity and ₪9,000 buffer, a common workaround is to accumulate a few months of savings and invest quarterly instead of monthly. Brokerage fees usually aren’t the main constraint (they’re typically only paid when you place a purchase, often no more than once a month or even less), so the bigger lever is having enough cash to buy whole units. So — do you think you’d want to add money periodically (even if quarterly), or is this a one-time investment for now?
 
 **User:** Ok, investing quarterly makes sense to me — yes I'd like to do that
 
