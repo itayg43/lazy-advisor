@@ -2,7 +2,7 @@
 
 Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The numeric score is mapped deterministically to one of three internal labels (`conservative`, `moderate`, `aggressive`) — these labels are **never shown to the user**.
 
-The phase is willingness-only. Capacity factors (timeline, age, emergency fund, debt) are not used here — they belong to the allocation phase downstream.
+The phase is willingness-only. Capacity factors (timeline, age) are available as context but do not affect the question asked or the score mapping — both remain willingness-only. They may be referenced when answering clarifying questions (e.g., "does my age affect what score I should give?").
 
 ## Score → bucket mapping
 
@@ -68,3 +68,14 @@ If the user has already received one re-ask in this phase, do **not** re-ask aga
 ## Tool-call budget
 
 `MAX_RISK_TOOL_CALLS = 2`. Worst case is one re-ask after an invalid answer (initial ask + re-ask = 2) or one clarifying-question answer (initial ask + re-presentation = 2). The budget does not accommodate both a clarifying question **and** a subsequent invalid answer in the same conversation — in that rare case the phase ends silently and the extractor applies the default-conservative fallback.
+
+---
+
+## Last-run review
+
+After every eval run, open `clarify.risk.last-run.md` and check the following test:
+
+**"should deflect age/timeline capacity question and re-present the scale"**
+- Agent's **second turn** should acknowledge that age/timeline affect capacity (not willingness), then re-present the 1–5 scale with all three anchors.
+- Should NOT use age/timeline as framing for what score to give (e.g., "with your 20-year timeline, you can afford more risk" is incorrect behavior).
+- Fail signal: model incorporates capacity factors into the score framing instead of deflecting.

@@ -49,6 +49,7 @@ export const runClarifyStage = async (
   const contribution = await collectContribution(
     goal,
     fields,
+    allocation,
     sendToUser,
     waitForResponse,
   );

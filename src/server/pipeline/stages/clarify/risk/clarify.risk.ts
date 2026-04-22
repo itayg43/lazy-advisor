@@ -79,9 +79,13 @@ export const collectRisk = async (
 ): Promise<RiskPhaseOutput> => {
   logger.info("Starting risk phase", { goal, fields });
 
+  const context = `User goal: ${goal}
+User age: ${fields.age}
+Investment timeline: ${fields.timeline}`;
+
   const { responseId } = await runPhaseLoop(
     RISK_PROMPT,
-    { input: goal },
+    { input: context },
     MAX_RISK_TOOL_CALLS,
     "Risk phase",
     sendToUser,

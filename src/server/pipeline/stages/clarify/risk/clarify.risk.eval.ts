@@ -225,4 +225,30 @@ describe("collectRisk", () => {
     expect(output.riskTolerance).toBe(conservative);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
+
+  // Validates correct deflection behavior: model must acknowledge capacity ≠ willingness
+  // and re-present the 1–5 scale — NOT use age/timeline as framing for what score to give.
+  // After running, open clarify.risk.last-run.md to verify the second turn deflects
+  // (no "with your timeline you can afford X") and re-presents the scale anchors.
+  it("should deflect age/timeline capacity question and re-present the scale", async () => {
+    const responder = createTrackedResponder([
+      "Does my age or investment timeline change what score I should give?",
+      "3",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockGoal,
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(moderate);
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    expect(agentTurns).toHaveLength(2);
+    expect(agentTurns[1].content).toContain("1 = very uncomfortable");
+  });
 });
