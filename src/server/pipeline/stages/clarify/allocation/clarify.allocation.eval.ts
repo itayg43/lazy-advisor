@@ -57,6 +57,14 @@ describe("collectAllocation", () => {
     riskTolerance: conservative,
   };
 
+  const shortMidHorizonConservativeFields: FieldsPhaseOutput = {
+    amount: 30_000,
+    age: 45,
+    timeline: "4 years",
+    hasEmergencyFund: true,
+    hasDebt: false,
+  };
+
   const shortHorizonAggressiveFields: FieldsPhaseOutput = {
     amount: 20_000,
     age: 30,
@@ -126,6 +134,15 @@ describe("collectAllocation", () => {
       longHorizonAggressiveFields.amount,
       output,
     );
+
+    // behavioral framing must use "tends to reduce", never "prevents" or "eliminates"
+    const agentText = responder.transcript
+      .filter((t) => t.role === "agent")
+      .map((t) => t.content.toLowerCase())
+      .join(" ");
+    expect(agentText).toContain("tends to reduce");
+    expect(agentText).not.toContain("prevents");
+    expect(agentText).not.toContain("eliminates");
   });
 
   // clarify.allocation.rules.md rule 1: moderate 5–10yr lands in the 50–60% cell
@@ -148,6 +165,30 @@ describe("collectAllocation", () => {
     expectShekelMathConsistent(
       responder.transcript,
       midHorizonModerateFields.amount,
+      output,
+    );
+  });
+
+  // clarify.allocation.rules.md rule 1: conservative 3–5yr lands in the 10–20% cell
+  it("should land in the 10–20% cell for conservative risk + 3–5 year timeline", async () => {
+    const responder = createTrackedResponder(["ok"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectAllocation(
+      mockGoal,
+      shortMidHorizonConservativeFields,
+      conservativeRisk,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.equityPercentage).toBeGreaterThanOrEqual(10);
+    expect(output.equityPercentage).toBeLessThanOrEqual(20);
+    expect(output.equityPercentage + output.bufferPercentage).toBe(100);
+    expectShekelMathConsistent(
+      responder.transcript,
+      shortMidHorizonConservativeFields.amount,
       output,
     );
   });
