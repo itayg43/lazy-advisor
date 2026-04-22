@@ -4,37 +4,50 @@ An agentic investment planning CLI for beginner ETF investors. Inspired by the I
 
 > Educational/demonstrative project — not a licensed financial advisor. Target audience: beginner investors getting started, not experienced traders.
 
-## Pipeline
-
-```
-┌─────────────┐
-│  1. CLARIFY  │ ──► UserProfile
-└─────────────┘
-```
+## Clarify Stage — Phases
 
 Stage behavior, prompts, and rules are co-located with the stage at `src/server/pipeline/stages/clarify/`.
 
-## Clarify Stage — Phases
+> Phases 1–8 shipped. `preferences` and `extraction` phases removed; classify → intake → fields → risk → allocation → contribution wired with typed I/O. Remaining: Phase 5a (equity) and 5b (buffer), after which `UserProfile` gains `equity` and `buffer` fields. See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase specs and status.
 
-> **Refactor in progress.** The stage is being rewritten from `previous_response_id` chaining to a typed I/O pipeline. See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase specs and status. The phase map below reflects the **target state**; current `main` still has the monolithic `preferences` phase and `riskTolerance` collected inside `fields`.
+Target execution order: **classify → intake (conditional) → fields → risk → allocation → contribution → equity → buffer**
 
-Target execution order: **classify → intake (conditional) → fields → risk → allocation → contribution → equity → buffer → extraction**
+```mermaid
+flowchart TD
+    Start([goal: string]) --> Classify[classify]
+    Classify -->|normal| Fields[fields]
+    Classify -->|out_of_scope| OOS[intake: handleOutOfScopeRedirect]
+    Classify -->|unrealistic| Unreal[intake: handleUnrealisticExpectations]
+    Classify -->|contradictory| Contra[intake: handleContradictoryRisk]
+
+    OOS -->|accepted: redirectedGoal| Fields
+    OOS -->|rejected| End([end session])
+    Unreal -->|accepted: redirectedGoal| Fields
+    Unreal -->|rejected| End
+    Contra -->|accepted| Fields
+    Contra -->|rejected| End
+
+    Fields --> Risk[risk]
+    Risk --> Allocation[allocation]
+    Allocation --> Contribution[contribution]
+    Contribution --> Profile([UserProfile])
+    Contribution -.->|Phase 5a planned| Equity[equity]
+    Equity -.->|Phase 5b planned| Buffer[buffer]
+    Buffer -.-> Profile
+```
 
 | Phase | Job | Input → Output |
 |-------|-----|----------------|
-| classify | Label the goal: `normal`, `out_of_scope`, or `unrealistic` (contradictory dropped) | `goal` → `GoalClassification` |
-| intake | Redirect misclassified goals; reject if user declines; extract clean `redirectedGoal` on acceptance | `goal`, classification → `IntakeResult` |
+| classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
+| intake | Redirect misclassified goals; reject if user declines; extract clean `redirectedGoal` on acceptance (Phase 7d) | `goal`, classification → `IntakeResult` |
 | fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | `goal`, fields, risk → `AllocationPhaseOutput` |
 | contribution | Establish one-time vs. periodic intent | `goal`, fields → `ContributionPhaseOutput` |
-| equity | Resolve which equity instruments fill the equity bucket + within-equity split (classify-then-route) | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
-| buffer | Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
-| extraction | Thin assembly into `UserProfile` (only remaining LLM call: goal summary) | all phase outputs → `UserProfile` |
+| equity | *(Phase 5a — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
+| buffer | *(Phase 5b — planned)* Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
 
 Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt, then a post-loop structured extraction call produces the phase's typed output. A `*.rules.md` file is co-located with each phase (and at the stage root) as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
-
-**Why allocation is its own phase:** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which is what protects against the panic-sell behavior they self-reported. Cramming this decision into the equity phase would recreate the "preferences phase bloat" the refactor is built to eliminate.
 
 ## Stage Boundary Validation
 
@@ -78,7 +91,7 @@ Each intake phase (`runPhaseLoop`) handles its specific conversation. Acceptance
 
 The fields prompt is left with one job: collect required profile fields.
 
-(The earlier pipeline included a `contradictory` classification for goals with conflicting risk signals like "maximum returns but I can't lose money." This path has been dropped — the risk phase's 1–5 self-rating collapses any goal-stated contradiction into the user's own comfort score.)
+(The `contradictory` classification handles goals with conflicting risk signals like "maximum returns but I can't lose money." Although the risk phase's 1–5 self-rating collapses any goal-stated contradiction into the user's own comfort score, the `contradictory` intake phase is **kept** for its educational value: surfacing the contradiction up-front and aligning on what drops actually feel like is meaningful for beginner users, the target audience. Phase 7 originally planned to drop it; that decision was reversed.)
 
 ### Handlers as sub-agents; code as orchestrator
 
@@ -102,40 +115,25 @@ The risk phase asks one question: a 1–5 self-rating of the user's comfort with
 
 The allocation phase resolves the total-portfolio split between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to phases 5a and 5b.
 
-**Anchor table.** The model locates the user's cell from `risk.riskTolerance` × interpreted timeline bucket, then picks a specific integer inside the cell's range based on qualitative signal:
+**Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported. Cramming this decision into the equity phase would recreate the "preferences phase bloat" the refactor is built to eliminate.
 
-| Willingness \ Timeline | < 3 yr | 3–5 yr | 5–10 yr | 10+ yr |
-|---|---|---|---|---|
-| conservative | 0–10% | 10–20% | 30–40% | 40–50% |
-| moderate     | 0–10% | 20–30% | 50–60% | 60–70% |
-| aggressive   | 0–10% | 30–40% | 60–70% | 80–90% |
+The model locates the user's cell from `risk.riskTolerance` × interpreted timeline bucket and picks a specific integer inside the cell's range. The canonical anchor table and the four behavioral rules driving the conversation live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); the research basis is in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
-The `<3yr` column collapses across all tolerances — at that horizon, capacity (the money still being there when needed) dominates risk tolerance per Vanguard, Fidelity, and Bogleheads guidance. Full reasoning, alternatives, and sources live in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
+The `<3yr` column collapses across all tolerances — at that horizon, capacity (the money still being there when needed) dominates risk tolerance per Vanguard, Fidelity, and Bogleheads guidance.
 
-**Behavior.** Four rules drive the conversation:
+**Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains the correct shekel amounts. A follow-up refactor to move the math from the model into code is a deferred architecture improvement — tracked in [STATUS.md § Deferred follow-ups](./STATUS.md#deferred-follow-ups).
 
-1. **Propose the cell-appropriate anchor.** One `ask_user` call stating the split in shekels against `fields.amount` (the two shekel amounts must sum exactly), one directional trade-off sentence in relative terms (no specific drawdown percentages in the routine proposal — they age badly and invite false precision), "sizing to your comfort level tends to reduce the chance of panic-selling" framing, and a question asking whether to accept, nudge up, or nudge down.
-2. **User accepts → end the phase.** No wrap-up message.
-3. **User proposes a different split → honor the exact number** (not snapped to the cell edge). In the same turn: confirm in shekels and percent, directional trade-off sentence, end on acceptance. **Extreme-mismatch exception:** if the proposal is significantly outside the cell range (conservative asking for 100% equity, short-horizon asking for all equity, aggressive 10+ yr asking for 0% equity), surface the mismatch once with concrete drawdown framing (e.g., "30–50% in a bad year"), then accept. Qualitative judgment — trusted to the model, evals catch drift.
-4. **User asks a clarifying question → answer briefly, then re-ask** in the same `ask_user` call. Concept questions (what a buffer is) get one or two sentences; method questions ("how did you get 70/30?") name the two inputs — timeline and comfort with drops — without surfacing internal risk labels or the table; instrument questions ("which ETF?") are deflected to later phases.
-
-**Why honor-exact-number, not snap-to-cell.** Haggling with the user undermines the "user has final say" principle. The extreme-mismatch exception is the guardrail for the far tail.
-
-**Why no specific drawdown percentages in the routine proposal.** Concrete numbers age badly and invite false precision. They are explicitly allowed *only* in the Rule 3 sanity check, where the whole point is to convey seriousness.
-
-**Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains the correct shekel amounts. A follow-up refactor to move the math from the model into code (passing pre-computed shekels into the prompt as grounding) is a deferred architecture improvement — tracked in `STATUS.md`.
-
-**What's not used by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but the allocation phase does not consume them. An earlier design treated them as mid-conversation suitability qualifiers; the heads-up was dropped as weak ROI. Whether to gate the clarify stage on EF/debt *before* field collection — an intake-rejection-style suitability gate — is a separate decision tracked in `STATUS.md` as a Phase 7 follow-up. Age is also unused: redundant with timeline per TDF glidepath literature.
-
-**Extraction fallback.** No safe default exists for allocation (unlike risk's conservative default). If the phase loop exhausts its tool-call budget without an agreed split, extraction runs anyway via `previous_response_id` chaining; if the output fails `AllocationPhaseOutputSchema`'s `equityPercentage + bufferPercentage === 100` refine, it throws. Guessing a default would override user intent.
-
-### Edge case — mid-conversation contradiction
-
-If a user states a `normal` goal but expresses contradictory risk wording during the risk phase (e.g., "I'd sell immediately but I also want aggressive growth"), this can't be pre-classified. The 1–5 self-rating collapses the contradiction into a single number — the user picks one point on the scale, and that's the signal. Non-numeric wording is not interpreted as a score; the phase re-asks once, and the user gives a digit. If they still don't, extraction defaults to `1` (conservative). The allocation phase (Phase 4b) further protects against any residual mismatch by sizing the equity bucket to the resulting risk tolerance — so panic-sell behavior is contained regardless of how the goal was initially phrased.
+**What's not used by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but the allocation phase does not consume them. An earlier design treated them as mid-conversation suitability qualifiers; the heads-up was dropped as weak ROI. Whether to gate the clarify stage on EF/debt *before* field collection — an intake-rejection-style suitability gate — is a separate Phase 7 decision tracked in [STATUS.md § Deferred follow-ups](./STATUS.md#deferred-follow-ups). Age is also unused: redundant with timeline per TDF glidepath literature.
 
 ### `plansToContribute: boolean` instead of `monthlyContribution: number`
 
 Users contribute on irregular schedules (every 2–3 months, every 6 months, etc.), and capturing a fixed monthly number creates a false precision problem: the number is hard to collect accurately and downstream predictions based on it would likely be wrong or misleading. A boolean is sufficient for the downstream use case — adjusting plan examples and projections for "contributes periodically" vs. "one-time investment." If a specific amount ever becomes necessary, it belongs in a later, dedicated phase.
+
+### No extraction phase — inline assembly from typed outputs
+
+The original pipeline ended with an LLM extraction call that read the full cross-phase conversation and assembled a `UserProfile`. This was replaced by inline assembly in `clarify.stage.ts`: each phase returns a typed output, and the stage spreads them directly into the profile object before a final `UserProfileSchema.parse()` boundary check.
+
+The extraction phase is permanently removed. Typed phase outputs make assembly trivial — there is no summation or inference step left, just field mapping. The goal-summary LLM call (the one remaining job extraction had) is dropped entirely: nothing downstream currently consumes a goal summary string, and a raw `goal` string is passed directly to downstream stages instead.
 
 ### Fields phase takes `goal: string` directly
 

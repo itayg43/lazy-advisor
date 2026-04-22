@@ -23,9 +23,6 @@ Internal risk labels (`conservative`, `moderate`, `aggressive`) are **never show
 - **Point-estimate, not distribution.** Output is a single integer (e.g., 70), not a range. Acceptable for a behavioral anchor; not acceptable as portfolio-optimization output.
 - **"Sizing tends to reduce panic-selling" — directional, not absolute.** Use "tends to reduce"; never "prevents" or "eliminates". Aligned with Kitces's composure-vs-tolerance distinction.
 - **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. Our 3-bucket output from the risk phase compresses into a 3×4 table. If evals surface discrimination problems, `RiskPhaseOutput.selfRatingScore` is available to refine without changing the risk phase.
-- **No instruments in this phase.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases and bring the conversation back to sizing.
-- **No internal risk labels shown to the user.** The agent never says "conservative", "moderate", or "aggressive" in user-facing text.
-- **EF and debt are not used by this phase.** `hasEmergencyFund` and `hasDebt` are collected upstream but this phase does not consume them. Whether to treat them as a stage-level suitability gate is a separate decision (tracked in `STATUS.md` as a Phase 7 follow-up).
 
 ---
 
@@ -103,9 +100,8 @@ In the sanity-check turn, **concrete drawdown percentages are allowed** — the 
 
 If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS` without reaching an agreed split, the extraction step is called anyway with `previous_response_id` chaining — same pattern as the risk phase. There is **no safe default** for allocation (unlike risk's "default to conservative when willingness is unknown"), so if extraction returns something non-sensible, the `AllocationPhaseOutputSchema.refine()` check (`equityPercentage + bufferPercentage === 100`) will fail and throw. Guessing a default would override user intent.
 
-## Non-goals (handled elsewhere)
+## Out of scope
 
-- **Instrument selection.** Phase 5a (equity) and Phase 5b (buffer).
-- **EF / debt suitability gating.** Currently out of scope — deferred decision tracked in `STATUS.md`.
+- **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (Phase 5a equity / Phase 5b buffer) and bring the conversation back to sizing.
+- **EF / debt suitability gating.** `hasEmergencyFund` and `hasDebt` are collected upstream but this phase does not consume them. Whether to treat them as a stage-level suitability gate is a separate Phase 7 decision tracked in `STATUS.md`.
 - **Emitting to `UserProfile`.** Phase 6 (thin extraction) flattens `AllocationPhaseOutput.equityPercentage` and `.bufferPercentage` onto `UserProfile`.
-- **Wiring into `clarify.stage.ts`.** Phase 8 (orchestrator typed I/O).

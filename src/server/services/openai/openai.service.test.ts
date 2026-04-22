@@ -104,14 +104,14 @@ describe("openaiService", () => {
 
   describe("callOpenAIParsed", () => {
     const mockParsedOutput: UserProfile = {
-      goal: "Build a diversified ETF portfolio for retirement",
       amount: 10000,
       age: 30,
-      riskTolerance: RiskTolerance.enum.moderate,
       timeline: "10+ years",
-      investmentPreferences: "70% FTSE All-World, 30% TLV-125, קרן כספית buffer",
       hasEmergencyFund: true,
       hasDebt: false,
+      riskTolerance: RiskTolerance.enum.moderate,
+      equityPercentage: 60,
+      bufferPercentage: 40,
       plansToContribute: true,
     };
 

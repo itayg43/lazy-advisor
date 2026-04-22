@@ -1,37 +1,19 @@
 import { createLogger } from "#lib/logger";
+import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
-import { extractUserProfile } from "#pipeline/stages/clarify/extraction/clarify.extraction";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
-import type { IntakeResult } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import { INTAKE_HANDLERS } from "#pipeline/stages/clarify/intake/clarify.intake.handlers";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
-import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/contradictory/clarify.contradictory";
-import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope";
-import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic";
-import { collectPreferences } from "#pipeline/stages/clarify/preferences/clarify.preferences";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { UserProfileSchema } from "#schemas/pipeline.schema";
 import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");
-
-type IntakeHandler = (
-  goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-) => Promise<IntakeResult>;
-
-const INTAKE_HANDLERS: Partial<
-  Record<(typeof GoalClassification.options)[number], IntakeHandler>
-> = {
-  [GoalClassification.enum.out_of_scope]: handleOutOfScopeRedirect,
-  [GoalClassification.enum.unrealistic]: handleUnrealisticExpectations,
-  [GoalClassification.enum.contradictory]: handleContradictoryRisk,
-};
 
 export const runClarifyStage = async (
   goal: string,
@@ -47,7 +29,6 @@ export const runClarifyStage = async (
     const result = await handler(goal, sendToUser, waitForResponse);
     if (!result.accepted) {
       logger.info("User rejected intake redirect, ending session");
-
       sendToUser(
         INTAKE_REJECTION_MESSAGES[classification] ?? INTAKE_REJECTION_DEFAULT_MESSAGE,
       );
@@ -56,25 +37,31 @@ export const runClarifyStage = async (
     }
   }
 
-  const fieldsOutput = await collectFields(goal, sendToUser, waitForResponse);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Phase 8: riskOutput will be passed to extractUserProfile
-  const riskOutput = await collectRisk(goal, fieldsOutput, sendToUser, waitForResponse);
-  const contributionOutput = await collectContribution(
+  const fields = await collectFields(goal, sendToUser, waitForResponse);
+  const risk = await collectRisk(goal, fields, sendToUser, waitForResponse);
+  const allocation = await collectAllocation(
     goal,
-    fieldsOutput,
+    fields,
+    risk,
     sendToUser,
     waitForResponse,
   );
-  const prefsResponseId = await collectPreferences(
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Phase 8: orchestrator will be rewired to typed I/O
-    // @ts-expect-error
-    contributionOutput,
+  const contribution = await collectContribution(
+    goal,
+    fields,
     sendToUser,
     waitForResponse,
   );
-  const profile = await extractUserProfile(prefsResponseId);
+
+  const profile = {
+    ...fields,
+    riskTolerance: risk.riskTolerance,
+    ...allocation,
+    ...contribution,
+  };
 
   logger.info("Clarify stage complete");
+  logger.debug("Assembled profile before validation", { profile });
 
-  return profile;
+  return UserProfileSchema.parse(profile);
 };
