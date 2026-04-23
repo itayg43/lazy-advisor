@@ -12,7 +12,7 @@ import type {
   FieldsPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskTolerance } from "#schemas/pipeline.schema";
+import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
 
@@ -24,7 +24,7 @@ describe("collectAllocation", () => {
   const longHorizonAggressiveFields: FieldsPhaseOutput = {
     amount: 50_000,
     age: 35,
-    timeline: "20 years",
+    timeline: TimelineBucket.enum["10+ years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };
@@ -36,7 +36,7 @@ describe("collectAllocation", () => {
   const midHorizonModerateFields: FieldsPhaseOutput = {
     amount: 80_000,
     age: 40,
-    timeline: "7 years",
+    timeline: TimelineBucket.enum["5–10 years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };
@@ -48,7 +48,7 @@ describe("collectAllocation", () => {
   const longHorizonConservativeFields: FieldsPhaseOutput = {
     amount: 60_000,
     age: 50,
-    timeline: "15 years",
+    timeline: TimelineBucket.enum["10+ years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };
@@ -60,7 +60,7 @@ describe("collectAllocation", () => {
   const shortMidHorizonConservativeFields: FieldsPhaseOutput = {
     amount: 30_000,
     age: 45,
-    timeline: "4 years",
+    timeline: TimelineBucket.enum["3–5 years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };
@@ -68,7 +68,7 @@ describe("collectAllocation", () => {
   const shortHorizonAggressiveFields: FieldsPhaseOutput = {
     amount: 20_000,
     age: 30,
-    timeline: "2 years",
+    timeline: TimelineBucket.enum["under 3 years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };
@@ -295,6 +295,32 @@ describe("collectAllocation", () => {
     );
   });
 
+  // clarify.allocation.rules.md rule 3 exception: aggressive 10+ yr user asks for 0% equity → sanity check fires, accept
+  it("should surface a sanity check when a long-horizon aggressive user asks for 0% equity", async () => {
+    const responder = createTrackedResponder(["I want 0% stocks", "Yes, I'm sure"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectAllocation(
+      mockGoal,
+      longHorizonAggressiveFields,
+      aggressiveRisk,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.equityPercentage).toBe(0);
+    expect(output.bufferPercentage).toBe(100);
+    expect(
+      responder.transcript.filter((t) => t.role === "agent").length,
+    ).toBeGreaterThanOrEqual(2);
+    expectShekelMathConsistent(
+      responder.transcript,
+      longHorizonAggressiveFields.amount,
+      output,
+    );
+  });
+
   // clarify.allocation.rules.md rule 4: clarifying question answered + re-ask, then accept
   it("should answer a clarifying question then return to the anchor proposal", async () => {
     const responder = createTrackedResponder(["What's a buffer?", "Got it, sounds good"]);
@@ -389,7 +415,7 @@ describe("collectAllocation", () => {
   });
 
   // clarify.allocation.rules.md anchor table: short-horizon collapses to 0–10% equity regardless of tolerance
-  it("should collapse to 0–10% equity for a <3yr timeline with aggressive risk", async () => {
+  it("should collapse to 0–10% equity for an under-3-years timeline with aggressive risk", async () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 

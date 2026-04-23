@@ -6,7 +6,7 @@ This phase does **not** pick instruments. Ticker selection belongs to T4 (equity
 
 ## Anchor Table (risk tolerance × timeline)
 
-| Willingness \ Timeline | < 3 yr | 3–5 yr | 5–10 yr | 10+ yr |
+| Willingness \ Timeline | under 3 years | 3–5 years | 5–10 years | 10+ years |
 |---|---|---|---|---|
 | `conservative` | 0–10% | 10–20% | 30–40% | 40–50% |
 | `moderate`     | 0–10% | 20–30% | 50–60% | 60–70% |
@@ -16,7 +16,7 @@ Cells are **ranges**, not points. The agent picks a specific integer inside the 
 
 The `<3yr` column is 0–10% across all rows on purpose. Money needed in under 3 years is dominated by the need for it to still be there — risk tolerance is not a meaningful dial at that horizon per Vanguard, Fidelity, Bogleheads. The user can still push back; see Rule 3.
 
-Internal risk labels (`conservative`, `moderate`, `aggressive`) are **never shown to the user**.
+The words `conservative`, `moderate`, and `aggressive` are **never used when speaking to the user** — not even as general adjectives.
 
 ## Design constraints
 
@@ -45,7 +45,9 @@ Internal risk labels (`conservative`, `moderate`, `aggressive`) are **never show
 
 ## 2. User accepts → end the phase
 
-**Rule:** If the user replies with a clear yes ("sounds good", "ok", "yes", "let's do it") to the Rule 1 proposal, stop calling tools. No wrap-up message, no re-confirmation.
+**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, stop calling tools. No wrap-up message, no re-confirmation.
+
+**Disambiguation:** A response that names a specific percentage or ratio different from the current proposal — even if phrased as acceptance (e.g., "let's do 50/50", "I want 60%") — is a counter-proposal. Apply Rule 3 instead.
 
 ---
 

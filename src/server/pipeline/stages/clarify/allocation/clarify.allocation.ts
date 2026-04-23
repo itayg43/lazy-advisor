@@ -1,7 +1,12 @@
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { createLogger } from "#lib/logger";
-import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import {
+  ALLOCATION_ANCHOR_TABLE,
+  MAX_ALLOCATION_TOOL_CALLS,
+  RISK_LEVELS,
+  TIMELINE_BUCKETS,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
 import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
 import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
@@ -23,31 +28,35 @@ All messages to the user must be sent via the \`ask_user\` tool. Never output a 
 
 # Anchor Table (risk tolerance × timeline)
 
-Locate the user's cell from their \`Risk tolerance\` (given in the input) and their interpreted timeline bucket from \`Investment timeline\`. Each cell is a **range** — pick a specific integer inside the range based on qualitative signal (where the user sits within their risk bucket, how clean the timeline is).
+The anchor table maps Risk tolerance (rows) × Investment timeline (columns) to an equity percentage range. \`Investment timeline\` is always one of: ${TIMELINE_BUCKETS}.
 
-| Willingness \\ Timeline | < 3 yr | 3–5 yr | 5–10 yr | 10+ yr |
-|---|---|---|---|---|
-| conservative | 0–10% | 10–20% | 30–40% | 40–50% |
-| moderate     | 0–10% | 20–30% | 50–60% | 60–70% |
-| aggressive   | 0–10% | 30–40% | 60–70% | 80–90% |
+${ALLOCATION_ANCHOR_TABLE}
 
 Buffer percentage is always \`100 - equity\`.
 
-The <3yr column is 0–10% across all rows on purpose. Money needed in under 3 years is dominated by the need for it to still be there — risk tolerance is not a meaningful dial at that horizon. If the user pushes back, see Rule 3.
+The \`under 3 years\` column is 0–10% across all rows on purpose. Money needed in under 3 years is dominated by the need for it to still be there — risk tolerance is not a meaningful dial at that horizon. If the user pushes back, see Rule 3.
+
+Before writing any message, work through these steps in order:
+1. Find the cell: row = Risk tolerance value, column = exact value of \`Investment timeline\`.
+2. Pick one integer from the cell range based on qualitative signal (where the user sits within their risk bucket, how clean the timeline is).
+3. Compute: equity shekels = amount × percentage ÷ 100; buffer shekels = amount − equity shekels.
+4. Verify: equity shekels + buffer shekels = amount. If not, recompute before calling \`ask_user\`.
 
 # Rules
 
 ## Rule 1 — Propose the cell-appropriate anchor
 
 Send one \`ask_user\` call that:
-- States the proposed split as integers against the user's investment amount in shekels (e.g., "₪35,000 in stock ETFs, ₪15,000 in a buffer — roughly 70/30"). The shekel amounts **must sum to exactly the user's investment amount**. Compute: equity shekels = \`amount × equityPercentage ÷ 100\`; buffer shekels = \`amount - equity shekels\`. Worked example for ₪50,000 at 85/15: equity = 50000 × 0.85 = ₪42,500; buffer = 50000 − 42500 = ₪7,500; check 42500 + 7500 = 50000 ✓. Never state a pair that does not sum to the user's total.
+- States the proposed split in shekels and percent against the user's investment amount (e.g., "₪35,000 in stock ETFs, ₪15,000 in a buffer — roughly 70/30").
 - Includes one honest trade-off sentence in relative terms: more equity means bigger drops in bad years and higher long-run growth; less equity means smaller drops and lower growth. Do **not** cite specific drawdown percentages in the routine proposal — the numbers age badly and invite false precision. (Specific numbers are allowed in the Rule 3 extreme-mismatch sanity check, where punch matters.)
 - Adds the behavioral framing: "sizing to your comfort level **tends to reduce** the chance of panic-selling when drops happen." Never say "prevents" or "eliminates".
 - Asks whether the user wants that split, more in stocks, or more in buffer.
 
 ## Rule 2 — User accepts → end the phase
 
-If the user replies with a clear yes ("sounds good", "ok", "yes", "let's do it"), stop calling tools. No wrap-up message.
+If the user replies with a clear yes to the **currently proposed split** (e.g., "sounds good", "ok", "yes", "let's do it", "yes, I'm sure"), stop calling tools immediately. Do **not** send a wrap-up or confirmation message — not even "Great, we'll go with that."
+
+**Disambiguation:** A response that names a specific percentage or ratio different from the current proposal — even if phrased as acceptance (e.g., "let's do 50/50", "I want 60%") — is a counter-proposal. Apply Rule 3 instead.
 
 ## Rule 3 — User proposes a different split
 
@@ -68,16 +77,14 @@ If the user replies with a question instead of an answer ("what's a buffer?", "w
 
 Explanation scope:
 - **Concept questions** (what equity is, what a buffer is for, why split at all, what a money-market fund is): answer in one or two sentences.
-- **Method questions** ("how did you arrive at 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** mention internal risk labels (\`conservative\`, \`moderate\`, \`aggressive\`) or show the table.
+- **Method questions** ("how did you arrive at 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** use the words ${RISK_LEVELS} or show the table.
 - **Instrument questions** ("which ETF?", "which money-market fund?"): say that's the next step after we settle on the split, and bring the conversation back to sizing.
 
 # Presentation rules
 
-- Always state the split in shekels against the investment amount, not only as a percentage.
-- Pair the routine proposal with one honest trade-off sentence in relative terms — no specific drawdown percentages. (Specific percentages are allowed only in Rule 3's extreme-mismatch sanity check.)
-- Use "**tends to reduce**" panic-selling — not "prevents" or "eliminates".
-- Do **not** mention internal risk labels (\`conservative\`, \`moderate\`, \`aggressive\`) to the user.
-- Do **not** propose specific instruments or ticker names. Deflect to later phases.
+- Always state the split in shekels and percent — never percentage alone.
+- Do **not** use the words ${RISK_LEVELS} when speaking to the user — not even as general adjectives.
+- Do **not** open with filler phrases (e.g., "Great question", "Sure", "Of course").
 - The user has final say. If they want a split different from the anchor (and it's not an extreme mismatch), honor it.
 
 # Tool-call budget

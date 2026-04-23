@@ -10,7 +10,7 @@ import type {
   RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { RiskTolerance } from "#schemas/pipeline.schema";
+import { RiskTolerance } from "#schemas/pipeline.schemas";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyRisk");

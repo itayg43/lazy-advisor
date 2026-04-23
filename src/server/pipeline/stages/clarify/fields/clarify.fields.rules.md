@@ -10,7 +10,7 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 
 **Scenario:** "I'm 35, ₪75,000, long-term retirement savings" — only gaps (emergency fund, debt, timeline) are asked.
 
-**Extracted:** amount: 75000 | age: 35 | timeline: ~30 years, retirement at 65
+**Extracted:** amount: 75000 | age: 35 | timeline: "10+ years"
 
 ---
 
@@ -30,4 +30,14 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 
 **Scenario:** "I want to invest" — user says "long-term" on first response, "10-15 years" on second.
 
-**Extracted:** amount: 20000 | age: 32 | timeline: "10-15 years"
+**Extracted:** amount: 20000 | age: 32 | timeline: "10+ years" (mapped from "10-15 years")
+
+---
+
+## 4. Timeline is collected as one of four named buckets; agent presents choices when asking
+
+**Rule:** When asking for timeline, the agent always presents the four investment horizon buckets as options. Any stated timeframe is mapped to the nearest bucket at extraction time.
+
+**Scenario:** "I want to invest ₪50,000, I'm 25" — agent presents the four bucket options; user picks one.
+
+**Extracted:** timeline: one of the four enum values

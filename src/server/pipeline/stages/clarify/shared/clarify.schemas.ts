@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { MAX_AGE, MAX_AMOUNT, MAX_STRING_LENGTH } from "#constants/validation.constants";
-import { RiskTolerance } from "#schemas/pipeline.schema";
+import { MAX_AGE, MAX_AMOUNT } from "#constants/validation.constants";
+import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
 export const GoalClassification = z.enum([
   "normal",
@@ -17,7 +17,7 @@ export const GoalClassificationSchema = z.object({
 export const FieldsPhaseOutputSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
   age: z.number().int().positive().max(MAX_AGE),
-  timeline: z.string().min(1).max(MAX_STRING_LENGTH),
+  timeline: TimelineBucket,
   hasEmergencyFund: z.boolean(),
   hasDebt: z.boolean(),
 });
