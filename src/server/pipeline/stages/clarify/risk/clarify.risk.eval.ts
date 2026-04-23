@@ -11,7 +11,7 @@ import type {
   FieldsPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskTolerance } from "#schemas/pipeline.schema";
+import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathname;
 
@@ -22,7 +22,7 @@ describe("collectRisk", () => {
   const mockFields: FieldsPhaseOutput = {
     amount: 50_000,
     age: 35,
-    timeline: "20 years",
+    timeline: TimelineBucket.enum["10+ years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };

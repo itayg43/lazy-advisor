@@ -1,7 +1,66 @@
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import { RiskTolerance } from "#schemas/pipeline.schema";
+import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
 export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
+export const TIMELINE_BUCKETS = TimelineBucket.options.map((o) => `\`${o}\``).join(", ");
+export const TIMELINE_BUCKET_LIST = TimelineBucket.options
+  .map((o, i) => `${i + 1}. ${o}`)
+  .join("\n");
+
+type AnchorCell = { min: number; max: number };
+
+const {
+  "under 3 years": under3,
+  "3–5 years": t3to5,
+  "5–10 years": t5to10,
+  "10+ years": t10plus,
+} = TimelineBucket.enum;
+
+export const TIMELINE_BOUNDARY_EXAMPLES = `3 yr → "${under3}", 5 yr → "${t3to5}", 10 yr → "${t5to10}"`;
+
+const ALLOCATION_ANCHOR_DATA = {
+  conservative: {
+    [under3]: { min: 0, max: 10 },
+    [t3to5]: { min: 10, max: 20 },
+    [t5to10]: { min: 30, max: 40 },
+    [t10plus]: { min: 40, max: 50 },
+  },
+  moderate: {
+    [under3]: { min: 0, max: 10 },
+    [t3to5]: { min: 20, max: 30 },
+    [t5to10]: { min: 50, max: 60 },
+    [t10plus]: { min: 60, max: 70 },
+  },
+  aggressive: {
+    [under3]: { min: 0, max: 10 },
+    [t3to5]: { min: 30, max: 40 },
+    [t5to10]: { min: 60, max: 70 },
+    [t10plus]: { min: 80, max: 90 },
+  },
+} satisfies Record<
+  (typeof RiskTolerance.options)[number],
+  Record<(typeof TimelineBucket.options)[number], AnchorCell>
+>;
+
+const buildAnchorTable = (): string => {
+  const timelines = TimelineBucket.options;
+  const risks = RiskTolerance.options;
+  const header = `| Willingness \\ Timeline | ${timelines.join(" | ")} |`;
+  const separator = `|${"---|".repeat(timelines.length + 1)}`;
+  const rows = risks.map((risk) => {
+    const cells = timelines.map((t) => {
+      const { min, max } = ALLOCATION_ANCHOR_DATA[risk][t];
+
+      return `${min}–${max}%`;
+    });
+
+    return `| ${risk} | ${cells.join(" | ")} |`;
+  });
+
+  return [header, separator, ...rows].join("\n");
+};
+
+export const ALLOCATION_ANCHOR_TABLE = buildAnchorTable();
 export const GOAL_CLASSIFICATIONS = GoalClassification.options
   .map((o) => `\`${o}\``)
   .join(", ");

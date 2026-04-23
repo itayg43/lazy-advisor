@@ -115,9 +115,9 @@ The allocation phase resolves the total-portfolio split between equity (stocks /
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
-The model locates the user's cell from `risk.riskTolerance` × interpreted timeline bucket and picks a specific integer inside the cell's range. The anchor table and four behavioral rules live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); the research basis is in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
+The model locates the user's cell from `risk.riskTolerance` × `fields.timeline` (a `TimelineBucket` enum: `"under 3 years" | "3–5 years" | "5–10 years" | "10+ years"`) and picks a specific integer inside the cell's range. The anchor table and four behavioral rules live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); the research basis is in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
-The `<3yr` column collapses across all tolerances — at that horizon, capacity (the money still being there when needed) dominates risk tolerance per Vanguard, Fidelity, and Bogleheads.
+The `"under 3 years"` column collapses across all tolerances — at that horizon, capacity (the money still being there when needed) dominates risk tolerance per Vanguard, Fidelity, and Bogleheads.
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 

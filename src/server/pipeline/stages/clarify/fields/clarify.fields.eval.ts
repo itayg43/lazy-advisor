@@ -8,6 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
+import { TimelineBucket } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.fields.last-run.md", import.meta.url).pathname;
 
@@ -33,7 +34,7 @@ describe("collectFields", () => {
 
   // clarify.fields.rules.md rule 1: fields stated in the goal (amount, timeline) are not re-asked.
   it("should ask only for gaps when goal includes amount and timeline", async () => {
-    lastGoal = "I want to start investing, I have about ₪18,000 and maybe 10 years";
+    lastGoal = "I want to start investing, I have about ₪18,000 and a 7-year horizon";
     const responder = createTrackedResponder([
       "I'm 27, yes I have an emergency fund, no debt",
     ]);
@@ -48,7 +49,7 @@ describe("collectFields", () => {
 
     expect(output.amount).toBe(18_000);
     expect(output.age).toBe(27);
-    expect(output.timeline).toMatch(/10/);
+    expect(output.timeline).toBe(TimelineBucket.enum["5–10 years"]);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
   });
@@ -71,7 +72,7 @@ describe("collectFields", () => {
 
     expect(output.amount).toBe(75_000);
     expect(output.age).toBe(35);
-    expect(output.timeline.toLowerCase()).toMatch(/30|65/);
+    expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
   });
@@ -94,7 +95,7 @@ describe("collectFields", () => {
 
     expect(output.amount).toBe(30_000);
     expect(output.age).toBe(27);
-    expect(output.timeline.toLowerCase()).toMatch(/20/);
+    expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
     // First turn asked at most 4 questions — verified by the two-turn scripted flow completing successfully
@@ -123,7 +124,75 @@ describe("collectFields", () => {
 
     expect(output.amount).toBe(20_000);
     expect(output.age).toBe(32);
-    expect(output.timeline.toLowerCase()).toMatch(/10|15/);
+    expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
+    expect(output.hasEmergencyFund).toBe(true);
+    expect(output.hasDebt).toBe(false);
+  });
+
+  // clarify.fields.rules.md rule 4: when asking for timeline, agent presents the four bucket options.
+  it("should present the four timeline bucket options when asking for timeline", async () => {
+    lastGoal = "I want to invest ₪50,000, I'm 25";
+    const responder = createTrackedResponder([
+      "5-10 years, yes I have an emergency fund, no debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.amount).toBe(50_000);
+    expect(output.age).toBe(25);
+    expect(output.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    expect(output.hasEmergencyFund).toBe(true);
+    expect(output.hasDebt).toBe(false);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    expect(agentTurns[0].content).toMatch(/under 3 years/i);
+    expect(agentTurns[0].content).toMatch(/3[–-]5 years/i);
+    expect(agentTurns[0].content).toMatch(/5[–-]10 years/i);
+    expect(agentTurns[0].content).toMatch(/10\+ years/i);
+  });
+
+  // clarify.fields.rules.md rule 4: stated timeframe is mapped to nearest bucket.
+  it("should map a short stated timeframe to the 'under 3 years' bucket", async () => {
+    lastGoal = "I want to invest ₪20,000, I'm 50, I'll need this money in about 2 years";
+    const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.amount).toBe(20_000);
+    expect(output.age).toBe(50);
+    expect(output.timeline).toBe(TimelineBucket.enum["under 3 years"]);
+    expect(output.hasEmergencyFund).toBe(true);
+    expect(output.hasDebt).toBe(false);
+  });
+
+  // clarify.fields.rules.md rule 4: stated timeframe is mapped to nearest bucket.
+  it("should map a medium stated timeframe to the '3–5 years' bucket", async () => {
+    lastGoal = "I'm 45, ₪25,000 to invest, about 4-year horizon";
+    const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.amount).toBe(25_000);
+    expect(output.age).toBe(45);
+    expect(output.timeline).toBe(TimelineBucket.enum["3–5 years"]);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
   });

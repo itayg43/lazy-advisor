@@ -10,7 +10,7 @@ import {
   INTAKE_REJECTION_MESSAGES,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { UserProfileSchema } from "#schemas/pipeline.schema";
+import { UserProfileSchema } from "#schemas/pipeline.schemas";
 import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");

@@ -12,6 +12,7 @@ import type {
   ContributionPhaseOutput,
   FieldsPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
+import { TimelineBucket } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.url)
   .pathname;
@@ -21,7 +22,7 @@ describe("collectContribution", () => {
   const mockFields: FieldsPhaseOutput = {
     amount: 30_000,
     age: 35,
-    timeline: "30 years",
+    timeline: TimelineBucket.enum["10+ years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };

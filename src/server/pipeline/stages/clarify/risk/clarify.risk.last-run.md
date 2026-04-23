@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-22T22:40:01.221Z | Commit: 064bbc8
+Timestamp: 2026-04-23T00:04:41.435Z | Commit: fc8087f
 
 ---
 
@@ -189,7 +189,7 @@ selfRatingScore: 4 | riskTolerance: aggressive
 
 **User:** What do you mean by drop temporarily?
 
-**Agent:** Good question—by “drop temporarily” I mean a period where the value of your investments falls from a recent level. I’m asking because your ability to stick with the plan during ups and downs depends on how uncomfortable that kind of short-term decline would feel to you.
+**Agent:** By “drop temporarily,” I mean a period where the value of your investments falls from a recent level—before things stabilize again. We’re asking this to gauge how you might react to that kind of fluctuation during a longer-term investment process.
 
 Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 
@@ -335,7 +335,7 @@ selfRatingScore: 2 | riskTolerance: conservative
 
 **User:** What does drop temporarily mean?
 
-**Agent:** On the scale of 1–5, we’re asking how comfortable you are with the value of your investments falling from a recent level for a period of time (a temporary drop in value). This helps match the allocation to your ability to stay invested through volatility.
+**Agent:** Great question. By “drop temporarily,” I mean a period where the value of your investments falls from a recent level.
 
 Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 
@@ -361,11 +361,11 @@ selfRatingScore: 1 | riskTolerance: conservative
 
 **User:** Does my age or investment timeline change what score I should give?
 
-**Agent:** Your age and timeline can affect your ability to stay invested, but this question is about your personal comfort right now with watching the value go down temporarily, regardless of timeframe.
+**Agent:** Your age and time horizon can influence how much volatility you might tolerate, but the score still reflects your personal comfort—how you expect you’d feel and act if your investments fall temporarily. We’re asking because it affects how much short-term decline you can handle without changing your plan.
 
-By “drop temporarily,” I mean a period where the value of your investments falls from a recent level.
+“Drop temporarily” means a period where the value of your investments falls from a recent level.
 
-On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold

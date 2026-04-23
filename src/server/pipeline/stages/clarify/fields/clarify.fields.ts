@@ -1,7 +1,12 @@
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { createLogger } from "#lib/logger";
-import { MAX_FIELDS_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import {
+  MAX_FIELDS_TOOL_CALLS,
+  TIMELINE_BOUNDARY_EXAMPLES,
+  TIMELINE_BUCKET_LIST,
+  TIMELINE_BUCKETS,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
 import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
 import { FieldsPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -26,7 +31,7 @@ Every required field must have a specific, actionable value before this phase en
 
 - **amount**: a specific number. Not \`some money\`, \`a lot\`, or \`not sure\`.
 - **age**: a specific number.
-- **timeline**: a specific number of years or a concrete milestone (e.g., \`5 years\`, \`until retirement at 65\`). Not \`long-term\`, \`short-term\`, \`a while\`, or \`until retirement\` without an age. Ranges like \`10-15 years\` are specific enough — do not ask to narrow further.
+- **timeline**: one of four investment horizon buckets: ${TIMELINE_BUCKETS}. When asking for timeline, always present these four options. A stated number of years is also valid — do not re-ask if the user gives a specific number (e.g., "20 years"). Timeline is invalid only if absent or genuinely vague (e.g., "long-term", "a while").
 - **hasEmergencyFund**: yes or no.
 - **hasDebt**: yes or no.
 
@@ -48,16 +53,17 @@ User message: "I'm 30, beginner, ₪70k to invest, no debt, have emergency fund,
 Decision Logic:
 - Step 1: timeline is "long-term" ✗ — not specific → call \`ask_user\` for timeline only.
 
-→ \`ask_user\`: "When you say long-term, roughly how many years are you thinking — 10, 20, or until retirement at a certain age?"
+→ \`ask_user\`: "Which of these best fits your investment timeline?
+${TIMELINE_BUCKET_LIST}"
 
-Next turn — user responds "15 years":
+Next turn — user picks "10+ years":
 - Step 1: all required fields pass ✓
 - Step 2: done
 
 → (stop — all fields complete, no message sent)
 
 ## Example 2 — all fields complete on first message
-User message: "I'm 24, ₪18,000, 10-15 years, no debt, have emergency fund."
+User message: "I'm 24, ₪18,000, 10+ years, no debt, have emergency fund."
 
 Decision Logic:
 - Step 1: all required fields pass ✓
@@ -75,7 +81,7 @@ Decision Logic:
 "A few details to get started:
 1. How much do you want to invest (a specific amount)?
 2. How old are you?
-3. What's your investment timeline — how many years, or until a specific milestone?
+3. What's your investment timeline — ${TIMELINE_BUCKETS}?
 4. Do you have an emergency fund set aside? (yes/no)"
 
 Next turn — user provides amount, age, timeline, and emergency fund. Remaining gap: hasDebt.
@@ -90,7 +96,7 @@ const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the pre
 
 - amount: exact ₪ amount (integer; convert shorthand: "₪50k" → 50000)
 - age: exact age (integer)
-- timeline: specific timeframe stated (e.g., "20 years", "until retirement at 65")
+- timeline: map the stated timeframe to the nearest of these four values — ${TIMELINE_BUCKETS}. On exact boundaries, prefer the shorter bucket: ${TIMELINE_BOUNDARY_EXAMPLES}
 - hasEmergencyFund: true or false
 - hasDebt: true or false`;
 

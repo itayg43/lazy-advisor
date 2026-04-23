@@ -3,13 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import { INTAKE_REJECTION_MESSAGES } from "#pipeline/stages/clarify/shared/clarify.constants";
+import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
   ContributionPhaseOutput,
   FieldsPhaseOutput,
   RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskTolerance } from "#schemas/pipeline.schema";
+import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -56,7 +57,7 @@ describe("clarifyStage", () => {
   const mockFieldsOutput: FieldsPhaseOutput = {
     amount: 50000,
     age: 30,
-    timeline: "10 years",
+    timeline: TimelineBucket.enum["10+ years"],
     hasEmergencyFund: true,
     hasDebt: false,
   };
@@ -71,7 +72,7 @@ describe("clarifyStage", () => {
   const expectedProfile = {
     amount: 50000,
     age: 30,
-    timeline: "10 years",
+    timeline: TimelineBucket.enum["10+ years"],
     hasEmergencyFund: true,
     hasDebt: false,
     riskTolerance: RiskTolerance.enum.moderate,
@@ -107,7 +108,7 @@ describe("clarifyStage", () => {
   describe("normal goal", () => {
     it("should return assembled UserProfile and run all phases", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "normal" }, "resp_classify"),
+        createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
       );
       setupPhaseParsedMocks();
       setupPhaseLoopMocks();
@@ -128,7 +129,10 @@ describe("clarifyStage", () => {
   describe("out-of-scope intake", () => {
     it("should complete full flow when accepted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "out_of_scope" }, "resp_classify"),
+        createParsedResponse(
+          { type: GoalClassification.enum.out_of_scope },
+          "resp_classify",
+        ),
       );
       setupPhaseParsedMocks();
       mockedCallOpenAI
@@ -151,7 +155,10 @@ describe("clarifyStage", () => {
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "out_of_scope" }, "resp_classify"),
+        createParsedResponse(
+          { type: GoalClassification.enum.out_of_scope },
+          "resp_classify",
+        ),
       );
       mockedCallOpenAI.mockResolvedValueOnce(
         createLoopResponse("resp_oos_intake", "Understood."),
@@ -173,7 +180,10 @@ describe("clarifyStage", () => {
   describe("unrealistic intake", () => {
     it("should complete full flow when accepted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "unrealistic" }, "resp_classify"),
+        createParsedResponse(
+          { type: GoalClassification.enum.unrealistic },
+          "resp_classify",
+        ),
       );
       setupPhaseParsedMocks();
       mockedCallOpenAI
@@ -196,7 +206,10 @@ describe("clarifyStage", () => {
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "unrealistic" }, "resp_classify"),
+        createParsedResponse(
+          { type: GoalClassification.enum.unrealistic },
+          "resp_classify",
+        ),
       );
       mockedCallOpenAI.mockResolvedValueOnce(
         createLoopResponse("resp_unreal_intake", "Understood."),
@@ -218,7 +231,10 @@ describe("clarifyStage", () => {
   describe("contradictory intake", () => {
     it("should complete full flow when accepted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "contradictory" }, "resp_classify"),
+        createParsedResponse(
+          { type: GoalClassification.enum.contradictory },
+          "resp_classify",
+        ),
       );
       setupPhaseParsedMocks();
       mockedCallOpenAI
@@ -241,7 +257,10 @@ describe("clarifyStage", () => {
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse({ type: "contradictory" }, "resp_classify"),
+        createParsedResponse(
+          { type: GoalClassification.enum.contradictory },
+          "resp_classify",
+        ),
       );
       mockedCallOpenAI.mockResolvedValueOnce(
         createLoopResponse("resp_contra_intake", "Understood."),
