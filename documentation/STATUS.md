@@ -2,13 +2,12 @@
 
 ## Up Next
 
-**T1 — Fields timeline → 4-bucket enum** — See [Refactor Plan § T1](../CLARIFY_REFACTOR_PLAN.md#t1--fields-timeline--4-bucket-enum).
+**T2 — Intake cleanup** — See [Refactor Plan § T2](../CLARIFY_REFACTOR_PLAN.md#t2--intake-cleanup).
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T1 | Fields timeline → 4-bucket enum |
 | T2 | Intake cleanup |
 | T3 | EF/debt gate |
 | T4 | Equity |

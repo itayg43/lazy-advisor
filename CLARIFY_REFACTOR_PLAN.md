@@ -16,7 +16,7 @@ Replaces responseId-chaining with a **typed I/O pipeline**: each phase produces 
 | 3b | Create the contribution phase | Complete |
 | 4 | Create the risk phase (single-question 1-5 self-rating) | Complete |
 | 4b | Create the allocation phase (equity vs. buffer sizing) | Complete |
-| T1 | Fields timeline → 4-bucket enum | Not started |
+| T1 | Fields timeline → 4-bucket enum | Complete |
 | T2 | Intake cleanup | Not started |
 | T3 | EF/debt gate | Not started |
 | T4 | Phase 5a — equity | Not started |
@@ -122,7 +122,7 @@ A new pre-fields suitability step, modeled on the intake rejection pattern. Educ
 - `src/server/pipeline/stages/clarify/ef-debt/clarify.ef-debt.rules.md` — new
 - `src/server/pipeline/stages/clarify/ef-debt/clarify.ef-debt.eval.ts` — new
 - `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — remove `hasEmergencyFund`, `hasDebt` from `FieldsPhaseOutputSchema`
-- `src/server/schemas/pipeline.schema.ts` — remove `hasEmergencyFund`, `hasDebt` from `UserProfileSchema`
+- `src/server/schemas/pipeline.schemas.ts` — remove `hasEmergencyFund`, `hasDebt` from `UserProfileSchema`
 - `src/server/pipeline/stages/clarify/fields/clarify.fields.ts` — remove EF/debt questions from prompt
 - `src/server/pipeline/stages/clarify/fields/clarify.fields.rules.md` — update rules
 - `src/server/pipeline/stages/clarify/clarify.stage.ts` — insert `collectEfDebt` call before `collectFields`
@@ -207,7 +207,7 @@ Plans to contribute periodically: yes | no (lump-sum investment)
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md`
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts`
 - `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `EquityAllocationSchema`, `EquityPhaseOutputSchema`
-- `src/server/schemas/pipeline.schema.ts` — add `equity` field
+- `src/server/schemas/pipeline.schemas.ts` — add `equity` field
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.equity.eval.ts`
 
@@ -267,7 +267,7 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.eval.ts`
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.test.ts` — unit test for early-exit branch
 - `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `BufferPhaseOutputSchema`
-- `src/server/schemas/pipeline.schema.ts` — add `buffer` field
+- `src/server/schemas/pipeline.schemas.ts` — add `buffer` field
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.buffer.eval.ts`
 
