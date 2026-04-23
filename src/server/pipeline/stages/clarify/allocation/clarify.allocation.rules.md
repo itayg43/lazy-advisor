@@ -14,7 +14,7 @@ This phase does **not** pick instruments. Ticker selection belongs to T4 (equity
 
 Cells are **ranges**, not points. The agent picks a specific integer inside the cell based on qualitative signal (where the user sits within their risk bucket, how clean the timeline is). Buffer percentage is always `100 - equity`.
 
-The `<3yr` column is 0–10% across all rows on purpose. Money needed in under 3 years is dominated by the need for it to still be there — risk tolerance is not a meaningful dial at that horizon per Vanguard, Fidelity, Bogleheads. The user can still push back; see Rule 3.
+The `under 3 years` column is 0–10% across all rows on purpose. Money needed in under 3 years is dominated by the need for it to still be there — risk tolerance is not a meaningful dial at that horizon per Vanguard, Fidelity, Bogleheads. The user can still push back; see Rule 3.
 
 The words `conservative`, `moderate`, and `aggressive` are **never used when speaking to the user** — not even as general adjectives.
 
@@ -36,10 +36,10 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 - A question asking whether the user wants that split, more in stocks, or more in buffer.
 
 **Scenarios:**
-- Aggressive, 10+ yr, ₪50,000 → propose ~85/15 (inside 80–90% cell).
-- Moderate, 5–10 yr, ₪80,000 → propose ~55/45 (inside 50–60% cell).
-- Conservative, 3–5 yr, ₪30,000 → propose ~15/85 (inside 10–20% cell).
-- Any risk, <3 yr, ₪20,000 → propose ~5/95 (inside 0–10% cell — short-horizon collapse).
+- Aggressive, 10+ years, ₪50,000 → propose ~85/15 (inside 80–90% cell).
+- Moderate, 5–10 years, ₪80,000 → propose ~55/45 (inside 50–60% cell).
+- Conservative, 3–5 years, ₪30,000 → propose ~15/85 (inside 10–20% cell).
+- Any risk, under 3 years, ₪20,000 → propose ~5/95 (inside 0–10% cell — short-horizon collapse).
 
 ---
 
@@ -62,11 +62,11 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 In the sanity-check turn, **concrete drawdown percentages are allowed** — the whole point is to convey seriousness. Outside the sanity check, percentages are not used.
 
 **Scenarios:**
-- Proposal 85/15 (aggressive, 10+ yr). User: "Make it 82." → honor exactly, trade-off note, end. Extract 82/18.
+- Proposal 85/15 (aggressive, 10+ years). User: "Make it 82." → honor exactly, trade-off note, end. Extract 82/18.
 - Proposal 85/15. User: "Make it 77." → honor exactly (below cell edge but not extreme), trade-off note, end. Extract 77/23.
 - Proposal 85/15. User: "Make it 50/50." → honor, trade-off note (smaller drops, lower growth), end. Extract 50/50.
-- Proposal 45/55 (conservative, 10+ yr). User: "Make it 100%." → sanity check: "Your earlier answer suggested you're uncomfortable with big drops — going 100% stocks could mean watching 30–50% of your portfolio disappear in a bad year. Still want to go there?" User: "Yes." → extract 100/0.
-- Proposal 5/95 (moderate, <3 yr). User: "Make it all stocks." → sanity check: "Money you need in under 3 years usually isn't invested in stocks — a 30% drop right before you need it is hard to recover from. Still want to go that way?" User: "Yes." → extract 100/0.
+- Proposal 45/55 (conservative, 10+ years). User: "Make it 100%." → sanity check: "Your earlier answer suggested you're uncomfortable with big drops — going 100% stocks could mean watching 30–50% of your portfolio disappear in a bad year. Still want to go there?" User: "Yes." → extract 100/0.
+- Proposal 5/95 (moderate, under 3 years). User: "Make it all stocks." → sanity check: "Money you need in under 3 years usually isn't invested in stocks — a 30% drop right before you need it is hard to recover from. Still want to go that way?" User: "Yes." → extract 100/0.
 
 **What counts as extreme** is a qualitative judgment: the proposed split is far enough from the cell anchor that the mismatch with the user's stated profile is obvious. Examples: conservative asking for 100% stocks, short-horizon asking for all equity, aggressive 10+ yr asking for 0% equity. Trust model judgment on the grey cases — evals will catch drift.
 
@@ -78,7 +78,7 @@ In the sanity-check turn, **concrete drawdown percentages are allowed** — the 
 
 **Explanation scope:**
 - **Concept questions** (what equity is, what a buffer is for, why split at all, what a money-market fund / קרן כספית is): answer in one or two sentences.
-- **Method questions** ("how did you come up with 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** mention internal risk labels or show the anchor table.
+- **Method questions** ("how did you come up with 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** use the words `conservative`, `moderate`, or `aggressive` when speaking to the user — not even as general adjectives — and do not show the anchor table.
 - **Instrument questions** ("which ETF?", "which money-market fund?"): say that's the next step after we settle on the split, and bring the conversation back to sizing.
 
 **Scenarios:**

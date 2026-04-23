@@ -13,7 +13,7 @@
 
 ## Naming
 
-- Files: `kebab-case`, suffixed by role (e.g., `plan.service.ts`, `auth.middleware.ts`, `plan.repository.ts`, `openai.client.ts`, `clarify.stage.ts`, `ask-user.tool.ts`, `pipeline.schema.ts`)
+- Files: `kebab-case`, suffixed by role (e.g., `plan.service.ts`, `auth.middleware.ts`, `plan.repository.ts`, `openai.client.ts`, `clarify.stage.ts`, `ask-user.tool.ts`, `pipeline.schemas.ts`)
 - Types/interfaces: `PascalCase`, suffix with purpose (e.g., `UserProfile`, `BadRequestError`)
 - Functions: `camelCase`
 - Constants: `UPPER_SNAKE_CASE`
@@ -45,11 +45,11 @@
 - `src/server/pipeline/lib/` — shared pure utilities used by 2+ stages (e.g., `build-profile-summary.ts`). Single-stage helpers stay in the stage directory
 - `src/server/pipeline/data/` — static reference data that doesn't change at runtime (e.g., brokerage tables)
 - `index.ts` barrel exports are required for directories defined in the plan
-- Schemas in `src/server/schemas/[domain].schema.ts`, types in `src/server/types/[domain].types.ts`
+- Schemas in `src/server/schemas/[domain].schemas.ts`, types in `src/server/types/[domain].types.ts`
 
 ## Types
 
-- Zod schemas as source of truth at stage boundaries; define in `[domain].schema.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts`. Schema is the single source of truth — types are derived, never hand-written duplicates
+- Zod schemas as source of truth at stage boundaries; define in `[domain].schemas.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts`. Schema is the single source of truth — types are derived, never hand-written duplicates
 - No `any` — use `unknown` when type is uncertain
 
 ## Comments
