@@ -8,7 +8,7 @@ An agentic investment planning CLI for beginner ETF investors. Inspired by the I
 
 Stage behavior, prompts, and rules are co-located with the stage at `src/server/pipeline/stages/clarify/`.
 
-> Phases 1–8 shipped. `preferences` and `extraction` phases removed; classify → intake → fields → risk → allocation → contribution wired with typed I/O. Remaining: T4 (equity) and T5 (buffer), after which `UserProfile` gains `equity` and `buffer` fields. See [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for per-phase specs and status.
+> Phases 1–8 shipped. `preferences` and `extraction` phases removed; classify → intake → fields → risk → allocation → contribution wired with typed I/O. Remaining: T2–T6 — see [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for specs and status. `UserProfile` will gain `equity` and `buffer` fields after T4/T5.
 
 ```mermaid
 flowchart TD
