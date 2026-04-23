@@ -3,6 +3,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { createLogger } from "#lib/logger";
 import {
   MAX_FIELDS_TOOL_CALLS,
+  TIMELINE_BOUNDARY_EXAMPLES,
   TIMELINE_BUCKET_LIST,
   TIMELINE_BUCKETS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
@@ -95,7 +96,7 @@ const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the pre
 
 - amount: exact ₪ amount (integer; convert shorthand: "₪50k" → 50000)
 - age: exact age (integer)
-- timeline: map the stated timeframe to the nearest of these four values — ${TIMELINE_BUCKETS}
+- timeline: map the stated timeframe to the nearest of these four values — ${TIMELINE_BUCKETS}. On exact boundaries, prefer the shorter bucket: ${TIMELINE_BOUNDARY_EXAMPLES}
 - hasEmergencyFund: true or false
 - hasDebt: true or false`;
 

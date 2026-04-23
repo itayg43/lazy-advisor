@@ -152,6 +152,48 @@ describe("collectFields", () => {
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns[0].content).toMatch(/under 3 years/i);
+    expect(agentTurns[0].content).toMatch(/3[–-]5 years/i);
+    expect(agentTurns[0].content).toMatch(/5[–-]10 years/i);
     expect(agentTurns[0].content).toMatch(/10\+ years/i);
+  });
+
+  // clarify.fields.rules.md rule 4: stated timeframe is mapped to nearest bucket.
+  it("should map a short stated timeframe to the 'under 3 years' bucket", async () => {
+    lastGoal = "I want to invest ₪20,000, I'm 50, I'll need this money in about 2 years";
+    const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.amount).toBe(20_000);
+    expect(output.age).toBe(50);
+    expect(output.timeline).toBe(TimelineBucket.enum["under 3 years"]);
+    expect(output.hasEmergencyFund).toBe(true);
+    expect(output.hasDebt).toBe(false);
+  });
+
+  // clarify.fields.rules.md rule 4: stated timeframe is mapped to nearest bucket.
+  it("should map a medium stated timeframe to the '3–5 years' bucket", async () => {
+    lastGoal = "I'm 45, ₪25,000 to invest, about 4-year horizon";
+    const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.amount).toBe(25_000);
+    expect(output.age).toBe(45);
+    expect(output.timeline).toBe(TimelineBucket.enum["3–5 years"]);
+    expect(output.hasEmergencyFund).toBe(true);
+    expect(output.hasDebt).toBe(false);
   });
 });

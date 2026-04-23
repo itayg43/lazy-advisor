@@ -38,6 +38,11 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 
 **Rule:** When asking for timeline, the agent always presents the four investment horizon buckets as options. Any stated timeframe is mapped to the nearest bucket at extraction time.
 
+**Boundary mapping:** When a stated number lands exactly on a bucket boundary, map to the shorter bucket. This aligns with the conservative bias that collapses all risk tolerances to 0–10% equity for short horizons — capital safety takes precedence over growth potential when the horizon is ambiguous.
+- `"3 years"` → `"under 3 years"`
+- `"5 years"` → `"3–5 years"`
+- `"10 years"` → `"5–10 years"`
+
 **Scenario:** "I want to invest ₪50,000, I'm 25" — agent presents the four bucket options; user picks one.
 
 **Extracted:** timeline: one of the four enum values
