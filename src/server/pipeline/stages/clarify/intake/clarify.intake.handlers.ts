@@ -1,8 +1,15 @@
-import type { IntakeHandler } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import type { IntakeResult } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
 import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/contradictory/clarify.contradictory";
 import { handleOutOfScopeRedirect } from "#pipeline/stages/clarify/intake/out-of-scope/clarify.out-of-scope";
 import { handleUnrealisticExpectations } from "#pipeline/stages/clarify/intake/unrealistic/clarify.unrealistic";
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+
+export type IntakeHandler = (
+  goal: string,
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+) => Promise<IntakeResult>;
 
 export const INTAKE_HANDLERS: Partial<
   Record<(typeof GoalClassification.options)[number], IntakeHandler>

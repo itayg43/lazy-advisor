@@ -1,13 +1,10 @@
 import type {
   ResponseFunctionToolCall,
   ResponseInputItem,
-  ResponseOutputItem,
-  ResponseOutputMessage,
 } from "openai/resources/responses/responses";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
-import { type TranscriptEntry } from "#pipeline/eval.transcript";
 import { type PhaseSourceParams } from "#pipeline/lib/build-source-params";
 import { getStageTools } from "#pipeline/tools";
 import {
@@ -19,19 +16,6 @@ import {
 import { callOpenAI } from "#services/openai";
 
 const logger = createLogger("clarifyLib");
-
-// Extracts the model's final plain-text response from a completed phase loop output.
-// The terminal message is a "message" item; reasoning and function_call items are skipped.
-const extractTerminalText = (output: ResponseOutputItem[]): string => {
-  const message = output.findLast(
-    (item): item is ResponseOutputMessage => item.type === "message",
-  );
-  if (!message) return "";
-
-  return message.content
-    .flatMap((c) => (c.type === "output_text" ? [c.text] : []))
-    .join("");
-};
 
 export const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
@@ -78,7 +62,7 @@ export const collectToolOutputs = async (
 };
 
 // Runs the tool-call loop for a clarify phase. Enforces: model gpt-5.4-nano,
-// reasoning effort low, clarify tools. Returns the final response ID and terminal text.
+// reasoning effort low, clarify tools. Returns the final response ID.
 export const runPhaseLoop = async (
   instructions: string,
   initialParams: PhaseSourceParams,
@@ -86,7 +70,7 @@ export const runPhaseLoop = async (
   phaseName: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<{ responseId: string; terminalText: string }> => {
+): Promise<{ responseId: string }> => {
   const tools = getStageTools();
 
   let response = await callOpenAI({
@@ -147,35 +131,5 @@ export const runPhaseLoop = async (
     totalToolCalls: toolCallCount,
   });
 
-  return { responseId: response.id, terminalText: extractTerminalText(response.output) };
+  return { responseId: response.id };
 };
-
-// Converts a ResponseInputItem[] to TranscriptEntry[] for eval last-run files.
-// Includes the initial user message, agent questions, and user responses.
-export const toTranscriptEntries = (items: ResponseInputItem[]): TranscriptEntry[] =>
-  items.flatMap((item): TranscriptEntry[] => {
-    if ("role" in item && item.role === "user" && typeof item.content === "string") {
-      return [{ role: "user", content: item.content }];
-    }
-    if (
-      "type" in item &&
-      item.type === "function_call" &&
-      "name" in item &&
-      item.name === "ask_user"
-    ) {
-      const args = JSON.parse(item.arguments) as { question: string };
-
-      return [{ role: "agent", content: args.question }];
-    }
-    if ("type" in item && item.type === "function_call_output") {
-      return [
-        {
-          role: "user",
-          content:
-            typeof item.output === "string" ? item.output : JSON.stringify(item.output),
-        },
-      ];
-    }
-
-    return [];
-  });

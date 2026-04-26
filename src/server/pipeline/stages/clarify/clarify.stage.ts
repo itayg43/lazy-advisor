@@ -25,6 +25,7 @@ export const runClarifyStage = async (
   const classification = await classifyGoal(goal);
 
   const handler = INTAKE_HANDLERS[classification];
+  let activeGoal = goal;
   if (handler) {
     const result = await handler(goal, sendToUser, waitForResponse);
     if (!result.accepted) {
@@ -35,19 +36,20 @@ export const runClarifyStage = async (
 
       return null;
     }
+    activeGoal = result.alignedGoal;
   }
 
-  const fields = await collectFields(goal, sendToUser, waitForResponse);
-  const risk = await collectRisk(goal, fields, sendToUser, waitForResponse);
+  const fields = await collectFields(activeGoal, sendToUser, waitForResponse);
+  const risk = await collectRisk(activeGoal, fields, sendToUser, waitForResponse);
   const allocation = await collectAllocation(
-    goal,
+    activeGoal,
     fields,
     risk,
     sendToUser,
     waitForResponse,
   );
   const contribution = await collectContribution(
-    goal,
+    activeGoal,
     fields,
     allocation,
     sendToUser,

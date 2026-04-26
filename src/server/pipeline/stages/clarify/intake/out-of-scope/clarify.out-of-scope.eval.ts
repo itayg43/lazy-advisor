@@ -45,7 +45,7 @@ describe("handleOutOfScopeRedirect", () => {
 
       expect(result.accepted).toBe(true);
       if (result.accepted) {
-        expect(result.responseId).toBeTruthy();
+        expect(result.alignedGoal).toBeTruthy();
       }
     });
   });

@@ -128,15 +128,22 @@ describe("clarifyStage", () => {
 
   describe("out-of-scope intake", () => {
     it("should complete full flow when accepted", async () => {
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { type: GoalClassification.enum.out_of_scope },
-          "resp_classify",
-        ),
-      );
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { type: GoalClassification.enum.out_of_scope },
+            "resp_classify",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { accepted: true, alignedGoal: "Invest in a tech ETF instead" },
+            "resp_oos_extraction",
+          ),
+        );
       setupPhaseParsedMocks();
       mockedCallOpenAI
-        .mockResolvedValueOnce(createLoopResponse("resp_oos_intake", "Got it."))
+        .mockResolvedValueOnce(createLoopResponse("resp_oos_intake"))
         .mockResolvedValueOnce(createLoopResponse("resp_fields_loop"))
         .mockResolvedValueOnce(createLoopResponse("resp_risk_loop"))
         .mockResolvedValueOnce(createLoopResponse("resp_allocation_loop"))
@@ -149,20 +156,22 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake + 4 phases
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phases
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + intake extraction + 4 phases
     });
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { type: GoalClassification.enum.out_of_scope },
-          "resp_classify",
-        ),
-      );
-      mockedCallOpenAI.mockResolvedValueOnce(
-        createLoopResponse("resp_oos_intake", "Understood."),
-      );
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { type: GoalClassification.enum.out_of_scope },
+            "resp_classify",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse({ accepted: false }, "resp_oos_extraction"),
+        );
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_oos_intake"));
 
       const result = await runClarifyStage(
         "I want to buy NVIDIA",
@@ -173,21 +182,28 @@ describe("clarifyStage", () => {
       expect(result).toBeNull();
       expect(mockSendToUser).toHaveBeenCalledWith(INTAKE_REJECTION_MESSAGES.out_of_scope);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(1); // classify only
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
     });
   });
 
   describe("unrealistic intake", () => {
     it("should complete full flow when accepted", async () => {
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { type: GoalClassification.enum.unrealistic },
-          "resp_classify",
-        ),
-      );
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { type: GoalClassification.enum.unrealistic },
+            "resp_classify",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { accepted: true, alignedGoal: "Invest ₪50,000 with a realistic long-term plan" },
+            "resp_unreal_extraction",
+          ),
+        );
       setupPhaseParsedMocks();
       mockedCallOpenAI
-        .mockResolvedValueOnce(createLoopResponse("resp_unreal_intake", "Got it."))
+        .mockResolvedValueOnce(createLoopResponse("resp_unreal_intake"))
         .mockResolvedValueOnce(createLoopResponse("resp_fields_loop"))
         .mockResolvedValueOnce(createLoopResponse("resp_risk_loop"))
         .mockResolvedValueOnce(createLoopResponse("resp_allocation_loop"))
@@ -200,20 +216,22 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake + 4 phases
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phases
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + intake extraction + 4 phases
     });
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { type: GoalClassification.enum.unrealistic },
-          "resp_classify",
-        ),
-      );
-      mockedCallOpenAI.mockResolvedValueOnce(
-        createLoopResponse("resp_unreal_intake", "Understood."),
-      );
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { type: GoalClassification.enum.unrealistic },
+            "resp_classify",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse({ accepted: false }, "resp_unreal_extraction"),
+        );
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_unreal_intake"));
 
       const result = await runClarifyStage(
         "I want to double my money in a month",
@@ -224,21 +242,28 @@ describe("clarifyStage", () => {
       expect(result).toBeNull();
       expect(mockSendToUser).toHaveBeenCalledWith(INTAKE_REJECTION_MESSAGES.unrealistic);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(1); // classify only
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
     });
   });
 
   describe("contradictory intake", () => {
     it("should complete full flow when accepted", async () => {
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { type: GoalClassification.enum.contradictory },
-          "resp_classify",
-        ),
-      );
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { type: GoalClassification.enum.contradictory },
+            "resp_classify",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { accepted: true, alignedGoal: "Invest for growth, comfortable holding through a 20% drop" },
+            "resp_contra_extraction",
+          ),
+        );
       setupPhaseParsedMocks();
       mockedCallOpenAI
-        .mockResolvedValueOnce(createLoopResponse("resp_contra_intake", "Got it."))
+        .mockResolvedValueOnce(createLoopResponse("resp_contra_intake"))
         .mockResolvedValueOnce(createLoopResponse("resp_fields_loop"))
         .mockResolvedValueOnce(createLoopResponse("resp_risk_loop"))
         .mockResolvedValueOnce(createLoopResponse("resp_allocation_loop"))
@@ -251,20 +276,22 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake + 4 phases
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phases
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + intake extraction + 4 phases
     });
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { type: GoalClassification.enum.contradictory },
-          "resp_classify",
-        ),
-      );
-      mockedCallOpenAI.mockResolvedValueOnce(
-        createLoopResponse("resp_contra_intake", "Understood."),
-      );
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { type: GoalClassification.enum.contradictory },
+            "resp_classify",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse({ accepted: false }, "resp_contra_extraction"),
+        );
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_contra_intake"));
 
       const result = await runClarifyStage(
         "I want max returns but can't lose money",
@@ -277,7 +304,7 @@ describe("clarifyStage", () => {
         INTAKE_REJECTION_MESSAGES.contradictory,
       );
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(1); // classify only
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
     });
   });
 });

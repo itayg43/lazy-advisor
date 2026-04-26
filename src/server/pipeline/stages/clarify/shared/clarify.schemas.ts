@@ -42,3 +42,10 @@ export const AllocationPhaseOutputSchema = z
 export const ContributionPhaseOutputSchema = z.object({
   plansToContribute: z.boolean(),
 });
+
+// Flat object (not discriminatedUnion) because OpenAI structured outputs requires a top-level z.object.
+// IntakeResult in clarify.intake.lib.ts is the narrowed public type derived from this schema.
+export const IntakeExtractionSchema = z.object({
+  accepted: z.boolean(),
+  alignedGoal: z.string().nullable(),
+});
