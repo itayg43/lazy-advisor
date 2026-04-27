@@ -16,7 +16,7 @@ Behavioral rules for the contradictory risk intake handler. Each entry: the rule
 
 **Rule:** When the user gives a clear answer to the scenario that reveals a risk preference (even implicitly), the post-loop extraction returns `{ accepted: true }`.
 
-**Scenario:** User says "I'd feel sick but I'd hold and wait for recovery — I guess I'm moderate" → `{ accepted: true }`
+**Scenario:** User says "I'd feel sick but I'd hold and wait for recovery" → `{ accepted: true }`
 
 ---
 

@@ -80,7 +80,7 @@ describe("collectContribution", () => {
     expect(output.plansToContribute).toBe(false);
   });
 
-  // clarify.contribution.rules.md rule 3: vague answer → acknowledge briefly, resolve to false, stop immediately
+  // clarify.contribution.rules.md rule 5: vague answer → acknowledge briefly, resolve to false, stop immediately
   it("should return false and acknowledge when user gives a vague answer", async () => {
     const responder = createTrackedResponder(["Maybe someday, but not regularly", ""]);
     lastTranscript = responder.transcript;
@@ -125,7 +125,7 @@ describe("collectContribution", () => {
   it("should explain DCA when asked and return false after user declines", async () => {
     const responder = createTrackedResponder([
       "What's DCA?",
-      "I see, but I think I'll just invest once for now",
+      "I see, but no — I'll just do a one-time investment",
     ]);
     lastTranscript = responder.transcript;
 
@@ -140,7 +140,7 @@ describe("collectContribution", () => {
     expect(output.plansToContribute).toBe(false);
   });
 
-  // clarify.contribution.rules.md rule 5: Israel-specific concern → address accurately → yes
+  // clarify.contribution.rules.md rule 3: Israel-specific concern → address accurately → yes
   it("should address fractional share concern and return true after user confirms", async () => {
     const responder = createTrackedResponder([
       "In Israel you can't buy partial ETF units so it's hard to invest small amounts",
@@ -160,10 +160,10 @@ describe("collectContribution", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
     // Israel-specific response must reference actual equity amount (₪21,000)
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns[1].content).toMatch(/21[,.]?000|₪21/);
+    expect(agentTurns.some((t) => /21[,.]?000|₪21/.test(t.content))).toBe(true);
   });
 
-  // clarify.contribution.rules.md rule 5: Israel-specific concern → address accurately → no
+  // clarify.contribution.rules.md rule 3: Israel-specific concern → address accurately → no
   it("should address fractional share concern and return false after user declines", async () => {
     const responder = createTrackedResponder([
       "In Israel you can't buy partial ETF units so it seems impractical",

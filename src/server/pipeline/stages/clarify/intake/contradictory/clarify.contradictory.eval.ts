@@ -36,7 +36,7 @@ describe("handleContradictoryRisk", () => {
     it("should resolve contradiction and return accepted result when user picks a risk level", async () => {
       lastGoal = "I want maximum returns but I can't afford to lose any money";
       const responder = createTrackedResponder([
-        "If my portfolio dropped 20% I'd feel sick but I'd hold and wait for recovery. I guess I'm moderate.",
+        "If my portfolio dropped 20% I'd feel sick but I'd hold and wait for recovery.",
       ]);
       lastTranscript = responder.transcript;
 
