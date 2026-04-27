@@ -52,6 +52,12 @@ Stop — do not call \`ask_user\`. Do not output any message.
 If the user disengages, refuses to answer, or says they are no longer
 interested — stop. Do not call \`ask_user\`. Do not ask again.`;
 
+const CONTRADICTORY_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user resolved the contradiction.
+
+Set accepted to true if the user gave any answer to the A/B/C scenario question that reveals a risk preference — even with hesitation or reluctance (e.g., "I'd feel sick but I'd hold", "I guess I'd hold", "I'd probably sell"). Any clear response to the scenario (sell / hold / buy more) counts.
+
+Set accepted to false only if the user disengaged, said they are no longer interested, or refused to engage entirely.`;
+
 export const handleContradictoryRisk = async (
   goal: string,
   sendToUser: SendToUser,
@@ -63,5 +69,6 @@ export const handleContradictoryRisk = async (
     goal,
     sendToUser,
     waitForResponse,
+    CONTRADICTORY_EXTRACTION_INSTRUCTIONS,
   );
 };
