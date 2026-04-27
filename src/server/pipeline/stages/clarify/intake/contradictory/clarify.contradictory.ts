@@ -1,7 +1,5 @@
-import {
-  runIntakePhase,
-  type IntakeResult,
-} from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import { runIntakePhase } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
 const CONTRADICTORY_PROMPT = `# Role and Objective
@@ -58,7 +56,7 @@ export const handleContradictoryRisk = async (
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<IntakeResult> => {
+): Promise<IntakePhaseOutput> => {
   return runIntakePhase(
     CONTRADICTORY_PROMPT,
     "Contradictory risk resolution phase",

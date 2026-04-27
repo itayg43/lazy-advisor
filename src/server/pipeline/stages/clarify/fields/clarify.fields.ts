@@ -101,15 +101,14 @@ const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the pre
 - hasDebt: true or false`;
 
 export const collectFields = async (
-  goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<FieldsPhaseOutput> => {
-  logger.info("Starting fields phase", { goal });
+  logger.info("Starting fields phase");
 
   const { responseId } = await runPhaseLoop(
     FIELDS_PROMPT,
-    { input: goal },
+    { input: "" },
     MAX_FIELDS_TOOL_CALLS,
     "Fields phase",
     sendToUser,

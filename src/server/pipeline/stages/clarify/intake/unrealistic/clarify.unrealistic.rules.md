@@ -12,11 +12,11 @@ Behavioral rules for the unrealistic expectations intake handler. Each entry: th
 
 ---
 
-## 2. User accepts → extraction returns `{ accepted: true, alignedGoal }`
+## 2. User accepts → extraction returns `{ accepted: true }`
 
-**Rule:** When the user agrees to realistic expectations or provides a revised timeline, the post-loop extraction returns `accepted: true` with an `alignedGoal` that reflects the user's original investment intent with a realistic horizon.
+**Rule:** When the user agrees to realistic expectations or provides a revised timeline, the post-loop extraction returns `{ accepted: true }`.
 
-**Scenario:** User says "ok fine, long term then, maybe 10-15 years" → `{ accepted: true, alignedGoal: "Invest ₪18,000 with a realistic long-term horizon of around 10 years" }`
+**Scenario:** User says "ok fine, long term then, maybe 10-15 years" → `{ accepted: true }`
 
 ---
 

@@ -12,11 +12,11 @@ Behavioral rules for the contradictory risk intake handler. Each entry: the rule
 
 ---
 
-## 2. User resolves contradiction → extraction returns `{ accepted: true, alignedGoal }`
+## 2. User resolves contradiction → extraction returns `{ accepted: true }`
 
-**Rule:** When the user gives a clear answer to the scenario that reveals a risk preference (even implicitly), the post-loop extraction returns `accepted: true` with an `alignedGoal` that reflects the user's investment intent without the contradictory phrasing.
+**Rule:** When the user gives a clear answer to the scenario that reveals a risk preference (even implicitly), the post-loop extraction returns `{ accepted: true }`.
 
-**Scenario:** User says "I'd feel sick but I'd hold and wait for recovery — I guess I'm moderate" → `{ accepted: true, alignedGoal: "Invest for growth, comfortable holding through a 20% temporary drop" }`
+**Scenario:** User says "I'd feel sick but I'd hold and wait for recovery — I guess I'm moderate" → `{ accepted: true }`
 
 ---
 

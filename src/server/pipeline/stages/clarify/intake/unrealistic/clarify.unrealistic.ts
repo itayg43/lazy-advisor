@@ -1,7 +1,5 @@
-import {
-  runIntakePhase,
-  type IntakeResult,
-} from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import { runIntakePhase } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
+import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
 const UNREALISTIC_PROMPT = `# Role and Objective
@@ -57,7 +55,7 @@ export const handleUnrealisticExpectations = async (
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<IntakeResult> => {
+): Promise<IntakePhaseOutput> => {
   return runIntakePhase(
     UNREALISTIC_PROMPT,
     "Unrealistic expectations redirect phase",

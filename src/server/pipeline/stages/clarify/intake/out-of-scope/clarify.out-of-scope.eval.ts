@@ -31,9 +31,9 @@ describe("handleOutOfScopeRedirect", () => {
 
   // clarify.out-of-scope.rules.md rule 1: redirect explains concentration risk, offers sector ETF middle ground,
   // and ends with a question. Field collection begins only after acceptance — not in this phase.
-  // clarify.out-of-scope.rules.md rule 2: accepted — extraction returns { accepted: true, alignedGoal }.
+  // clarify.out-of-scope.rules.md rule 2: accepted — extraction returns { accepted: true }.
   describe("accepted", () => {
-    it("should redirect and return accepted result with responseId", async () => {
+    it("should redirect and return accepted result", async () => {
       lastGoal = "Should I buy NVIDIA stock?";
       const responder = createTrackedResponder(["ok fine, I'm open to ETFs"]);
       lastTranscript = responder.transcript;
@@ -45,9 +45,6 @@ describe("handleOutOfScopeRedirect", () => {
       );
 
       expect(result.accepted).toBe(true);
-      if (result.accepted) {
-        expect(result.alignedGoal).toBeTruthy();
-      }
     });
   });
 

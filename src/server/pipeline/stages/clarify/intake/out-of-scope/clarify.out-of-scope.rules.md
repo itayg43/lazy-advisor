@@ -12,11 +12,11 @@ Behavioral rules for the out-of-scope intake handler. Each entry: the rule, a on
 
 ---
 
-## 2. User accepts → extraction returns `{ accepted: true, alignedGoal }`
+## 2. User accepts → extraction returns `{ accepted: true }`
 
-**Rule:** When the user agrees to proceed with an ETF-based approach, the post-loop extraction returns `accepted: true` with an `alignedGoal` that preserves the user's directional preference (e.g., tech exposure) expressed through an ETF.
+**Rule:** When the user agrees to proceed with an ETF-based approach, the post-loop extraction returns `{ accepted: true }`.
 
-**Scenario:** User says "ok fine, I'm open to ETFs" → `{ accepted: true, alignedGoal: "Invest in a tech ETF (e.g., NASDAQ-100) rather than individual stocks" }`
+**Scenario:** User says "ok fine, I'm open to ETFs" → `{ accepted: true }`
 
 ---
 

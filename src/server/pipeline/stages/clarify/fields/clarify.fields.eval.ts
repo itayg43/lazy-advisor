@@ -40,11 +40,7 @@ describe("collectFields", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(18_000);
@@ -63,11 +59,7 @@ describe("collectFields", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(75_000);
@@ -86,11 +78,7 @@ describe("collectFields", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(30_000);
@@ -115,11 +103,7 @@ describe("collectFields", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(20_000);
@@ -137,11 +121,7 @@ describe("collectFields", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(50_000);
@@ -163,11 +143,7 @@ describe("collectFields", () => {
     const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(20_000);
@@ -183,11 +159,7 @@ describe("collectFields", () => {
     const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(25_000);

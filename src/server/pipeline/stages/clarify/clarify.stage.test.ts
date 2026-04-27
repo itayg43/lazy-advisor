@@ -2,7 +2,10 @@ import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
-import { INTAKE_REJECTION_MESSAGES } from "#pipeline/stages/clarify/shared/clarify.constants";
+import {
+  INTAKE_REJECTION_MESSAGES,
+  PROFILE_TRANSITION_MESSAGE,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
@@ -121,6 +124,8 @@ describe("clarifyStage", () => {
 
       expect(result).toMatchObject(expectedProfile);
       expect(mockWaitForResponse).not.toHaveBeenCalled();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockSendToUser).toHaveBeenCalledWith(PROFILE_TRANSITION_MESSAGE);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(4);
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + 4 extractions
     });
@@ -136,10 +141,7 @@ describe("clarifyStage", () => {
           ),
         )
         .mockResolvedValueOnce(
-          createParsedResponse(
-            { accepted: true, alignedGoal: "Invest in a tech ETF instead" },
-            "resp_oos_extraction",
-          ),
+          createParsedResponse({ accepted: true }, "resp_oos_extraction"),
         );
       setupPhaseParsedMocks();
       mockedCallOpenAI
@@ -156,6 +158,8 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockSendToUser).toHaveBeenCalledWith(PROFILE_TRANSITION_MESSAGE);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phases
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + intake extraction + 4 phases
     });
@@ -180,6 +184,7 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
       expect(mockSendToUser).toHaveBeenCalledWith(INTAKE_REJECTION_MESSAGES.out_of_scope);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
@@ -196,13 +201,7 @@ describe("clarifyStage", () => {
           ),
         )
         .mockResolvedValueOnce(
-          createParsedResponse(
-            {
-              accepted: true,
-              alignedGoal: "Invest ₪50,000 with a realistic long-term plan",
-            },
-            "resp_unreal_extraction",
-          ),
+          createParsedResponse({ accepted: true }, "resp_unreal_extraction"),
         );
       setupPhaseParsedMocks();
       mockedCallOpenAI
@@ -219,6 +218,8 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockSendToUser).toHaveBeenCalledWith(PROFILE_TRANSITION_MESSAGE);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phases
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + intake extraction + 4 phases
     });
@@ -243,6 +244,7 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
       expect(mockSendToUser).toHaveBeenCalledWith(INTAKE_REJECTION_MESSAGES.unrealistic);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
@@ -259,13 +261,7 @@ describe("clarifyStage", () => {
           ),
         )
         .mockResolvedValueOnce(
-          createParsedResponse(
-            {
-              accepted: true,
-              alignedGoal: "Invest for growth, comfortable holding through a 20% drop",
-            },
-            "resp_contra_extraction",
-          ),
+          createParsedResponse({ accepted: true }, "resp_contra_extraction"),
         );
       setupPhaseParsedMocks();
       mockedCallOpenAI
@@ -282,6 +278,8 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(mockSendToUser).toHaveBeenCalledWith(PROFILE_TRANSITION_MESSAGE);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phases
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + intake extraction + 4 phases
     });
@@ -306,6 +304,7 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(1);
       expect(mockSendToUser).toHaveBeenCalledWith(
         INTAKE_REJECTION_MESSAGES.contradictory,
       );

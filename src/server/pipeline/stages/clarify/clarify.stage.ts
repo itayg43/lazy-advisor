@@ -8,6 +8,7 @@ import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
+  PROFILE_TRANSITION_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { UserProfileSchema } from "#schemas/pipeline.schemas";
@@ -25,7 +26,6 @@ export const runClarifyStage = async (
   const classification = await classifyGoal(goal);
 
   const handler = INTAKE_HANDLERS[classification];
-  let activeGoal = goal;
   if (handler) {
     const result = await handler(goal, sendToUser, waitForResponse);
     if (!result.accepted) {
@@ -36,20 +36,14 @@ export const runClarifyStage = async (
 
       return null;
     }
-    activeGoal = result.alignedGoal;
   }
 
-  const fields = await collectFields(activeGoal, sendToUser, waitForResponse);
-  const risk = await collectRisk(activeGoal, fields, sendToUser, waitForResponse);
-  const allocation = await collectAllocation(
-    activeGoal,
-    fields,
-    risk,
-    sendToUser,
-    waitForResponse,
-  );
+  sendToUser(PROFILE_TRANSITION_MESSAGE);
+
+  const fields = await collectFields(sendToUser, waitForResponse);
+  const risk = await collectRisk(fields, sendToUser, waitForResponse);
+  const allocation = await collectAllocation(fields, risk, sendToUser, waitForResponse);
   const contribution = await collectContribution(
-    activeGoal,
     fields,
     allocation,
     sendToUser,

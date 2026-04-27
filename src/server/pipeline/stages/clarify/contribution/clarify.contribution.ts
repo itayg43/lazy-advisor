@@ -48,19 +48,17 @@ const CONTRIBUTION_EXTRACTION_INSTRUCTIONS = `Extract a structured record from t
 - plansToContribute: true if the user confirmed they plan to add money periodically, false otherwise (explicit no, vague answer, or no clear signal)`;
 
 export const collectContribution = async (
-  goal: string,
   fields: FieldsPhaseOutput,
   allocation: AllocationPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<ContributionPhaseOutput> => {
-  logger.info("Starting contribution phase", { goal, fields, allocation });
+  logger.info("Starting contribution phase", { fields, allocation });
 
   const equityAmount = Math.round((fields.amount * allocation.equityPercentage) / 100);
   const bufferAmount = fields.amount - equityAmount;
 
-  const context = `User goal: ${goal}
-Investment amount: ₪${fields.amount.toLocaleString()}
+  const context = `Investment amount: ₪${fields.amount.toLocaleString()}
 Investment timeline: ${fields.timeline}
 Allocation: ${allocation.equityPercentage}% equity (₪${equityAmount.toLocaleString()}), ${allocation.bufferPercentage}% buffer (₪${bufferAmount.toLocaleString()})`;
 

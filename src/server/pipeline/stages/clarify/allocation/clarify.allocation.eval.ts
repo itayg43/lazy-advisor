@@ -19,8 +19,6 @@ const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url)
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
 describe("collectAllocation", () => {
-  const mockGoal = "Invest ₪50,000 for long-term growth";
-
   const longHorizonAggressiveFields: FieldsPhaseOutput = {
     amount: 50_000,
     age: 35,
@@ -116,7 +114,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -151,7 +148,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       midHorizonModerateFields,
       moderateRisk,
       responder.sendToUser,
@@ -175,7 +171,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       shortMidHorizonConservativeFields,
       conservativeRisk,
       responder.sendToUser,
@@ -199,7 +194,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -222,7 +216,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -248,7 +241,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonConservativeFields,
       conservativeRisk,
       responder.sendToUser,
@@ -275,7 +267,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       shortHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -301,7 +292,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -327,7 +317,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -357,7 +346,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -393,7 +381,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
@@ -420,7 +407,6 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      mockGoal,
       shortHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
