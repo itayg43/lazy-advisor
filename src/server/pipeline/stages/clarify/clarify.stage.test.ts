@@ -197,7 +197,10 @@ describe("clarifyStage", () => {
         )
         .mockResolvedValueOnce(
           createParsedResponse(
-            { accepted: true, alignedGoal: "Invest ₪50,000 with a realistic long-term plan" },
+            {
+              accepted: true,
+              alignedGoal: "Invest ₪50,000 with a realistic long-term plan",
+            },
             "resp_unreal_extraction",
           ),
         );
@@ -257,7 +260,10 @@ describe("clarifyStage", () => {
         )
         .mockResolvedValueOnce(
           createParsedResponse(
-            { accepted: true, alignedGoal: "Invest for growth, comfortable holding through a 20% drop" },
+            {
+              accepted: true,
+              alignedGoal: "Invest for growth, comfortable holding through a 20% drop",
+            },
             "resp_contra_extraction",
           ),
         );

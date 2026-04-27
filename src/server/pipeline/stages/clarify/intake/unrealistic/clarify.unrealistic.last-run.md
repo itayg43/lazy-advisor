@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-17T00:56:52.980Z | Commit: ec1048d
+Timestamp: 2026-04-26T04:30:01.778Z | Commit: 4d68b10
 
 ---
 
@@ -7,9 +7,7 @@ Timestamp: 2026-04-17T00:56:52.980Z | Commit: ec1048d
 
 **Goal:** "I have ₪18,000 and I want to double it in 6 months"
 
-**Agent:** Doubling in 6 months via passive ETF investing isn’t realistically achievable: passive portfolios are diversified to track market returns, and even strong market periods typically don’t support a near-100% gain over just half a year. Achieving that level of return would require taking substantially higher, non-passive risk (e.g., concentrated bets or active/speculative strategies), which can also lead to significant losses.
-
-Would you like to proceed with a realistic long-term plan instead?
+**Agent:** Doubling ₪18,000 in 6 months would require roughly a ~100% return in that time. That’s not something passive ETF investing can reliably deliver. Historically, diversified passive ETFs have averaged about ~7–10% per year over the long term, and even then, returns can swing dramatically from year to year—often ±20–30% or more in a given year—so short-term outcomes are unpredictable. The strength of passive investing is compounding over many years, not hitting a specific short-term spike. Would you like to proceed with a realistic long-term plan that targets achievable returns instead?
 
 **User:** ok fine, long term then, maybe 10-15 years
 
@@ -20,9 +18,11 @@ Would you like to proceed with a realistic long-term plan instead?
 
 **Goal:** "I have ₪18,000 and I want to double it in 6 months"
 
-**Agent:** Doubling in 6 months is not achievable with passive ETF investing. Passive ETFs aim to track broad market performance, and over such a short period the results can’t be reliably controlled—achieving a 100% gain consistently would require taking materially higher, non-passive risk (e.g., concentrated/speculative trading), which defeats the purpose of a passive ETF approach.
+**Agent:** Doubling ₪18,000 in 6 months would require roughly a ~100% return. That isn’t something diversified, passive ETF investing can reliably deliver—those assets are designed to track broad market returns, not generate near-term, outsized gains on a short timeline.
 
-Would you like to proceed with a realistic long-term plan instead (focused on risk-managed investing over years, not months)?
+Historically, diversified global ETFs have averaged around ~7–10% per year over the long run, and in any single year results can swing dramatically (often ±20–30% or more). In other words, short-term timing is unpredictable—so aiming for a doubling in months tends to be at odds with how passive investing actually behaves.
+
+The strength of passive ETFs is compounding over years, not months. Would you like to proceed with a realistic long-term plan (with expectations aligned to ~7–10% per year averages and the typical year-to-year volatility) instead?
 
 **User:** No, I'm sure I can double it, I've seen people do it online
 

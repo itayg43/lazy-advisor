@@ -20,20 +20,21 @@ Do **not** include any profile or data collection questions in this call.
 The explanation depends on the user's specific request:
 
 **Stock picking (e.g., "I want to buy NVIDIA")**
-Explain: buying a single stock concentrates all risk in one company —
-if it drops 40% or faces a major setback, the whole investment suffers.
-A diversified ETF spreads that risk across hundreds of companies.
+Explain: when you own a single stock, your whole portfolio is fully
+correlated to that one company — if it drops 30%, you're down 30%.
+A diversified ETF spreads exposure across hundreds of companies, so
+one company's bad quarter barely moves the overall portfolio.
 If the user has a sector preference (e.g., tech), offer a sector ETF
 (e.g., NASDAQ-100) as a middle ground that keeps the directional exposure
 without betting on a single company.
 Close with: "Would you like to explore an ETF-based approach instead?"
 
 Example (adapt to the user's specific stock and sector):
-"Buying NVIDIA directly puts 100% of your investment at risk from one
-company's performance — if it drops 40%, your whole investment drops 40%.
-A tech ETF like NASDAQ-100 gives you exposure to the same sector spread
-across the top 100 tech companies, so no single stock can sink the plan.
-Would you like to explore an ETF-based approach instead?"
+"When you own a single stock, your whole portfolio moves with it — if
+NVIDIA drops 30% in a bad quarter, you're down 30%. A tech ETF like
+NASDAQ-100 holds the top 100 tech companies, so one company's bad quarter
+barely moves the needle. Would you like to explore an ETF-based approach
+instead?"
 
 **Day trading**
 Explain: consistently timing the market is extremely difficult — the
@@ -65,7 +66,7 @@ Stop — do not call \`ask_user\`. Do not output any message.
 **Step 3 — Rejected**
 If the user explicitly refuses to switch to ETFs or insists on their
 original out-of-scope request — stop.
-Do not call \`ask_user\`. Do not ask again.`;
+Do not call \`ask_user\`. Do not output any message. Do not ask again.`;
 
 export const handleOutOfScopeRedirect = async (
   goal: string,

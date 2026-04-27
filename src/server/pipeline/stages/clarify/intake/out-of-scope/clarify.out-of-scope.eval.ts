@@ -29,8 +29,9 @@ describe("handleOutOfScopeRedirect", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // clarify.stage.rules.md rule 1: redirect explains concentration risk, offers sector ETF middle ground,
+  // clarify.out-of-scope.rules.md rule 1: redirect explains concentration risk, offers sector ETF middle ground,
   // and ends with a question. Field collection begins only after acceptance — not in this phase.
+  // clarify.out-of-scope.rules.md rule 2: accepted — extraction returns { accepted: true, alignedGoal }.
   describe("accepted", () => {
     it("should redirect and return accepted result with responseId", async () => {
       lastGoal = "Should I buy NVIDIA stock?";
@@ -50,6 +51,7 @@ describe("handleOutOfScopeRedirect", () => {
     });
   });
 
+  // clarify.out-of-scope.rules.md rule 3: rejected — extraction returns { accepted: false }.
   describe("rejected", () => {
     it("should return rejected result when user insists on stock picking", async () => {
       lastGoal = "Should I buy NVIDIA stock?";

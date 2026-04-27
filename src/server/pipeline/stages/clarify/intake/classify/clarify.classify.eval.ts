@@ -4,7 +4,7 @@ import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.c
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 
 describe("classifyGoal", () => {
-  // clarify.stage.rules.md rule 1: individual stock picking, day trading, and direct crypto purchases
+  // clarify.classify.rules.md rule 1: individual stock picking, day trading, and direct crypto purchases
   // are out of scope — redirect to ETF-based investing.
   describe(GoalClassification.enum.out_of_scope, () => {
     it("should classify individual stock picking as out_of_scope", async () => {
@@ -23,7 +23,7 @@ describe("classifyGoal", () => {
     });
   });
 
-  // clarify.stage.rules.md rule 2: unrealistic return expectations are redirected before field collection.
+  // clarify.classify.rules.md rule 2: unrealistic return expectations are redirected before field collection.
   describe(GoalClassification.enum.unrealistic, () => {
     it("should classify doubling capital in 6 months as unrealistic", async () => {
       const result = await classifyGoal(
@@ -33,7 +33,7 @@ describe("classifyGoal", () => {
     });
   });
 
-  // clarify.stage.rules.md rule 4: contradictory risk signals in the goal are resolved before field collection.
+  // clarify.classify.rules.md rule 3: contradictory risk signals in the goal are resolved before field collection.
   describe(GoalClassification.enum.contradictory, () => {
     it("should classify conflicting risk signals as contradictory", async () => {
       const result = await classifyGoal(
@@ -43,7 +43,8 @@ describe("classifyGoal", () => {
     });
   });
 
-  // Normal goals pass through to field collection without an intake phase.
+  // clarify.classify.rules.md rule 4: everything else passes as normal — vague goals, crypto ETFs, rich goals.
+  // When in doubt, classify as normal.
   describe(GoalClassification.enum.normal, () => {
     it("should classify a vague goal as normal", async () => {
       const result = await classifyGoal("I want to start investing");

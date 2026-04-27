@@ -51,7 +51,7 @@ Do not output any message.
 **Step 3 — Rejected**
 If the user insists the unrealistic goal is achievable or explicitly
 refuses to proceed with a realistic plan — stop.
-Do not call \`ask_user\`. Do not ask again.`;
+Do not call \`ask_user\`. Do not output any message. Do not ask again.`;
 
 export const handleUnrealisticExpectations = async (
   goal: string,
