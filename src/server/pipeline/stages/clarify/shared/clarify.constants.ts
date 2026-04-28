@@ -71,14 +71,8 @@ export const GOAL_CLASSIFICATIONS = GoalClassification.options
   .map((o) => `\`${o}\``)
   .join(", ");
 
-export const PROFILE_TRANSITION_MESSAGE =
-  "I'll now ask you a few questions to understand your financial situation and investment preferences — your answers will shape the plan we build together.";
-
 export const INTAKE_REJECTION_DEFAULT_MESSAGE =
   "No problem — feel free to come back when you're ready.";
-
-export const SHORT_TIMELINE_EXIT_MESSAGE =
-  "For money you plan to use within 3 years, ETFs carry too much timing risk — a market drop right before you need the funds may be hard to recover from in time. A money market fund is a better fit: lower risk, stays accessible, and still earns meaningful returns. When you're ready to invest money for a longer horizon, come back and we'll build an ETF plan.";
 
 export const INTAKE_REJECTION_MESSAGES: Partial<
   Record<(typeof GoalClassification.options)[number], string>
@@ -91,8 +85,18 @@ export const INTAKE_REJECTION_MESSAGES: Partial<
     "No problem — feel free to come back when you have a clearer picture of your risk tolerance.",
 };
 
+export const PROFILE_TRANSITION_MESSAGE =
+  "I'll now ask you a few questions to understand your financial situation and investment preferences — your answers will shape the plan we build together.";
+
+export const AMOUNT_EXIT_MESSAGE =
+  "To build your investment plan I need a specific amount — feel free to come back when you have a figure in mind.";
+
+export const SHORT_TIMELINE_EXIT_MESSAGE =
+  "For money you plan to use within 3 years, ETFs carry too much timing risk — a market drop right before you need the funds may be hard to recover from in time. A money market fund is a better fit: lower risk, stays accessible, and still earns meaningful returns. When you're ready to invest money for a longer horizon, come back and we'll build an ETF plan.";
+
 export const MAX_INTAKE_TOOL_CALLS = 5;
-export const MAX_FIELDS_TOOL_CALLS = 10;
+export const MAX_EF_DEBT_TOOL_CALLS = 4;
+export const MAX_FIELDS_TOOL_CALLS = 5;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
 export const MAX_RISK_TOOL_CALLS = 3;
 export const MAX_ALLOCATION_TOOL_CALLS = 5;

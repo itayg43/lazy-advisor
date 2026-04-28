@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { MAX_AGE, MAX_AMOUNT } from "#constants/validation.constants";
+import { MAX_AMOUNT } from "#constants/validation.constants";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
 export const GoalClassification = z.enum([
@@ -14,13 +14,24 @@ export const GoalClassificationSchema = z.object({
   type: GoalClassification,
 });
 
+export const IntakePhaseOutputSchema = z.object({
+  accepted: z.boolean(),
+});
+
 export const FieldsPhaseOutputSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
-  age: z.number().int().positive().max(MAX_AGE),
   timeline: TimelineBucket,
-  hasEmergencyFund: z.boolean(),
-  hasDebt: z.boolean(),
 });
+
+export const FieldsExtractionSchema = z.object({
+  amount: z.number().int().positive().max(MAX_AMOUNT).nullable(),
+  timeline: TimelineBucket,
+});
+
+export const FieldsPhaseResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("success"), fields: FieldsPhaseOutputSchema }),
+  z.object({ status: z.literal("failure"), code: z.literal("amount_missing") }),
+]);
 
 export const RiskScoreSchema = z.object({
   selfRatingScore: z.number().int().min(1).max(5),
@@ -41,8 +52,4 @@ export const AllocationPhaseOutputSchema = z
 
 export const ContributionPhaseOutputSchema = z.object({
   plansToContribute: z.boolean(),
-});
-
-export const IntakePhaseOutputSchema = z.object({
-  accepted: z.boolean(),
 });

@@ -83,8 +83,7 @@ export const collectRisk = async (
 ): Promise<RiskPhaseOutput> => {
   logger.info("Starting risk phase", { fields });
 
-  const context = `User age: ${fields.age}
-Investment timeline: ${fields.timeline}`;
+  const context = `Investment timeline: ${fields.timeline}`;
 
   const { responseId } = await runPhaseLoop({
     model: "gpt-5.4-nano",

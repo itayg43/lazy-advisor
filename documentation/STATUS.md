@@ -5,9 +5,21 @@
 | # | Task |
 |---|------|
 | T3 | EF/debt gate |
+| T3.5 | Drop `age`, rename `fields` → `parameters` |
+| T3.6 | Align `IntakePhaseOutput` to `{ status: "accepted" \| "rejected" }` pattern |
 | T4 | Equity |
 | T5 | Buffer |
 | T6 | Wire equity/buffer in orchestrator |
+
+## Task Notes
+
+### T3.5 — Drop `age`, rename `fields` → `parameters`
+
+**Summary:** After T3 removes EF/debt, the fields phase is left collecting `amount`, `age`, and `timeline`. `age` was never used in any decision logic — the allocation model is keyed on `timeline × riskTolerance` only, and the risk phase prompt explicitly guards against using age to suggest a score. The research notes confirm age was consciously dropped from the 5-factor design ("TDF glidepaths use years-to-retirement, not age"). With only `amount` and `timeline` remaining, `fields` is too generic a name — rename to `parameters`, which reflects that these are the two input parameters that drive everything downstream.
+
+**Why now (after T3):** T3 leaves the phase in a transitional state. This task completes the cleanup with a clean boundary.
+
+**Blast radius (to assess when planning):** schema, types, phase file + directory rename, prompt + extraction instructions, rules file, eval file, runs/last-run files, all downstream context strings that pass `fields.age`, imports across the pipeline.
 
 ## Improvements
 

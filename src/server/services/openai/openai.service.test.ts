@@ -105,10 +105,7 @@ describe("openaiService", () => {
   describe("callOpenAIParsed", () => {
     const mockParsedOutput: UserProfile = {
       amount: 10000,
-      age: 30,
       timeline: TimelineBucket.enum["10+ years"],
-      hasEmergencyFund: true,
-      hasDebt: false,
       riskTolerance: RiskTolerance.enum.moderate,
       equityPercentage: 60,
       bufferPercentage: 40,
