@@ -29,12 +29,14 @@ describe("handleContradictoryRisk", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // clarify.stage.rules.md rule 4: stage uses a concrete loss scenario to resolve contradictory risk signals.
+  // clarify.contradictory.rules.md rule 1: stage presents a concrete loss scenario (A/B/C options)
+  // to surface real risk preference. No field collection in this phase.
+  // clarify.contradictory.rules.md rule 2: accepted — extraction returns { accepted: true }.
   describe("accepted", () => {
     it("should resolve contradiction and return accepted result when user picks a risk level", async () => {
       lastGoal = "I want maximum returns but I can't afford to lose any money";
       const responder = createTrackedResponder([
-        "If my portfolio dropped 20% I'd feel sick but I'd hold and wait for recovery. I guess I'm moderate.",
+        "If my portfolio dropped 20% I'd feel sick but I'd hold and wait for recovery.",
       ]);
       lastTranscript = responder.transcript;
 
@@ -45,12 +47,10 @@ describe("handleContradictoryRisk", () => {
       );
 
       expect(result.accepted).toBe(true);
-      if (result.accepted) {
-        expect(result.responseId).toBeTruthy();
-      }
     });
   });
 
+  // clarify.contradictory.rules.md rule 3: rejected — extraction returns { accepted: false }.
   describe("rejected", () => {
     it("should return rejected result when user disengages without resolving", async () => {
       lastGoal = "I want maximum returns but I can't afford to lose any money";

@@ -100,16 +100,14 @@ The two integers **must sum to exactly 100**. If the user agreed to 70% stocks, 
 Extract only the final agreed split — not an intermediate proposal. Use the user's exact number (e.g., 77, not snapped to a round value).`;
 
 export const collectAllocation = async (
-  goal: string,
   fields: FieldsPhaseOutput,
   risk: RiskPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<AllocationPhaseOutput> => {
-  logger.info("Starting allocation phase", { goal, fields, risk });
+  logger.info("Starting allocation phase", { fields, risk });
 
   const context = [
-    `User goal: ${goal}`,
     `Investment amount: ₪${fields.amount.toLocaleString()}`,
     `Investment timeline: ${fields.timeline}`,
     `Risk tolerance: ${risk.riskTolerance}`,

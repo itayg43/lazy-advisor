@@ -42,3 +42,7 @@ export const AllocationPhaseOutputSchema = z
 export const ContributionPhaseOutputSchema = z.object({
   plansToContribute: z.boolean(),
 });
+
+export const IntakePhaseOutputSchema = z.object({
+  accepted: z.boolean(),
+});

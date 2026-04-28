@@ -1,44 +1,29 @@
+import { zodTextFormat } from "openai/helpers/zod";
+
 import { createLogger } from "#lib/logger";
 import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import { IntakePhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyIntake");
 
-// responseId: the final OpenAI response ID from the intake loop. Carried for Phase 7d,
-// which will make a post-acceptance extraction call against it to produce redirectedGoal.
-// Not consumed by the orchestrator directly.
-//
-// redirectedGoal: clean goal string produced by Phase 7d after the user accepts an ETF
-// redirect. When present, the orchestrator passes it to all downstream phases instead of
-// the original raw goal. Absent until Phase 7d lands — orchestrator falls back to goal.
-export type IntakeResult =
-  | { accepted: true; responseId: string; redirectedGoal?: string }
-  | { accepted: false };
+const INTAKE_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user accepted the proposed direction.
 
-export type IntakeHandler = (
-  goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-) => Promise<IntakeResult>;
+Set accepted to true if the user agreed to proceed (e.g., with ETF investing, a realistic timeline, or clarified risk tolerance). Set to false if they declined, disengaged, or showed no clear acceptance.`;
 
-// Determines acceptance from the model's terminal phrase: "Got it." → accepted, "Understood." → rejected.
-// The terminal phrase is the classification signal — no separate API call is needed.
-// The prompts instruct the model to output exactly these phrases, and evals enforce that contract.
-const extractAcceptanceFromText = (terminalText: string): boolean =>
-  /^\s*got it[.!]?\s*$/i.test(terminalText);
-
-// Runs the tool-call loop for an intake phase and interprets the terminal phrase as an IntakeResult.
 export const runIntakePhase = async (
   instructions: string,
   phaseName: string,
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<IntakeResult> => {
+): Promise<IntakePhaseOutput> => {
   logger.info(`Starting ${phaseName}`);
 
-  const { responseId, terminalText } = await runPhaseLoop(
+  const { responseId } = await runPhaseLoop(
     instructions,
     { input: goal },
     MAX_INTAKE_TOOL_CALLS,
@@ -47,8 +32,16 @@ export const runIntakePhase = async (
     waitForResponse,
   );
 
-  const accepted = extractAcceptanceFromText(terminalText);
-  logger.info(`${phaseName} complete`, { accepted });
+  const { output, usage } = await callOpenAIParsed<IntakePhaseOutput>({
+    model: "gpt-5.4-nano",
+    instructions: INTAKE_EXTRACTION_INSTRUCTIONS,
+    input: [],
+    previous_response_id: responseId,
+    text: { format: zodTextFormat(IntakePhaseOutputSchema, "IntakePhaseOutputSchema") },
+    reasoning: { effort: "low" },
+  });
 
-  return accepted ? { accepted: true, responseId } : { accepted: false };
+  logger.info(`${phaseName} extraction complete`, { accepted: output.accepted, usage });
+
+  return output;
 };

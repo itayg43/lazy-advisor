@@ -8,6 +8,7 @@ import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
+  PROFILE_TRANSITION_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { UserProfileSchema } from "#schemas/pipeline.schemas";
@@ -37,17 +38,12 @@ export const runClarifyStage = async (
     }
   }
 
-  const fields = await collectFields(goal, sendToUser, waitForResponse);
-  const risk = await collectRisk(goal, fields, sendToUser, waitForResponse);
-  const allocation = await collectAllocation(
-    goal,
-    fields,
-    risk,
-    sendToUser,
-    waitForResponse,
-  );
+  sendToUser(PROFILE_TRANSITION_MESSAGE);
+
+  const fields = await collectFields(sendToUser, waitForResponse);
+  const risk = await collectRisk(fields, sendToUser, waitForResponse);
+  const allocation = await collectAllocation(fields, risk, sendToUser, waitForResponse);
   const contribution = await collectContribution(
-    goal,
     fields,
     allocation,
     sendToUser,

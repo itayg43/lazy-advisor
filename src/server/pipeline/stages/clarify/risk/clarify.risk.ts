@@ -72,15 +72,13 @@ const mapScoreToBucket = (score: number): RiskPhaseOutput["riskTolerance"] => {
 };
 
 export const collectRisk = async (
-  goal: string,
   fields: FieldsPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<RiskPhaseOutput> => {
-  logger.info("Starting risk phase", { goal, fields });
+  logger.info("Starting risk phase", { fields });
 
-  const context = `User goal: ${goal}
-User age: ${fields.age}
+  const context = `User age: ${fields.age}
 Investment timeline: ${fields.timeline}`;
 
   const { responseId } = await runPhaseLoop(

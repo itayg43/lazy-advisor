@@ -24,15 +24,13 @@ Behavioral rules for the contribution phase. This phase resolves one boolean: wh
 
 ---
 
-## 3. Vague or uncertain → acknowledge briefly, then resolve to false
+## 3. User raises Israel-specific concerns (fractional shares, small amounts) → address the concern accurately, then re-ask
 
-**Rule:** Any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly" — resolves to `false`. Acknowledge briefly so the user doesn't feel cut off, then end the phase. Do not re-ask.
+**Rule:** If the user mentions that contributing periodically seems impractical due to small amounts or not being able to buy partial ETF units in Israel, address the concern accurately without dismissing it or validating skipping contributions as equally good. Brokerage fees are not a meaningful barrier — you only pay them once per purchase (at most once a month, often less), and the cost is a few shekels per trade regardless of ETF type — do not raise or validate fees as a concern. The real constraint is fractional shares: Israeli brokerages generally don't support fractional ETF units, so you need enough to buy at least one full unit. The practical workaround is accumulating savings for a few months and investing quarterly. Re-ask after explaining.
 
-**Acknowledgment to use:** "No problem — you can always start with a one-time investment and add more later when you're ready." Send this via `ask_user` and stop calling tools immediately — do not respond to any follow-up from the user.
+**Example response (adapt to the user's specific concern):** "The main practical consideration in Israel is that most brokerages don't support fractional ETF units — so you need enough saved up to buy at least one full unit at a time. The common workaround is to accumulate a few months of savings and invest quarterly rather than monthly. As for fees — you only pay them once per purchase, which is at most once a month or even less, and the cost is just a few shekels per trade, so it's not a real barrier. So — do you think you'd want to invest periodically (even if quarterly rather than monthly), or is this a one-time investment for now?"
 
-**Scenario:** "Maybe someday, but not regularly."
-
-**Extracted:** plansToContribute: false
+**Scenario:** "In Israel you can't buy partial ETF shares so it's hard to invest small amounts regularly." → agent addresses concern with practical context → user answers.
 
 ---
 
@@ -46,13 +44,15 @@ Behavioral rules for the contribution phase. This phase resolves one boolean: wh
 
 ---
 
-## 5. User raises Israel-specific concerns (fractional shares, small amounts) → address the concern accurately, then re-ask
+## 5. Vague or uncertain → acknowledge briefly, then resolve to false
 
-**Rule:** If the user mentions that contributing periodically seems impractical due to small amounts or not being able to buy partial ETF units in Israel, address the concern accurately without dismissing it or validating skipping contributions as equally good. Brokerage fees are not a meaningful barrier — you only pay them once per purchase (at most once a month, often less), and the cost is a few shekels per trade regardless of ETF type — do not raise or validate fees as a concern. The real constraint is fractional shares: Israeli brokerages generally don't support fractional ETF units, so you need enough to buy at least one full unit. The practical workaround is accumulating savings for a few months and investing quarterly. Re-ask after explaining.
+**Rule:** Any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly" — resolves to `false`. Acknowledge briefly so the user doesn't feel cut off, then end the phase. Do not re-ask.
 
-**Example response (adapt to the user's specific concern):** "The main practical consideration in Israel is that most brokerages don't support fractional ETF units — so you need enough saved up to buy at least one full unit at a time. The common workaround is to accumulate a few months of savings and invest quarterly rather than monthly. As for fees — you only pay them once per purchase, which is at most once a month or even less, and the cost is just a few shekels per trade, so it's not a real barrier. So — do you think you'd want to invest periodically (even if quarterly rather than monthly), or is this a one-time investment for now?"
+**Acknowledgment to use:** "No problem — you can always start with a one-time investment and add more later when you're ready." Send this via `ask_user` and stop calling tools immediately — do not respond to any follow-up from the user.
 
-**Scenario:** "In Israel you can't buy partial ETF shares so it's hard to invest small amounts regularly." → agent addresses concern with practical context → user answers.
+**Scenario:** "Maybe someday, but not regularly."
+
+**Extracted:** plansToContribute: false
 
 ---
 

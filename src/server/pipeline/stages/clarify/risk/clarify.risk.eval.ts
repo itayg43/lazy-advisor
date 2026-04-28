@@ -18,7 +18,6 @@ const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathn
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
 describe("collectRisk", () => {
-  const mockGoal = "Invest ₪50,000 for long-term growth";
   const mockFields: FieldsPhaseOutput = {
     amount: 50_000,
     age: 35,
@@ -65,7 +64,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -84,7 +82,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -102,7 +99,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -120,7 +116,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -138,7 +133,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -156,7 +150,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -175,7 +168,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -193,7 +185,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -211,7 +202,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -229,7 +219,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -247,7 +236,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -268,7 +256,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -286,7 +273,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -304,7 +290,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -325,7 +310,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -343,7 +327,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -361,7 +344,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -382,7 +364,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,
@@ -404,7 +385,6 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockGoal,
       mockFields,
       responder.sendToUser,
       responder.waitForResponse,

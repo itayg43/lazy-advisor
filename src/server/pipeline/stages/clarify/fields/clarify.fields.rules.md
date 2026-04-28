@@ -4,37 +4,27 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 
 ---
 
-## 1. Partial context in initial goal → agent asks only for gaps
+## 1. Fields are collected in two structured turns
 
-**Rule:** The agent asks only for gaps — fields already stated in the goal (amount, age, context) are not re-asked. If the goal provides enough to infer a field, treat it as answered.
+**Rule:** The agent always opens by asking for amount, age, and timeline together (turn 1), then asks hasEmergencyFund and hasDebt together in a single follow-up (turn 2). The two groups are always kept separate — financial health questions are never mixed into the first turn.
 
-**Scenario:** "I'm 35, ₪75,000, long-term retirement savings" — only gaps (emergency fund, debt, timeline) are asked.
-
-**Extracted:** amount: 75000 | age: 35 | timeline: "10+ years"
-
----
-
-## 2. Multiple fields missing → batched, most critical first
-
-**Rule:** When several fields are missing, ask the most critical ones first (amount, age, timeline) — at most 4 questions per turn. Remaining fields are collected in the next turn.
-
-**Scenario:** "I want to start investing." — amount, age, timeline, hasEmergencyFund, hasDebt are all missing. First turn asks the 4 most critical; second turn asks the rest.
+**Scenario:** All fields unknown — turn 1 asks amount, age, timeline; turn 2 asks hasEmergencyFund and hasDebt together.
 
 **Extracted:** all fields collected across two turns
 
 ---
 
-## 3. Vague timeline → accepted after second ask
+## 2. Vague timeline → accepted after second ask
 
 **Rule:** If a field has been asked twice without a specific value, accept the best available answer and move on — do not probe a third time.
 
-**Scenario:** "I want to invest" — user says "long-term" on first response, "10-15 years" on second.
+**Scenario:** User says "long-term" on first response, "10-15 years" on second.
 
-**Extracted:** amount: 20000 | age: 32 | timeline: "10+ years" (mapped from "10-15 years")
+**Extracted:** timeline: "10+ years" (mapped from "10-15 years")
 
 ---
 
-## 4. Timeline is collected as one of four named buckets; agent presents choices when asking
+## 3. Timeline is collected as one of four named buckets; agent presents choices when asking
 
 **Rule:** When asking for timeline, the agent always presents the four investment horizon buckets as options. Any stated timeframe is mapped to the nearest bucket at extraction time.
 
@@ -43,6 +33,6 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 - `"5 years"` → `"3–5 years"`
 - `"10 years"` → `"5–10 years"`
 
-**Scenario:** "I want to invest ₪50,000, I'm 25" — agent presents the four bucket options; user picks one.
+**Scenario:** All fields unknown — agent opens by asking for amount, age, timeline (presenting four bucket options), and hasEmergencyFund; user picks a timeline bucket.
 
 **Extracted:** timeline: one of the four enum values

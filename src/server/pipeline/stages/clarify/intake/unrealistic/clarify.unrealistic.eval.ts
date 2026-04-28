@@ -29,8 +29,9 @@ describe("handleUnrealisticExpectations", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // clarify.stage.rules.md rule 2: stage explains why doubling in 6 months is unrealistic and asks
-  // if the user wants to proceed with a realistic long-term plan.
+  // clarify.unrealistic.rules.md rule 1: stage explains why the goal is unrealistic with concrete contrast,
+  // and asks if the user wants to proceed with a realistic long-term plan.
+  // clarify.unrealistic.rules.md rule 2: accepted — extraction returns { accepted: true }.
   describe("accepted", () => {
     it("should redirect and return accepted result when user pivots to long-term", async () => {
       lastGoal = "I have ₪18,000 and I want to double it in 6 months";
@@ -46,12 +47,10 @@ describe("handleUnrealisticExpectations", () => {
       );
 
       expect(result.accepted).toBe(true);
-      if (result.accepted) {
-        expect(result.responseId).toBeTruthy();
-      }
     });
   });
 
+  // clarify.unrealistic.rules.md rule 3: rejected — extraction returns { accepted: false }.
   describe("rejected", () => {
     it("should return rejected result when user insists on unrealistic goal", async () => {
       lastGoal = "I have ₪18,000 and I want to double it in 6 months";

@@ -65,6 +65,9 @@ export const GOAL_CLASSIFICATIONS = GoalClassification.options
   .map((o) => `\`${o}\``)
   .join(", ");
 
+export const PROFILE_TRANSITION_MESSAGE =
+  "I'll now ask you a few questions to understand your financial situation and investment preferences — your answers will shape the plan we build together.";
+
 export const INTAKE_REJECTION_DEFAULT_MESSAGE =
   "No problem — feel free to come back when you're ready.";
 

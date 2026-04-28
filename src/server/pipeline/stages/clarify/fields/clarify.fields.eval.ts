@@ -13,7 +13,6 @@ import { TimelineBucket } from "#schemas/pipeline.schemas";
 const LAST_RUN_PATH = new URL("clarify.fields.last-run.md", import.meta.url).pathname;
 
 describe("collectFields", () => {
-  let lastGoal: string | undefined;
   let lastTranscript: TranscriptEntry[] | undefined;
   let lastOutput: FieldsPhaseOutput | undefined;
 
@@ -24,73 +23,23 @@ describe("collectFields", () => {
     appendLastRunEntry(LAST_RUN_PATH, {
       name: ctx.task.name,
       passed: ctx.task.result?.state === "pass",
-      goal: lastGoal,
       transcript: lastTranscript,
       output: lastOutput,
       error: ctx.task.result?.errors?.[0]?.message,
     });
-    lastGoal = lastTranscript = lastOutput = undefined;
+    lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.fields.rules.md rule 1: fields stated in the goal (amount, timeline) are not re-asked.
-  it("should ask only for gaps when goal includes amount and timeline", async () => {
-    lastGoal = "I want to start investing, I have about ₪18,000 and a 7-year horizon";
+  // clarify.fields.rules.md rule 1: agent always opens with amount/age/timeline in turn 1,
+  // then asks EF and debt together in turn 2.
+  it("should collect all fields in exactly two turns", async () => {
     const responder = createTrackedResponder([
-      "I'm 27, yes I have an emergency fund, no debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.amount).toBe(18_000);
-    expect(output.age).toBe(27);
-    expect(output.timeline).toBe(TimelineBucket.enum["5–10 years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
-  });
-
-  // clarify.fields.rules.md rule 1: fields already stated in the goal are not re-asked.
-  it("should ask only for gaps when goal already contains several fields", async () => {
-    lastGoal = "I'm 35, ₪75,000, long-term retirement savings";
-    const responder = createTrackedResponder([
-      "About 30 years — I'll retire at 65",
+      "₪30,000, I'm 27, 20 years",
       "Yes emergency fund, no debt",
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.amount).toBe(75_000);
-    expect(output.age).toBe(35);
-    expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
-  });
-
-  // clarify.fields.rules.md rule 2: when many fields are missing, at most 4 are asked per turn.
-  it("should ask at most 4 questions in the first turn when many fields are missing", async () => {
-    lastGoal = "I want to start investing";
-    const responder = createTrackedResponder([
-      "₪30,000, I'm 27, 20 years, yes emergency fund",
-      "No debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(30_000);
@@ -98,28 +47,19 @@ describe("collectFields", () => {
     expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
-    // First turn asked at most 4 questions — verified by the two-turn scripted flow completing successfully
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-    // debt is lower-priority than amount/age/timeline — must not appear in the first turn.
-    // Remove this check once EF/debt collection is removed from the fields phase (T3 gate).
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns[0].content.toLowerCase()).not.toContain("debt");
   });
 
-  // clarify.fields.rules.md rule 3: a soft answer on the second ask for timeline is accepted without a third probe.
-  it("should stop probing timeline after 2 asks and accept best available answer", async () => {
-    lastGoal = "I want to invest";
+  // clarify.fields.rules.md rule 2: vague timeline → re-asked before moving to turn 2.
+  it("should re-ask timeline when vague before proceeding to EF/debt", async () => {
     const responder = createTrackedResponder([
       "I have ₪20,000, I'm 32, long-term",
-      "I guess maybe 10-15 years. yes emergency fund, no debt",
+      "I guess maybe 10-15 years",
+      "Yes emergency fund, no debt",
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(20_000);
@@ -129,19 +69,16 @@ describe("collectFields", () => {
     expect(output.hasDebt).toBe(false);
   });
 
-  // clarify.fields.rules.md rule 4: when asking for timeline, agent presents the four bucket options.
+  // clarify.fields.rules.md rule 3: when asking for timeline, agent presents the four bucket options.
   it("should present the four timeline bucket options when asking for timeline", async () => {
-    lastGoal = "I want to invest ₪50,000, I'm 25";
     const responder = createTrackedResponder([
-      "5-10 years, yes I have an emergency fund, no debt",
+      "₪50,000, I'm 25",
+      "5-10 years",
+      "Yes I have an emergency fund, no debt",
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(50_000);
@@ -151,23 +88,21 @@ describe("collectFields", () => {
     expect(output.hasDebt).toBe(false);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns[0].content).toMatch(/under 3 years/i);
-    expect(agentTurns[0].content).toMatch(/3[–-]5 years/i);
-    expect(agentTurns[0].content).toMatch(/5[–-]10 years/i);
-    expect(agentTurns[0].content).toMatch(/10\+ years/i);
+    const timelineTurn = agentTurns.find((t) => /under 3 years/i.test(t.content));
+    expect(timelineTurn?.content).toMatch(/3[–-]5 years/i);
+    expect(timelineTurn?.content).toMatch(/5[–-]10 years/i);
+    expect(timelineTurn?.content).toMatch(/10\+ years/i);
   });
 
-  // clarify.fields.rules.md rule 4: stated timeframe is mapped to nearest bucket.
+  // clarify.fields.rules.md rule 3: stated timeframe is mapped to nearest bucket.
   it("should map a short stated timeframe to the 'under 3 years' bucket", async () => {
-    lastGoal = "I want to invest ₪20,000, I'm 50, I'll need this money in about 2 years";
-    const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
+    const responder = createTrackedResponder([
+      "₪20,000, I'm 50, I need this money in about 2 years",
+      "Yes emergency fund, no debt",
+    ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(20_000);
@@ -177,17 +112,15 @@ describe("collectFields", () => {
     expect(output.hasDebt).toBe(false);
   });
 
-  // clarify.fields.rules.md rule 4: stated timeframe is mapped to nearest bucket.
+  // clarify.fields.rules.md rule 3: stated timeframe is mapped to nearest bucket.
   it("should map a medium stated timeframe to the '3–5 years' bucket", async () => {
-    lastGoal = "I'm 45, ₪25,000 to invest, about 4-year horizon";
-    const responder = createTrackedResponder(["Yes emergency fund, no debt"]);
+    const responder = createTrackedResponder([
+      "₪25,000, I'm 45, about 4-year horizon",
+      "Yes emergency fund, no debt",
+    ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
     expect(output.amount).toBe(25_000);
