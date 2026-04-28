@@ -81,14 +81,16 @@ export const collectRisk = async (
   const context = `User age: ${fields.age}
 Investment timeline: ${fields.timeline}`;
 
-  const { responseId } = await runPhaseLoop(
-    RISK_PROMPT,
-    { input: context },
-    MAX_RISK_TOOL_CALLS,
-    "Risk phase",
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
+    instructions: RISK_PROMPT,
+    input: context,
+    maxToolCalls: MAX_RISK_TOOL_CALLS,
+    phaseName: "Risk phase",
     sendToUser,
     waitForResponse,
-  );
+  });
 
   const { id, usage, output } = await callOpenAIParsed<RiskScore>({
     model: "gpt-5.4-nano",

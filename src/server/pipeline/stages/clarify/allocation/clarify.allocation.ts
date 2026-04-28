@@ -113,14 +113,16 @@ export const collectAllocation = async (
     `Risk tolerance: ${risk.riskTolerance}`,
   ].join("\n");
 
-  const { responseId } = await runPhaseLoop(
-    ALLOCATION_PROMPT,
-    { input: context },
-    MAX_ALLOCATION_TOOL_CALLS,
-    "Allocation phase",
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
+    instructions: ALLOCATION_PROMPT,
+    input: context,
+    maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
+    phaseName: "Allocation phase",
     sendToUser,
     waitForResponse,
-  );
+  });
 
   const { id, usage, output } = await callOpenAIParsed<AllocationPhaseOutput>({
     model: "gpt-5.4-nano",

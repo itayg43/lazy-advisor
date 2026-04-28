@@ -2,10 +2,10 @@ import type {
   ResponseFunctionToolCall,
   ResponseInputItem,
 } from "openai/resources/responses/responses";
+import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
-import { type PhaseSourceParams } from "#pipeline/lib/build-source-params";
 import { getStageTools } from "#pipeline/tools";
 import {
   ASK_USER_TOOL,
@@ -16,6 +16,17 @@ import {
 import { callOpenAI } from "#services/openai";
 
 const logger = createLogger("clarifyLib");
+
+type PhaseLoopParams = {
+  model: ResponsesModel;
+  effort: ReasoningEffort;
+  instructions: string;
+  input: string | ResponseInputItem[];
+  maxToolCalls: number;
+  phaseName: string;
+  sendToUser: SendToUser;
+  waitForResponse: WaitForResponse;
+};
 
 export const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
@@ -61,24 +72,24 @@ export const collectToolOutputs = async (
   return toolOutputs;
 };
 
-// Runs the tool-call loop for a clarify phase. Enforces: model gpt-5.4-nano,
-// reasoning effort low, clarify tools. Returns the final response ID.
-export const runPhaseLoop = async (
-  instructions: string,
-  initialParams: PhaseSourceParams,
-  maxToolCalls: number,
-  phaseName: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<{ responseId: string }> => {
+export const runPhaseLoop = async ({
+  model,
+  effort,
+  instructions,
+  input,
+  maxToolCalls,
+  phaseName,
+  sendToUser,
+  waitForResponse,
+}: PhaseLoopParams): Promise<{ responseId: string }> => {
   const tools = getStageTools();
 
   let response = await callOpenAI({
-    model: "gpt-5.4-nano",
+    model,
     instructions,
-    ...initialParams,
+    input,
     tools,
-    reasoning: { effort: "low" },
+    reasoning: { effort },
   });
 
   logger.info(`${phaseName} initial response`, {
@@ -111,12 +122,12 @@ export const runPhaseLoop = async (
     );
 
     response = await callOpenAI({
-      model: "gpt-5.4-nano",
+      model,
       instructions,
       tools,
       previous_response_id: response.id,
       input: toolOutputs,
-      reasoning: { effort: "low" },
+      reasoning: { effort },
     });
 
     logger.info(`${phaseName} follow-up response`, {

@@ -106,14 +106,16 @@ export const collectFields = async (
 ): Promise<FieldsPhaseOutput> => {
   logger.info("Starting fields phase");
 
-  const { responseId } = await runPhaseLoop(
-    FIELDS_PROMPT,
-    { input: "Begin." },
-    MAX_FIELDS_TOOL_CALLS,
-    "Fields phase",
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
+    instructions: FIELDS_PROMPT,
+    input: "Begin.",
+    maxToolCalls: MAX_FIELDS_TOOL_CALLS,
+    phaseName: "Fields phase",
     sendToUser,
     waitForResponse,
-  );
+  });
 
   const { id, usage, output } = await callOpenAIParsed<FieldsPhaseOutput>({
     model: "gpt-5.4-nano",

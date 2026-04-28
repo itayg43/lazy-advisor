@@ -63,14 +63,16 @@ export const collectContribution = async (
 Investment timeline: ${fields.timeline}
 Allocation: ${allocation.equityPercentage}% equity (₪${equityAmount.toLocaleString()}), ${allocation.bufferPercentage}% buffer (₪${bufferAmount.toLocaleString()})`;
 
-  const { responseId } = await runPhaseLoop(
-    CONTRIBUTION_PROMPT,
-    { input: context },
-    MAX_CONTRIBUTION_TOOL_CALLS,
-    "Contribution phase",
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
+    instructions: CONTRIBUTION_PROMPT,
+    input: context,
+    maxToolCalls: MAX_CONTRIBUTION_TOOL_CALLS,
+    phaseName: "Contribution phase",
     sendToUser,
     waitForResponse,
-  );
+  });
 
   const { id, usage, output } = await callOpenAIParsed<ContributionPhaseOutput>({
     model: "gpt-5.4-nano",

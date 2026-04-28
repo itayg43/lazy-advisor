@@ -23,14 +23,16 @@ export const runIntakePhase = async (
 ): Promise<IntakePhaseOutput> => {
   logger.info(`Starting ${phaseName}`);
 
-  const { responseId } = await runPhaseLoop(
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
     instructions,
-    { input: goal },
-    MAX_INTAKE_TOOL_CALLS,
+    input: goal,
+    maxToolCalls: MAX_INTAKE_TOOL_CALLS,
     phaseName,
     sendToUser,
     waitForResponse,
-  );
+  });
 
   const { output, usage } = await callOpenAIParsed<IntakePhaseOutput>({
     model: "gpt-5.4-nano",
