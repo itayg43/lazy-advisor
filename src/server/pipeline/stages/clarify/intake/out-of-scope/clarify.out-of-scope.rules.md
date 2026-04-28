@@ -38,6 +38,6 @@ Behavioral rules for the out-of-scope intake handler. Each entry: the rule, a on
 
 ## 5. Mixed ETF + stock picking goal → acknowledge ETF interest, redirect stock-picking component
 
-**Rule:** When the user's goal mixes ETF investing with individual stock picking (e.g., "I want ETFs but also buy some NVIDIA"), the agent acknowledges the ETF interest positively and addresses only the stock component: explains concentration risk using the user's specific stock by name, offers a sector ETF as an alternative (no ticker named). Closes with a question asking if the user wants to proceed with a pure ETF plan.
+**Rule:** When the user's goal mixes ETF investing with individual stock picking (e.g., "I want ETFs but also buy some NVIDIA"), the agent acknowledges the ETF interest positively and addresses only the stock component: explains concentration risk using the user's specific stock by name, offers a diversified ETF as an alternative (no ticker named). Closes with a question asking if the user wants to proceed with a pure ETF plan.
 
-**Scenario:** "I want to invest in ETFs but also buy some NVIDIA stock" → agent acknowledges ETF interest, explains NVIDIA concentration risk, offers sector ETF alternative (no ticker), asks if user wants a pure ETF approach.
+**Scenario:** "I want to invest in ETFs but also buy some NVIDIA stock" → agent acknowledges ETF interest, explains NVIDIA concentration risk, offers diversified ETF alternative (no ticker), asks if user wants a pure ETF approach.

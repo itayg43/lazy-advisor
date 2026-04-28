@@ -137,6 +137,8 @@ describe("handleOutOfScopeRedirect", () => {
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
+      const agentMessages = responder.transcript.filter((t) => t.role === "agent");
+      expect(agentMessages.some((t) => /diversified/i.test(t.content))).toBe(true);
     });
 
     it("should return rejected result when user insists on keeping the stock", async () => {

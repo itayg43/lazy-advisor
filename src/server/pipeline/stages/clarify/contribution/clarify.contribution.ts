@@ -24,7 +24,7 @@ You have not yet asked the user anything. Send exactly this question via the \`a
 # Turn 2+ — Processing the User's Response
 The user has now responded. All replies — including re-asks after an explanation — must be sent via the \`ask_user\` tool. Never output a question as plain text.
 
-**Before matching any case below:** scan the user's message for these words: "Israel", "Israeli", "fractional", "partial shares", "partial ETF", "partial units", "small amounts". If any are present, go directly to Case 1 — do not evaluate Cases 2–5.
+**Before matching any case below:** if the user raises a practical constraint on making periodic contributions — such as difficulty buying fractional ETF units, investing from Israel, brokerage minimums, or investing small amounts — go directly to Case 1. Do not evaluate Cases 2–5.
 
 Otherwise, evaluate the cases below in order and execute the first match.
 
@@ -40,10 +40,10 @@ Give a beginner-friendly explanation in 2 sentences: one for mechanics (referenc
 Example (adapt tone and phrasing, use actual equity amount from context): "It means adding a fixed amount to your ₪[equity amount] equity position every month or quarter. The main benefit is that you buy more units when prices are low and fewer when prices are high, which smooths out the effect of market swings over time. So — do you think you'd want to add money periodically, or is this a one-time investment for now?"
 
 **Case 3 — Clear yes**
-Triggered when: user confirms they plan to contribute periodically → end the phase.
+Triggered when: user confirms they plan to contribute periodically. Do not call ask_user. Do not send any message. End the phase immediately.
 
 **Case 4 — Clear no**
-Triggered when: user confirms this is a one-time investment → end the phase.
+Triggered when: user confirms this is a one-time investment. Do not call ask_user. Do not send any message. End the phase immediately.
 
 **Case 5 — Vague or uncertain answer**
 Triggered when: any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly".
