@@ -28,8 +28,8 @@ describe("classifyGoal", () => {
     lastGoal = lastClassification = undefined;
   });
 
-  // clarify.classify.rules.md rule 1: individual stock picking, day trading, and direct crypto purchases
-  // are out of scope — redirect to ETF-based investing.
+  // clarify.classify.rules.md rule 1: individual stock picking, day trading, direct crypto purchases,
+  // and mixed ETF+stock goals are out of scope — redirect to ETF-based investing.
   describe(GoalClassification.enum.out_of_scope, () => {
     it("should classify individual stock picking as out_of_scope", async () => {
       lastGoal = "Should I buy NVIDIA stock?";
@@ -47,6 +47,14 @@ describe("classifyGoal", () => {
 
     it("should classify direct crypto purchase as out_of_scope", async () => {
       lastGoal = "I want to buy Bitcoin with ₪15,000";
+      const result = await classifyGoal(lastGoal);
+      lastClassification = result;
+      expect(result).toBe(GoalClassification.enum.out_of_scope);
+    });
+
+    it("should classify a mixed ETF-and-stock goal as out_of_scope", async () => {
+      // ETF interest doesn't neutralize the stock-picking component — still needs redirect.
+      lastGoal = "I want to invest in ETFs but also buy some NVIDIA stock";
       const result = await classifyGoal(lastGoal);
       lastClassification = result;
       expect(result).toBe(GoalClassification.enum.out_of_scope);
@@ -94,6 +102,14 @@ describe("classifyGoal", () => {
 
     it("should classify a rich goal as normal", async () => {
       lastGoal = "I'm 35, I have ₪75,000, moderate risk, long-term retirement savings";
+      const result = await classifyGoal(lastGoal);
+      lastClassification = result;
+      expect(result).toBe(GoalClassification.enum.normal);
+    });
+
+    it("should classify a sector-only ETF goal as normal", async () => {
+      // Sector preference is still ETF-based investing — normal by rule 4.
+      lastGoal = "I want to invest in real estate ETFs";
       const result = await classifyGoal(lastGoal);
       lastClassification = result;
       expect(result).toBe(GoalClassification.enum.normal);

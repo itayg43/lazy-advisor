@@ -1,13 +1,5 @@
 # Project Status
 
-## Up Next
-
-**Evals review follow-up (branch: `feature/evals-review`).** Working through issues from the 2026-04-28 evals report. Progress:
-
-| # | Issue | Status |
-|---|-------|--------|
-| 10 | Classify — borderline goal coverage | ⏳ Next |
-
 ## Task Queue
 
 | # | Task |

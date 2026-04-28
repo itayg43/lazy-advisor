@@ -33,3 +33,11 @@ Behavioral rules for the out-of-scope intake handler. Each entry: the rule, a on
 **Rule:** When the user asks a clarifying question (e.g., "what's an ETF?", "why can't I just buy the stock?") instead of accepting or rejecting, the agent answers in one or two educational sentences, notes that specifics will be covered later, and re-asks whether the user wants to proceed with an ETF-based plan. No profile or data collection questions are asked here. The user's response to the re-ask determines acceptance per rules 2 and 3.
 
 **Scenario:** Agent redirects → user asks "what's an ETF?" → agent answers briefly and re-asks → user accepts → `{ accepted: true }`.
+
+---
+
+## 5. Mixed ETF + stock picking goal → acknowledge ETF interest, redirect stock-picking component
+
+**Rule:** When the user's goal mixes ETF investing with individual stock picking (e.g., "I want ETFs but also buy some NVIDIA"), the agent acknowledges the ETF interest positively and addresses only the stock component: explains concentration risk using the user's specific stock by name, offers a sector ETF as an alternative (no ticker named). Closes with a question asking if the user wants to proceed with a pure ETF plan.
+
+**Scenario:** "I want to invest in ETFs but also buy some NVIDIA stock" → agent acknowledges ETF interest, explains NVIDIA concentration risk, offers sector ETF alternative (no ticker), asks if user wants a pure ETF approach.

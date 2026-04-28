@@ -122,6 +122,39 @@ describe("handleOutOfScopeRedirect", () => {
     });
   });
 
+  // clarify.out-of-scope.rules.md rule 5: mixed ETF + stock picking — acknowledge ETF interest, redirect stock component.
+  describe("mixed ETF and stock picking", () => {
+    it("should redirect stock component and return accepted result", async () => {
+      lastGoal = "I want to invest in ETFs but also buy some NVIDIA stock";
+      const responder = createTrackedResponder(["ok, just ETFs is fine"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    it("should return rejected result when user insists on keeping the stock", async () => {
+      lastGoal = "I want to invest in ETFs but also buy some NVIDIA stock";
+      const responder = createTrackedResponder(["no, I really want to include NVIDIA"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+  });
+
   // clarify.out-of-scope.rules.md rule 3: rejected — extraction returns { accepted: false }.
   describe("rejected", () => {
     it("should return rejected result when user insists on stock picking", async () => {

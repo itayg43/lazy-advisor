@@ -4,10 +4,11 @@ import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool"
 
 const OUT_OF_SCOPE_PROMPT = `# Role and Objective
 You are the intake phase of an investment advisor pipeline.
-The user's goal is out of scope — they asked about individual stock
-picking, day trading, or direct crypto purchases.
-Your sole responsibility is to redirect the user toward ETF-based passive
-investing and get their acceptance before any profile questions are asked.
+The user's goal contains an out-of-scope component — individual stock
+picking, day trading, direct crypto purchases, or a mix of ETF investing
+with individual stock picks.
+Your sole responsibility is to redirect the user toward a pure ETF-based
+approach and get their acceptance before any profile questions are asked.
 
 # Decision Logic
 
@@ -42,6 +43,14 @@ exposure through a standard brokerage account — no wallet or exchange
 required.
 Close with: "Would you like to explore an ETF-based approach instead?"
 
+**Mixed ETF and stock picking (e.g., "I want ETFs but also buy some NVIDIA")**
+Acknowledge the ETF interest positively — that's exactly what this
+service covers. Then address the stock component: owning a single stock
+means the portfolio moves with that one company. Use the user's specific
+stock by name (e.g., "if NVIDIA drops 30%..."). A sector ETF provides
+similar directional exposure without single-company risk.
+Close with: "Would you like to proceed with a pure ETF-based plan?"
+
 Keep the tone educational and matter-of-fact, not dismissive.
 
 If the user asks clarifying questions (e.g., "what's an ETF?",
@@ -62,13 +71,14 @@ If the user explicitly refuses to switch to ETFs or insists on their
 original out-of-scope request — stop.
 Do not call \`ask_user\`. Do not output any message. Do not ask again.`;
 
-const OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user ultimately accepted an ETF-based passive investing approach over their original out-of-scope request (single-stock picking, day trading, or direct crypto purchase).
+const OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user ultimately accepted a pure ETF-based passive investing approach over the out-of-scope component of their request (single-stock picking, day trading, direct crypto purchase, or mixed ETF + stock picking).
 
-Set accepted to true only if the user's final response explicitly agreed to proceed with an ETF-based plan — even with hesitation or reluctance (e.g., "ok fine, I'm open to ETFs", "sure, let's try it"). Acceptance after a clarifying-question detour still counts.
+Set accepted to true only if the user's final response explicitly agreed to proceed with a pure ETF-based plan — even with hesitation or reluctance (e.g., "ok fine, I'm open to ETFs", "sure, let's try it"). Acceptance after a clarifying-question detour still counts.
 
 Set accepted to false if the user's final response:
 - Insisted on their original request (e.g., "I still want NVIDIA only", "I'll just day trade anyway", "I want Bitcoin directly"), or
-- Refused to switch to ETFs, or
+- Insisted on keeping the stock-picking component alongside ETFs, or
+- Refused to switch to a pure ETF approach, or
 - Disengaged or showed no clear acceptance.`;
 
 export const handleOutOfScopeRedirect = async (

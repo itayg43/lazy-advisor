@@ -6,9 +6,9 @@ Behavioral rules for the goal classifier. Each entry: the rule, a one-line scena
 
 ## 1. Individual stock picking, day trading, or direct crypto purchases → `out_of_scope`
 
-**Rule:** A goal focused on buying individual stocks, day trading, or purchasing crypto directly (not via ETF) is classified as `out_of_scope`.
+**Rule:** A goal focused on buying individual stocks, day trading, or purchasing crypto directly (not via ETF) is classified as `out_of_scope`. Goals that mix ETF investing with individual stock picks are also `out_of_scope` — the stock-picking component needs to be redirected regardless of the ETF interest.
 
-**Scenarios:** "Should I buy NVIDIA stock?" → `out_of_scope` | "I want to do day trading with ₪20,000" → `out_of_scope` | "I want to buy Bitcoin with ₪15,000" → `out_of_scope`
+**Scenarios:** "Should I buy NVIDIA stock?" → `out_of_scope` | "I want to do day trading with ₪20,000" → `out_of_scope` | "I want to buy Bitcoin with ₪15,000" → `out_of_scope` | "I want to invest in ETFs but also buy some NVIDIA stock" → `out_of_scope`
 
 ---
 
@@ -32,4 +32,4 @@ Behavioral rules for the goal classifier. Each entry: the rule, a one-line scena
 
 **Rule:** All other goals pass through as `normal`, including vague goals, crypto ETFs, and goals with sector preferences. Crypto ETFs (e.g., IBIT) are valid aggressive preferences — only direct crypto purchases are `out_of_scope`. When in doubt, classify as `normal`.
 
-**Scenarios:** "I want to start investing" → `normal` | "I want to invest in a Bitcoin ETF like IBIT" → `normal` | "I'm 35, ₪75,000, moderate risk, long-term retirement savings" → `normal`
+**Scenarios:** "I want to start investing" → `normal` | "I want to invest in a Bitcoin ETF like IBIT" → `normal` | "I'm 35, ₪75,000, moderate risk, long-term retirement savings" → `normal` | "I want to invest in real estate ETFs" → `normal`

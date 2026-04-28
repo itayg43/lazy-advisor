@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-28T07:52:48.615Z | Commit: 11fce64
+Timestamp: 2026-04-28T17:07:10.038Z | Commit: 8f023e1
 
 ---
 
@@ -26,6 +26,16 @@ classification: out_of_scope
 ## ✓ should classify direct crypto purchase as out_of_scope
 
 **Goal:** "I want to buy Bitcoin with ₪15,000"
+
+**Output:**
+classification: out_of_scope
+
+
+---
+
+## ✓ should classify a mixed ETF-and-stock goal as out_of_scope
+
+**Goal:** "I want to invest in ETFs but also buy some NVIDIA stock"
 
 **Output:**
 classification: out_of_scope
@@ -76,6 +86,16 @@ classification: normal
 ## ✓ should classify a rich goal as normal
 
 **Goal:** "I'm 35, I have ₪75,000, moderate risk, long-term retirement savings"
+
+**Output:**
+classification: normal
+
+
+---
+
+## ✓ should classify a sector-only ETF goal as normal
+
+**Goal:** "I want to invest in real estate ETFs"
 
 **Output:**
 classification: normal
