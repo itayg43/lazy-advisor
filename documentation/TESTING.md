@@ -62,6 +62,8 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 
 - **File convention**: `*.eval.ts` (not `*.test.ts`) — naturally excluded from `npm test` since the main Vitest config only includes `*.test.ts`
 - **Run**: `npm run test:evals` (separate Vitest config: `vitest.config.evals.ts`, `fileParallelism: false`, `testTimeout: 120_000`)
+- **Run a single file**: `npm run test:evals -- <file>`
+- **Run specific cases**: `npm run test:evals -- <file> -t "<pattern>"` — `-t` matches against `it()` descriptions as a substring/regex
 - **Env**: uses `.env.test` (requires `OPENAI_API_KEY`)
 - **Not in CI**: evals are slow (real API calls), non-deterministic, and cost money — run manually
 - **After each eval run**: check the co-located `*.last-run.md` file for LLM output quality — verify responses are sensible, not just that assertions passed.

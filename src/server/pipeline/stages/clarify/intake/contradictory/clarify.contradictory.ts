@@ -39,18 +39,28 @@ the same call.
 Keep the tone educational and matter-of-fact, not dismissive.
 
 If the user asks clarifying questions (e.g., "why does this matter?",
-"what is risk tolerance?"), briefly answer in one or two sentences —
-keep it educational — then note that the details of their specific
-situation will be covered in the next steps, and re-present the scenario.
+"what is risk tolerance?"), call \`ask_user\` again with a brief answer
+(one or two sentences) — keep it educational — note that the details
+of their specific situation will be covered in the next steps, and
+re-present the scenario.
 
 **Step 2 — Resolved**
-The user accepts if they give a clear answer to the scenario that
-reveals a risk preference — even implicitly (e.g., "I'd probably hold").
-Stop — do not call \`ask_user\`. Do not output any message.
+The user accepts if they give any answer that reveals a lean toward
+sell, hold, or buy more — even with hesitation, uncertainty, or the
+word "probably" or "I think" (e.g., "I'd probably hold", "I'd probably
+hold but I'm not sure", "I think I'd sell"). Any lean toward an option
+counts, even when combined with expressed doubt. Stop — do not call
+\`ask_user\`. Do not output any message.
 
 **Step 3 — Disengaged**
 If the user disengages, refuses to answer, or says they are no longer
 interested — stop. Do not call \`ask_user\`. Do not ask again.`;
+
+const CONTRADICTORY_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user resolved the contradiction.
+
+Set accepted to true if the user gave any answer to the A/B/C scenario question that reveals a risk preference — even with hesitation or reluctance (e.g., "I'd feel sick but I'd hold", "I guess I'd hold", "I'd probably sell"). Any clear response to the scenario (sell / hold / buy more) counts.
+
+Set accepted to false only if the user disengaged, said they are no longer interested, or refused to engage entirely.`;
 
 export const handleContradictoryRisk = async (
   goal: string,
@@ -63,5 +73,6 @@ export const handleContradictoryRisk = async (
     goal,
     sendToUser,
     waitForResponse,
+    CONTRADICTORY_EXTRACTION_INSTRUCTIONS,
   );
 };

@@ -25,7 +25,9 @@ flowchart TD
     Contra -->|accepted| Fields
     Contra -->|rejected| End
 
-    Fields --> Risk[risk]
+    Fields --> ShortHorizon{timeline < 3yr?}
+    ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
+    ShortHorizon -->|no| Risk[risk]
     Risk --> Allocation[allocation]
     Allocation --> Contribution[contribution]
     Contribution --> Profile([UserProfile])
@@ -117,7 +119,7 @@ The allocation phase resolves the total-portfolio split between equity (stocks /
 
 The model locates the user's cell from `risk.riskTolerance` × `fields.timeline` (a `TimelineBucket` enum: `"under 3 years" | "3–5 years" | "5–10 years" | "10+ years"`) and picks a specific integer inside the cell's range. The anchor table and four behavioral rules live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); the research basis is in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
-The `"under 3 years"` column collapses across all tolerances — at that horizon, capacity (the money still being there when needed) dominates risk tolerance per Vanguard, Fidelity, and Bogleheads.
+Users with an `"under 3 years"` timeline never reach this phase. The orchestrator exits after fields collection, sends a money market fund redirect, and returns `null`. ETFs carry too much timing risk for money needed within 3 years — a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful dial at that horizon (Vanguard, Fidelity, Bogleheads). The allocation anchor table therefore only covers three timelines: `3–5 years`, `5–10 years`, `10+ years`.
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 

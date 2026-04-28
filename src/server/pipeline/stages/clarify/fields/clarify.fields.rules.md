@@ -33,6 +33,6 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 - `"5 years"` → `"3–5 years"`
 - `"10 years"` → `"5–10 years"`
 
-**Scenario:** All fields unknown — agent opens by asking for amount, age, timeline (presenting four bucket options), and hasEmergencyFund; user picks a timeline bucket.
+**Scenario:** All fields unknown — agent opens by asking for amount, age, timeline (presenting four bucket options); user picks a timeline bucket.
 
 **Extracted:** timeline: one of the four enum values

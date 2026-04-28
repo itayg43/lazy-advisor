@@ -5,6 +5,7 @@ import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import {
   INTAKE_REJECTION_MESSAGES,
   PROFILE_TRANSITION_MESSAGE,
+  SHORT_TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
@@ -248,6 +249,35 @@ describe("clarifyStage", () => {
       expect(mockSendToUser).toHaveBeenCalledWith(INTAKE_REJECTION_MESSAGES.unrealistic);
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
+    });
+  });
+
+  describe("short-timeline exit", () => {
+    it("should return null, send exit message, and skip risk/allocation/contribution when timeline is under 3 years", async () => {
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { ...mockFieldsOutput, timeline: TimelineBucket.enum["under 3 years"] },
+            "resp_fields",
+          ),
+        );
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_fields_loop"));
+
+      const result = await runClarifyStage(
+        "I want to invest ₪20,000",
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+
+      expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(2);
+      expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
+      expect(mockSendToUser).toHaveBeenNthCalledWith(2, SHORT_TIMELINE_EXIT_MESSAGE);
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // fields loop only
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + fields extraction
     });
   });
 

@@ -129,4 +129,44 @@ describe("collectFields", () => {
     expect(output.hasEmergencyFund).toBe(true);
     expect(output.hasDebt).toBe(false);
   });
+
+  // clarify.fields.rules.md rule 3 boundary mapping: exact boundary values map to the shorter bucket
+  it("should map exactly 3 years to the 'under 3 years' bucket", async () => {
+    const responder = createTrackedResponder([
+      "₪20,000, I'm 30, 3 years",
+      "Yes emergency fund, no debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = output;
+
+    expect(output.timeline).toBe(TimelineBucket.enum["under 3 years"]);
+  });
+
+  it("should map exactly 5 years to the '3–5 years' bucket", async () => {
+    const responder = createTrackedResponder([
+      "₪20,000, I'm 30, 5 years",
+      "Yes emergency fund, no debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = output;
+
+    expect(output.timeline).toBe(TimelineBucket.enum["3–5 years"]);
+  });
+
+  it("should map exactly 10 years to the '5–10 years' bucket", async () => {
+    const responder = createTrackedResponder([
+      "₪20,000, I'm 30, 10 years",
+      "Yes emergency fund, no debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = output;
+
+    expect(output.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+  });
 });

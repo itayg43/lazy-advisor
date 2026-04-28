@@ -12,6 +12,17 @@ const LAST_RUN_PATH = new URL("clarify.out-of-scope.last-run.md", import.meta.ur
   .pathname;
 
 describe("handleOutOfScopeRedirect", () => {
+  // Regression guard for issue #7: redirect must not name specific ETFs/tickers — fund selection happens in later phases.
+  const TICKER_PATTERN =
+    /\b(NASDAQ-100|NASDAQ100|QQQ|SOXX|SMH|IBIT|SPY|VOO|VTI|XLK|XLF)\b/i;
+
+  const expectNoTickersInAgentMessages = (transcript: TranscriptEntry[]) => {
+    for (const turn of transcript) {
+      if (turn.role !== "agent") continue;
+      expect(turn.content).not.toMatch(TICKER_PATTERN);
+    }
+  };
+
   let lastGoal: string | undefined;
   let lastTranscript: TranscriptEntry[] | undefined;
 
@@ -29,7 +40,7 @@ describe("handleOutOfScopeRedirect", () => {
     lastGoal = lastTranscript = undefined;
   });
 
-  // clarify.out-of-scope.rules.md rule 1: redirect explains concentration risk, offers sector ETF middle ground,
+  // clarify.out-of-scope.rules.md rule 1: redirect explains concentration risk, offers a diversified ETF (no ticker),
   // and ends with a question. Field collection begins only after acceptance — not in this phase.
   // clarify.out-of-scope.rules.md rule 2: accepted — extraction returns { accepted: true }.
   describe("accepted", () => {
@@ -45,6 +56,104 @@ describe("handleOutOfScopeRedirect", () => {
       );
 
       expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    it("should redirect day trading and return accepted result", async () => {
+      lastGoal = "I want to do day trading with ₪20,000";
+      const responder = createTrackedResponder(["ok, I'll try an index ETF instead"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    it("should redirect direct crypto and return accepted result", async () => {
+      lastGoal = "I want to buy Bitcoin with ₪15,000";
+      const responder = createTrackedResponder(["ok, a crypto ETF sounds good"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    // clarify.out-of-scope.rules.md rule 2: hesitant/reluctant agreement still counts as accepted.
+    it("should accept reluctant agreement", async () => {
+      lastGoal = "Should I buy NVIDIA stock?";
+      const responder = createTrackedResponder(["I guess I'll try ETFs"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    // clarify.out-of-scope.rules.md rule 4: clarifying question → agent answers briefly and re-asks → user accepts.
+    it("should handle a clarifying question and accept after re-ask", async () => {
+      lastGoal = "Should I buy NVIDIA stock?";
+      const responder = createTrackedResponder(["what's an ETF?", "ok, sounds good"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+  });
+
+  // clarify.out-of-scope.rules.md rule 5: mixed ETF + stock picking — acknowledge ETF interest, redirect stock component.
+  describe("mixed ETF and stock picking", () => {
+    it("should redirect stock component and return accepted result", async () => {
+      lastGoal = "I want to invest in ETFs but also buy some NVIDIA stock";
+      const responder = createTrackedResponder(["ok, just ETFs is fine"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+      expectNoTickersInAgentMessages(responder.transcript);
+      const agentMessages = responder.transcript.filter((t) => t.role === "agent");
+      expect(agentMessages.some((t) => /diversified/i.test(t.content))).toBe(true);
+    });
+
+    it("should return rejected result when user insists on keeping the stock", async () => {
+      lastGoal = "I want to invest in ETFs but also buy some NVIDIA stock";
+      const responder = createTrackedResponder(["no, I really want to include NVIDIA"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+      expectNoTickersInAgentMessages(responder.transcript);
     });
   });
 
@@ -64,6 +173,39 @@ describe("handleOutOfScopeRedirect", () => {
       );
 
       expect(result.accepted).toBe(false);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    it("should return rejected result when day-trading user insists", async () => {
+      lastGoal = "I want to do day trading with ₪20,000";
+      const responder = createTrackedResponder([
+        "No, I only want to day trade, not interested in ETFs",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+      expectNoTickersInAgentMessages(responder.transcript);
+    });
+
+    it("should return rejected result when crypto user insists", async () => {
+      lastGoal = "I want to buy Bitcoin with ₪15,000";
+      const responder = createTrackedResponder(["No, I only want Bitcoin directly"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+      expectNoTickersInAgentMessages(responder.transcript);
     });
   });
 });

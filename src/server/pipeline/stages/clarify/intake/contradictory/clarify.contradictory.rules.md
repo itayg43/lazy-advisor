@@ -25,3 +25,11 @@ Behavioral rules for the contradictory risk intake handler. Each entry: the rule
 **Rule:** When the user disengages, refuses to answer, or says they are no longer interested, the extraction returns `accepted: false`. The orchestrator sends the per-classification rejection message and ends the session.
 
 **Scenario:** User says "I don't know, forget it, I'm not interested anymore" → `{ accepted: false }`
+
+---
+
+## 4. User asks a clarifying question → agent answers briefly and re-presents the scenario
+
+**Rule:** When the user asks a clarifying question (e.g., "why does this matter?", "what is risk tolerance?") instead of answering the A/B/C scenario, the agent answers briefly via `ask_user` (one or two sentences), notes that specifics will be covered later, and re-presents the scenario. The user's response to the re-presented scenario determines acceptance per rules 2 and 3.
+
+**Scenario:** Agent presents A/B/C scenario → user asks "why does this matter?" → agent answers briefly and re-presents the scenario → user picks an option → `{ accepted: true }`.

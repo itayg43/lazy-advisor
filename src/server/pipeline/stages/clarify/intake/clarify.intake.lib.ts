@@ -10,16 +10,13 @@ import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool"
 
 const logger = createLogger("clarifyIntake");
 
-const INTAKE_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user accepted the proposed direction.
-
-Set accepted to true if the user agreed to proceed (e.g., with ETF investing, a realistic timeline, or clarified risk tolerance). Set to false if they declined, disengaged, or showed no clear acceptance.`;
-
 export const runIntakePhase = async (
   instructions: string,
   phaseName: string,
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
+  extractionInstructions: string,
 ): Promise<IntakePhaseOutput> => {
   logger.info(`Starting ${phaseName}`);
 
@@ -37,7 +34,7 @@ export const runIntakePhase = async (
   const { output, usage } = await runPhaseExtraction<IntakePhaseOutput>({
     model: "gpt-5.4-nano",
     effort: "low",
-    instructions: INTAKE_EXTRACTION_INSTRUCTIONS,
+    instructions: extractionInstructions,
     lastResponseId: responseId,
     schema: IntakePhaseOutputSchema,
   });

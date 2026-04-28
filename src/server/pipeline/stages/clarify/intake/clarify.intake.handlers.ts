@@ -5,7 +5,7 @@ import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.sche
 import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
-export type IntakeHandler = (
+type IntakeHandler = (
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,

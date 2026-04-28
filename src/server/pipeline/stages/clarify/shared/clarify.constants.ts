@@ -1,14 +1,6 @@
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
-export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
-export const TIMELINE_BUCKETS = TimelineBucket.options.map((o) => `\`${o}\``).join(", ");
-export const TIMELINE_BUCKET_LIST = TimelineBucket.options
-  .map((o, i) => `${i + 1}. ${o}`)
-  .join("\n");
-
-type AnchorCell = { min: number; max: number };
-
 const {
   "under 3 years": under3,
   "3–5 years": t3to5,
@@ -16,42 +8,51 @@ const {
   "10+ years": t10plus,
 } = TimelineBucket.enum;
 
-export const TIMELINE_BOUNDARY_EXAMPLES = `3 yr → "${under3}", 5 yr → "${t3to5}", 10 yr → "${t5to10}"`;
+export const TIMELINE_BUCKETS = TimelineBucket.options.map((o) => `\`${o}\``).join(", ");
+export const TIMELINE_BUCKET_LIST = TimelineBucket.options
+  .map((o, i) => `${i + 1}. ${o}`)
+  .join("\n");
+export const TIMELINE_BOUNDARY_EXAMPLES = `"3 years" → "${under3}" (not "${t3to5}"), "5 years" → "${t3to5}" (not "${t5to10}"), "10 years" → "${t5to10}" (not "${t10plus}" — "${t10plus}" means strictly more than 10 years)`;
+
+export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
+
+type AllocationTimeline = Exclude<
+  (typeof TimelineBucket.options)[number],
+  "under 3 years"
+>;
 
 const ALLOCATION_ANCHOR_DATA = {
   conservative: {
-    [under3]: { min: 0, max: 10 },
     [t3to5]: { min: 10, max: 20 },
     [t5to10]: { min: 30, max: 40 },
     [t10plus]: { min: 40, max: 50 },
   },
   moderate: {
-    [under3]: { min: 0, max: 10 },
     [t3to5]: { min: 20, max: 30 },
     [t5to10]: { min: 50, max: 60 },
     [t10plus]: { min: 60, max: 70 },
   },
   aggressive: {
-    [under3]: { min: 0, max: 10 },
     [t3to5]: { min: 30, max: 40 },
     [t5to10]: { min: 60, max: 70 },
     [t10plus]: { min: 80, max: 90 },
   },
 } satisfies Record<
   (typeof RiskTolerance.options)[number],
-  Record<(typeof TimelineBucket.options)[number], AnchorCell>
+  Record<AllocationTimeline, { min: number; max: number }>
 >;
 
 const buildAnchorTable = (): string => {
-  const timelines = TimelineBucket.options;
-  const risks = RiskTolerance.options;
+  const timelines = TimelineBucket.options.filter(
+    (o): o is AllocationTimeline => o !== under3,
+  );
   const header = `| Willingness \\ Timeline | ${timelines.join(" | ")} |`;
   const separator = `|${"---|".repeat(timelines.length + 1)}`;
-  const rows = risks.map((risk) => {
+  const rows = RiskTolerance.options.map((risk) => {
     const cells = timelines.map((t) => {
       const { min, max } = ALLOCATION_ANCHOR_DATA[risk][t];
 
-      return `${min}–${max}%`;
+      return min === max ? `${min}%` : `${min}–${max}%`;
     });
 
     return `| ${risk} | ${cells.join(" | ")} |`;
@@ -61,6 +62,11 @@ const buildAnchorTable = (): string => {
 };
 
 export const ALLOCATION_ANCHOR_TABLE = buildAnchorTable();
+export const ALLOCATION_TIMELINE_BUCKETS = TimelineBucket.options
+  .filter((o) => o !== under3)
+  .map((o) => `\`${o}\``)
+  .join(", ");
+
 export const GOAL_CLASSIFICATIONS = GoalClassification.options
   .map((o) => `\`${o}\``)
   .join(", ");
@@ -70,6 +76,9 @@ export const PROFILE_TRANSITION_MESSAGE =
 
 export const INTAKE_REJECTION_DEFAULT_MESSAGE =
   "No problem — feel free to come back when you're ready.";
+
+export const SHORT_TIMELINE_EXIT_MESSAGE =
+  "For money you plan to use within 3 years, ETFs carry too much timing risk — a market drop right before you need the funds may be hard to recover from in time. A money market fund is a better fit: lower risk, stays accessible, and still earns meaningful returns. When you're ready to invest money for a longer horizon, come back and we'll build an ETF plan.";
 
 export const INTAKE_REJECTION_MESSAGES: Partial<
   Record<(typeof GoalClassification.options)[number], string>
@@ -85,5 +94,5 @@ export const INTAKE_REJECTION_MESSAGES: Partial<
 export const MAX_INTAKE_TOOL_CALLS = 5;
 export const MAX_FIELDS_TOOL_CALLS = 10;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
-export const MAX_RISK_TOOL_CALLS = 2;
+export const MAX_RISK_TOOL_CALLS = 3;
 export const MAX_ALLOCATION_TOOL_CALLS = 5;

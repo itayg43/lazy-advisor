@@ -1,20 +1,13 @@
 # Project Status
 
-## Up Next
-
-**T2 — Intake cleanup** — See [Refactor Plan § T2](../CLARIFY_REFACTOR_PLAN.md#t2--intake-cleanup).
-
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T2 | Intake cleanup |
 | T3 | EF/debt gate |
 | T4 | Equity |
 | T5 | Buffer |
 | T6 | Wire equity/buffer in orchestrator |
-
-Full specs: [CLARIFY_REFACTOR_PLAN.md](../CLARIFY_REFACTOR_PLAN.md)
 
 ## Improvements
 

@@ -63,14 +63,6 @@ describe("collectAllocation", () => {
     hasDebt: false,
   };
 
-  const shortHorizonAggressiveFields: FieldsPhaseOutput = {
-    amount: 20_000,
-    age: 30,
-    timeline: TimelineBucket.enum["under 3 years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
-  };
-
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
   // extracted split — catches model arithmetic drift (e.g., "₪85,000 equity + ₪15,000
   // buffer" on a ₪50,000 investment). Looks for the expected shekels anywhere in the
@@ -261,31 +253,6 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md rule 3 exception: short-horizon user asks for all equity → sanity check fires, accept
-  it("should surface a sanity check when a short-horizon user asks for all equity", async () => {
-    const responder = createTrackedResponder(["Put it all in stocks", "Yes, I'm sure"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectAllocation(
-      shortHorizonAggressiveFields,
-      aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.equityPercentage).toBe(100);
-    expect(output.bufferPercentage).toBe(0);
-    expect(
-      responder.transcript.filter((t) => t.role === "agent").length,
-    ).toBeGreaterThanOrEqual(2);
-    expectShekelMathConsistent(
-      responder.transcript,
-      shortHorizonAggressiveFields.amount,
-      output,
-    );
-  });
-
   // clarify.allocation.rules.md rule 3 exception: aggressive 10+ yr user asks for 0% equity → sanity check fires, accept
   it("should surface a sanity check when a long-horizon aggressive user asks for 0% equity", async () => {
     const responder = createTrackedResponder(["I want 0% stocks", "Yes, I'm sure"]);
@@ -401,25 +368,32 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md anchor table: short-horizon collapses to 0–10% equity regardless of tolerance
-  it("should collapse to 0–10% equity for an under-3-years timeline with aggressive risk", async () => {
-    const responder = createTrackedResponder(["ok"]);
+  // clarify.allocation.rules.md rule 4 + rule 3: clarifying question followed by counter-proposal (4-tool-call worst case)
+  it("should handle a clarifying question followed by a counter-proposal", async () => {
+    const responder = createTrackedResponder([
+      "What's a buffer?",
+      "Let's do 60/40",
+      "yes",
+    ]);
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      shortHorizonAggressiveFields,
+      longHorizonAggressiveFields,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
     lastOutput = output;
 
-    expect(output.equityPercentage).toBeGreaterThanOrEqual(0);
-    expect(output.equityPercentage).toBeLessThanOrEqual(10);
-    expect(output.equityPercentage + output.bufferPercentage).toBe(100);
+    expect(output.equityPercentage).toBe(60);
+    expect(output.bufferPercentage).toBe(40);
+    // clarifying Q answer + re-ask + counter-proposal confirm = at least 3 agent turns
+    expect(
+      responder.transcript.filter((t) => t.role === "agent").length,
+    ).toBeGreaterThanOrEqual(3);
     expectShekelMathConsistent(
       responder.transcript,
-      shortHorizonAggressiveFields.amount,
+      longHorizonAggressiveFields.amount,
       output,
     );
   });
