@@ -2,6 +2,8 @@
 
 ## Up Next
 
+**Evals review follow-up — under-3-years early exit.** Working through issues surfaced by the 2026-04-28 evals review. Issues 1 (allocation sanity-check `all-singles` artifact) and 2 (under-3-years anchor collapse to 0%) are committed. Currently implementing issue 2's logical conclusion: an early exit in the orchestrator after fields when `timeline === "under 3 years"`, with a קרן כספית redirect message and a full cleanup of now-dead under-3-years logic in the allocation phase. See plan at `.claude/plans/i-agree-we-should-temporal-kahn.md`. After this is committed, resume with **issue 3** (contradictory phase — missing test for amount adaptation in scenario) and the remaining evals review issues.
+
 **T2 — Intake cleanup** — See [Refactor Plan § T2](../CLARIFY_REFACTOR_PLAN.md#t2--intake-cleanup).
 
 ## Task Queue

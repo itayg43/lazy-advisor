@@ -9,12 +9,12 @@ Phase 4b uses a **two-axis anchor table: risk tolerance × timeline**.
 
 | Willingness \ Timeline | < 3 yr | 3–5 yr | 5–10 yr | 10+ yr |
 |---|---|---|---|---|
-| Conservative | 0–10% | 10–20% | 30–40% | 40–50% |
-| Moderate | 0–10% | 20–30% | 50–60% | 60–70% |
-| Aggressive | 0–10% | 30–40% | 60–70% | 80–90% |
+| Conservative | 0% | 10–20% | 30–40% | 40–50% |
+| Moderate | 0% | 20–30% | 50–60% | 60–70% |
+| Aggressive | 0% | 30–40% | 60–70% | 80–90% |
 
 Key rules:
-- **Short-horizon collapse:** <3yr collapses to 0–10% equity for all willingness levels. Risk tolerance is not a meaningful dial below ~3 years.
+- **Short-horizon collapse:** <3yr is fixed at 0% equity for all willingness levels. Risk tolerance is not a meaningful dial below ~3 years.
 - **EF and debt are suitability gates, not anchor inputs.** If the user lacks an EF or carries high-interest debt, the agent surfaces the concern and asks how they want to proceed — the anchor percentage does not shift.
 - **Pre-stated split:** accept by default. Exception: if the split is extreme relative to capacity (e.g., 100% equity with <3yr horizon, or 0% equity with 20+yr horizon + aggressive risk), surface the mismatch in one turn, then accept the user's final answer.
 - **Behavioral framing:** "sizing to tolerance *tends to* reduce panic-selling" — not "prevents".
@@ -56,7 +56,7 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 |---|---|
 | Age redundant with timeline | Dropped — TDF glidepaths use years-to-retirement, not age |
 | EF/debt treated as continuous anchor inputs | Moved to conversational suitability qualifiers |
-| Short-horizon at 20–60% equity | Collapsed to 0–10% across all tolerances (<3yr) |
+| Short-horizon at 20–60% equity | Fixed at 0% across all tolerances (<3yr) |
 | 5-factor interaction hard to prompt/eval | 3×4 table maps 1:1 to eval cases |
 
 ## Trade-offs

@@ -20,19 +20,19 @@ export const TIMELINE_BOUNDARY_EXAMPLES = `"3 years" → "${under3}" (not "${t3t
 
 const ALLOCATION_ANCHOR_DATA = {
   conservative: {
-    [under3]: { min: 0, max: 10 },
+    [under3]: { min: 0, max: 0 },
     [t3to5]: { min: 10, max: 20 },
     [t5to10]: { min: 30, max: 40 },
     [t10plus]: { min: 40, max: 50 },
   },
   moderate: {
-    [under3]: { min: 0, max: 10 },
+    [under3]: { min: 0, max: 0 },
     [t3to5]: { min: 20, max: 30 },
     [t5to10]: { min: 50, max: 60 },
     [t10plus]: { min: 60, max: 70 },
   },
   aggressive: {
-    [under3]: { min: 0, max: 10 },
+    [under3]: { min: 0, max: 0 },
     [t3to5]: { min: 30, max: 40 },
     [t5to10]: { min: 60, max: 70 },
     [t10plus]: { min: 80, max: 90 },
@@ -51,7 +51,7 @@ const buildAnchorTable = (): string => {
     const cells = timelines.map((t) => {
       const { min, max } = ALLOCATION_ANCHOR_DATA[risk][t];
 
-      return `${min}–${max}%`;
+      return min === max ? `${min}%` : `${min}–${max}%`;
     });
 
     return `| ${risk} | ${cells.join(" | ")} |`;

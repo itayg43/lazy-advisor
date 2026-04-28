@@ -431,8 +431,8 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md anchor table: short-horizon collapses to 0–10% equity regardless of tolerance
-  it("should collapse to 0–10% equity for an under-3-years timeline with aggressive risk", async () => {
+  // clarify.allocation.rules.md anchor table: short-horizon always proposes 0% equity regardless of risk tolerance
+  it("should propose 0% equity for an under-3-years timeline regardless of risk tolerance", async () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
@@ -444,9 +444,8 @@ describe("collectAllocation", () => {
     );
     lastOutput = output;
 
-    expect(output.equityPercentage).toBeGreaterThanOrEqual(0);
-    expect(output.equityPercentage).toBeLessThanOrEqual(10);
-    expect(output.equityPercentage + output.bufferPercentage).toBe(100);
+    expect(output.equityPercentage).toBe(0);
+    expect(output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
       shortHorizonAggressiveFields.amount,
