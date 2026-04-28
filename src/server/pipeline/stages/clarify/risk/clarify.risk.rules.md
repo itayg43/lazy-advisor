@@ -65,6 +65,16 @@ If the user has already received one re-ask in this phase, do **not** re-ask aga
 
 ---
 
+## 4. Capacity questions (age/timeline) → clarify willingness vs capacity, re-present scale
+
+**Rule:** If the user asks whether their age or investment timeline should affect their score, briefly clarify that the scale measures willingness (comfort with drops), not capacity (ability to recover over time). Do not use timeline or age to suggest or frame a score. Then re-present the 1–5 question with all three anchors.
+
+**Scenario:** "Does my age or investment timeline change what score I should give?"
+
+**Agent response:** brief clarification that the scale is about willingness, not capacity, then re-present the scale. Must NOT say things like "with your 10-year timeline you can afford a higher score."
+
+---
+
 ## Tool-call budget
 
 `MAX_RISK_TOOL_CALLS = 3`. Worst case: clarifying question (T1 initial ask + T2 re-presentation after Q) followed by an invalid answer (T3 Step 3 re-ask) = 3 turns. The budget covers:
@@ -84,9 +94,4 @@ If all 3 turns are consumed and no valid score is given, the phase ends silently
 
 ## Last-run review
 
-After every eval run, open `clarify.risk.last-run.md` and check the following test:
-
-**"should deflect age/timeline capacity question and re-present the scale"**
-- Agent's **second turn** should acknowledge that age/timeline affect capacity (not willingness), then re-present the 1–5 scale with all three anchors.
-- Should NOT use age/timeline as framing for what score to give (e.g., "with your 20-year timeline, you can afford more risk" is incorrect behavior).
-- Fail signal: model incorporates capacity factors into the score framing instead of deflecting.
+After every eval run, open `clarify.risk.last-run.md` and verify the capacity deflection test (Rule 4) passed. The automated assertion checks for capacity-framing phrases — a pass does not guarantee natural tone, so spot-check the transcript when the test is borderline.

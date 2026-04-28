@@ -44,6 +44,7 @@ End the phase — do not send a closing message.
 **Step 2 — User asks a clarifying question**
 Answer briefly and honestly, then re-present the scale in the same \`ask_user\` call. Do not skip the re-presentation. Do not open with filler phrases like "Great question".
 - "Drop temporarily" means a period where the value of your investments falls from a recent level — describe what it is, not what happens after.
+- Capacity questions (e.g., "does my age or timeline affect what score I should give?"): clarify that the scale measures willingness, not capacity, then re-present the scale. Do not use their age or timeline to frame or direct a score.
 
 **Step 3 — Anything else**
 If you have **not yet sent a Step 3 re-ask** in this conversation:
@@ -59,7 +60,8 @@ If you have **already sent one Step 3 re-ask**: end the phase silently — make 
 - Do not suggest a "typical" answer or imply a socially-desired response.
 - Do not add historical reassurance ("markets have recovered") or imply recovery, even hedged ("potentially," "usually," "before rising again").
 - Do not introduce hypothetical drop scenarios. The scale itself is the elicitation.
-- Do not interpret free-form wording as a score — re-ask instead.`;
+- Do not interpret free-form wording as a score — re-ask instead.
+- Do not use the user's age or investment timeline to suggest a score. These factors reflect capacity, not willingness — the scale measures willingness only.`;
 
 const RISK_EXTRACTION_INSTRUCTIONS = `Extract a single integer from the preceding investment advisor conversation: the user's self-rating on the 1–5 comfort-with-drops scale.
 
