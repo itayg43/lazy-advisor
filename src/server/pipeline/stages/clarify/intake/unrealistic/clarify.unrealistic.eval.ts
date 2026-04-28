@@ -48,14 +48,68 @@ describe("handleUnrealisticExpectations", () => {
 
       expect(result.accepted).toBe(true);
     });
+
+    // clarify.unrealistic.rules.md rule 3 + rule 2: after re-redirect, user accepts realistic expectations
+    it("should return accepted result when user accepts realistic plan after re-redirect", async () => {
+      lastGoal = "I have ₪18,000 and I want to double it in 6 months";
+      const responder = createTrackedResponder([
+        "ok fine, maybe in 2 years then",
+        "ok I understand, let's do it long term",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleUnrealisticExpectations(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+    });
   });
 
-  // clarify.unrealistic.rules.md rule 3: rejected — extraction returns { accepted: false }.
+  // clarify.unrealistic.rules.md rule 4: rejected — extraction returns { accepted: false }.
   describe("rejected", () => {
     it("should return rejected result when user insists on unrealistic goal", async () => {
       lastGoal = "I have ₪18,000 and I want to double it in 6 months";
       const responder = createTrackedResponder([
         "No, I'm sure I can double it, I've seen people do it online",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleUnrealisticExpectations(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+    });
+
+    // clarify.unrealistic.rules.md rule 3 + rule 4: after re-redirect, user still insists on unrealistic goal
+    it("should return rejected result when user still insists after re-redirect", async () => {
+      lastGoal = "I have ₪18,000 and I want to double it in 6 months";
+      const responder = createTrackedResponder([
+        "ok fine, maybe in 2 years then",
+        "No, I really think 2 years is enough, I've seen it done",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleUnrealisticExpectations(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+    });
+
+    // clarify.unrealistic.rules.md rule 3 + rule 4: after re-redirect, user disengages
+    it("should return rejected result when user disengages after re-redirect", async () => {
+      lastGoal = "I have ₪18,000 and I want to double it in 6 months";
+      const responder = createTrackedResponder([
+        "ok fine, maybe in 2 years then",
+        "forget it, this isn't what I was looking for",
       ]);
       lastTranscript = responder.transcript;
 

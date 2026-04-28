@@ -48,6 +48,23 @@ describe("handleContradictoryRisk", () => {
 
       expect(result.accepted).toBe(true);
     });
+
+    // clarify.contradictory.rules.md rule 2: hedging ("I'd probably hold but I'm not sure") still reveals a preference and counts as accepted
+    it("should resolve contradiction and return accepted result when user hedges but reveals a preference", async () => {
+      lastGoal = "I want maximum returns but I can't afford to lose any money";
+      const responder = createTrackedResponder([
+        "I'd probably hold but honestly I'm not sure.",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleContradictoryRisk(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+    });
   });
 
   // clarify.contradictory.rules.md rule 1: shekel figures adapted to amount mentioned in goal

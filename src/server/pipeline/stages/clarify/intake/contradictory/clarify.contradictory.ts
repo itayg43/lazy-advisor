@@ -44,9 +44,12 @@ keep it educational — then note that the details of their specific
 situation will be covered in the next steps, and re-present the scenario.
 
 **Step 2 — Resolved**
-The user accepts if they give a clear answer to the scenario that
-reveals a risk preference — even implicitly (e.g., "I'd probably hold").
-Stop — do not call \`ask_user\`. Do not output any message.
+The user accepts if they give any answer that reveals a lean toward
+sell, hold, or buy more — even with hesitation, uncertainty, or the
+word "probably" or "I think" (e.g., "I'd probably hold", "I'd probably
+hold but I'm not sure", "I think I'd sell"). Any lean toward an option
+counts, even when combined with expressed doubt. Stop — do not call
+\`ask_user\`. Do not output any message.
 
 **Step 3 — Disengaged**
 If the user disengages, refuses to answer, or says they are no longer
