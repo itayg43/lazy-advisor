@@ -6,9 +6,7 @@
 
 | # | Issue | Status |
 |---|-------|--------|
-| 8 | Fields — no test covering all 5 fields in one pass | ⏳ Next |
-| 9 | Contribution — DCA explanation length | Pending |
-| 10 | Classify — borderline goal coverage | Pending |
+| 10 | Classify — borderline goal coverage | ⏳ Next |
 
 ## Task Queue
 
