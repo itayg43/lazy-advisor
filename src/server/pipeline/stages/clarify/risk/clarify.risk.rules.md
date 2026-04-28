@@ -46,10 +46,10 @@ Mapping is deterministic and lives in code, not in prompts:
 
 ## 3. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask once, then default to conservative
 
-**Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask once with the full scale (anchors included). This covers:
+**Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask once with the full scale (anchors included). For range or decimal inputs, briefly acknowledge that the scale needs a single whole number before re-presenting. This covers:
 
 - Numbers outside 1–5 (`"7"`, `"0"`)
-- Decimals or ranges (`"3.5"`, `"2-3"`)
+- Decimals or ranges (`"3.5"`, `"2-3"`) — acknowledge "single whole number needed" before re-presenting
 - Non-numeric wording (`"I'd panic"`, `"absolutely not"`, `"buying opportunity"`)
 - Vague answers (`"I don't know"`, `"depends"`)
 

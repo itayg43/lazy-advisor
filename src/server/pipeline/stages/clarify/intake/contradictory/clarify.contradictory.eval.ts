@@ -50,6 +50,30 @@ describe("handleContradictoryRisk", () => {
     });
   });
 
+  // clarify.contradictory.rules.md rule 1: shekel figures adapted to amount mentioned in goal
+  it("should use the goal amount in the scenario, not the generic ₪10,000 example", async () => {
+    lastGoal =
+      "I want maximum returns on my ₪50,000 but I can't afford to lose any money";
+    const responder = createTrackedResponder(["I'd hold and wait for recovery."]);
+    lastTranscript = responder.transcript;
+
+    await handleContradictoryRisk(
+      lastGoal,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+
+    const agentText = responder.transcript
+      .filter((t) => t.role === "agent")
+      .map((t) => t.content)
+      .join(" ");
+    // 20% drop of ₪50,000 → ₪40,000
+    expect(agentText).toContain("₪50,000");
+    expect(agentText).toContain("₪40,000");
+    expect(agentText).not.toContain("₪10,000");
+    expect(agentText).not.toContain("₪8,000");
+  });
+
   // clarify.contradictory.rules.md rule 3: rejected — extraction returns { accepted: false }.
   describe("rejected", () => {
     it("should return rejected result when user disengages without resolving", async () => {

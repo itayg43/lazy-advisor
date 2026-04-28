@@ -338,7 +338,7 @@ describe("collectRisk", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
-  // clarify.risk.rules.md rule 3: range input → re-ask → valid answer
+  // clarify.risk.rules.md rule 3: range input → re-ask with single-number acknowledgment → valid answer
   it("should re-ask on a range input then accept the corrected answer", async () => {
     const responder = createTrackedResponder(["2-3", "2"]);
     lastTranscript = responder.transcript;
@@ -352,7 +352,10 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(2);
     expect(output.riskTolerance).toBe(conservative);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    expect(agentTurns).toHaveLength(2);
+    // re-ask must explain the scale needs a single number, not just re-present it
+    expect(agentTurns[1].content.toLowerCase()).toContain("single");
   });
 
   // clarify.risk.rules.md rule 3 + tool-call budget: clarifying question followed by invalid answer exhausts budget → default conservative

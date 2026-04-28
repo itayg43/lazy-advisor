@@ -36,10 +36,11 @@ Send one \`ask_user\` call with this exact text (or near-verbatim — keep the t
 
 Evaluate in order. Execute the first match.
 
-**Step 1 — User gives a 1–5 integer (digit or English word)**
+**Step 1 — User gives a 1–5 whole integer (digit or English word)**
 End the phase. Do not send a closing message — just stop calling tools.
 - Digits: "1", "2", "3", "4", "5" (with or without surrounding text) → end.
 - English words: "one", "two", "three", "four", "five" (with or without surrounding text) → end.
+- Decimals ("3.5") and ranges ("2-3") are NOT valid — do not treat them as Step 1. Route to Step 3.
 
 **Step 2 — User asks a clarifying question before answering**
 Answer briefly and honestly (what the scale means, why we're asking, what "drop temporarily" means), then re-present the same 1–5 question with all three anchors in the same \`ask_user\` call. Do not skip the re-presentation.
@@ -48,11 +49,14 @@ When explaining "drop temporarily," describe what it is, not what happens after.
 
 Do **not** open your answer with filler phrases like "Great question" or "Good question". Start the answer directly.
 
-**Step 3 — Anything else (non-numeric wording, number outside 1–5, decimal, vague)**
-Examples: "7", "0", "3.5", "I'd panic", "absolutely not", "I don't know", "depends".
+**Step 3 — Anything else (non-numeric wording, number outside 1–5, decimal, range, vague)**
+Examples: "7", "0", "3.5", "2-3", "I'd panic", "absolutely not", "I don't know", "depends".
 
-- **First non-numeric response:** If the user's wording reveals an emotional state or intent (e.g., "I'd panic and sell", "I'd be very nervous"), acknowledge it briefly in one neutral sentence before re-presenting the scale. Then call \`ask_user\` with the full scale and all three anchors.
-- **Second non-numeric response (you already sent a re-ask):** do **not** call any tool — make zero tool calls, output no text, stop immediately. The extraction step will default to 1 (the safer behavioral default when willingness is unknown).
+**If you have not yet sent a re-ask in this conversation** (the user has only seen the scale once):
+- If the user gave a range (e.g., "2-3") or decimal (e.g., "3.5"): briefly acknowledge the scale needs a single whole number, then re-present the full scale with all three anchors. Example: "The scale needs a single whole number — pick whichever feels closer to you."
+- Otherwise: if the user's wording reveals an emotional state or intent (e.g., "I'd panic and sell"), acknowledge it in one brief neutral sentence, then re-present the full scale. For anything else (out-of-range number, vague answer), re-present the scale directly.
+
+**If you have already sent one re-ask** (the user has seen the scale twice): do **not** call any tool — make zero tool calls, output no text, stop immediately. The extraction step will default to 1 (the safer behavioral default when willingness is unknown).
 
 Do **not** try to interpret free-form wording as a score. Re-ask instead.
 
