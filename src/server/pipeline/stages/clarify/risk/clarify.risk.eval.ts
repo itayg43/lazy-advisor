@@ -298,7 +298,10 @@ describe("collectRisk", () => {
 
     expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    expect(agentTurns).toHaveLength(2);
+    // re-ask must acknowledge the emotional content — not a bare scale re-presentation
+    expect(agentTurns[1].content).not.toMatch(/^Before we design/);
   });
 
   // clarify.risk.rules.md rule 3: still invalid after re-ask → default conservative
@@ -358,11 +361,12 @@ describe("collectRisk", () => {
     expect(agentTurns[1].content.toLowerCase()).toContain("single");
   });
 
-  // clarify.risk.rules.md rule 3 + tool-call budget: clarifying question followed by invalid answer exhausts budget → default conservative
-  it("should default to conservative when a clarifying question exhausts the budget before a valid answer", async () => {
+  // clarify.risk.rules.md budget: with budget=3, clarifying Q + range gets a valid third turn
+  it("should accept a valid answer after clarifying question followed by a range input", async () => {
     const responder = createTrackedResponder([
       "What does drop temporarily mean?",
-      "I still can't decide",
+      "2-3",
+      "2",
     ]);
     lastTranscript = responder.transcript;
 
@@ -373,10 +377,31 @@ describe("collectRisk", () => {
     );
     lastOutput = output;
 
-    // budget = 2: initial ask (turn 1) + re-present after clarifying Q (turn 2) → invalid answer, budget exhausted, silent end
+    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
+  });
+
+  // clarify.risk.rules.md rule 3 + tool-call budget: clarifying Q + two invalid answers exhaust budget → default conservative
+  it("should default to conservative when a clarifying question exhausts the budget before a valid answer", async () => {
+    const responder = createTrackedResponder([
+      "What does drop temporarily mean?",
+      "I still can't decide",
+      "Honestly I still can't say",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(
+      mockFields,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    // budget = 3: initial ask (T1) + re-present after clarifying Q (T2) + Step 3 re-ask (T3) → still invalid → silent end
     expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 
   // clarify.risk.rules.md capacity-context rule: deflect age/timeline questions, re-present 1–5 scale

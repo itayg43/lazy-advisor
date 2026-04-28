@@ -67,7 +67,18 @@ If the user has already received one re-ask in this phase, do **not** re-ask aga
 
 ## Tool-call budget
 
-`MAX_RISK_TOOL_CALLS = 2`. Worst case is one re-ask after an invalid answer (initial ask + re-ask = 2) or one clarifying-question answer (initial ask + re-presentation = 2). The budget does not accommodate both a clarifying question **and** a subsequent invalid answer in the same conversation — in that rare case the phase ends silently and the extractor applies the default-conservative fallback.
+`MAX_RISK_TOOL_CALLS = 3`. Worst case: clarifying question (T1 initial ask + T2 re-presentation after Q) followed by an invalid answer (T3 Step 3 re-ask) = 3 turns. The budget covers:
+
+- Initial ask + invalid answer + Step 3 re-ask = 3
+- Initial ask + clarifying Q re-presentation + Step 3 re-ask = 3
+- Initial ask + clarifying Q re-presentation + valid answer = 2 (within budget)
+
+If all 3 turns are consumed and no valid score is given, the phase ends silently and the extractor defaults to 1 (`conservative`).
+
+**Scenarios:**
+
+- `"What does drop temporarily mean?"` → re-present → `"2-3"` → Step 3 re-ask → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
+- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → end silently → selfRatingScore: 1 (default) → riskTolerance: conservative
 
 ---
 
