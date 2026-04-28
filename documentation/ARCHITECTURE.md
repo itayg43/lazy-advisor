@@ -1,14 +1,12 @@
 # Lazy Advisor — Architecture
 
-An agentic investment planning CLI for beginner ETF investors. Inspired by the Israeli "Lazy Investor" philosophy — invest in ETFs, set up monthly contributions, stick to the plan, don't overthink it. The agent asks smart questions to clarify the user's investment situation and builds a structured investment profile.
+An agentic investment planning CLI for beginner ETF investors. Inspired by the Israeli "Lazy Investor" philosophy — invest in ETFs, set up monthly contributions, stick to the plan, don't overthink it.
 
 > Educational/demonstrative project — not a licensed financial advisor. Target audience: beginner investors getting started, not experienced traders.
 
-## Clarify Stage — Phases
+## Pipeline Overview
 
 Stage behavior, prompts, and rules are co-located with the stage at `src/server/pipeline/stages/clarify/`.
-
-> Phases 1–8 shipped. `preferences` and `extraction` phases removed; classify → intake → fields → risk → allocation → contribution wired with typed I/O. Remaining: T2–T6 — see [`CLARIFY_REFACTOR_PLAN.md`](../CLARIFY_REFACTOR_PLAN.md) for specs and status. `UserProfile` will gain `equity` and `buffer` fields after T4/T5.
 
 ```mermaid
 flowchart TD
@@ -18,9 +16,9 @@ flowchart TD
     Classify -->|unrealistic| Unreal[intake: handleUnrealisticExpectations]
     Classify -->|contradictory| Contra[intake: handleContradictoryRisk]
 
-    OOS -->|accepted: alignedGoal| Fields
+    OOS -->|accepted| Fields
     OOS -->|rejected| End([end session])
-    Unreal -->|accepted: alignedGoal| Fields
+    Unreal -->|accepted| Fields
     Unreal -->|rejected| End
     Contra -->|accepted| Fields
     Contra -->|rejected| End
@@ -39,23 +37,15 @@ flowchart TD
 | Phase | Job | Input → Output |
 |-------|-----|----------------|
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
-| intake | Redirect misclassified goals; reject if user declines; extract clean `alignedGoal` on acceptance | `goal`, classification → `IntakeResult` |
-| fields | Collect core profile fields via conversation | `goal` → `FieldsPhaseOutput` |
-| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `goal`, `FieldsPhaseOutput` → `RiskPhaseOutput` |
-| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | `goal`, fields, risk → `AllocationPhaseOutput` |
-| contribution | Establish one-time vs. periodic intent | `goal`, fields, allocation → `ContributionPhaseOutput` |
-| equity | *(T4 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | `goal`, fields, risk, allocation, contribution → `EquityPhaseOutput` |
-| buffer | *(T5 — planned)* Resolve which buffer instrument fills the buffer bucket | `goal`, fields, risk, allocation, equity → `BufferPhaseOutput` |
+| intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakeResult` |
+| fields | Collect core profile fields via conversation | — → `FieldsPhaseOutput` |
+| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `FieldsPhaseOutput` → `RiskPhaseOutput` |
+| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | fields, risk → `AllocationPhaseOutput` |
+| contribution | Establish one-time vs. periodic intent | fields, allocation → `ContributionPhaseOutput` |
+| equity | *(T4 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | fields, risk, allocation, contribution → `EquityPhaseOutput` |
+| buffer | *(T5 — planned)* Resolve which buffer instrument fills the buffer bucket | fields, risk, allocation, equity → `BufferPhaseOutput` |
 
 Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt, then a post-loop structured extraction call produces the phase's typed output. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
-
-## Stage Boundary Validation
-
-The clarify stage output is validated with `UserProfileSchema`. If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help. The user starts a new session.
-
-## OpenAI Failure Handling
-
-All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, nothing is saved. The pipeline sends an `error` event and the user retries from scratch.
 
 ---
 
@@ -63,15 +53,9 @@ All OpenAI API calls use retry with exponential backoff (3 attempts). If all ret
 
 ### Multi-phase split
 
-Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Each phase has its own system prompt scoped to a single job, runs its own `runPhaseLoop`, and returns a typed structured output consumed by the next phase. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
+Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
 
-(Initial implementation chained phases via `previous_response_id` with a single extraction call at the end; replaced by the typed I/O pipeline described above.)
-
-### Phase loop guardrails
-
-`runPhaseLoop` enforces a max tool call count to guard against the model not converging, and `collectToolOutputs` rejects any tool that isn't `ask_user`. Both violations throw `InternalError`.
-
-### Classifier + intake routing
+### Classify + intake routing
 
 Some goals require handling before field collection: stock-picking requests need an ETF redirect, unrealistic return expectations need a reality check. Embedding that branching in the fields prompt would create a mega-prompt where routing logic competes with field-collection instructions, degrading adherence.
 
@@ -80,24 +64,24 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
 ```
 "Should I buy NVIDIA stock?"
   → classifyGoal()             → out_of_scope
-  → handleOutOfScopeRedirect   → IntakeResult { accepted: true, alignedGoal }
-  → collectFields(alignedGoal)
-  → collectRisk → collectAllocation → ... → UserProfile
+  → handleOutOfScopeRedirect   → IntakeResult { accepted: true }
+  → collectFields()
+  → collectRisk(fields) → collectAllocation(fields, risk) → ... → UserProfile
 ```
 
-Each intake phase handles its specific conversation via `runPhaseLoop`. Acceptance and `alignedGoal` extraction are determined by a post-loop structured LLM call returning `{ accepted: true; alignedGoal: string } | { accepted: false }`. Result is typed as `IntakeResult`:
-- `{ accepted: true, alignedGoal }` — clean goal string produced after the user accepts; orchestrator passes `alignedGoal` to all downstream phases
+Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakeResult`. Acceptance is determined by a post-loop structured LLM call:
+- `{ accepted: true }` — user accepted the redirect; orchestrator continues to field collection
 - `{ accepted: false }` — end the session; stage sends a per-classification closing message from `INTAKE_REJECTION_MESSAGES`
 
 The fields prompt is left with one job: collect required profile fields.
 
+An alternative considered: skip the classifier and expose handlers as LLM tools, letting a top-level agent route via tool call. This breaks down because the handlers are multi-turn conversations — the outer agent would just wait, making it an expensive classifier with no upside. Explicit code routing after a lightweight classifier is cheaper, independently testable, and observable in isolation.
+
 (The `contradictory` classification is kept despite the risk phase's self-rating resolving the stated contradiction — surfacing the conflict up-front has educational value for beginner users.)
 
-### Handlers as sub-agents; code as orchestrator
+### Short-horizon early exit (timeline < 3 years)
 
-Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent in the practical sense: its own system prompt, its own `runPhaseLoop`, and a typed `IntakeResult`. The clarify stage orchestrates them explicitly in code after the classifier runs.
-
-An alternative considered: skip the classifier and expose handlers as LLM tools, letting a top-level agent route via tool call. This breaks down because the handlers are multi-turn conversations — the outer agent would just wait, making it an expensive classifier with no upside. Explicit code routing after a lightweight classifier is cheaper, independently testable, and observable in isolation.
+After fields collection, the orchestrator checks `fields.timeline`. If it is `"under 3 years"`, the stage exits immediately — sends a money market fund redirect and returns `null`. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
 
 ### Risk phase — single 1–5 self-rating
 
@@ -117,24 +101,34 @@ The allocation phase resolves the total-portfolio split between equity (stocks /
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
-The model locates the user's cell from `risk.riskTolerance` × `fields.timeline` (a `TimelineBucket` enum: `"under 3 years" | "3–5 years" | "5–10 years" | "10+ years"`) and picks a specific integer inside the cell's range. The anchor table and four behavioral rules live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); the research basis is in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
-
-Users with an `"under 3 years"` timeline never reach this phase. The orchestrator exits after fields collection, sends a money market fund redirect, and returns `null`. ETFs carry too much timing risk for money needed within 3 years — a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful dial at that horizon (Vanguard, Fidelity, Bogleheads). The allocation anchor table therefore only covers three timelines: `3–5 years`, `5–10 years`, `10+ years`.
+The model locates the user's cell from `risk.riskTolerance` × `fields.timeline` and picks a specific integer inside the cell's range. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
 **What's not consumed by this phase.** `age` is unused: redundant with timeline per TDF glidepath literature. Emergency fund and debt status are addressed in a separate educational gate (T3, not yet implemented) and will not be passed to this phase.
 
-### `plansToContribute: boolean` instead of `monthlyContribution: number`
+### Contribution phase — `plansToContribute: boolean`
 
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
 
 **Allocation context passed to contribution.** The contribution phase receives `AllocationPhaseOutput` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
 
-### No extraction phase — inline assembly from typed outputs
+### Inline assembly from typed outputs
 
-The original pipeline ended with an LLM extraction call reading the full cross-phase conversation to assemble a `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: each phase returns a typed output spread directly into the profile before a final `UserProfileSchema.parse()` boundary check. With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: each phase returns a typed output spread directly into the profile before a final `UserProfileSchema.parse()` boundary check. With typed phase outputs, there is no summation or inference step — just field mapping.
 
-### Fields phase takes `goal: string` directly
+---
 
-Intake handlers are short redirections; their LLM conversation context adds little value to the fields phase. A later refactor phase will build an enriched goal string incorporating relevant intake context explicitly and pass it to fields as a clean typed input — simpler and more testable than threading a `previous_response_id` through two unrelated phases.
+## Cross-cutting Concerns
+
+### Phase loop guardrails
+
+`runPhaseLoop` enforces a max tool call count to guard against the model not converging, and `collectToolOutputs` rejects any tool that isn't `ask_user`. Both violations throw `InternalError`.
+
+### Stage boundary validation
+
+The clarify stage output is validated with `UserProfileSchema`. If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
+
+### OpenAI failure handling
+
+All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the pipeline sends an `error` event and the user retries from scratch.
