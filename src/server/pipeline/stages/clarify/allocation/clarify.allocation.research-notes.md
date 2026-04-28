@@ -7,14 +7,14 @@
 
 Phase 4b uses a **two-axis anchor table: risk tolerance × timeline**.
 
-| Willingness \ Timeline | < 3 yr | 3–5 yr | 5–10 yr | 10+ yr |
-|---|---|---|---|---|
-| Conservative | 0% | 10–20% | 30–40% | 40–50% |
-| Moderate | 0% | 20–30% | 50–60% | 60–70% |
-| Aggressive | 0% | 30–40% | 60–70% | 80–90% |
+| Willingness \ Timeline | 3–5 yr | 5–10 yr | 10+ yr |
+|---|---|---|---|
+| Conservative | 10–20% | 30–40% | 40–50% |
+| Moderate | 20–30% | 50–60% | 60–70% |
+| Aggressive | 30–40% | 60–70% | 80–90% |
 
 Key rules:
-- **Short-horizon collapse:** <3yr is fixed at 0% equity for all willingness levels. Risk tolerance is not a meaningful dial below ~3 years.
+- **Short-horizon exit:** Users with <3yr timeline never reach this phase. The orchestrator exits after fields collection and redirects them to a money market fund — risk tolerance is not a meaningful dial below ~3 years, and proposing an ETF allocation for money needed soon would be a disservice.
 - **EF and debt are suitability gates, not anchor inputs.** If the user lacks an EF or carries high-interest debt, the agent surfaces the concern and asks how they want to proceed — the anchor percentage does not shift.
 - **Pre-stated split:** accept by default. Exception: if the split is extreme relative to capacity (e.g., 100% equity with <3yr horizon, or 0% equity with 20+yr horizon + aggressive risk), surface the mismatch in one turn, then accept the user's final answer.
 - **Behavioral framing:** "sizing to tolerance *tends to* reduce panic-selling" — not "prevents".
@@ -42,7 +42,7 @@ Dalbar QAIB is correlational, not a controlled study. Kitces argues panic-sellin
 - <1yr: 0% equity — cash, MMF, high-yield savings.
 - 1–3yr: dominated by short-term bonds/CDs; at most a token equity slice.
 - 3–5yr: 20–40% equity, graded by tolerance.
-- Pass-1 draft had short-horizon at 20–60% equity — **this was wrong**. Risk tolerance is not a meaningful dial below ~3 years.
+- Pass-1 draft had short-horizon at 20–60% equity — **this was wrong**. Risk tolerance is not a meaningful dial below ~3 years. Implemented as an orchestrator-level early exit: <3yr users are redirected to a money market fund before reaching this phase.
 
 **6. Pre-stated-split sanity check aligns with fiduciary norms — [verified]**
 FINRA 2111, CFP Board, and MiFID II all require pushing back on client-directed splits that conflict with the client's profile. We're not a regulated fiduciary, but a lightweight sanity check is consistent with "user has final say, trade-offs presented honestly".
@@ -56,7 +56,7 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 |---|---|
 | Age redundant with timeline | Dropped — TDF glidepaths use years-to-retirement, not age |
 | EF/debt treated as continuous anchor inputs | Moved to conversational suitability qualifiers |
-| Short-horizon at 20–60% equity | Fixed at 0% across all tolerances (<3yr) |
+| Short-horizon at 20–60% equity | Orchestrator exits early for <3yr; phase never sees this timeline |
 | 5-factor interaction hard to prompt/eval | 3×4 table maps 1:1 to eval cases |
 
 ## Trade-offs

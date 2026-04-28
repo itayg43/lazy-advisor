@@ -9,9 +9,10 @@ import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
   PROFILE_TRANSITION_MESSAGE,
+  SHORT_TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { UserProfileSchema } from "#schemas/pipeline.schemas";
+import { TimelineBucket, UserProfileSchema } from "#schemas/pipeline.schemas";
 import type { UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyStage");
@@ -41,6 +42,15 @@ export const runClarifyStage = async (
   sendToUser(PROFILE_TRANSITION_MESSAGE);
 
   const fields = await collectFields(sendToUser, waitForResponse);
+
+  if (fields.timeline === TimelineBucket.enum["under 3 years"]) {
+    logger.info("Short timeline — exiting pipeline", { timeline: fields.timeline });
+
+    sendToUser(SHORT_TIMELINE_EXIT_MESSAGE);
+
+    return null;
+  }
+
   const risk = await collectRisk(fields, sendToUser, waitForResponse);
   const allocation = await collectAllocation(fields, risk, sendToUser, waitForResponse);
   const contribution = await collectContribution(

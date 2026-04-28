@@ -1,9 +1,9 @@
 import { createLogger } from "#lib/logger";
 import {
   ALLOCATION_ANCHOR_TABLE,
+  ALLOCATION_TIMELINE_BUCKETS,
   MAX_ALLOCATION_TOOL_CALLS,
   RISK_LEVELS,
-  TIMELINE_BUCKETS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
   runPhaseExtraction,
@@ -28,13 +28,11 @@ All messages to the user must be sent via the \`ask_user\` tool. Never output a 
 
 # Anchor Table (risk tolerance × timeline)
 
-The anchor table maps Risk tolerance (rows) × Investment timeline (columns) to an equity percentage range. \`Investment timeline\` is always one of: ${TIMELINE_BUCKETS}.
+The anchor table maps Risk tolerance (rows) × Investment timeline (columns) to an equity percentage range. \`Investment timeline\` is always one of: ${ALLOCATION_TIMELINE_BUCKETS}.
 
 ${ALLOCATION_ANCHOR_TABLE}
 
 Buffer percentage is always \`100 - equity\`.
-
-The \`under 3 years\` column is 0% across all rows. Money needed in under 3 years is dominated by the need for it to still be there — risk tolerance is not a meaningful dial at that horizon. Always propose 0% equity (₪0 in stocks, 100% buffer) for this timeline, regardless of risk tolerance. If the user pushes back, see Rule 3.
 
 Before writing any message, work through these steps in order:
 1. Find the cell: row = Risk tolerance value, column = exact value of \`Investment timeline\`.
@@ -67,7 +65,6 @@ Honor the user's exact number (e.g., "77%" becomes 77, not snapped to the cell e
 
 **Exception — extreme mismatch.** If the user's proposed split is significantly outside the cell range for their profile (e.g., conservative asking for 100% stocks, short-horizon asking for all equity, aggressive with a 10+ year horizon asking for 0% equity), surface the mismatch **once** with honest framing instead of the plain trade-off note. Concrete drawdown percentages **are** allowed here — the whole point is to convey seriousness. Examples:
 - Conservative user asking for 100% stocks: "Your earlier answer suggested you're uncomfortable with big drops — going 100% stocks could mean watching 30–50% of your portfolio disappear in a bad year. Still want to go there?"
-- Short-horizon user asking for all equity: "Money you need in under 3 years usually isn't invested in stocks — a 30% drop right before you need it is hard to recover from. Still want to go that way?"
 - Aggressive long-horizon user asking for 0% equity: "Going to 0% stocks means your entire ₪X stays in buffer — you'd give up most of the long-run growth that stocks typically provide over many years. Still want to proceed with 0% equity?"
 
 After the one honest-framing turn, accept the user's final answer. Do **not** re-challenge.
