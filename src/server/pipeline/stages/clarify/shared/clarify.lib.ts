@@ -1,8 +1,10 @@
+import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseFunctionToolCall,
   ResponseInputItem,
 } from "openai/resources/responses/responses";
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
+import type { ZodType } from "zod";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
@@ -13,7 +15,7 @@ import {
   type SendToUser,
   type WaitForResponse,
 } from "#pipeline/tools/ask-user.tool";
-import { callOpenAI } from "#services/openai";
+import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/openai";
 
 const logger = createLogger("clarifyLib");
 
@@ -26,6 +28,14 @@ type PhaseLoopParams = {
   phaseName: string;
   sendToUser: SendToUser;
   waitForResponse: WaitForResponse;
+};
+
+type PhaseExtractionParams<T> = {
+  model: ResponsesModel;
+  effort: ReasoningEffort;
+  instructions: string;
+  lastResponseId: string;
+  schema: ZodType<T>;
 };
 
 export const collectToolOutputs = async (
@@ -143,4 +153,21 @@ export const runPhaseLoop = async ({
   });
 
   return { responseId: response.id };
+};
+
+export const runPhaseExtraction = async <T>({
+  model,
+  effort,
+  instructions,
+  lastResponseId,
+  schema,
+}: PhaseExtractionParams<T>): Promise<OpenAIResponse<T>> => {
+  return await callOpenAIParsed<T>({
+    model,
+    instructions,
+    input: [],
+    previous_response_id: lastResponseId,
+    text: { format: zodTextFormat(schema, "output") },
+    reasoning: { effort },
+  });
 };

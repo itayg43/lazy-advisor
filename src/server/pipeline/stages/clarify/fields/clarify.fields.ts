@@ -1,5 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
-
 import { createLogger } from "#lib/logger";
 import {
   MAX_FIELDS_TOOL_CALLS,
@@ -7,11 +5,13 @@ import {
   TIMELINE_BUCKET_LIST,
   TIMELINE_BUCKETS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import {
+  runPhaseExtraction,
+  runPhaseLoop,
+} from "#pipeline/stages/clarify/shared/clarify.lib";
 import { FieldsPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyFields");
 
@@ -117,13 +117,12 @@ export const collectFields = async (
     waitForResponse,
   });
 
-  const { id, usage, output } = await callOpenAIParsed<FieldsPhaseOutput>({
+  const { id, usage, output } = await runPhaseExtraction<FieldsPhaseOutput>({
     model: "gpt-5.4-nano",
+    effort: "low",
     instructions: FIELDS_EXTRACTION_INSTRUCTIONS,
-    input: [],
-    previous_response_id: responseId,
-    text: { format: zodTextFormat(FieldsPhaseOutputSchema, "FieldsPhaseOutput") },
-    reasoning: { effort: "low" },
+    lastResponseId: responseId,
+    schema: FieldsPhaseOutputSchema,
   });
 
   logger.info("Fields extraction complete", { responseId: id, usage });

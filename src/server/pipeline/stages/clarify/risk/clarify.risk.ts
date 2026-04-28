@@ -1,8 +1,9 @@
-import { zodTextFormat } from "openai/helpers/zod";
-
 import { createLogger } from "#lib/logger";
 import { MAX_RISK_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import {
+  runPhaseExtraction,
+  runPhaseLoop,
+} from "#pipeline/stages/clarify/shared/clarify.lib";
 import { RiskScoreSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   FieldsPhaseOutput,
@@ -11,7 +12,6 @@ import type {
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { RiskTolerance } from "#schemas/pipeline.schemas";
-import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyRisk");
 
@@ -92,13 +92,12 @@ Investment timeline: ${fields.timeline}`;
     waitForResponse,
   });
 
-  const { id, usage, output } = await callOpenAIParsed<RiskScore>({
+  const { id, usage, output } = await runPhaseExtraction<RiskScore>({
     model: "gpt-5.4-nano",
+    effort: "low",
     instructions: RISK_EXTRACTION_INSTRUCTIONS,
-    input: [],
-    previous_response_id: responseId,
-    text: { format: zodTextFormat(RiskScoreSchema, "RiskScoreSchema") },
-    reasoning: { effort: "low" },
+    lastResponseId: responseId,
+    schema: RiskScoreSchema,
   });
 
   const result: RiskPhaseOutput = {

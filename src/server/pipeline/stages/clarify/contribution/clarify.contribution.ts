@@ -1,8 +1,9 @@
-import { zodTextFormat } from "openai/helpers/zod";
-
 import { createLogger } from "#lib/logger";
 import { MAX_CONTRIBUTION_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import {
+  runPhaseExtraction,
+  runPhaseLoop,
+} from "#pipeline/stages/clarify/shared/clarify.lib";
 import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
@@ -10,7 +11,6 @@ import type {
   FieldsPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyContribution");
 
@@ -74,15 +74,12 @@ Allocation: ${allocation.equityPercentage}% equity (₪${equityAmount.toLocaleSt
     waitForResponse,
   });
 
-  const { id, usage, output } = await callOpenAIParsed<ContributionPhaseOutput>({
+  const { id, usage, output } = await runPhaseExtraction<ContributionPhaseOutput>({
     model: "gpt-5.4-nano",
+    effort: "low",
     instructions: CONTRIBUTION_EXTRACTION_INSTRUCTIONS,
-    input: [],
-    previous_response_id: responseId,
-    text: {
-      format: zodTextFormat(ContributionPhaseOutputSchema, "ContributionPhaseOutput"),
-    },
-    reasoning: { effort: "low" },
+    lastResponseId: responseId,
+    schema: ContributionPhaseOutputSchema,
   });
 
   logger.info("Contribution extraction complete", { responseId: id, usage });
