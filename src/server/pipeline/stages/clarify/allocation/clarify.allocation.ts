@@ -1,5 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
-
 import { createLogger } from "#lib/logger";
 import {
   ALLOCATION_ANCHOR_TABLE,
@@ -7,7 +5,10 @@ import {
   RISK_LEVELS,
   TIMELINE_BUCKETS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import {
+  runPhaseExtraction,
+  runPhaseLoop,
+} from "#pipeline/stages/clarify/shared/clarify.lib";
 import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
@@ -15,7 +16,6 @@ import type {
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAllocation");
 
@@ -113,24 +113,23 @@ export const collectAllocation = async (
     `Risk tolerance: ${risk.riskTolerance}`,
   ].join("\n");
 
-  const { responseId } = await runPhaseLoop(
-    ALLOCATION_PROMPT,
-    { input: context },
-    MAX_ALLOCATION_TOOL_CALLS,
-    "Allocation phase",
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
+    instructions: ALLOCATION_PROMPT,
+    input: context,
+    maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
+    phaseName: "Allocation phase",
     sendToUser,
     waitForResponse,
-  );
+  });
 
-  const { id, usage, output } = await callOpenAIParsed<AllocationPhaseOutput>({
+  const { id, usage, output } = await runPhaseExtraction<AllocationPhaseOutput>({
     model: "gpt-5.4-nano",
+    effort: "low",
     instructions: ALLOCATION_EXTRACTION_INSTRUCTIONS,
-    input: [],
-    previous_response_id: responseId,
-    text: {
-      format: zodTextFormat(AllocationPhaseOutputSchema, "AllocationPhaseOutput"),
-    },
-    reasoning: { effort: "low" },
+    lastResponseId: responseId,
+    schema: AllocationPhaseOutputSchema,
   });
 
   logger.info("Allocation extraction complete", { responseId: id, usage });

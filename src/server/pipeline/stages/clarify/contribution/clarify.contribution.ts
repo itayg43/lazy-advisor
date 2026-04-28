@@ -1,8 +1,9 @@
-import { zodTextFormat } from "openai/helpers/zod";
-
 import { createLogger } from "#lib/logger";
 import { MAX_CONTRIBUTION_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import {
+  runPhaseExtraction,
+  runPhaseLoop,
+} from "#pipeline/stages/clarify/shared/clarify.lib";
 import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
@@ -10,7 +11,6 @@ import type {
   FieldsPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyContribution");
 
@@ -63,24 +63,23 @@ export const collectContribution = async (
 Investment timeline: ${fields.timeline}
 Allocation: ${allocation.equityPercentage}% equity (₪${equityAmount.toLocaleString()}), ${allocation.bufferPercentage}% buffer (₪${bufferAmount.toLocaleString()})`;
 
-  const { responseId } = await runPhaseLoop(
-    CONTRIBUTION_PROMPT,
-    { input: context },
-    MAX_CONTRIBUTION_TOOL_CALLS,
-    "Contribution phase",
+  const { responseId } = await runPhaseLoop({
+    model: "gpt-5.4-nano",
+    effort: "low",
+    instructions: CONTRIBUTION_PROMPT,
+    input: context,
+    maxToolCalls: MAX_CONTRIBUTION_TOOL_CALLS,
+    phaseName: "Contribution phase",
     sendToUser,
     waitForResponse,
-  );
+  });
 
-  const { id, usage, output } = await callOpenAIParsed<ContributionPhaseOutput>({
+  const { id, usage, output } = await runPhaseExtraction<ContributionPhaseOutput>({
     model: "gpt-5.4-nano",
+    effort: "low",
     instructions: CONTRIBUTION_EXTRACTION_INSTRUCTIONS,
-    input: [],
-    previous_response_id: responseId,
-    text: {
-      format: zodTextFormat(ContributionPhaseOutputSchema, "ContributionPhaseOutput"),
-    },
-    reasoning: { effort: "low" },
+    lastResponseId: responseId,
+    schema: ContributionPhaseOutputSchema,
   });
 
   logger.info("Contribution extraction complete", { responseId: id, usage });
