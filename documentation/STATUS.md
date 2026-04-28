@@ -2,21 +2,29 @@
 
 ## Up Next
 
-**Evals review follow-up — under-3-years early exit.** Working through issues surfaced by the 2026-04-28 evals review. Issues 1 (allocation sanity-check `all-singles` artifact) and 2 (under-3-years anchor collapse to 0%) are committed. Currently implementing issue 2's logical conclusion: an early exit in the orchestrator after fields when `timeline === "under 3 years"`, with a קרן כספית redirect message and a full cleanup of now-dead under-3-years logic in the allocation phase. See plan at `.claude/plans/i-agree-we-should-temporal-kahn.md`. After this is committed, resume with **issue 3** (contradictory phase — missing test for amount adaptation in scenario) and the remaining evals review issues.
+**Evals review follow-up (branch: `feature/evals-review`).** Working through issues from the 2026-04-28 evals report. Progress:
 
-**T2 — Intake cleanup** — See [Refactor Plan § T2](../CLARIFY_REFACTOR_PLAN.md#t2--intake-cleanup).
+| # | Issue | Status |
+|---|-------|--------|
+| 1 | Allocation sanity-check `all-singles` artifact | ✅ Done |
+| 2 | Under-3-years early exit (orchestrator + allocation cleanup) | ✅ Done |
+| 3 | Contradictory — missing test for goal-amount adaptation in scenario | ✅ Done |
+| 4 | Contribution rules missing "don't validate skipping as equally good" | ✅ Done (was already in rules) |
+| 5 | Risk — range/decimal re-ask needs "single number" acknowledgment | ✅ Done |
+| 6 | Contradictory + unrealistic — add ≥1 more test each | ⏳ Next |
+| 7 | Out-of-scope — NASDAQ-100 mislabeled as semiconductor ETF | Pending |
+| 8 | Fields — no test covering all 5 fields in one pass | Pending |
+| 9 | Contribution — DCA explanation length | Pending |
+| 10 | Classify — borderline goal coverage | Pending |
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T2 | Intake cleanup |
 | T3 | EF/debt gate |
 | T4 | Equity |
 | T5 | Buffer |
 | T6 | Wire equity/buffer in orchestrator |
-
-Full specs: [CLARIFY_REFACTOR_PLAN.md](../CLARIFY_REFACTOR_PLAN.md)
 
 ## Improvements
 
