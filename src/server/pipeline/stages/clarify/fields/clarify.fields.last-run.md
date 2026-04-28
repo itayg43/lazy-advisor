@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-27T10:20:46.222Z | Commit: 1c5cd42
+Timestamp: 2026-04-28T12:32:17.307Z | Commit: 0332a41
 
 ---
 
@@ -8,13 +8,17 @@ Timestamp: 2026-04-27T10:20:46.222Z | Commit: 1c5cd42
 **Agent:** A few details to get started:
 1. How much do you want to invest (a specific amount)?
 2. How old are you?
-3. What’s your investment timeline — choose one: `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`?
+3. What’s your investment timeline?
+   1) under 3 years
+   2) 3–5 years
+   3) 5–10 years
+   4) 10+ years
 
 **User:** ₪30,000, I'm 27, 20 years
 
 **Agent:** Two more quick questions:
 1. Do you have an emergency fund set aside? (yes/no)
-2. Do you have any debt you’re currently paying down? (yes/no)
+2. Do you have any debt you're currently paying down? (yes/no)
 
 **User:** Yes emergency fund, no debt
 
@@ -27,17 +31,21 @@ amount: 30000 | age: 27 | timeline: 10+ years | hasEmergencyFund: true | hasDebt
 ## ✓ should re-ask timeline when vague before proceeding to EF/debt
 
 **Agent:** A few details to get started:
-1. How much do you want to invest (a specific number)?
-2. How old are you? 
-3. What’s your investment timeline? Choose one: `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`.
+1. How much do you want to invest (a specific amount)?
+2. How old are you?
+3. What’s your investment timeline?
+   1) under 3 years
+   2) 3–5 years
+   3) 5–10 years
+   4) 10+ years
 
 **User:** I have ₪20,000, I'm 32, long-term
 
-**Agent:** Got it. For your timeline, which of these best fits?
-1. under 3 years
-2. 3–5 years
-3. 5–10 years
-4. 10+ years
+**Agent:** Got it—just to clarify your timeline: which of these best fits?
+1) under 3 years
+2) 3–5 years
+3) 5–10 years
+4) 10+ years
 
 **User:** I guess maybe 10-15 years
 
@@ -56,23 +64,27 @@ amount: 20000 | age: 32 | timeline: 10+ years | hasEmergencyFund: true | hasDebt
 ## ✓ should present the four timeline bucket options when asking for timeline
 
 **Agent:** A few details to get started:
-1. How much do you want to invest? (please provide a specific amount)
+1. How much do you want to invest (a specific amount)?
 2. How old are you?
-3. What’s your investment timeline? Choose one: 1) under 3 years  2) 3–5 years  3) 5–10 years  4) 10+ years
+3. What’s your investment timeline? Choose one: 
+   - under 3 years
+   - 3–5 years
+   - 5–10 years
+   - 10+ years
 
 **User:** ₪50,000, I'm 25
 
-**Agent:** Great—thanks. What’s your investment timeline? Choose one:
-1) under 3 years
-2) 3–5 years
-3) 5–10 years
-4) 10+ years
+**Agent:** Great—what’s your investment timeline? Choose one:
+1. under 3 years
+2. 3–5 years
+3. 5–10 years
+4. 10+ years
 
 **User:** 5-10 years
 
 **Agent:** Two more quick questions:
 1. Do you have an emergency fund set aside? (yes/no)
-2. Do you have any debt you're currently paying down? (yes/no)
+2. Do you have any debt you’re currently paying down? (yes/no)
 
 **User:** Yes I have an emergency fund, no debt
 
@@ -85,15 +97,15 @@ amount: 50000 | age: 25 | timeline: 5–10 years | hasEmergencyFund: true | hasD
 ## ✓ should map a short stated timeframe to the 'under 3 years' bucket
 
 **Agent:** A few details to get started:
-1. How much do you want to invest (a specific number)?
-2. How old are you? 
-3. What’s your investment timeline—choose one: `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`
+1. How much do you want to invest (a specific amount)?
+2. How old are you?
+3. What’s your investment timeline? Choose one: 1) under 3 years  2) 3–5 years  3) 5–10 years  4) 10+ years
 
 **User:** ₪20,000, I'm 50, I need this money in about 2 years
 
 **Agent:** Two more quick questions:
 1. Do you have an emergency fund set aside? (yes/no)
-2. Do you have any debt you're currently paying down? (yes/no)
+2. Do you have any debt you’re currently paying down? (yes/no)
 
 **User:** Yes emergency fund, no debt
 
@@ -106,7 +118,7 @@ amount: 20000 | age: 50 | timeline: under 3 years | hasEmergencyFund: true | has
 ## ✓ should map a medium stated timeframe to the '3–5 years' bucket
 
 **Agent:** A few details to get started:
-1. How much do you want to invest (please give a specific number)?
+1. How much do you want to invest (a specific number)?
 2. How old are you?
 3. What’s your investment timeline? Choose one: 1) under 3 years 2) 3–5 years 3) 5–10 years 4) 10+ years
 

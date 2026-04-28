@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-27T10:18:05.417Z | Commit: 1c5cd42
+Timestamp: 2026-04-28T12:34:47.729Z | Commit: 0332a41
 
 ---
 
@@ -7,9 +7,9 @@ Timestamp: 2026-04-27T10:18:05.417Z | Commit: 1c5cd42
 
 **Goal:** "I want maximum returns but I can't afford to lose any money"
 
-**Agent:** That’s a common tension: aiming for maximum returns usually comes with some risk of temporary loss. In investing, “no losses” isn’t always achievable day-to-day—so the key is how much volatility you can genuinely tolerate.
+**Agent:** That’s a common tension: aiming for maximum returns usually involves some chance of temporary losses, even if you still end up profiting over time. The key is how much short-term volatility you can truly tolerate.
 
-If your portfolio dropped 20% in a year—for example, ₪10,000 became ₪8,000—what would you do?
+Concrete scenario: imagine your portfolio is worth ₪10,000 today and it drops 20% in a year (to ₪8,000). What would you do?
 (A) Sell to stop further losses
 (B) Hold and wait for recovery
 (C) Buy more while prices are low
@@ -23,12 +23,9 @@ If your portfolio dropped 20% in a year—for example, ₪10,000 became ₪8,000
 
 **Goal:** "I want maximum returns but I can't afford to lose any money"
 
-**Agent:** That’s a very common tension: chasing maximum returns and also requiring “no losses” can conflict, because even strong investments can drop temporarily before recovering. The key is how much temporary drawdown you can truly tolerate.
+**Agent:** That’s a common tension: aiming for maximum returns usually comes with a risk that you may see temporary declines. The key is how much volatility you can genuinely tolerate.
 
-Concrete scenario: If your portfolio dropped 20% in a year—say ₪10,000 became ₪8,000—would you:
-(A) sell to stop further losses,
-(B) hold and wait for recovery,
-or (C) buy more while prices are low?
+Scenario: If your portfolio dropped 20% in a year—for example, ₪10,000 became ₪8,000—would you (A) sell to stop further losses, (B) hold and wait for recovery, or (C) buy more while prices are low?
 
 **User:** I don't know, forget it, I'm not interested anymore
 
