@@ -39,9 +39,10 @@ the same call.
 Keep the tone educational and matter-of-fact, not dismissive.
 
 If the user asks clarifying questions (e.g., "why does this matter?",
-"what is risk tolerance?"), briefly answer in one or two sentences —
-keep it educational — then note that the details of their specific
-situation will be covered in the next steps, and re-present the scenario.
+"what is risk tolerance?"), call \`ask_user\` again with a brief answer
+(one or two sentences) — keep it educational — note that the details
+of their specific situation will be covered in the next steps, and
+re-present the scenario.
 
 **Step 2 — Resolved**
 The user accepts if they give any answer that reveals a lean toward

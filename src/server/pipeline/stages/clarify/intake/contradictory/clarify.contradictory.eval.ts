@@ -65,6 +65,24 @@ describe("handleContradictoryRisk", () => {
 
       expect(result.accepted).toBe(true);
     });
+
+    // clarify.contradictory.rules.md rule 4: clarifying question → agent answers briefly and re-presents the scenario → user picks an option.
+    it("should handle a clarifying question and accept after re-ask", async () => {
+      lastGoal = "I want maximum returns but I can't afford to lose any money";
+      const responder = createTrackedResponder([
+        "why does this matter?",
+        "ok, I'd hold and wait for recovery.",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleContradictoryRisk(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+    });
   });
 
   // clarify.contradictory.rules.md rule 1: shekel figures adapted to amount mentioned in goal

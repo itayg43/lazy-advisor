@@ -66,6 +66,24 @@ describe("handleUnrealisticExpectations", () => {
 
       expect(result.accepted).toBe(true);
     });
+
+    // clarify.unrealistic.rules.md rule 5: clarifying question → agent answers briefly and re-asks → user accepts.
+    it("should handle a clarifying question and accept after re-ask", async () => {
+      lastGoal = "I have ₪18,000 and I want to double it in 6 months";
+      const responder = createTrackedResponder([
+        "what does a realistic plan look like?",
+        "ok, that makes sense, let's do long term",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleUnrealisticExpectations(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+    });
   });
 
   // clarify.unrealistic.rules.md rule 4: rejected — extraction returns { accepted: false }.

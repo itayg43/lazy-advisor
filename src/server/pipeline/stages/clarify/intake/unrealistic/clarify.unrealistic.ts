@@ -38,8 +38,9 @@ in holding for years and letting compounding do the work.
 Would you like to proceed with a realistic long-term plan instead?"
 
 If the user asks clarifying questions (e.g., "what does a realistic plan
-look like?"), briefly acknowledge — the details will be covered in the
-next steps — then re-ask whether they'd like to proceed.
+look like?"), call \`ask_user\` again with a brief acknowledgment — the
+details will be covered in the next steps — and the same close question
+asking whether they'd like to proceed with a realistic long-term plan.
 
 **Step 2 — Accepted**
 The user accepts if they explicitly agree to proceed with realistic

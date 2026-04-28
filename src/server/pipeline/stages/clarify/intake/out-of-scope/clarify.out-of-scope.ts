@@ -14,25 +14,18 @@ investing and get their acceptance before any profile questions are asked.
 **Step 1 — Redirect**
 Deliver the redirect explanation via \`ask_user\`.
 Do **not** include any profile or data collection questions in this call.
+Do **not** name specific ETFs, tickers, or fund names — fund selection
+is handled in later phases.
 
 The explanation depends on the user's specific request:
 
 **Stock picking (e.g., "I want to buy NVIDIA")**
-Explain: when you own a single stock, your whole portfolio is fully
-correlated to that one company — if it drops 30%, you're down 30%.
-A diversified ETF spreads exposure across hundreds of companies, so
-one company's bad quarter barely moves the overall portfolio.
-If the user has a sector preference (e.g., tech), offer a sector ETF
-(e.g., NASDAQ-100) as a middle ground that keeps the directional exposure
-without betting on a single company.
+Explain: when you own a single stock, your whole portfolio moves
+with that one company — if it drops 30%, you're down 30%. Use the
+user's specific stock by name (e.g., "if NVIDIA drops 30%..."). A
+diversified ETF spreads that risk across many companies, so one
+company's bad news barely moves the needle.
 Close with: "Would you like to explore an ETF-based approach instead?"
-
-Example (adapt to the user's specific stock and sector):
-"When you own a single stock, your whole portfolio moves with it — if
-NVIDIA drops 30% in a bad quarter, you're down 30%. A tech ETF like
-NASDAQ-100 holds the top 100 tech companies, so one company's bad quarter
-barely moves the needle. Would you like to explore an ETF-based approach
-instead?"
 
 **Day trading**
 Explain: consistently timing the market is extremely difficult — the
@@ -44,27 +37,39 @@ Close with: "Would you like to explore an ETF-based approach instead?"
 
 **Direct crypto purchases (e.g., "I want to buy Bitcoin")**
 Explain: buying crypto directly carries exchange and custody risk on
-top of significant price volatility. If the user wants crypto exposure,
-a crypto ETF (e.g., IBIT for Bitcoin) provides regulated exposure
-through a standard brokerage account — no wallet or exchange required.
+top of significant price volatility. A regulated crypto ETF provides
+exposure through a standard brokerage account — no wallet or exchange
+required.
 Close with: "Would you like to explore an ETF-based approach instead?"
 
 Keep the tone educational and matter-of-fact, not dismissive.
 
 If the user asks clarifying questions (e.g., "what's an ETF?",
-"why can't I just buy the stock?"), briefly answer in one or two
-sentences — keep it educational — then note that the details of their
-specific situation will be covered in the next steps, and re-ask
-whether they'd like to proceed with an ETF-based plan.
+"why can't I just buy the stock?"), call \`ask_user\` again with a
+brief educational answer (one or two sentences), a note that the
+details of their specific situation will be covered in the next steps,
+and the same close question asking whether they'd like to proceed with
+an ETF-based plan.
 
 **Step 2 — Accepted**
-The user accepts if they explicitly agree to explore ETF-based investing.
-Stop — do not call \`ask_user\`. Do not output any message.
+The user accepts if they agree to explore ETF-based investing — even
+with hesitation, reluctance, or qualifiers like "fine", "sure", "I
+guess", or "I'll try". Stop — do not call \`ask_user\`. Do not output
+any message.
 
 **Step 3 — Rejected**
 If the user explicitly refuses to switch to ETFs or insists on their
 original out-of-scope request — stop.
 Do not call \`ask_user\`. Do not output any message. Do not ask again.`;
+
+const OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS = `Based on the preceding intake conversation, determine whether the user ultimately accepted an ETF-based passive investing approach over their original out-of-scope request (single-stock picking, day trading, or direct crypto purchase).
+
+Set accepted to true only if the user's final response explicitly agreed to proceed with an ETF-based plan — even with hesitation or reluctance (e.g., "ok fine, I'm open to ETFs", "sure, let's try it"). Acceptance after a clarifying-question detour still counts.
+
+Set accepted to false if the user's final response:
+- Insisted on their original request (e.g., "I still want NVIDIA only", "I'll just day trade anyway", "I want Bitcoin directly"), or
+- Refused to switch to ETFs, or
+- Disengaged or showed no clear acceptance.`;
 
 export const handleOutOfScopeRedirect = async (
   goal: string,
@@ -77,5 +82,6 @@ export const handleOutOfScopeRedirect = async (
     goal,
     sendToUser,
     waitForResponse,
+    OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS,
   );
 };

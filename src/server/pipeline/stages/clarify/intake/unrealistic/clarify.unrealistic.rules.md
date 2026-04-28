@@ -35,3 +35,11 @@ Behavioral rules for the unrealistic expectations intake handler. Each entry: th
 **Scenario:** User says "No, I'm sure I can double it, I've seen people do it online" → `{ accepted: false }`
 **Scenario:** After re-redirect, user says "No, I really think 2 years is enough" → `{ accepted: false }`
 **Scenario:** After re-redirect, user says "forget it, this isn't what I was looking for" → `{ accepted: false }`
+
+---
+
+## 5. User asks a clarifying question → agent answers briefly and re-asks
+
+**Rule:** When the user asks a clarifying question (e.g., "what does a realistic plan look like?", "what's a passive ETF?") instead of accepting or rejecting, the agent acknowledges briefly via `ask_user`, notes that specifics will be covered later, and re-asks whether the user wants to proceed with a realistic long-term plan. The user's response to the re-ask determines acceptance per rules 2 and 4.
+
+**Scenario:** Agent redirects → user asks "what does a realistic plan look like?" → agent answers briefly and re-asks → user accepts → `{ accepted: true }`.

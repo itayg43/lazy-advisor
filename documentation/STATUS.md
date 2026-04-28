@@ -6,8 +6,7 @@
 
 | # | Issue | Status |
 |---|-------|--------|
-| 7 | Out-of-scope — NASDAQ-100 mislabeled as semiconductor ETF | ⏳ Next |
-| 8 | Fields — no test covering all 5 fields in one pass | Pending |
+| 8 | Fields — no test covering all 5 fields in one pass | ⏳ Next |
 | 9 | Contribution — DCA explanation length | Pending |
 | 10 | Classify — borderline goal coverage | Pending |
 
