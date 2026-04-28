@@ -16,7 +16,7 @@ const {
   "10+ years": t10plus,
 } = TimelineBucket.enum;
 
-export const TIMELINE_BOUNDARY_EXAMPLES = `3 yr → "${under3}", 5 yr → "${t3to5}", 10 yr → "${t5to10}"`;
+export const TIMELINE_BOUNDARY_EXAMPLES = `"3 years" → "${under3}" (not "${t3to5}"), "5 years" → "${t3to5}" (not "${t5to10}"), "10 years" → "${t5to10}" (not "${t10plus}" — "${t10plus}" means strictly more than 10 years)`;
 
 const ALLOCATION_ANCHOR_DATA = {
   conservative: {

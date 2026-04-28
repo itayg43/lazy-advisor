@@ -46,6 +46,34 @@ describe("handleOutOfScopeRedirect", () => {
 
       expect(result.accepted).toBe(true);
     });
+
+    it("should redirect day trading and return accepted result", async () => {
+      lastGoal = "I want to do day trading with ₪20,000";
+      const responder = createTrackedResponder(["ok, I'll try an index ETF instead"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+    });
+
+    it("should redirect direct crypto and return accepted result", async () => {
+      lastGoal = "I want to buy Bitcoin with ₪15,000";
+      const responder = createTrackedResponder(["ok, a crypto ETF sounds good"]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(true);
+    });
   });
 
   // clarify.out-of-scope.rules.md rule 3: rejected — extraction returns { accepted: false }.
@@ -55,6 +83,36 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder([
         "No, I only want to buy NVIDIA, not interested in ETFs",
       ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+    });
+
+    it("should return rejected result when day-trading user insists", async () => {
+      lastGoal = "I want to do day trading with ₪20,000";
+      const responder = createTrackedResponder([
+        "No, I only want to day trade, not interested in ETFs",
+      ]);
+      lastTranscript = responder.transcript;
+
+      const result = await handleOutOfScopeRedirect(
+        lastGoal,
+        responder.sendToUser,
+        responder.waitForResponse,
+      );
+
+      expect(result.accepted).toBe(false);
+    });
+
+    it("should return rejected result when crypto user insists", async () => {
+      lastGoal = "I want to buy Bitcoin with ₪15,000";
+      const responder = createTrackedResponder(["No, I only want Bitcoin directly"]);
       lastTranscript = responder.transcript;
 
       const result = await handleOutOfScopeRedirect(

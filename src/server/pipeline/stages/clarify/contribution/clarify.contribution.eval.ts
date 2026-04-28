@@ -82,7 +82,10 @@ describe("collectContribution", () => {
 
   // clarify.contribution.rules.md rule 5: vague answer → acknowledge briefly, resolve to false, stop immediately
   it("should return false and acknowledge when user gives a vague answer", async () => {
-    const responder = createTrackedResponder(["Maybe someday, but not regularly", ""]);
+    const responder = createTrackedResponder([
+      "Maybe someday, but not regularly",
+      "Ok, thanks",
+    ]);
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(

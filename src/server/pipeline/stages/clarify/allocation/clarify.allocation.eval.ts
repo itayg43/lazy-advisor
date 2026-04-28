@@ -401,6 +401,36 @@ describe("collectAllocation", () => {
     );
   });
 
+  // clarify.allocation.rules.md rule 4 + rule 3: clarifying question followed by counter-proposal (4-tool-call worst case)
+  it("should handle a clarifying question followed by a counter-proposal", async () => {
+    const responder = createTrackedResponder([
+      "What's a buffer?",
+      "Let's do 60/40",
+      "yes",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectAllocation(
+      longHorizonAggressiveFields,
+      aggressiveRisk,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+
+    expect(output.equityPercentage).toBe(60);
+    expect(output.bufferPercentage).toBe(40);
+    // clarifying Q answer + re-ask + counter-proposal confirm = at least 3 agent turns
+    expect(
+      responder.transcript.filter((t) => t.role === "agent").length,
+    ).toBeGreaterThanOrEqual(3);
+    expectShekelMathConsistent(
+      responder.transcript,
+      longHorizonAggressiveFields.amount,
+      output,
+    );
+  });
+
   // clarify.allocation.rules.md anchor table: short-horizon collapses to 0–10% equity regardless of tolerance
   it("should collapse to 0–10% equity for an under-3-years timeline with aggressive risk", async () => {
     const responder = createTrackedResponder(["ok"]);

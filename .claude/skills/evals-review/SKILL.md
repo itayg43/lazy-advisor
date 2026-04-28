@@ -30,9 +30,11 @@ If an arg was provided, filter all three lists to entries whose path contains th
 
 From the output, extract: total tests, pass count, fail count, and the full error message for any failure.
 
-### 3. Read last-run and rules files
+### 3. Read last-run, rules, and implementation files
 
-Read all matched `*.last-run.md` and `*.rules.md` files in parallel.
+Only proceed to this step after step 2 has fully completed — do not read last-run files in parallel with the eval run.
+
+Read all matched `*.last-run.md` and `*.rules.md` files in parallel. Also read the corresponding phase implementation file (the `*.ts` file co-located with the eval, e.g. `clarify.risk.ts`) for any phase where you expect to flag a rules-alignment finding. This is required to distinguish intentional prompted behavior from accidental divergence — you cannot make that call from last-run and rules alone.
 
 ### 4. Produce the quality report
 
@@ -50,7 +52,8 @@ Pass/fail summary. For any failure: test name, what the agent said, what the exp
 
 For each phase that was run, assess:
 
-- **Rules alignment** — Does the observed behavior match the rules file? Call out any rule that the conversation violates or only partially satisfies.
+- **Rules alignment** — Does the observed behavior match the rules file? Call out any rule that the conversation violates or only partially satisfies. Before reporting a divergence, verify against the implementation file — if the behavior is explicitly prompted, note the prompt/rules gap instead of flagging the behavior as wrong.
+- **Prompt/rules sync** — Are there behaviors in the prompt that are not documented in the rules file? Flag any meaningful prompt behavior (handling patterns, tone instructions, edge-case logic) that has no corresponding rule. This is a documentation gap even if the behavior itself is correct.
 - **Conversation quality** — Is the language natural, educational, and appropriately concise? Does the agent use concrete figures (e.g., actual ₪ amounts from the user's profile)? Does tone stay matter-of-fact without being cold or preachy?
 - **Flow** — Turn efficiency (does it complete in the expected number of turns?), re-ask logic (are re-asks clean and non-repetitive?), deflections (are off-topic questions handled without derailing the phase?).
 - **Edge-case handling** — How does it handle vague, invalid, or adversarial inputs? Are defaults reasonable?
@@ -68,7 +71,8 @@ Each entry:
 
 - **Priority**: Must fix / Should fix / Nice to have
 - **Phase**: which phase
-- **Type**: Coverage gap / Quality issue
+- **Type**: Coverage gap / Quality issue / Prompt-rules sync gap
+- **Confidence**: Verified (cross-checked against implementation file) / Inferred (from last-run and rules only — treat as a hypothesis, not a confirmed finding)
 - **Finding**: what the issue is, with a quoted example if applicable
 - **Suggested fix**: a concrete direction (prompt change, new eval case, extraction rule tweak, etc.)
 
@@ -77,3 +81,22 @@ Each entry:
 #### Summary
 
 2–3 sentences: overall health of the pipeline, what's working well, and the single most important thing to act on next.
+
+---
+
+### 5. Save the report
+
+Write the full report produced in Step 4 to:
+
+```
+documentation/eval-reports/YYYY-MM-DD-HH-MM.md
+```
+
+Use the current date and time (UTC) for the filename (e.g., `2026-04-27-11-38.md`). If the `documentation/eval-reports/` directory does not exist, create it first.
+
+Include this header at the top of the saved file, before the report body:
+
+```
+# Evals Quality Report — YYYY-MM-DD
+> Commit: <current git commit hash> | Tests: X passed, Y failed
+```
