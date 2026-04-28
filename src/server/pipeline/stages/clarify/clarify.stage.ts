@@ -31,6 +31,7 @@ export const runClarifyStage = async (
     const result = await handler(goal, sendToUser, waitForResponse);
     if (!result.accepted) {
       logger.info("User rejected intake redirect, ending session");
+
       sendToUser(
         INTAKE_REJECTION_MESSAGES[classification] ?? INTAKE_REJECTION_DEFAULT_MESSAGE,
       );

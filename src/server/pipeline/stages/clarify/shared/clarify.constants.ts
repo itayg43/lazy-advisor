@@ -1,14 +1,6 @@
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
 
-export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
-export const TIMELINE_BUCKETS = TimelineBucket.options.map((o) => `\`${o}\``).join(", ");
-export const TIMELINE_BUCKET_LIST = TimelineBucket.options
-  .map((o, i) => `${i + 1}. ${o}`)
-  .join("\n");
-
-type AnchorCell = { min: number; max: number };
-
 const {
   "under 3 years": under3,
   "3–5 years": t3to5,
@@ -16,7 +8,18 @@ const {
   "10+ years": t10plus,
 } = TimelineBucket.enum;
 
+export const TIMELINE_BUCKETS = TimelineBucket.options.map((o) => `\`${o}\``).join(", ");
+export const TIMELINE_BUCKET_LIST = TimelineBucket.options
+  .map((o, i) => `${i + 1}. ${o}`)
+  .join("\n");
 export const TIMELINE_BOUNDARY_EXAMPLES = `"3 years" → "${under3}" (not "${t3to5}"), "5 years" → "${t3to5}" (not "${t5to10}"), "10 years" → "${t5to10}" (not "${t10plus}" — "${t10plus}" means strictly more than 10 years)`;
+
+export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
+
+type AllocationTimeline = Exclude<
+  (typeof TimelineBucket.options)[number],
+  "under 3 years"
+>;
 
 const ALLOCATION_ANCHOR_DATA = {
   conservative: {
@@ -36,18 +39,16 @@ const ALLOCATION_ANCHOR_DATA = {
   },
 } satisfies Record<
   (typeof RiskTolerance.options)[number],
-  Record<Exclude<(typeof TimelineBucket.options)[number], "under 3 years">, AnchorCell>
+  Record<AllocationTimeline, { min: number; max: number }>
 >;
 
 const buildAnchorTable = (): string => {
-  const timelines = TimelineBucket.options.filter((o) => o !== under3) as Exclude<
-    (typeof TimelineBucket.options)[number],
-    "under 3 years"
-  >[];
-  const risks = RiskTolerance.options;
+  const timelines = TimelineBucket.options.filter(
+    (o): o is AllocationTimeline => o !== under3,
+  );
   const header = `| Willingness \\ Timeline | ${timelines.join(" | ")} |`;
   const separator = `|${"---|".repeat(timelines.length + 1)}`;
-  const rows = risks.map((risk) => {
+  const rows = RiskTolerance.options.map((risk) => {
     const cells = timelines.map((t) => {
       const { min, max } = ALLOCATION_ANCHOR_DATA[risk][t];
 
@@ -65,6 +66,7 @@ export const ALLOCATION_TIMELINE_BUCKETS = TimelineBucket.options
   .filter((o) => o !== under3)
   .map((o) => `\`${o}\``)
   .join(", ");
+
 export const GOAL_CLASSIFICATIONS = GoalClassification.options
   .map((o) => `\`${o}\``)
   .join(", ");
