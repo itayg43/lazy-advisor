@@ -1,103 +1,9 @@
 # Eval Last Run
-Timestamp: 2026-04-28T22:23:29.888Z | Commit: 16cf54f
+Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 ---
 
-## ✓ should ask emergency fund first then debt in separate turns
-
-**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
-
-**User:** Yes, I have an emergency fund
-
-**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
-
-**User:** No high-interest debt
-
-
----
-
-## ✓ should not send educational content between the EF and debt questions
-
-**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
-
-**User:** No, I don't have an emergency fund
-
-**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
-
-**User:** No credit card debt
-
-**Agent:** An unexpected expense could force you to sell investments at a bad time — possibly at a loss. Standard guidance is 3–6 months of expenses in a liquid account before investing. Would you like to continue with your investment plan anyway?
-
-**User:** Yes, I'll continue anyway
-
-
----
-
-## ✓ should end silently when user has an emergency fund and no high-interest debt
-
-**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
-
-**User:** Yes, I have an emergency fund
-
-**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
-
-**User:** No high-interest debt
-
-
----
-
-## ✓ should send educational message and ask proceed when user has no emergency fund
-
-**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
-
-**User:** No, I don't have an emergency fund
-
-**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
-
-**User:** No credit card debt
-
-**Agent:** An unexpected expense could force you to sell investments at a bad time — possibly at a loss. Standard guidance is 3–6 months of expenses in a liquid account before investing. Would you like to continue with your investment plan anyway?
-
-**User:** Yes, I'd like to continue
-
-
----
-
-## ✓ should send educational message and ask proceed when user has high-interest debt
-
-**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
-
-**User:** Yes, I have an emergency fund
-
-**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
-
-**User:** Yes, I have credit card debt
-
-**Agent:** High-interest debt (e.g., credit cards at 15–25% APR) typically costs more than ETF investing earns (~7–10% per year). Paying it off first often yields a better net return. Would you like to continue with your investment plan anyway?
-
-**User:** Yes, I'd like to continue
-
-
----
-
-## ✓ should end after user declines to proceed
-
-**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
-
-**User:** No, I don't have an emergency fund
-
-**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
-
-**User:** No, I don't have any high-interest debt
-
-**Agent:** An unexpected expense could force you to sell investments at a bad time — possibly at a loss. Standard guidance is 3–6 months of expenses in a liquid account before investing. Would you like to continue with your investment plan anyway?
-
-**User:** No, I'll wait
-
-
----
-
-## ✓ should clarify that mortgage does not count and re-ask the debt question
+## ✓ should clarify that mortgage does not count as high-interest debt
 
 **Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
 
@@ -107,24 +13,111 @@ Timestamp: 2026-04-28T22:23:29.888Z | Commit: 16cf54f
 
 **User:** Does my mortgage count?
 
-**Agent:** No — a mortgage is secured, long-term debt at relatively low interest rates, so it doesn't apply here. Do you have any significant high-interest debt, such as credit card balances or personal loans?
+**Agent:** No—mortgages don’t count as high-interest debt for this question. Do you have any significant high-interest credit card balances or personal loans (roughly 15–25% APR or higher)?
 
 **User:** No, no other debt
 
 
 ---
 
-## ✓ should answer EF clarifying question and re-ask EF only — not debt
+## ✓ should answer EF clarifying question using key facts
 
 **Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
 
 **User:** What counts as an emergency fund?
 
-**Agent:** An emergency fund is money you can access quickly for unexpected expenses (like job loss, medical bills, or urgent repairs)—typically in a liquid place such as a savings account or money market. Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
+**Agent:** An emergency fund is 3–6 months of your living expenses saved in a liquid, easily accessible account like a savings or checking account. Retirement accounts, investments, or money that’s hard to access usually don’t count—do you have that amount set aside?
 
 **User:** Yes, I have one
 
 **Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
 
 **User:** No debt
+
+
+---
+
+## ✓ should answer debt clarifying question using key facts
+
+**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
+
+**User:** Yes, I have an emergency fund
+
+**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
+
+**User:** What's considered high-interest?
+
+**Agent:** High-interest debt generally means credit card balances or personal loans (or similar) with an APR around 15–25% or higher. Is any of your debt in that range?
+
+**User:** No, I don't have any
+
+
+---
+
+## ✓ should redirect user back when they deflect the EF question
+
+**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
+
+**User:** skip this
+
+**Agent:** I need your answer to continue — do you have 3–6 months of living expenses set aside in a liquid, accessible account (like savings or checking)?
+
+**User:** Yes, I have one
+
+**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
+
+**User:** No debt
+
+
+---
+
+## ✓ should redirect user back when they deflect the debt question
+
+**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
+
+**User:** Yes, I have an emergency fund
+
+**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
+
+**User:** I don't want to answer that
+
+**Agent:** I need your answer to continue. Do you have significant high-interest debt (e.g., credit card balances or personal loans at roughly 15–25%+ APR), excluding your mortgage?
+
+**User:** No, no debt
+
+
+---
+
+## ✓ should ask for clarification when EF answer is ambiguous
+
+**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
+
+**User:** I have some savings
+
+**Agent:** Could you be more specific—do you have 3–6 months of living expenses set aside in a liquid, accessible account like a savings or checking account (not investments or retirement)?
+
+**User:** Yes, I have a proper emergency fund
+
+**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
+
+**User:** No debt
+
+
+---
+
+## ✓ should ask for clarification when debt answer is ambiguous
+
+**Agent:** Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?
+
+**User:** Yes, I have an emergency fund
+
+**Agent:** Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)
+
+**User:** kind of?
+
+**Agent:** Could you clarify whether you have credit card balances or personal loans with high APR (about 15–25%+)? If yes, roughly how much and what type?
+
+**User:** Yes, I have credit card debt
+
+**Agent:** High-interest debt (e.g., credit cards at 15–25% APR) typically costs more than ETF investing earns (~7–10% per year). Paying it off first often yields a better net return.
 

@@ -25,114 +25,8 @@ describe("collectEfDebt", () => {
     lastTranscript = undefined;
   });
 
-  // clarify.ef-debt.rules.md rule 1: EF asked first, debt second — in separate turns
-  it("should ask emergency fund first then debt in separate turns", async () => {
-    const responder = createTrackedResponder([
-      "Yes, I have an emergency fund",
-      "No high-interest debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns.length).toBeGreaterThanOrEqual(2);
-    expect(agentTurns[0].content).toMatch(/emergency fund/i);
-    expect(agentTurns[1].content).toMatch(/high.interest debt/i);
-  });
-
-  // clarify.ef-debt.rules.md rule 2: education deferred — no educational content between the two questions
-  it("should not send educational content between the EF and debt questions", async () => {
-    const responder = createTrackedResponder([
-      "No, I don't have an emergency fund",
-      "No credit card debt",
-      "Yes, I'll continue anyway",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const debtQuestionIndex = agentTurns.findIndex((t) =>
-      /high.interest debt/i.test(t.content),
-    );
-    const educationIndex = agentTurns.findIndex((t) =>
-      /unexpected expense|sell investments/i.test(t.content),
-    );
-    expect(debtQuestionIndex).toBeGreaterThanOrEqual(0);
-    expect(educationIndex).toBeGreaterThan(debtQuestionIndex);
-  });
-
-  // clarify.ef-debt.rules.md rule 3: no concerns → phase ends silently (no extra message)
-  it("should end silently when user has an emergency fund and no high-interest debt", async () => {
-    const responder = createTrackedResponder([
-      "Yes, I have an emergency fund",
-      "No high-interest debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns).toHaveLength(2);
-    expect(agentTurns[1].content).not.toMatch(/proceed|continue|anyway/i);
-  });
-
-  // clarify.ef-debt.rules.md rule 4: missing EF → educational message + "proceed?"
-  it("should send educational message and ask proceed when user has no emergency fund", async () => {
-    const responder = createTrackedResponder([
-      "No, I don't have an emergency fund",
-      "No credit card debt",
-      "Yes, I'd like to continue",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const educationTurn = agentTurns.find((t) =>
-      /proceed|continue|anyway/i.test(t.content),
-    );
-    expect(educationTurn).toBeDefined();
-    expect(educationTurn?.content).toMatch(/emergency fund|unexpected expense/i);
-  });
-
-  // clarify.ef-debt.rules.md rule 4: high-interest debt alone → educational message + "proceed?"
-  it("should send educational message and ask proceed when user has high-interest debt", async () => {
-    const responder = createTrackedResponder([
-      "Yes, I have an emergency fund",
-      "Yes, I have credit card debt",
-      "Yes, I'd like to continue",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const educationTurn = agentTurns.find((t) =>
-      /proceed|continue|anyway/i.test(t.content),
-    );
-    expect(educationTurn).toBeDefined();
-    expect(educationTurn?.content).toMatch(/high.interest|credit card|APR/i);
-  });
-
-  // clarify.ef-debt.rules.md rule 5: phase ends after "proceed?" response regardless of answer
-  it("should end after user declines to proceed", async () => {
-    const responder = createTrackedResponder([
-      "No, I don't have an emergency fund",
-      "No, I don't have any high-interest debt",
-      "No, I'll wait",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    // All 3 scripted responses were consumed — phase ended without looping
-    expect(responder.transcript.filter((t) => t.role === "user")).toHaveLength(3);
-  });
-
-  // clarify.ef-debt.rules.md rule 6: mortgage clarification → excluded, re-asks debt only
-  it("should clarify that mortgage does not count and re-ask the debt question", async () => {
+  // clarify.ef-debt.rules.md rule 1: mortgage is excluded from high-interest debt
+  it("should clarify that mortgage does not count as high-interest debt", async () => {
     const responder = createTrackedResponder([
       "Yes, I have an emergency fund",
       "Does my mortgage count?",
@@ -145,16 +39,14 @@ describe("collectEfDebt", () => {
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const mortgageTurn = agentTurns.find((t) => /mortgage/i.test(t.content));
     expect(mortgageTurn).toBeDefined();
-    // All 3 user responses consumed — debt question was re-asked and answered
-    expect(responder.transcript.filter((t) => t.role === "user")).toHaveLength(3);
-    // Phase ended silently (has EF + no debt)
+    // phase ends silently — has EF, no debt
     expect(agentTurns[agentTurns.length - 1].content).not.toMatch(
-      /proceed|continue|anyway/i,
+      /unexpected expense|paying it off first|costs more than ETF/i,
     );
   });
 
-  // clarify.ef-debt.rules.md rule 7: other clarifying questions re-ask current question only
-  it("should answer EF clarifying question and re-ask EF only — not debt", async () => {
+  // clarify.ef-debt.rules.md rule 2: clarifying questions answered in 1–2 sentences — EF side
+  it("should answer EF clarifying question using key facts", async () => {
     const responder = createTrackedResponder([
       "What counts as an emergency fund?",
       "Yes, I have one",
@@ -166,9 +58,106 @@ describe("collectEfDebt", () => {
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const clarificationTurn = agentTurns.find((t) =>
-      /3.6 months|liquid account|living expenses/i.test(t.content),
+      /3.6 months|liquid|savings|checking/i.test(t.content),
     );
     expect(clarificationTurn).toBeDefined();
-    expect(clarificationTurn?.content).not.toMatch(/high.interest debt|credit card/i);
+    // phase ends silently — has EF, no debt
+    expect(agentTurns[agentTurns.length - 1].content).not.toMatch(
+      /unexpected expense|paying it off first|costs more than ETF/i,
+    );
+  });
+
+  // clarify.ef-debt.rules.md rule 2: clarifying questions answered in 1–2 sentences — debt side
+  it("should answer debt clarifying question using key facts", async () => {
+    const responder = createTrackedResponder([
+      "Yes, I have an emergency fund",
+      "What's considered high-interest?",
+      "No, I don't have any",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const clarificationTurn = agentTurns.find((t) =>
+      /APR|percent|credit card|interest/i.test(t.content),
+    );
+    expect(clarificationTurn).toBeDefined();
+    // phase ends silently — has EF, no debt
+    expect(agentTurns[agentTurns.length - 1].content).not.toMatch(
+      /unexpected expense|paying it off first|costs more than ETF/i,
+    );
+  });
+
+  // clarify.ef-debt.rules.md rule 3: deflection → redirect back — EF side
+  it("should redirect user back when they deflect the EF question", async () => {
+    const responder = createTrackedResponder(["skip this", "Yes, I have one", "No debt"]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const redirectTurn = agentTurns.find((t) =>
+      /need your answer|please answer|to continue/i.test(t.content),
+    );
+    expect(redirectTurn).toBeDefined();
+  });
+
+  // clarify.ef-debt.rules.md rule 3: deflection → redirect back — debt side
+  it("should redirect user back when they deflect the debt question", async () => {
+    const responder = createTrackedResponder([
+      "Yes, I have an emergency fund",
+      "I don't want to answer that",
+      "No, no debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const redirectTurn = agentTurns.find((t) =>
+      /need your answer|please answer|to continue/i.test(t.content),
+    );
+    expect(redirectTurn).toBeDefined();
+  });
+
+  // clarify.ef-debt.rules.md rule 4: ambiguous answer → ask for clarification — EF side
+  it("should ask for clarification when EF answer is ambiguous", async () => {
+    const responder = createTrackedResponder([
+      "I have some savings",
+      "Yes, I have a proper emergency fund",
+      "No debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const clarificationTurn = agentTurns.find((t) =>
+      /specific|3.6 months|liquid|savings account|clarify/i.test(t.content),
+    );
+    expect(clarificationTurn).toBeDefined();
+  });
+
+  // clarify.ef-debt.rules.md rule 4: ambiguous answer → ask for clarification — debt side
+  it("should ask for clarification when debt answer is ambiguous", async () => {
+    const responder = createTrackedResponder([
+      "Yes, I have an emergency fund",
+      "kind of?",
+      "Yes, I have credit card debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const clarificationTurn = agentTurns.find((t) =>
+      /specific|credit card|APR|clarify/i.test(t.content),
+    );
+    expect(clarificationTurn).toBeDefined();
+    // has debt → education shown
+    expect(agentTurns[agentTurns.length - 1].content).toMatch(
+      /paying it off first|costs more than ETF/i,
+    );
   });
 });

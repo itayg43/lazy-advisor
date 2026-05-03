@@ -95,7 +95,6 @@ export const SHORT_TIMELINE_EXIT_MESSAGE =
   "For money you plan to use within 3 years, ETFs carry too much timing risk — a market drop right before you need the funds may be hard to recover from in time. A money market fund is a better fit: lower risk, stays accessible, and still earns meaningful returns. When you're ready to invest money for a longer horizon, come back and we'll build an ETF plan.";
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
-export const MAX_EF_DEBT_TOOL_CALLS = 4;
 export const MAX_FIELDS_TOOL_CALLS = 5;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
 export const MAX_RISK_TOOL_CALLS = 3;

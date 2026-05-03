@@ -1,73 +1,45 @@
 # Clarify EF/Debt Phase — Behavior Rules
 
-Behavioral rules for the EF/debt financial health check phase. Each entry: the rule, a one-line scenario, and the expected behavior for verifying correctness.
+Behavioral rules for the EF/debt financial health check phase. Rules cover LLM classification behavior — conversation flow (question order, education trigger, silent exit) is enforced by code and tested in unit tests.
+
+Each entry: the rule, a one-line scenario, and the expected behavior for verifying correctness.
 
 ---
 
-## 1. Emergency fund is asked first, debt second — in separate turns
+## 1. Mortgage is excluded from high-interest debt
 
-**Rule:** The agent always asks the two questions in separate messages, in order: emergency fund first, then high-interest debt. They are never combined into a single message.
-
-**Scenario:** Neither question has been asked — agent sends EF question only.
-
-**Expected behavior:** First message asks only about emergency fund; debt question is sent in a subsequent turn.
-
----
-
-## 2. Education is deferred until both questions are answered
-
-**Rule:** No educational content is sent between the two questions. The agent moves directly from EF answer to the debt question.
-
-**Scenario:** User says they have no emergency fund — agent asks about debt next without commenting on the EF answer.
-
-**Expected behavior:** Debt question sent immediately after EF answer, no educational note in between.
-
----
-
-## 3. No concerns → phase ends silently
-
-**Rule:** If the user has an emergency fund and no significant high-interest debt, the phase ends without sending any message.
-
-**Scenario:** User confirms both: has an emergency fund, no high-interest debt.
-
-**Expected behavior:** Phase ends — no message sent, `ask_user` not called again.
-
----
-
-## 4. At least one concern → single educational message + "proceed?"
-
-**Rule:** If either concern is present, the agent sends exactly one educational message covering all present concerns, then asks "Would you like to continue with your investment plan anyway?"
-
-**Scenario:** User has no emergency fund but no high-interest debt.
-
-**Expected behavior:** One message explaining the EF risk, followed by the "proceed?" question.
-
----
-
-## 5. Phase always ends after the user responds to "proceed?"
-
-**Rule:** Any response to the "proceed?" question ends the phase. The agent does not loop, push back, or ask again.
-
-**Scenario:** User says "no, I'll wait" in response to "proceed?".
-
-**Expected behavior:** Phase ends — `ask_user` not called again regardless of the answer.
-
----
-
-## 6. Mortgage is excluded from high-interest debt; clarification re-asks the current question only
-
-**Rule:** If the user asks whether a mortgage counts, the agent explains it does not (secured, long-term, low-rate), then re-asks the current unanswered question — not both questions.
+**Rule:** If the user asks whether a mortgage counts as high-interest debt, the agent explains it does not in 1–2 sentences. The question is not re-stated — the user responds naturally on the next turn.
 
 **Scenario:** Agent has asked about debt; user responds "does my mortgage count?"
 
-**Expected behavior:** Agent explains mortgage is excluded, then re-asks the debt question only.
+**Expected behavior:** Agent explains mortgage is excluded in 1–2 sentences. No re-ask of the debt question.
 
 ---
 
-## 7. Other clarifying questions re-ask the current question only
+## 2. Clarifying questions are answered in 1–2 sentences — no re-ask
 
-**Rule:** For any other clarifying question (e.g., "what counts as an emergency fund?", "what's considered high-interest?"), the agent answers in 1–2 sentences, then re-asks the current unanswered question — not both questions.
+**Rule:** For any clarifying question (e.g., "what counts as an emergency fund?", "what's considered high-interest?"), the agent answers in 1–2 sentences using the key facts. The original question is not re-stated — the user responds naturally on the next turn. Applies to both the EF and debt questions.
 
 **Scenario:** Agent has asked about emergency fund; user responds "what counts as one?"
 
-**Expected behavior:** Agent explains in 1–2 sentences, then re-asks the EF question only.
+**Expected behavior:** Agent explains in 1–2 sentences. No re-ask of the EF question.
+
+---
+
+## 3. Deflection or off-topic response → redirect back
+
+**Rule:** If the user deflects (e.g., "skip this", "I don't want to answer") or goes off-topic, the agent redirects them back to answer the current question. Applies to both the EF and debt questions.
+
+**Scenario:** Agent has asked about emergency fund; user responds "skip this".
+
+**Expected behavior:** Agent sends a redirect message asking the user to answer.
+
+---
+
+## 4. Ambiguous answer → ask for clarification
+
+**Rule:** If the user gives an ambiguous or unclear answer (e.g., "I have some savings", "I think so?", "kind of?"), the agent asks them to be more specific rather than treating the response as a yes or no. Applies to both the EF and debt questions.
+
+**Scenario:** Agent has asked about emergency fund; user responds "I have some savings".
+
+**Expected behavior:** Agent asks the user to clarify (e.g., whether they have 3–6 months of expenses set aside in a liquid account).

@@ -1,82 +1,131 @@
+import { z } from "zod";
+
 import { createLogger } from "#lib/logger";
-import { MAX_EF_DEBT_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
-import { runPhaseLoop } from "#pipeline/stages/clarify/shared/clarify.lib";
+import {
+  AskWithClassifyBaseSchema,
+  askWithClassify,
+} from "#pipeline/stages/clarify/shared/clarify.ask";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyEfDebt");
 
-const EF_DEBT_PROMPT = `# Role and Objective
-You are the financial health check phase of an investment advisor pipeline. Ask the user about their emergency fund and debt situation in separate turns, and — if either is concerning — provide a brief educational note before continuing. This phase is informational only: always conclude after the user responds to the final question. Do not provide investment advice, fund names, or action plans.
+const EmergencyFundSchema = AskWithClassifyBaseSchema.extend({
+  answer: z.enum(["yes", "no"]).nullable(),
+});
 
-# Decision Logic
+const DebtSchema = AskWithClassifyBaseSchema.extend({
+  answer: z.enum(["yes", "no"]).nullable(),
+});
 
-Evaluate in order and execute the first match:
+const EF_QUESTION =
+  "Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?";
 
-**Step 1 — Emergency fund not yet asked**
-→ Call \`ask_user\`: "Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?"
+const DEBT_QUESTION =
+  "Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)";
 
-**Step 2 — Emergency fund answered; debt not yet asked**
-→ You MUST ask about debt next — do not skip this step regardless of the EF answer.
-→ Call \`ask_user\` with ONLY this question — no educational content: "Do you have any significant high-interest debt, such as credit card balances or personal loans? (A mortgage doesn't count here.)"
+const EF_EDUCATION =
+  "An unexpected expense could force you to sell investments at a bad time — possibly at a loss. Standard guidance is 3–6 months of expenses in a liquid account before investing.";
 
-**Step 3 — Both answered; determine outcome**
+const DEBT_EDUCATION =
+  "High-interest debt (e.g., credit cards at 15–25% APR) typically costs more than ETF investing earns (~7–10% per year). Paying it off first often yields a better net return.";
 
-→ If the user said YES to having an emergency fund AND NO to having high-interest debt:
-   End the phase silently. Do NOT call \`ask_user\` again.
+const EF_CLASSIFY_INSTRUCTIONS = `
+# Role and Objective
+You are classifying a user's response to: "${EF_QUESTION}"
+Populate the three output fields based on the rules below.
 
-→ In all other cases — user lacks an emergency fund, OR has high-interest debt, OR both:
-   Call \`ask_user\` with one educational message covering the risk(s) present, followed by: "Would you like to continue with your investment plan anyway?"
-   - Lacks emergency fund: An unexpected expense could force you to sell investments at a bad time — possibly at a loss. Standard guidance is 3–6 months of expenses in a liquid account before investing.
-   - Has high-interest debt: High-interest debt (e.g., credit cards at 15–25% APR) typically costs more than ETF investing earns (~7–10% per year). Paying it off first often yields a better net return.
-   - Both: Cover both in a single message.
-   After the user responds: End the phase. Accept any answer. Do NOT call \`ask_user\` again.
+# Output Rules
 
-# Clarifying questions
-A clarifying question is not an answer — always respond explicitly and re-ask, even if the answer is implied.
-- If the user asks what qualifies as an emergency fund, what counts as high-interest debt, or any similar clarifying question: answer in 1–2 sentences, then call \`ask_user\` to re-ask the current unanswered question.
-- If the user asks whether a mortgage counts as high-interest debt: call \`ask_user\` with: "No — a mortgage is secured, long-term debt at relatively low interest rates, so it doesn't apply here. Do you have any significant high-interest debt, such as credit card balances or personal loans?"
+**answer**
+- "yes" — user confirmed they have an emergency fund
+- "no"  — user confirmed they do not
+- null  — when clarificationNeeded is true
 
-# Examples
+**clarificationNeeded**
+- true — user asked a question instead of answering (e.g. "what counts as one?", "does a savings account qualify?")
+- true — user gave an ambiguous or unclear answer (e.g. "I have some savings", "I think so?")
+- true — user deflected or went off-topic (e.g. "skip this", "I don't want to answer")
+- true — user both answered and asked a question (e.g. "Yes, but does a savings account count?") — answer the question first; the answer will be re-confirmed next turn
+- false — user gave a clear yes or no
 
-## Example 1 — no concerns
-→ \`ask_user\`: "Do you have an emergency fund...?"
-User: "Yes"
-→ \`ask_user\`: "Do you have any significant high-interest debt...?"
-User: "No"
-→ End phase.
+**clarificationMessage** (only when clarificationNeeded is true)
+- Must be non-null when clarificationNeeded is true.
+- Use the conversation history to understand exactly what the user said or asked — tailor your response accordingly.
+- If user asked a question: answer it directly using the key facts below
+- If user gave an ambiguous answer: ask them to clarify (e.g. "Could you be more specific — do you have 3–6 months of expenses set aside in a savings or checking account?")
+- If user deflected or went off-topic: redirect them back (e.g. "I need your answer to continue — do you have an emergency fund?")
+- If user both answered and asked a question: answer their question first
+- Key facts: an emergency fund is 3–6 months of living expenses in a liquid, accessible account (e.g. savings or checking). Retirement accounts, investments, or illiquid assets do not qualify.
+- Keep it to 1–2 sentences. Do not re-state the original question.
+`;
 
-## Example 2 — no emergency fund (one concern)
-→ \`ask_user\`: "Do you have an emergency fund...?"
-User: "No"
-→ \`ask_user\`: "Do you have any significant high-interest debt...?"
-User: "No"
-→ \`ask_user\`: "An unexpected expense could force you to sell investments at a bad time — possibly at a loss. Standard guidance is 3–6 months of expenses in a liquid account before investing. Would you like to continue with your investment plan anyway?"
-User: "Yes, I'll continue"
-→ End phase.
+const DEBT_CLASSIFY_INSTRUCTIONS = `
+# Role and Objective
+You are classifying a user's response to: "${DEBT_QUESTION}"
+Populate the three output fields based on the rules below.
 
-## Example 3 — high-interest debt (one concern)
-→ \`ask_user\`: "Do you have an emergency fund...?"
-User: "Yes"
-→ \`ask_user\`: "Do you have any significant high-interest debt...?"
-User: "Yes, credit card debt"
-→ \`ask_user\`: "High-interest debt (e.g., credit cards at 15–25% APR) typically costs more than ETF investing earns (~7–10% per year). Paying it off first often yields a better net return. Would you like to continue with your investment plan anyway?"
-User: "I'll wait"
-→ End phase.
+# Output Rules
 
-## Example 4 — mortgage clarifying question
-→ \`ask_user\`: "Do you have an emergency fund...?"
-User: "Yes"
-→ \`ask_user\`: "Do you have any significant high-interest debt...?"
-User: "Does my mortgage count?"
-→ \`ask_user\`: "No — a mortgage is secured, long-term debt at relatively low interest rates, so it doesn't apply here. Do you have any significant high-interest debt, such as credit card balances or personal loans?"
-User: "No"
-→ End phase.
+**answer**
+- "yes" — user confirmed they have high-interest debt
+- "no"  — user confirmed they do not
+- null  — when clarificationNeeded is true
 
-# Constraints
-- Always use \`ask_user\` to send every message — never output text directly
-- No investment advice, fund names, or action plans
-- No filler openings (e.g., "Great!", "Sure!", "Of course!")
-- Tone: conversational and non-judgmental`;
+**clarificationNeeded**
+- true — user asked a question instead of answering (e.g. "does my mortgage count?", "what qualifies as high-interest?")
+- true — user gave an ambiguous or unclear answer (e.g. "I have some debt", "kind of?")
+- true — user deflected or went off-topic (e.g. "skip this", "I don't want to answer")
+- true — user both answered and asked a question (e.g. "No, but does my mortgage count?") — answer the question first; the answer will be re-confirmed next turn
+- false — user gave a clear yes or no
+
+**clarificationMessage** (only when clarificationNeeded is true)
+- Must be non-null when clarificationNeeded is true.
+- Use the conversation history to understand exactly what the user said or asked — tailor your response accordingly.
+- If user asked a question: answer it directly using the key facts below
+- If user gave an ambiguous answer: ask them to clarify (e.g. "Could you be more specific — do you have credit card balances or personal loans with high APR?")
+- If user deflected or went off-topic: redirect them back (e.g. "I need your answer to continue — do you have significant high-interest debt like credit card balances?")
+- If user both answered and asked a question: answer their question first
+- Key facts: high-interest debt means credit card balances, personal loans, or similar at 15–25%+ APR. Mortgages do not count.
+- Keep it to 1–2 sentences. Do not re-state the original question.
+`;
+
+const askEmergencyFund = async (
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<boolean> => {
+  const result = await askWithClassify({
+    question: EF_QUESTION,
+    classifyInstructions: EF_CLASSIFY_INSTRUCTIONS,
+    schema: EmergencyFundSchema,
+    sendToUser,
+    waitForResponse,
+    model: "gpt-5.4-nano",
+    effort: "low",
+  });
+
+  if (result.status === "failure") return false;
+
+  return result.output.answer === "yes";
+};
+
+const askDebt = async (
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<boolean> => {
+  const result = await askWithClassify({
+    question: DEBT_QUESTION,
+    classifyInstructions: DEBT_CLASSIFY_INSTRUCTIONS,
+    schema: DebtSchema,
+    sendToUser,
+    waitForResponse,
+    model: "gpt-5.4-nano",
+    effort: "low",
+  });
+
+  if (result.status === "failure") return true;
+
+  return result.output.answer === "yes";
+};
 
 export const collectEfDebt = async (
   sendToUser: SendToUser,
@@ -84,16 +133,20 @@ export const collectEfDebt = async (
 ): Promise<void> => {
   logger.info("Starting EF/debt phase");
 
-  await runPhaseLoop({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: EF_DEBT_PROMPT,
-    input: "Begin.",
-    maxToolCalls: MAX_EF_DEBT_TOOL_CALLS,
-    phaseName: "EF/debt phase",
-    sendToUser,
-    waitForResponse,
-  });
+  const hasEF = await askEmergencyFund(sendToUser, waitForResponse);
+  const hasDebt = await askDebt(sendToUser, waitForResponse);
+
+  if (hasEF && !hasDebt) {
+    logger.info("EF/debt phase complete — no education needed");
+
+    return;
+  }
+
+  const educationParts: string[] = [];
+  if (!hasEF) educationParts.push(EF_EDUCATION);
+  if (hasDebt) educationParts.push(DEBT_EDUCATION);
+
+  sendToUser(educationParts.join("\n\n"));
 
   logger.info("EF/debt phase complete");
 };
