@@ -87,13 +87,21 @@ describe("clarifyStage", () => {
     mockedCallOpenAIParsed
       .mockResolvedValueOnce(
         createParsedResponse(
-          { clarificationNeeded: false, clarificationMessage: null, answer: "yes" as const },
+          {
+            clarificationNeeded: false,
+            clarificationMessage: null,
+            answer: "yes" as const,
+          },
           "resp_ef",
         ),
       )
       .mockResolvedValueOnce(
         createParsedResponse(
-          { clarificationNeeded: false, clarificationMessage: null, answer: "no" as const },
+          {
+            clarificationNeeded: false,
+            clarificationMessage: null,
+            answer: "no" as const,
+          },
           "resp_debt",
         ),
       );

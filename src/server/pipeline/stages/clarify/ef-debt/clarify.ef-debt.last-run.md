@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
+Timestamp: 2026-05-03T13:24:54.869Z | Commit: 4064593
 
 ---
 
@@ -13,7 +13,7 @@ Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 **User:** Does my mortgage count?
 
-**Agent:** No—mortgages don’t count as high-interest debt for this question. Do you have any significant high-interest credit card balances or personal loans (roughly 15–25% APR or higher)?
+**Agent:** No—mortgages don’t count for this. I’m only asking about significant high-interest debt like credit card balances or personal loans (typically around 15–25%+ APR). Do you have any of that?
 
 **User:** No, no other debt
 
@@ -26,7 +26,7 @@ Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 **User:** What counts as an emergency fund?
 
-**Agent:** An emergency fund is 3–6 months of your living expenses saved in a liquid, easily accessible account like a savings or checking account. Retirement accounts, investments, or money that’s hard to access usually don’t count—do you have that amount set aside?
+**Agent:** An emergency fund is 3–6 months of living expenses set aside in a liquid, easily accessible account like savings or checking. Retirement accounts, investments, or money that can’t be quickly accessed usually don’t qualify.
 
 **User:** Yes, I have one
 
@@ -47,7 +47,7 @@ Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 **User:** What's considered high-interest?
 
-**Agent:** High-interest debt generally means credit card balances or personal loans (or similar) with an APR around 15–25% or higher. Is any of your debt in that range?
+**Agent:** High-interest debt here means things like credit card balances or personal loans with roughly 15–25%+ APR. Mortgages don’t count—do you have any debt at those high rates?
 
 **User:** No, I don't have any
 
@@ -81,7 +81,7 @@ Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 **User:** I don't want to answer that
 
-**Agent:** I need your answer to continue. Do you have significant high-interest debt (e.g., credit card balances or personal loans at roughly 15–25%+ APR), excluding your mortgage?
+**Agent:** I need your answer to continue—do you have significant high-interest debt like credit card balances or personal loans?
 
 **User:** No, no debt
 
@@ -94,7 +94,7 @@ Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 **User:** I have some savings
 
-**Agent:** Could you be more specific—do you have 3–6 months of living expenses set aside in a liquid, accessible account like a savings or checking account (not investments or retirement)?
+**Agent:** Do you have roughly 3–6 months of living expenses set aside in a liquid, accessible account (like savings or checking), or is it less than that?
 
 **User:** Yes, I have a proper emergency fund
 
@@ -115,7 +115,7 @@ Timestamp: 2026-04-30T18:44:43.114Z | Commit: d9deccf
 
 **User:** kind of?
 
-**Agent:** Could you clarify whether you have credit card balances or personal loans with high APR (about 15–25%+)? If yes, roughly how much and what type?
+**Agent:** “Kind of” is a bit unclear—do you have credit card balances or personal loans with high interest (about 15–25%+ APR), or not?
 
 **User:** Yes, I have credit card debt
 

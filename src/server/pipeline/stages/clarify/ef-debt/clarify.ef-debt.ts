@@ -1,9 +1,11 @@
 import { z } from "zod";
 
+import { exhaustiveSwitch } from "#lib/exhaustive-switch";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
   askWithClassify,
+  buildClassifyInstructions,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
@@ -29,65 +31,79 @@ const EF_EDUCATION =
 const DEBT_EDUCATION =
   "High-interest debt (e.g., credit cards at 15–25% APR) typically costs more than ETF investing earns (~7–10% per year). Paying it off first often yields a better net return.";
 
-const EF_CLASSIFY_INSTRUCTIONS = `
-# Role and Objective
-You are classifying a user's response to: "${EF_QUESTION}"
-Populate the three output fields based on the rules below.
+const EF_CLASSIFY_INSTRUCTIONS = buildClassifyInstructions({
+  question: EF_QUESTION,
+  answerOptions: [
+    { value: "yes", description: "user confirmed they have an emergency fund" },
+    { value: "no", description: "user confirmed they do not" },
+  ],
+  keyFacts:
+    "An emergency fund is 3–6 months of living expenses in a liquid, accessible account (e.g. savings or checking). Retirement accounts, investments, or illiquid assets do not qualify.",
+  examples: [
+    {
+      userInput: "what counts as an emergency fund?",
+      clarificationNeeded: true,
+      note: 'answer using key facts (e.g. "An emergency fund is 3–6 months of expenses in a savings or checking account.")',
+    },
+    {
+      userInput: "I have some savings",
+      clarificationNeeded: true,
+      note: 'ask for specifics (e.g. "Do you have roughly 3–6 months of living expenses set aside in a liquid account?")',
+    },
+    {
+      userInput: "Yes, but does a savings account count?",
+      clarificationNeeded: true,
+      note: 'answer their question first, then confirm (e.g. "Yes, a savings account qualifies. Just to confirm — you have 3–6 months of expenses set aside?")',
+    },
+    {
+      userInput: "skip this",
+      clarificationNeeded: true,
+      note: 'redirect directly (e.g. "I need your answer to continue — do you have 3–6 months of expenses set aside in a liquid account?")',
+    },
+    {
+      userInput: "Yes",
+      clarificationNeeded: false,
+      note: "clear answer, no clarification needed",
+    },
+  ],
+});
 
-# Output Rules
-
-**answer**
-- "yes" — user confirmed they have an emergency fund
-- "no"  — user confirmed they do not
-- null  — when clarificationNeeded is true
-
-**clarificationNeeded**
-- true — user asked a question instead of answering (e.g. "what counts as one?", "does a savings account qualify?")
-- true — user gave an ambiguous or unclear answer (e.g. "I have some savings", "I think so?")
-- true — user deflected or went off-topic (e.g. "skip this", "I don't want to answer")
-- true — user both answered and asked a question (e.g. "Yes, but does a savings account count?") — answer the question first; the answer will be re-confirmed next turn
-- false — user gave a clear yes or no
-
-**clarificationMessage** (only when clarificationNeeded is true)
-- Must be non-null when clarificationNeeded is true.
-- Use the conversation history to understand exactly what the user said or asked — tailor your response accordingly.
-- If user asked a question: answer it directly using the key facts below
-- If user gave an ambiguous answer: ask them to clarify (e.g. "Could you be more specific — do you have 3–6 months of expenses set aside in a savings or checking account?")
-- If user deflected or went off-topic: redirect them back (e.g. "I need your answer to continue — do you have an emergency fund?")
-- If user both answered and asked a question: answer their question first
-- Key facts: an emergency fund is 3–6 months of living expenses in a liquid, accessible account (e.g. savings or checking). Retirement accounts, investments, or illiquid assets do not qualify.
-- Keep it to 1–2 sentences. Do not re-state the original question.
-`;
-
-const DEBT_CLASSIFY_INSTRUCTIONS = `
-# Role and Objective
-You are classifying a user's response to: "${DEBT_QUESTION}"
-Populate the three output fields based on the rules below.
-
-# Output Rules
-
-**answer**
-- "yes" — user confirmed they have high-interest debt
-- "no"  — user confirmed they do not
-- null  — when clarificationNeeded is true
-
-**clarificationNeeded**
-- true — user asked a question instead of answering (e.g. "does my mortgage count?", "what qualifies as high-interest?")
-- true — user gave an ambiguous or unclear answer (e.g. "I have some debt", "kind of?")
-- true — user deflected or went off-topic (e.g. "skip this", "I don't want to answer")
-- true — user both answered and asked a question (e.g. "No, but does my mortgage count?") — answer the question first; the answer will be re-confirmed next turn
-- false — user gave a clear yes or no
-
-**clarificationMessage** (only when clarificationNeeded is true)
-- Must be non-null when clarificationNeeded is true.
-- Use the conversation history to understand exactly what the user said or asked — tailor your response accordingly.
-- If user asked a question: answer it directly using the key facts below
-- If user gave an ambiguous answer: ask them to clarify (e.g. "Could you be more specific — do you have credit card balances or personal loans with high APR?")
-- If user deflected or went off-topic: redirect them back (e.g. "I need your answer to continue — do you have significant high-interest debt like credit card balances?")
-- If user both answered and asked a question: answer their question first
-- Key facts: high-interest debt means credit card balances, personal loans, or similar at 15–25%+ APR. Mortgages do not count.
-- Keep it to 1–2 sentences. Do not re-state the original question.
-`;
+const DEBT_CLASSIFY_INSTRUCTIONS = buildClassifyInstructions({
+  question: DEBT_QUESTION,
+  answerOptions: [
+    { value: "yes", description: "user confirmed they have high-interest debt" },
+    { value: "no", description: "user confirmed they do not" },
+  ],
+  keyFacts:
+    "High-interest debt means credit card balances, personal loans, or similar at 15–25%+ APR. Mortgages do not count.",
+  examples: [
+    {
+      userInput: "does my mortgage count?",
+      clarificationNeeded: true,
+      note: "answer using key facts (e.g. \"Mortgages don't count here — I'm asking about high-interest debt like credit card balances or personal loans.\")",
+    },
+    {
+      userInput: "I have some debt",
+      clarificationNeeded: true,
+      note: 'ask for specifics (e.g. "Do you have credit card balances or personal loans with high interest rates, like 15% APR or more?")',
+    },
+    {
+      userInput: "No, but does my car loan count?",
+      clarificationNeeded: true,
+      note: 'answer their question first, then confirm (e.g. "A car loan typically doesn\'t count unless the rate is very high. Just to confirm — no high-interest debt like credit cards?")',
+    },
+    {
+      userInput: "I don't want to answer that",
+      clarificationNeeded: true,
+      note: 'redirect directly (e.g. "I need your answer to continue — do you have significant high-interest debt like credit card balances?")',
+    },
+    {
+      userInput: "No",
+      clarificationNeeded: false,
+      note: "clear answer, no clarification needed",
+    },
+  ],
+});
 
 const askEmergencyFund = async (
   sendToUser: SendToUser,
@@ -103,7 +119,11 @@ const askEmergencyFund = async (
     effort: "low",
   });
 
-  if (result.status === "failure") return false;
+  if (result.status === "failure") {
+    return exhaustiveSwitch(result.code, {
+      retries_exhausted: () => false,
+    });
+  }
 
   return result.output.answer === "yes";
 };
@@ -122,7 +142,11 @@ const askDebt = async (
     effort: "low",
   });
 
-  if (result.status === "failure") return true;
+  if (result.status === "failure") {
+    return exhaustiveSwitch(result.code, {
+      retries_exhausted: () => true,
+    });
+  }
 
   return result.output.answer === "yes";
 };
