@@ -23,29 +23,21 @@ describe("collectEfDebt", () => {
     output,
   });
 
-  const efYes = createParsedResponse({
+  const answerYes = createParsedResponse({
     clarificationNeeded: false,
     clarificationMessage: null,
     answer: "yes",
   });
-  const efNo = createParsedResponse({
-    clarificationNeeded: false,
-    clarificationMessage: null,
-    answer: "no",
-  });
-  const debtYes = createParsedResponse({
-    clarificationNeeded: false,
-    clarificationMessage: null,
-    answer: "yes",
-  });
-  const debtNo = createParsedResponse({
+  const answerNo = createParsedResponse({
     clarificationNeeded: false,
     clarificationMessage: null,
     answer: "no",
   });
 
   it("should end silently when user has EF and no debt", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(efYes).mockResolvedValueOnce(debtNo);
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(answerYes)
+      .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["Yes", "No"]);
 
     await collectEfDebt(responder.sendToUser, responder.waitForResponse);
@@ -55,7 +47,9 @@ describe("collectEfDebt", () => {
   });
 
   it("should send EF education only when user has no emergency fund and no debt", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(efNo).mockResolvedValueOnce(debtNo);
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(answerNo)
+      .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["No", "No"]);
 
     await collectEfDebt(responder.sendToUser, responder.waitForResponse);
@@ -67,7 +61,9 @@ describe("collectEfDebt", () => {
   });
 
   it("should send debt education only when user has EF and high-interest debt", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(efYes).mockResolvedValueOnce(debtYes);
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(answerYes)
+      .mockResolvedValueOnce(answerYes);
     const responder = createTrackedResponder(["Yes", "Yes"]);
 
     await collectEfDebt(responder.sendToUser, responder.waitForResponse);
@@ -79,7 +75,9 @@ describe("collectEfDebt", () => {
   });
 
   it("should send both education messages in a single turn when user has no EF and has debt", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(efNo).mockResolvedValueOnce(debtYes);
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(answerNo)
+      .mockResolvedValueOnce(answerYes);
     const responder = createTrackedResponder(["No", "Yes"]);
 
     await collectEfDebt(responder.sendToUser, responder.waitForResponse);
@@ -91,7 +89,9 @@ describe("collectEfDebt", () => {
   });
 
   it("should not call waitForResponse after sending education", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(efNo).mockResolvedValueOnce(debtNo);
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(answerNo)
+      .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["No", "No"]);
 
     await collectEfDebt(responder.sendToUser, responder.waitForResponse);

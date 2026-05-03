@@ -120,6 +120,7 @@ const askEmergencyFund = async (
   });
 
   if (result.status === "failure") {
+    // Intentional: default to no EF → education sent. When in doubt, educate.
     return exhaustiveSwitch(result.code, {
       retries_exhausted: () => false,
     });
@@ -143,6 +144,7 @@ const askDebt = async (
   });
 
   if (result.status === "failure") {
+    // Intentional: default to has debt → education sent. When in doubt, educate.
     return exhaustiveSwitch(result.code, {
       retries_exhausted: () => true,
     });

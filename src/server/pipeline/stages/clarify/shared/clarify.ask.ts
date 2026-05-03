@@ -17,6 +17,8 @@ type AskWithClassifyResult<TOutput> =
 
 export const AskWithClassifyBaseSchema = z.object({
   clarificationNeeded: z.boolean(),
+  // Must be non-null when clarificationNeeded is true — enforced by instructions only.
+  // A discriminated union would express this structurally, but zodTextFormat doesn't support oneOf yet.
   clarificationMessage: z.string().nullable(),
 });
 
