@@ -42,7 +42,6 @@
 
 ## File Organization
 
-- `src/server/pipeline/lib/` — shared pure utilities used by 2+ stages (e.g., `build-profile-summary.ts`). Single-stage helpers stay in the stage directory
 - `src/server/pipeline/data/` — static reference data that doesn't change at runtime (e.g., brokerage tables)
 - `index.ts` barrel exports are required for directories defined in the plan
 - Schemas in `src/server/schemas/[domain].schemas.ts`, types in `src/server/types/[domain].types.ts`

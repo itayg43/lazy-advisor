@@ -6,11 +6,11 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 
 ## 1. Fields are collected in two structured turns
 
-**Rule:** The agent always opens by asking for amount, age, and timeline together (turn 1), then asks hasEmergencyFund and hasDebt together in a single follow-up (turn 2). The two groups are always kept separate — financial health questions are never mixed into the first turn.
+**Rule:** The agent always asks one field per turn: amount first, then timeline. The two questions are always kept separate.
 
-**Scenario:** All fields unknown — turn 1 asks amount, age, timeline; turn 2 asks hasEmergencyFund and hasDebt together.
+**Scenario:** All fields unknown — agent asks for amount; user answers; agent then asks for timeline (presenting four bucket options); user picks a bucket.
 
-**Extracted:** all fields collected across two turns
+**Extracted:** `amount` and `timeline` collected in two turns
 
 ---
 
@@ -33,6 +33,16 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 - `"5 years"` → `"3–5 years"`
 - `"10 years"` → `"5–10 years"`
 
-**Scenario:** All fields unknown — agent opens by asking for amount, age, timeline (presenting four bucket options); user picks a timeline bucket.
+**Scenario:** All fields unknown — agent opens by asking for amount; user answers; agent then asks for timeline (presenting four bucket options); user picks a timeline bucket.
 
 **Extracted:** timeline: one of the four enum values
+
+---
+
+## 4. Amount asked twice with no valid number → phase ends with failure
+
+**Rule:** If the user fails to provide a specific amount after two attempts, the phase ends immediately — timeline is not asked.
+
+**Scenario:** User says "I'm not sure" on first ask, "I really don't know" on retry. Agent stops without asking for timeline.
+
+**Extracted:** `{ status: "failure", code: "amount_missing" }`

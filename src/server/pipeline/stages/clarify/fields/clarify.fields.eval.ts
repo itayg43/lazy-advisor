@@ -30,7 +30,7 @@ describe("collectFields", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.fields.rules.md: amount and timeline collected in separate turns
+  // clarify.fields.rules.md rule 1: amount and timeline collected in separate turns
   it("should collect amount then timeline in separate questions", async () => {
     const responder = createTrackedResponder(["₪30,000", "about 20 years"]);
     lastTranscript = responder.transcript;
@@ -45,7 +45,7 @@ describe("collectFields", () => {
     }
   });
 
-  // clarify.fields.rules.md: vague timeline → re-asked before accepting
+  // clarify.fields.rules.md rule 2: vague timeline → re-asked before accepting
   it("should re-ask timeline when vague", async () => {
     const responder = createTrackedResponder([
       "₪20,000",
@@ -64,7 +64,7 @@ describe("collectFields", () => {
     }
   });
 
-  // clarify.fields.rules.md: agent presents four bucket options when asking timeline
+  // clarify.fields.rules.md rule 3: agent presents four bucket options when asking timeline
   it("should present the four timeline bucket options when asking for timeline", async () => {
     const responder = createTrackedResponder(["₪50,000", "5-10 years"]);
     lastTranscript = responder.transcript;
@@ -84,7 +84,7 @@ describe("collectFields", () => {
     expect(timelineTurn?.content).toMatch(/10\+ years/i);
   });
 
-  // clarify.fields.rules.md boundary mapping: exact boundary values map to shorter bucket
+  // clarify.fields.rules.md rule 3: exact boundary values map to shorter bucket
   it("should map exactly 3 years to 'under 3 years'", async () => {
     const responder = createTrackedResponder(["₪20,000", "3 years"]);
     lastTranscript = responder.transcript;
@@ -98,6 +98,7 @@ describe("collectFields", () => {
     }
   });
 
+  // clarify.fields.rules.md rule 3: exact boundary values map to shorter bucket
   it("should map exactly 5 years to '3–5 years'", async () => {
     const responder = createTrackedResponder(["₪20,000", "5 years"]);
     lastTranscript = responder.transcript;
@@ -111,6 +112,7 @@ describe("collectFields", () => {
     }
   });
 
+  // clarify.fields.rules.md rule 3: exact boundary values map to shorter bucket
   it("should map exactly 10 years to '5–10 years'", async () => {
     const responder = createTrackedResponder(["₪20,000", "10 years"]);
     lastTranscript = responder.transcript;
@@ -124,7 +126,7 @@ describe("collectFields", () => {
     }
   });
 
-  // clarify.fields.rules.md: amount asked twice with no number → failure
+  // clarify.fields.rules.md rule 4: amount asked twice with no number → failure
   it("should return failure when amount is never provided", async () => {
     const responder = createTrackedResponder(["I'm not sure yet", "I really don't know"]);
     lastTranscript = responder.transcript;

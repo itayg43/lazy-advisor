@@ -11,18 +11,19 @@ Stage behavior, prompts, and rules are co-located with the stage at `src/server/
 ```mermaid
 flowchart TD
     Start([goal: string]) --> Classify[classify]
-    Classify -->|normal| Fields[fields]
+    Classify -->|normal| EfDebt[ef-debt]
     Classify -->|out_of_scope| OOS[intake: handleOutOfScopeRedirect]
     Classify -->|unrealistic| Unreal[intake: handleUnrealisticExpectations]
     Classify -->|contradictory| Contra[intake: handleContradictoryRisk]
 
-    OOS -->|accepted| Fields
+    OOS -->|accepted| EfDebt
     OOS -->|rejected| End([end session])
-    Unreal -->|accepted| Fields
+    Unreal -->|accepted| EfDebt
     Unreal -->|rejected| End
-    Contra -->|accepted| Fields
+    Contra -->|accepted| EfDebt
     Contra -->|rejected| End
 
+    EfDebt --> Fields[fields]
     Fields --> ShortHorizon{timeline < 3yr?}
     ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
@@ -38,8 +39,9 @@ flowchart TD
 |-------|-----|----------------|
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakeResult` |
-| fields | Collect core profile fields via conversation | — → `FieldsPhaseOutput` |
-| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `FieldsPhaseOutput` → `RiskPhaseOutput` |
+| ef-debt | Educate/warn about emergency fund and high-interest debt; gate before field collection | — → (educational gate, no profile output) |
+| fields | Collect core profile fields via conversation | — → `FieldsExtraction` |
+| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `FieldsExtraction` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | fields, risk → `AllocationPhaseOutput` |
 | contribution | Establish one-time vs. periodic intent | fields, allocation → `ContributionPhaseOutput` |
 | equity | *(T4 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | fields, risk, allocation, contribution → `EquityPhaseOutput` |
@@ -65,6 +67,7 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
 "Should I buy NVIDIA stock?"
   → classifyGoal()             → out_of_scope
   → handleOutOfScopeRedirect   → IntakeResult { accepted: true }
+  → collectEfDebt()
   → collectFields()
   → collectRisk(fields) → collectAllocation(fields, risk) → ... → UserProfile
 ```
@@ -93,7 +96,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 
-**Capacity context available, not surfaced in responses.** Age and timeline are passed to the risk phase as grounding context but the phase prompt does not instruct the model to reference them. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Prompting the model to say "with your 20-year timeline, you can afford more risk" would reintroduce the framing bias the design avoids.
+**Timeline context available, not surfaced in responses.** The user's timeline is passed to the risk phase as grounding context, but the phase prompt does not instruct the model to reference it. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Prompting the model to say "with your 20-year timeline, you can afford more risk" would reintroduce the framing bias the design avoids.
 
 ### Allocation phase — 2-axis anchor (risk tolerance × timeline)
 
@@ -105,13 +108,13 @@ The model locates the user's cell from `risk.riskTolerance` × `fields.timeline`
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
-**What's not consumed by this phase.** `age` is unused: redundant with timeline per TDF glidepath literature. Emergency fund and debt status are addressed in a separate educational gate (T3, not yet implemented) and will not be passed to this phase.
+**What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase (T3) and are not passed to this phase.
 
 ### Contribution phase — `plansToContribute: boolean`
 
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
 
-**Allocation context passed to contribution.** The contribution phase receives `AllocationPhaseOutput` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
+**Allocation context passed to contribution.** The contribution phase receives `fields` and `allocation` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
 
 ### Phase conversation patterns
 
@@ -121,7 +124,7 @@ Two patterns are used depending on whether the LLM needs to drive the conversati
 
 The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
 
-Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: allocation (negotiating the equity split), and intake handlers (redirecting out-of-scope goals with goal-specific explanations).
+Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: fields, risk, allocation, contribution, and intake handlers.
 
 **`askWithClassify` — code as orchestrator**
 
@@ -129,7 +132,7 @@ Code drives the conversation — decides what question to ask and in what order.
 
 A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
 
-Used when questions are fixed and answers need structured extraction: EF/debt, fields, risk, and contribution.
+Used when questions are fixed and answers need structured extraction: ef-debt.
 
 **The boundary**
 
