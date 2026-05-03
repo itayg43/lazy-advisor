@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { MAX_AGE, MAX_AMOUNT } from "#constants/validation.constants";
+import { MAX_AMOUNT } from "#constants/validation.constants";
 
 export const RiskTolerance = z.enum(["conservative", "moderate", "aggressive"]);
 
@@ -13,10 +13,7 @@ export const TimelineBucket = z.enum([
 
 export const UserProfileSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
-  age: z.number().int().positive().max(MAX_AGE),
   timeline: TimelineBucket,
-  hasEmergencyFund: z.boolean(),
-  hasDebt: z.boolean(),
   riskTolerance: RiskTolerance,
   // sum-to-100 is validated in AllocationPhaseOutputSchema, not here
   equityPercentage: z.number().int().min(0).max(100),

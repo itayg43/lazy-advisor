@@ -7,14 +7,14 @@ import {
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
-import type { FieldsPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
+import type { FieldsPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import { TimelineBucket } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.fields.last-run.md", import.meta.url).pathname;
 
 describe("collectFields", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
-  let lastOutput: FieldsPhaseOutput | undefined;
+  let lastOutput: FieldsPhaseResult | undefined;
 
   beforeAll(() => initLastRun(LAST_RUN_PATH));
 
@@ -30,62 +30,52 @@ describe("collectFields", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.fields.rules.md rule 1: agent always opens with amount/age/timeline in turn 1,
-  // then asks EF and debt together in turn 2.
-  it("should collect all fields in exactly two turns", async () => {
+  // clarify.fields.rules.md: amount and timeline collected in separate turns
+  it("should collect amount then timeline in separate questions", async () => {
+    const responder = createTrackedResponder(["₪30,000", "about 20 years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
+
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.fields.amount).toBe(30_000);
+      expect(result.fields.timeline).toBe(TimelineBucket.enum["10+ years"]);
+    }
+  });
+
+  // clarify.fields.rules.md: vague timeline → re-asked before accepting
+  it("should re-ask timeline when vague", async () => {
     const responder = createTrackedResponder([
-      "₪30,000, I'm 27, 20 years",
-      "Yes emergency fund, no debt",
+      "₪20,000",
+      "long-term",
+      "I think 10-15 years",
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
 
-    expect(output.amount).toBe(30_000);
-    expect(output.age).toBe(27);
-    expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.fields.amount).toBe(20_000);
+      expect(result.fields.timeline).toBe(TimelineBucket.enum["10+ years"]);
+    }
   });
 
-  // clarify.fields.rules.md rule 2: vague timeline → re-asked before moving to turn 2.
-  it("should re-ask timeline when vague before proceeding to EF/debt", async () => {
-    const responder = createTrackedResponder([
-      "I have ₪20,000, I'm 32, long-term",
-      "I guess maybe 10-15 years",
-      "Yes emergency fund, no debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
-
-    expect(output.amount).toBe(20_000);
-    expect(output.age).toBe(32);
-    expect(output.timeline).toBe(TimelineBucket.enum["10+ years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
-  });
-
-  // clarify.fields.rules.md rule 3: when asking for timeline, agent presents the four bucket options.
+  // clarify.fields.rules.md: agent presents four bucket options when asking timeline
   it("should present the four timeline bucket options when asking for timeline", async () => {
-    const responder = createTrackedResponder([
-      "₪50,000, I'm 25",
-      "5-10 years",
-      "Yes I have an emergency fund, no debt",
-    ]);
+    const responder = createTrackedResponder(["₪50,000", "5-10 years"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
 
-    expect(output.amount).toBe(50_000);
-    expect(output.age).toBe(25);
-    expect(output.timeline).toBe(TimelineBucket.enum["5–10 years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.fields.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    }
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const timelineTurn = agentTurns.find((t) => /under 3 years/i.test(t.content));
@@ -94,79 +84,57 @@ describe("collectFields", () => {
     expect(timelineTurn?.content).toMatch(/10\+ years/i);
   });
 
-  // clarify.fields.rules.md rule 3: stated timeframe is mapped to nearest bucket.
-  it("should map a short stated timeframe to the 'under 3 years' bucket", async () => {
-    const responder = createTrackedResponder([
-      "₪20,000, I'm 50, I need this money in about 2 years",
-      "Yes emergency fund, no debt",
-    ]);
+  // clarify.fields.rules.md boundary mapping: exact boundary values map to shorter bucket
+  it("should map exactly 3 years to 'under 3 years'", async () => {
+    const responder = createTrackedResponder(["₪20,000", "3 years"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
 
-    expect(output.amount).toBe(20_000);
-    expect(output.age).toBe(50);
-    expect(output.timeline).toBe(TimelineBucket.enum["under 3 years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.fields.timeline).toBe(TimelineBucket.enum["under 3 years"]);
+    }
   });
 
-  // clarify.fields.rules.md rule 3: stated timeframe is mapped to nearest bucket.
-  it("should map a medium stated timeframe to the '3–5 years' bucket", async () => {
-    const responder = createTrackedResponder([
-      "₪25,000, I'm 45, about 4-year horizon",
-      "Yes emergency fund, no debt",
-    ]);
+  it("should map exactly 5 years to '3–5 years'", async () => {
+    const responder = createTrackedResponder(["₪20,000", "5 years"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
 
-    expect(output.amount).toBe(25_000);
-    expect(output.age).toBe(45);
-    expect(output.timeline).toBe(TimelineBucket.enum["3–5 years"]);
-    expect(output.hasEmergencyFund).toBe(true);
-    expect(output.hasDebt).toBe(false);
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.fields.timeline).toBe(TimelineBucket.enum["3–5 years"]);
+    }
   });
 
-  // clarify.fields.rules.md rule 3 boundary mapping: exact boundary values map to the shorter bucket
-  it("should map exactly 3 years to the 'under 3 years' bucket", async () => {
-    const responder = createTrackedResponder([
-      "₪20,000, I'm 30, 3 years",
-      "Yes emergency fund, no debt",
-    ]);
+  it("should map exactly 10 years to '5–10 years'", async () => {
+    const responder = createTrackedResponder(["₪20,000", "10 years"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
 
-    expect(output.timeline).toBe(TimelineBucket.enum["under 3 years"]);
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.fields.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    }
   });
 
-  it("should map exactly 5 years to the '3–5 years' bucket", async () => {
-    const responder = createTrackedResponder([
-      "₪20,000, I'm 30, 5 years",
-      "Yes emergency fund, no debt",
-    ]);
+  // clarify.fields.rules.md: amount asked twice with no number → failure
+  it("should return failure when amount is never provided", async () => {
+    const responder = createTrackedResponder(["I'm not sure yet", "I really don't know"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
+    const result = await collectFields(responder.sendToUser, responder.waitForResponse);
+    lastOutput = result;
 
-    expect(output.timeline).toBe(TimelineBucket.enum["3–5 years"]);
-  });
-
-  it("should map exactly 10 years to the '5–10 years' bucket", async () => {
-    const responder = createTrackedResponder([
-      "₪20,000, I'm 30, 10 years",
-      "Yes emergency fund, no debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectFields(responder.sendToUser, responder.waitForResponse);
-    lastOutput = output;
-
-    expect(output.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    expect(result.status).toBe("failure");
+    if (result.status === "failure") {
+      expect(result.code).toBe("amount_missing");
+    }
   });
 });

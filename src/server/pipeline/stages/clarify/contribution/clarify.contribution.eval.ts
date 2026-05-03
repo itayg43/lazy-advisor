@@ -20,10 +20,7 @@ const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.ur
 describe("collectContribution", () => {
   const mockFields: FieldsPhaseOutput = {
     amount: 30_000,
-    age: 35,
     timeline: TimelineBucket.enum["10+ years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
   };
 
   const mockAllocation: AllocationPhaseOutput = {

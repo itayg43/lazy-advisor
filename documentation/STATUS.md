@@ -5,9 +5,27 @@
 | # | Task |
 |---|------|
 | T3 | EF/debt gate |
+| T3.5 | Drop `age`, rename `fields` → `parameters` |
+| T3.6 | Align `IntakePhaseOutput` to `{ status: "accepted" \| "rejected" }` pattern |
 | T4 | Equity |
 | T5 | Buffer |
 | T6 | Wire equity/buffer in orchestrator |
+
+## Task Notes
+
+### T3.5 — Drop `age`, rename `fields` → `parameters`
+
+**Summary:** After T3 removes EF/debt, the fields phase is left collecting `amount`, `age`, and `timeline`. `age` was never used in any decision logic — the allocation model is keyed on `timeline × riskTolerance` only, and the risk phase prompt explicitly guards against using age to suggest a score. The research notes confirm age was consciously dropped from the 5-factor design ("TDF glidepaths use years-to-retirement, not age"). With only `amount` and `timeline` remaining, `fields` is too generic a name — rename to `parameters`, which reflects that these are the two input parameters that drive everything downstream.
+
+**Why now (after T3):** T3 leaves the phase in a transitional state. This task completes the cleanup with a clean boundary.
+
+**Blast radius (to assess when planning):** schema, types, phase file + directory rename, prompt + extraction instructions, rules file, eval file, runs/last-run files, all downstream context strings that pass `fields.age`, imports across the pipeline.
+
+## EF/Debt Refactor Watch Items (check after evals)
+
+- **Mixed message + Option B.** Current design (Option A): when user both answers and asks a question (e.g. "Yes, but does a savings account count?"), `answer` is set to null, the question is answered, and the answer is re-confirmed on the next turn. If evals show this breaks or causes too many retries, consider Option B: allow `answer` to be non-null when `clarificationNeeded: true` so the orchestrator can use the answer immediately without an extra round-trip. Trade-off: breaks the clean discriminated contract, adds orchestrator complexity.
+
+- **Retries bump to 3.** Default is 2. A mixed message followed by two clarifying questions in a row needs 4 attempts total — retries=2 exhausts before resolving. If evals surface this scenario failing, bump `ASK_WITH_CLASSIFY_DEFAULT_RETRIES` to 3.
 
 ## Improvements
 

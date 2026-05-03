@@ -45,7 +45,7 @@ flowchart TD
 | equity | *(T4 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | fields, risk, allocation, contribution → `EquityPhaseOutput` |
 | buffer | *(T5 — planned)* Resolve which buffer instrument fills the buffer bucket | fields, risk, allocation, equity → `BufferPhaseOutput` |
 
-Each phase runs a `runPhaseLoop` tool-call loop with its own system prompt, then a post-loop structured extraction call produces the phase's typed output. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
+Phases use one of two conversation patterns depending on whether the LLM needs to drive the conversation or just classify a fixed question — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
 
 ---
 
@@ -112,6 +112,33 @@ The model locates the user's cell from `risk.riskTolerance` × `fields.timeline`
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
 
 **Allocation context passed to contribution.** The contribution phase receives `AllocationPhaseOutput` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
+
+### Phase conversation patterns
+
+Two patterns are used depending on whether the LLM needs to drive the conversation or just classify a response to a fixed question.
+
+**`runPhaseLoop` — LLM as orchestrator**
+
+The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
+
+Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: allocation (negotiating the equity split), and intake handlers (redirecting out-of-scope goals with goal-specific explanations).
+
+**`askWithClassify` — code as orchestrator**
+
+Code drives the conversation — decides what question to ask and in what order. The LLM does one narrow job per call: classify a single user response into a typed schema. Code calls `sendToUser`/`waitForResponse` directly (the same primitives `ask_user` is built on). State lives in TypeScript variables, not conversation history.
+
+A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
+
+Used when questions are fixed and answers need structured extraction: EF/debt, fields, risk, and contribution.
+
+**The boundary**
+
+| Need | Pattern |
+|------|---------|
+| LLM generates the question content dynamically | `runPhaseLoop` |
+| LLM decides what question to ask next | `runPhaseLoop` |
+| Questions are fixed; answers need classification | `askWithClassify` |
+| Multi-turn negotiation or complex branching | `runPhaseLoop` |
 
 ### Inline assembly from typed outputs
 

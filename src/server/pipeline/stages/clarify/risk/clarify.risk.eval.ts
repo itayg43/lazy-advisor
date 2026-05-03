@@ -20,10 +20,7 @@ const { conservative, moderate, aggressive } = RiskTolerance.enum;
 describe("collectRisk", () => {
   const mockFields: FieldsPhaseOutput = {
     amount: 50_000,
-    age: 35,
     timeline: TimelineBucket.enum["10+ years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
   };
 
   let lastTranscript: TranscriptEntry[] | undefined;

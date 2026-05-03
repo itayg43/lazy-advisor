@@ -21,10 +21,7 @@ const { conservative, moderate, aggressive } = RiskTolerance.enum;
 describe("collectAllocation", () => {
   const longHorizonAggressiveFields: FieldsPhaseOutput = {
     amount: 50_000,
-    age: 35,
     timeline: TimelineBucket.enum["10+ years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
   };
   const aggressiveRisk: RiskPhaseOutput = {
     selfRatingScore: 5,
@@ -33,10 +30,7 @@ describe("collectAllocation", () => {
 
   const midHorizonModerateFields: FieldsPhaseOutput = {
     amount: 80_000,
-    age: 40,
     timeline: TimelineBucket.enum["5–10 years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
   };
   const moderateRisk: RiskPhaseOutput = {
     selfRatingScore: 3,
@@ -45,10 +39,7 @@ describe("collectAllocation", () => {
 
   const longHorizonConservativeFields: FieldsPhaseOutput = {
     amount: 60_000,
-    age: 50,
     timeline: TimelineBucket.enum["10+ years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
   };
   const conservativeRisk: RiskPhaseOutput = {
     selfRatingScore: 2,
@@ -57,10 +48,7 @@ describe("collectAllocation", () => {
 
   const shortMidHorizonConservativeFields: FieldsPhaseOutput = {
     amount: 30_000,
-    age: 45,
     timeline: TimelineBucket.enum["3–5 years"],
-    hasEmergencyFund: true,
-    hasDebt: false,
   };
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final

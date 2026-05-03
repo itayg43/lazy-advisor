@@ -1,11 +1,13 @@
 import { createLogger } from "#lib/logger";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
+import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
 import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 import { INTAKE_HANDLERS } from "#pipeline/stages/clarify/intake/clarify.intake.handlers";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
+  AMOUNT_EXIT_MESSAGE,
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
   PROFILE_TRANSITION_MESSAGE,
@@ -42,7 +44,19 @@ export const runClarifyStage = async (
 
   sendToUser(PROFILE_TRANSITION_MESSAGE);
 
-  const fields = await collectFields(sendToUser, waitForResponse);
+  await collectEfDebt(sendToUser, waitForResponse);
+
+  const fieldsResult = await collectFields(sendToUser, waitForResponse);
+
+  if (fieldsResult.status === "failure") {
+    logger.info("Fields phase failed", { code: fieldsResult.code });
+
+    sendToUser(AMOUNT_EXIT_MESSAGE);
+
+    return null;
+  }
+
+  const { fields } = fieldsResult;
 
   if (fields.timeline === TimelineBucket.enum["under 3 years"]) {
     logger.info("Short timeline — exiting pipeline", { timeline: fields.timeline });
