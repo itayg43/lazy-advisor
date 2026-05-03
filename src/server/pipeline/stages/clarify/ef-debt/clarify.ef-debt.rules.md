@@ -43,3 +43,11 @@ Each entry: the rule, a one-line scenario, and the expected behavior for verifyi
 **Scenario:** Agent has asked about emergency fund; user responds "I have some savings".
 
 **Expected behavior:** Agent asks the user to clarify (e.g., whether they have 3–6 months of expenses set aside in a liquid account).
+
+---
+
+## Watch Items (check after evals)
+
+- **Mixed message + Option B.** Current design (Option A): when user both answers and asks a question (e.g. "Yes, but does a savings account count?"), `answer` is set to null, the question is answered, and the answer is re-confirmed on the next turn. If evals show this breaks or causes too many retries, consider Option B: allow `answer` to be non-null when `clarificationNeeded: true` so the orchestrator can use the answer immediately without an extra round-trip. Trade-off: breaks the clean discriminated contract, adds orchestrator complexity.
+
+- **Retries bump to 3.** Default is 2. A mixed message followed by two clarifying questions in a row needs 4 attempts total — retries=2 exhausts before resolving. If evals surface this scenario failing, bump `ASK_WITH_CLASSIFY_DEFAULT_RETRIES` to 3.
