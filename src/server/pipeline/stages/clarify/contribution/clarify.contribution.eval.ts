@@ -10,7 +10,7 @@ import { collectContribution } from "#pipeline/stages/clarify/contribution/clari
 import type {
   AllocationPhaseOutput,
   ContributionPhaseOutput,
-  FieldsPhaseOutput,
+  ParametersPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { TimelineBucket } from "#schemas/pipeline.schemas";
 
@@ -18,7 +18,7 @@ const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.ur
   .pathname;
 
 describe("collectContribution", () => {
-  const mockFields: FieldsPhaseOutput = {
+  const mockParameters: ParametersPhaseOutput = {
     amount: 30_000,
     timeline: TimelineBucket.enum["10+ years"],
   };
@@ -51,7 +51,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
@@ -67,7 +67,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
@@ -86,7 +86,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
@@ -107,7 +107,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
@@ -130,7 +130,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
@@ -149,7 +149,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,
@@ -172,7 +172,7 @@ describe("collectContribution", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectContribution(
-      mockFields,
+      mockParameters,
       mockAllocation,
       responder.sendToUser,
       responder.waitForResponse,

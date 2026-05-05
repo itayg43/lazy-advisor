@@ -8,7 +8,7 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type {
-  FieldsPhaseOutput,
+  ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
@@ -18,7 +18,7 @@ const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathn
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
 describe("collectRisk", () => {
-  const mockFields: FieldsPhaseOutput = {
+  const mockParameters: ParametersPhaseOutput = {
     amount: 50_000,
     timeline: TimelineBucket.enum["10+ years"],
   };
@@ -60,7 +60,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -78,7 +78,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -95,7 +95,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -112,7 +112,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -129,7 +129,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -146,7 +146,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -164,7 +164,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -181,7 +181,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -198,7 +198,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -215,7 +215,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -232,7 +232,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -252,7 +252,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -270,7 +270,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -292,7 +292,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -316,7 +316,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -333,7 +333,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -350,7 +350,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -374,7 +374,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -395,7 +395,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );
@@ -416,7 +416,7 @@ describe("collectRisk", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectRisk(
-      mockFields,
+      mockParameters,
       responder.sendToUser,
       responder.waitForResponse,
     );

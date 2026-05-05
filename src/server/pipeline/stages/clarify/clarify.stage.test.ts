@@ -11,7 +11,7 @@ import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.sche
 import type {
   AllocationPhaseOutput,
   ContributionPhaseOutput,
-  FieldsExtraction,
+  ParametersExtraction,
   RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
@@ -58,7 +58,7 @@ describe("clarifyStage", () => {
     output,
   });
 
-  const mockFieldsOutput: FieldsExtraction = {
+  const mockParametersOutput: ParametersExtraction = {
     amount: 50000,
     timeline: TimelineBucket.enum["10+ years"],
   };
@@ -111,7 +111,7 @@ describe("clarifyStage", () => {
   // Always call after classify and ef-debt mocks so the queue order matches execution.
   const setupPhaseParsedMocks = () => {
     mockedCallOpenAIParsed
-      .mockResolvedValueOnce(createParsedResponse(mockFieldsOutput, "resp_fields"))
+      .mockResolvedValueOnce(createParsedResponse(mockParametersOutput, "resp_fields"))
       .mockResolvedValueOnce(createParsedResponse(mockRiskScore, "resp_risk"))
       .mockResolvedValueOnce(
         createParsedResponse(mockAllocationOutput, "resp_allocation"),
@@ -278,7 +278,7 @@ describe("clarifyStage", () => {
       setupEfDebtParsedMocks();
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse(
-          { ...mockFieldsOutput, timeline: TimelineBucket.enum["under 3 years"] },
+          { ...mockParametersOutput, timeline: TimelineBucket.enum["under 3 years"] },
           "resp_fields",
         ),
       );

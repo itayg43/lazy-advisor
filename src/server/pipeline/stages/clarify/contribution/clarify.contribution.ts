@@ -8,7 +8,7 @@ import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/shared/c
 import type {
   AllocationPhaseOutput,
   ContributionPhaseOutput,
-  FieldsPhaseOutput,
+  ParametersPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
@@ -54,18 +54,20 @@ const CONTRIBUTION_EXTRACTION_INSTRUCTIONS = `Extract a structured record from t
 - plansToContribute: true if the user confirmed they plan to add money periodically, false otherwise (explicit no, vague answer, or no clear signal)`;
 
 export const collectContribution = async (
-  fields: FieldsPhaseOutput,
+  parameters: ParametersPhaseOutput,
   allocation: AllocationPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<ContributionPhaseOutput> => {
-  logger.info("Starting contribution phase", { fields, allocation });
+  logger.info("Starting contribution phase", { parameters, allocation });
 
-  const equityAmount = Math.round((fields.amount * allocation.equityPercentage) / 100);
-  const bufferAmount = fields.amount - equityAmount;
+  const equityAmount = Math.round(
+    (parameters.amount * allocation.equityPercentage) / 100,
+  );
+  const bufferAmount = parameters.amount - equityAmount;
 
-  const context = `Investment amount: ₪${fields.amount.toLocaleString()}
-Investment timeline: ${fields.timeline}
+  const context = `Investment amount: ₪${parameters.amount.toLocaleString()}
+Investment timeline: ${parameters.timeline}
 Allocation: ${allocation.equityPercentage}% equity (₪${equityAmount.toLocaleString()}), ${allocation.bufferPercentage}% buffer (₪${bufferAmount.toLocaleString()})`;
 
   const { responseId } = await runPhaseLoop({

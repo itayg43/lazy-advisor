@@ -2,9 +2,9 @@ import { createLogger } from "#lib/logger";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
-import { collectFields } from "#pipeline/stages/clarify/fields/clarify.fields";
 import { INTAKE_HANDLERS } from "#pipeline/stages/clarify/intake/clarify.intake.handlers";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
+import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   AMOUNT_EXIT_MESSAGE,
@@ -46,37 +46,42 @@ export const runClarifyStage = async (
 
   await collectEfDebt(sendToUser, waitForResponse);
 
-  const fieldsResult = await collectFields(sendToUser, waitForResponse);
+  const parametersResult = await collectParameters(sendToUser, waitForResponse);
 
-  if (fieldsResult.status === "failure") {
-    logger.info("Fields phase failed", { code: fieldsResult.code });
+  if (parametersResult.status === "failure") {
+    logger.info("Parameters phase failed", { code: parametersResult.code });
 
     sendToUser(AMOUNT_EXIT_MESSAGE);
 
     return null;
   }
 
-  const { fields } = fieldsResult;
+  const { parameters } = parametersResult;
 
-  if (fields.timeline === TimelineBucket.enum["under 3 years"]) {
-    logger.info("Short timeline — exiting pipeline", { timeline: fields.timeline });
+  if (parameters.timeline === TimelineBucket.enum["under 3 years"]) {
+    logger.info("Short timeline — exiting pipeline", { timeline: parameters.timeline });
 
     sendToUser(SHORT_TIMELINE_EXIT_MESSAGE);
 
     return null;
   }
 
-  const risk = await collectRisk(fields, sendToUser, waitForResponse);
-  const allocation = await collectAllocation(fields, risk, sendToUser, waitForResponse);
+  const risk = await collectRisk(parameters, sendToUser, waitForResponse);
+  const allocation = await collectAllocation(
+    parameters,
+    risk,
+    sendToUser,
+    waitForResponse,
+  );
   const contribution = await collectContribution(
-    fields,
+    parameters,
     allocation,
     sendToUser,
     waitForResponse,
   );
 
   const profile = {
-    ...fields,
+    ...parameters,
     riskTolerance: risk.riskTolerance,
     ...allocation,
     ...contribution,
