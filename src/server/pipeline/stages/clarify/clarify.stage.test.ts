@@ -111,7 +111,9 @@ describe("clarifyStage", () => {
   // Always call after classify and ef-debt mocks so the queue order matches execution.
   const setupPhaseParsedMocks = () => {
     mockedCallOpenAIParsed
-      .mockResolvedValueOnce(createParsedResponse(mockParametersOutput, "resp_fields"))
+      .mockResolvedValueOnce(
+        createParsedResponse(mockParametersOutput, "resp_parameters"),
+      )
       .mockResolvedValueOnce(createParsedResponse(mockRiskScore, "resp_risk"))
       .mockResolvedValueOnce(
         createParsedResponse(mockAllocationOutput, "resp_allocation"),
@@ -126,7 +128,7 @@ describe("clarifyStage", () => {
   // ef-debt no longer uses a loop — it uses askWithClassify (callOpenAIParsed).
   const setupPhaseLoopMocks = () => {
     mockedCallOpenAI
-      .mockResolvedValueOnce(createLoopResponse("resp_fields_loop"))
+      .mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_risk_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_allocation_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_contribution_loop"));
@@ -279,10 +281,10 @@ describe("clarifyStage", () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse(
           { ...mockParametersOutput, timeline: TimelineBucket.enum["under 3 years"] },
-          "resp_fields",
+          "resp_parameters",
         ),
       );
-      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_fields_loop"));
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"));
 
       const result = await runClarifyStage(
         "I want to invest ₪20,000",

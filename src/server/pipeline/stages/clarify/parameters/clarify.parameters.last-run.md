@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-05-05T17:21:40.196Z | Commit: 87dd7f9
+Timestamp: 2026-05-05T17:35:47.187Z | Commit: 2f07343
 
 ---
 
@@ -14,14 +14,14 @@ Timestamp: 2026-05-05T17:21:40.196Z | Commit: 87dd7f9
 **User:** about 20 years
 
 **Output:**
-status: success | parameters: [object Object]
+status: success | amount: 30000 | timeline: 10+ years
 
 
 ---
 
 ## ✓ should re-ask timeline when vague
 
-**Agent:** How much do you want to invest?
+**Agent:** How much do you want to invest? (Please give a specific amount in shekels.)
 
 **User:** ₪20,000
 
@@ -38,7 +38,7 @@ status: success | parameters: [object Object]
 **User:** I think 10-15 years
 
 **Output:**
-status: success | parameters: [object Object]
+status: success | amount: 20000 | timeline: 10+ years
 
 
 ---
@@ -54,7 +54,7 @@ status: success | parameters: [object Object]
 **User:** 5-10 years
 
 **Output:**
-status: success | parameters: [object Object]
+status: success | amount: 50000 | timeline: 5–10 years
 
 
 ---
@@ -70,7 +70,7 @@ status: success | parameters: [object Object]
 **User:** 3 years
 
 **Output:**
-status: success | parameters: [object Object]
+status: success | amount: 20000 | timeline: under 3 years
 
 
 ---
@@ -86,7 +86,7 @@ status: success | parameters: [object Object]
 **User:** 5 years
 
 **Output:**
-status: success | parameters: [object Object]
+status: success | amount: 20000 | timeline: 3–5 years
 
 
 ---
@@ -102,7 +102,7 @@ status: success | parameters: [object Object]
 **User:** 10 years
 
 **Output:**
-status: success | parameters: [object Object]
+status: success | amount: 20000 | timeline: 5–10 years
 
 
 ---
