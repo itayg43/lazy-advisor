@@ -24,28 +24,29 @@ flowchart TD
     Contra -->|rejected| End
 
     EfDebt --> Parameters[parameters]
+    Parameters -->|amount failure| ExitAmount([exit: amount failure message])
     Parameters --> ShortHorizon{timeline < 3yr?}
     ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
     Risk --> Allocation[allocation]
     Allocation --> Contribution[contribution]
     Contribution --> Profile([UserProfile])
-    Contribution -.->|T4 planned| Equity[equity]
-    Equity -.->|T5 planned| Buffer[buffer]
+    Contribution -.->|T5 planned| Equity[equity]
+    Equity -.->|T6 planned| Buffer[buffer]
     Buffer -.-> Profile
 ```
 
 | Phase | Job | Input → Output |
 |-------|-----|----------------|
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
-| intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakeResult` |
+| intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseOutput` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `ParametersPhaseOutput` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseOutput` |
 | contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseOutput` |
-| equity | *(T4 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
-| buffer | *(T5 — planned)* Resolve which buffer instrument fills the buffer bucket | parameters, risk, allocation, equity → `BufferPhaseOutput` |
+| equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
+| buffer | *(T6 — planned)* Resolve which buffer instrument fills the buffer bucket | parameters, risk, allocation, equity → `BufferPhaseOutput` |
 
 Phases use one of two conversation patterns depending on whether the LLM needs to drive the conversation or just classify a fixed question — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
 
@@ -66,13 +67,13 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
 ```
 "Should I buy NVIDIA stock?"
   → classifyGoal()             → out_of_scope
-  → handleOutOfScopeRedirect   → IntakeResult { accepted: true }
+  → handleOutOfScopeRedirect   → IntakePhaseOutput { accepted: true }
   → collectEfDebt()
   → collectParameters()
   → collectRisk(parameters) → collectAllocation(parameters, risk) → ... → UserProfile
 ```
 
-Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakeResult`. Acceptance is determined by a post-loop structured LLM call:
+Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakePhaseOutput`. Acceptance is determined by a post-loop structured LLM call:
 - `{ accepted: true }` — user accepted the redirect; orchestrator continues to parameter collection
 - `{ accepted: false }` — end the session; stage sends a per-classification closing message from `INTAKE_REJECTION_MESSAGES`
 
@@ -81,6 +82,10 @@ The parameters prompt is left with one job: collect required profile parameters.
 An alternative considered: skip the classifier and expose handlers as LLM tools, letting a top-level agent route via tool call. This breaks down because the handlers are multi-turn conversations — the outer agent would just wait, making it an expensive classifier with no upside. Explicit code routing after a lightweight classifier is cheaper, independently testable, and observable in isolation.
 
 (The `contradictory` classification is kept despite the risk phase's self-rating resolving the stated contradiction — surfacing the conflict up-front has educational value for beginner users.)
+
+### Parameters — amount failure exit
+
+`collectParameters` returns `{ status: "failure", code: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Amount is the only required parameter with a hard-fail exit: every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline has no equivalent hard exit because the extraction schema always resolves to a bucket (non-nullable), so the model always returns a valid timeline even from an ambiguous answer.
 
 ### Short-horizon early exit (timeline < 3 years)
 
@@ -100,7 +105,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 ### Allocation phase — 2-axis anchor (risk tolerance × timeline)
 
-The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to T4 (equity) and T5 (buffer).
+The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to T5 (equity) and T6 (buffer).
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
@@ -145,7 +150,7 @@ Used when questions are fixed and answers need structured extraction: ef-debt.
 
 ### Inline assembly from typed outputs
 
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: each phase returns a typed output spread directly into the profile before a final `UserProfileSchema.parse()` boundary check. With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase outputs are mapped directly into the profile before a final `UserProfileSchema.parse()` boundary check. Most phase outputs are spread (`parameters`, `allocation`, `contribution`); risk is selectively extracted — only `riskTolerance` is taken because `selfRatingScore` is not a profile field (it remains on `RiskPhaseOutput` for use by the allocation phase). With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ---
 

@@ -296,8 +296,8 @@ describe("clarifyStage", () => {
       expect(mockSendToUser).toHaveBeenCalledTimes(4); // PROFILE_TRANSITION + EF question + debt question + SHORT_TIMELINE_EXIT
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
       expect(mockSendToUser).toHaveBeenNthCalledWith(4, SHORT_TIMELINE_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // fields loop only
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(4); // classify + EF + debt + fields extraction
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // parameters loop only
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(4); // classify + EF + debt + parameters extraction
     });
   });
 

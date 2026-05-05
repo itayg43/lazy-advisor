@@ -14,7 +14,7 @@ Phase 4b uses a **two-axis anchor table: risk tolerance × timeline**.
 | Aggressive | 30–40% | 60–70% | 80–90% |
 
 Key rules:
-- **Short-horizon exit:** Users with <3yr timeline never reach this phase. The orchestrator exits after fields collection and redirects them to a money market fund — risk tolerance is not a meaningful dial below ~3 years, and proposing an ETF allocation for money needed soon would be a disservice.
+- **Short-horizon exit:** Users with <3yr timeline never reach this phase. The orchestrator exits after parameters collection and redirects them to a money market fund — risk tolerance is not a meaningful dial below ~3 years, and proposing an ETF allocation for money needed soon would be a disservice.
 - **EF and debt are suitability gates, not anchor inputs.** If the user lacks an EF or carries high-interest debt, the agent surfaces the concern and asks how they want to proceed — the anchor percentage does not shift.
 - **Pre-stated split:** accept by default. Exception: if the split is extreme relative to capacity (e.g., 100% equity with <3yr horizon, or 0% equity with 20+yr horizon + aggressive risk), surface the mismatch in one turn, then accept the user's final answer.
 - **Behavioral framing:** "sizing to tolerance *tends to* reduce panic-selling" — not "prevents".
