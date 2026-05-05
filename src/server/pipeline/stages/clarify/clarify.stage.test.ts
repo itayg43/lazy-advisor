@@ -11,7 +11,7 @@ import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.sche
 import type {
   AllocationPhaseOutput,
   ContributionPhaseOutput,
-  FieldsExtraction,
+  ParametersExtraction,
   RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
@@ -58,7 +58,7 @@ describe("clarifyStage", () => {
     output,
   });
 
-  const mockFieldsOutput: FieldsExtraction = {
+  const mockParametersOutput: ParametersExtraction = {
     amount: 50000,
     timeline: TimelineBucket.enum["10+ years"],
   };
@@ -111,7 +111,9 @@ describe("clarifyStage", () => {
   // Always call after classify and ef-debt mocks so the queue order matches execution.
   const setupPhaseParsedMocks = () => {
     mockedCallOpenAIParsed
-      .mockResolvedValueOnce(createParsedResponse(mockFieldsOutput, "resp_fields"))
+      .mockResolvedValueOnce(
+        createParsedResponse(mockParametersOutput, "resp_parameters"),
+      )
       .mockResolvedValueOnce(createParsedResponse(mockRiskScore, "resp_risk"))
       .mockResolvedValueOnce(
         createParsedResponse(mockAllocationOutput, "resp_allocation"),
@@ -126,7 +128,7 @@ describe("clarifyStage", () => {
   // ef-debt no longer uses a loop — it uses askWithClassify (callOpenAIParsed).
   const setupPhaseLoopMocks = () => {
     mockedCallOpenAI
-      .mockResolvedValueOnce(createLoopResponse("resp_fields_loop"))
+      .mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_risk_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_allocation_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_contribution_loop"));
@@ -278,11 +280,11 @@ describe("clarifyStage", () => {
       setupEfDebtParsedMocks();
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse(
-          { ...mockFieldsOutput, timeline: TimelineBucket.enum["under 3 years"] },
-          "resp_fields",
+          { ...mockParametersOutput, timeline: TimelineBucket.enum["under 3 years"] },
+          "resp_parameters",
         ),
       );
-      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_fields_loop"));
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"));
 
       const result = await runClarifyStage(
         "I want to invest ₪20,000",

@@ -76,7 +76,13 @@ export const appendLastRunEntry = (
 
   if (entry.output != null && typeof entry.output === "object") {
     const fields = Object.entries(entry.output)
-      .map(([k, v]) => `${k}: ${String(v)}`)
+      .flatMap(([k, v]) =>
+        v != null && typeof v === "object" && !Array.isArray(v)
+          ? Object.entries(v as Record<string, unknown>).map(
+              ([nk, nv]) => `${nk}: ${String(nv)}`,
+            )
+          : [`${k}: ${String(v)}`],
+      )
       .join(" | ");
     lines.push("**Output:**", fields, "");
   }

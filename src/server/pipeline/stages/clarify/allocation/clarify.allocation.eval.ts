@@ -9,7 +9,7 @@ import {
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import type {
   AllocationPhaseOutput,
-  FieldsPhaseOutput,
+  ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
@@ -19,7 +19,7 @@ const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url)
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
 describe("collectAllocation", () => {
-  const longHorizonAggressiveFields: FieldsPhaseOutput = {
+  const longHorizonAggressiveParameters: ParametersPhaseOutput = {
     amount: 50_000,
     timeline: TimelineBucket.enum["10+ years"],
   };
@@ -28,7 +28,7 @@ describe("collectAllocation", () => {
     riskTolerance: aggressive,
   };
 
-  const midHorizonModerateFields: FieldsPhaseOutput = {
+  const midHorizonModerateParameters: ParametersPhaseOutput = {
     amount: 80_000,
     timeline: TimelineBucket.enum["5–10 years"],
   };
@@ -37,7 +37,7 @@ describe("collectAllocation", () => {
     riskTolerance: moderate,
   };
 
-  const longHorizonConservativeFields: FieldsPhaseOutput = {
+  const longHorizonConservativeParameters: ParametersPhaseOutput = {
     amount: 60_000,
     timeline: TimelineBucket.enum["10+ years"],
   };
@@ -46,7 +46,7 @@ describe("collectAllocation", () => {
     riskTolerance: conservative,
   };
 
-  const shortMidHorizonConservativeFields: FieldsPhaseOutput = {
+  const shortMidHorizonConservativeParameters: ParametersPhaseOutput = {
     amount: 30_000,
     timeline: TimelineBucket.enum["3–5 years"],
   };
@@ -94,7 +94,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -108,7 +108,7 @@ describe("collectAllocation", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
 
@@ -128,7 +128,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      midHorizonModerateFields,
+      midHorizonModerateParameters,
       moderateRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -140,7 +140,7 @@ describe("collectAllocation", () => {
     expect(output.equityPercentage + output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
-      midHorizonModerateFields.amount,
+      midHorizonModerateParameters.amount,
       output,
     );
   });
@@ -151,7 +151,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      shortMidHorizonConservativeFields,
+      shortMidHorizonConservativeParameters,
       conservativeRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -163,7 +163,7 @@ describe("collectAllocation", () => {
     expect(output.equityPercentage + output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
-      shortMidHorizonConservativeFields.amount,
+      shortMidHorizonConservativeParameters.amount,
       output,
     );
   });
@@ -174,7 +174,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -185,7 +185,7 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(23);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });
@@ -196,7 +196,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -207,7 +207,7 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(50);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });
@@ -221,7 +221,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonConservativeFields,
+      longHorizonConservativeParameters,
       conservativeRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -236,7 +236,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonConservativeFields.amount,
+      longHorizonConservativeParameters.amount,
       output,
     );
   });
@@ -247,7 +247,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -261,7 +261,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });
@@ -272,7 +272,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -287,7 +287,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });
@@ -301,7 +301,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -325,7 +325,7 @@ describe("collectAllocation", () => {
     expect(agentText).not.toContain("moderate");
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });
@@ -336,7 +336,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -351,7 +351,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });
@@ -366,7 +366,7 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const output = await collectAllocation(
-      longHorizonAggressiveFields,
+      longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
@@ -381,7 +381,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(3);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveFields.amount,
+      longHorizonAggressiveParameters.amount,
       output,
     );
   });

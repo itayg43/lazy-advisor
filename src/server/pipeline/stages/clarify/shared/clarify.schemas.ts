@@ -18,18 +18,18 @@ export const IntakePhaseOutputSchema = z.object({
   accepted: z.boolean(),
 });
 
-export const FieldsPhaseOutputSchema = z.object({
+export const ParametersPhaseOutputSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
   timeline: TimelineBucket,
 });
 
-export const FieldsExtractionSchema = z.object({
+export const ParametersExtractionSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT).nullable(),
   timeline: TimelineBucket,
 });
 
-export const FieldsPhaseResultSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("success"), fields: FieldsPhaseOutputSchema }),
+export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("success"), parameters: ParametersPhaseOutputSchema }),
   z.object({ status: z.literal("failure"), code: z.literal("amount_missing") }),
 ]);
 

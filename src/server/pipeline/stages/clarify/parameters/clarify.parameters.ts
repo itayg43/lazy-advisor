@@ -1,6 +1,6 @@
 import { createLogger } from "#lib/logger";
 import {
-  MAX_FIELDS_TOOL_CALLS,
+  MAX_PARAMETERS_TOOL_CALLS,
   TIMELINE_BOUNDARY_EXAMPLES,
   TIMELINE_BUCKET_LIST,
   TIMELINE_BUCKETS,
@@ -9,28 +9,28 @@ import {
   runPhaseExtraction,
   runPhaseLoop,
 } from "#pipeline/stages/clarify/shared/clarify.lib";
-import { FieldsExtractionSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { ParametersExtractionSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
-  FieldsExtraction,
-  FieldsPhaseResult,
+  ParametersExtraction,
+  ParametersPhaseResult,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
-const logger = createLogger("clarifyFields");
+const logger = createLogger("clarifyParameters");
 
-const FIELDS_PROMPT = `# Role and Objective
-You are the field-collection phase of an investment advisor pipeline. Collect the two required fields below through separate questions. Do not provide investment advice, portfolio suggestions, fund names, or action plans. Do not mention risk tolerance — that is handled in a separate phase.
+const PARAMETERS_PROMPT = `# Role and Objective
+You are the parameter-collection phase of an investment advisor pipeline. Collect the two required parameters below through separate questions. Do not provide investment advice, portfolio suggestions, fund names, or action plans. Do not mention risk tolerance — that is handled in a separate phase.
 
-# Required Fields
+# Required Parameters
 
 - **amount**: a specific integer in shekels. Vague phrases (e.g., \`some money\`, \`a lot\`, \`not sure\`) are not valid.
 - **timeline**: one of four investment horizon buckets: ${TIMELINE_BUCKETS}. A stated number of years is also valid (e.g., "20 years"). Timeline is invalid only if absent or genuinely vague (e.g., "long-term", "a while").
 
 # Behavior
-- Ask one field per turn.
+- Ask one parameter per turn.
 - Do not guess or fill in missing information yourself.
 - Keep the tone conversational and non-robotic. Beginner-friendly by default.
-- **Two-try rule:** If a field has been asked twice without a valid answer:
+- **Two-try rule:** If a parameter has been asked twice without a valid answer:
   - Amount: end the phase — do not ask for timeline.
   - Timeline: accept the best available answer and stop.
 
@@ -54,7 +54,7 @@ If still no specific number → end phase. Do NOT call \`ask_user\` again.
 ${TIMELINE_BUCKET_LIST}"
 Accept whatever the user says on this second attempt.
 
-**Step 5 — All fields collected**
+**Step 5 — All parameters collected**
 → Stop. Do NOT call \`ask_user\`. Do NOT output any message to the user.
 
 # Examples
@@ -93,38 +93,38 @@ User: "I really don't know"
 
 Amount asked twice with no specific number → end phase. Do NOT ask for timeline.`;
 
-const FIELDS_EXTRACTION_INSTRUCTIONS = `Extract from the preceding investment advisor conversation.
+const PARAMETERS_EXTRACTION_INSTRUCTIONS = `Extract from the preceding investment advisor conversation.
 
 - amount: the exact investment amount as an integer (convert shorthand: "₪50k" → 50000). Set to null if the user never provided a specific number after being asked twice.
 - timeline: map the stated timeframe to the nearest of these four values — ${TIMELINE_BUCKETS}. On exact boundaries, prefer the shorter bucket: ${TIMELINE_BOUNDARY_EXAMPLES}`;
 
-export const collectFields = async (
+export const collectParameters = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<FieldsPhaseResult> => {
-  logger.info("Starting fields phase");
+): Promise<ParametersPhaseResult> => {
+  logger.info("Starting parameters phase");
 
   const { responseId } = await runPhaseLoop({
     model: "gpt-5.4-nano",
     effort: "low",
-    instructions: FIELDS_PROMPT,
+    instructions: PARAMETERS_PROMPT,
     input: "Begin.",
-    maxToolCalls: MAX_FIELDS_TOOL_CALLS,
-    phaseName: "Fields phase",
+    maxToolCalls: MAX_PARAMETERS_TOOL_CALLS,
+    phaseName: "Parameters phase",
     sendToUser,
     waitForResponse,
   });
 
-  const { id, usage, output } = await runPhaseExtraction<FieldsExtraction>({
+  const { id, usage, output } = await runPhaseExtraction<ParametersExtraction>({
     model: "gpt-5.4-nano",
     effort: "low",
-    instructions: FIELDS_EXTRACTION_INSTRUCTIONS,
+    instructions: PARAMETERS_EXTRACTION_INSTRUCTIONS,
     lastResponseId: responseId,
-    schema: FieldsExtractionSchema,
+    schema: ParametersExtractionSchema,
   });
 
-  logger.info("Fields extraction complete", { responseId: id, usage });
-  logger.debug("Fields output", { output });
+  logger.info("Parameters extraction complete", { responseId: id, usage });
+  logger.debug("Parameters output", { output });
 
   if (output.amount === null) {
     return { status: "failure", code: "amount_missing" };
@@ -132,6 +132,6 @@ export const collectFields = async (
 
   return {
     status: "success",
-    fields: { amount: output.amount, timeline: output.timeline },
+    parameters: { amount: output.amount, timeline: output.timeline },
   };
 };

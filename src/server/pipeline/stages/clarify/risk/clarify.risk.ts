@@ -6,7 +6,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.lib";
 import { RiskScoreSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
-  FieldsPhaseOutput,
+  ParametersPhaseOutput,
   RiskPhaseOutput,
   RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -77,13 +77,13 @@ const mapScoreToBucket = (score: number): RiskPhaseOutput["riskTolerance"] => {
 };
 
 export const collectRisk = async (
-  fields: FieldsPhaseOutput,
+  parameters: ParametersPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<RiskPhaseOutput> => {
-  logger.info("Starting risk phase", { fields });
+  logger.info("Starting risk phase", { parameters });
 
-  const context = `Investment timeline: ${fields.timeline}`;
+  const context = `Investment timeline: ${parameters.timeline}`;
 
   const { responseId } = await runPhaseLoop({
     model: "gpt-5.4-nano",

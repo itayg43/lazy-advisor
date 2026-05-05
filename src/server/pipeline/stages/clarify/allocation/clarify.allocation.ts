@@ -12,7 +12,7 @@ import {
 import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
-  FieldsPhaseOutput,
+  ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
@@ -98,16 +98,16 @@ The two integers **must sum to exactly 100**. If the user agreed to 70% stocks, 
 Extract only the final agreed split — not an intermediate proposal. Use the user's exact number (e.g., 77, not snapped to a round value).`;
 
 export const collectAllocation = async (
-  fields: FieldsPhaseOutput,
+  parameters: ParametersPhaseOutput,
   risk: RiskPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<AllocationPhaseOutput> => {
-  logger.info("Starting allocation phase", { fields, risk });
+  logger.info("Starting allocation phase", { parameters, risk });
 
   const context = [
-    `Investment amount: ₪${fields.amount.toLocaleString()}`,
-    `Investment timeline: ${fields.timeline}`,
+    `Investment amount: ₪${parameters.amount.toLocaleString()}`,
+    `Investment timeline: ${parameters.timeline}`,
     `Risk tolerance: ${risk.riskTolerance}`,
   ].join("\n");
 
