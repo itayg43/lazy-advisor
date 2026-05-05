@@ -1,14 +1,14 @@
-# Clarify Fields Phase — Behavior Rules
+# Clarify Parameters Phase — Behavior Rules
 
-Behavioral rules for the fields collection phase. Each entry: the rule, a one-line scenario, and the fields that matter for verifying correctness.
+Behavioral rules for the parameters collection phase. Each entry: the rule, a one-line scenario, and the fields that matter for verifying correctness.
 
 ---
 
-## 1. Fields are collected in two structured turns
+## 1. Parameters are collected in two structured turns
 
-**Rule:** The agent always asks one field per turn: amount first, then timeline. The two questions are always kept separate.
+**Rule:** The agent always asks one parameter per turn: amount first, then timeline. The two questions are always kept separate.
 
-**Scenario:** All fields unknown — agent asks for amount; user answers; agent then asks for timeline (presenting four bucket options); user picks a bucket.
+**Scenario:** All parameters unknown — agent asks for amount; user answers; agent then asks for timeline (presenting four bucket options); user picks a bucket.
 
 **Extracted:** `amount` and `timeline` collected in two turns
 
@@ -16,7 +16,7 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 
 ## 2. Vague timeline → accepted after second ask
 
-**Rule:** If a field has been asked twice without a specific value, accept the best available answer and move on — do not probe a third time.
+**Rule:** If a parameter has been asked twice without a specific value, accept the best available answer and move on — do not probe a third time.
 
 **Scenario:** User says "long-term" on first response, "10-15 years" on second.
 
@@ -33,7 +33,7 @@ Behavioral rules for the fields collection phase. Each entry: the rule, a one-li
 - `"5 years"` → `"3–5 years"`
 - `"10 years"` → `"5–10 years"`
 
-**Scenario:** All fields unknown — agent opens by asking for amount; user answers; agent then asks for timeline (presenting four bucket options); user picks a timeline bucket.
+**Scenario:** All parameters unknown — agent opens by asking for amount; user answers; agent then asks for timeline (presenting four bucket options); user picks a timeline bucket.
 
 **Extracted:** timeline: one of the four enum values
 
