@@ -62,6 +62,8 @@ The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict 
 
 ## OpenAI
 
+- `callOpenAI` — use for agentic loop turns: tool call responses and conversation continuation. Returns a raw `OpenAIResponse`.
+- `callOpenAIParsed<T>` — use for structured extraction: when the response must conform to a Zod schema passed via `zodTextFormat`. Returns `OpenAIResponse<T>` with `output_parsed` populated.
 - `previous_response_id` does **not** carry `instructions` forward — every chained call must re-pass `instructions` explicitly. Omitting them causes the model to run without the system prompt
 
 ## Imports

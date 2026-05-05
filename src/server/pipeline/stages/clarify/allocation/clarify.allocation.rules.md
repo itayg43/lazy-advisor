@@ -1,6 +1,6 @@
 # Clarify Allocation Phase — Behavior Rules
 
-Behavioral rules for the allocation phase. This phase converts the user's risk-tolerance bucket (from the risk phase) and timeline (from the fields phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100.
+Behavioral rules for the allocation phase. This phase converts the user's risk-tolerance bucket (from the risk phase) and timeline (from the parameters phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100.
 
 This phase does **not** pick instruments. Ticker selection belongs to T4 (equity) and T5 (buffer).
 
@@ -14,7 +14,7 @@ This phase does **not** pick instruments. Ticker selection belongs to T4 (equity
 
 All cells are **ranges**, not points. The agent picks a specific integer inside the cell based on qualitative signal (where the user sits within their risk bucket, how clean the timeline is). Buffer percentage is always `100 - equity`.
 
-Users with an `under 3 years` timeline never reach this phase — the orchestrator exits early after fields collection and redirects them to a money market fund. This phase only receives timelines of `3–5 years`, `5–10 years`, or `10+ years`.
+Users with an `under 3 years` timeline never reach this phase — the orchestrator exits early after parameters collection and redirects them to a money market fund. This phase only receives timelines of `3–5 years`, `5–10 years`, or `10+ years`.
 
 The words `conservative`, `moderate`, and `aggressive` are **never used when speaking to the user** — not even as general adjectives.
 
@@ -103,4 +103,4 @@ If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws 
 ## Out of scope
 
 - **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (T4 equity / T5 buffer) and bring the conversation back to sizing.
-- **EF / debt collection.** Emergency fund and debt status are collected and addressed in a separate educational gate (T3) before the fields phase. This phase does not consume them.
+- **EF / debt collection.** Emergency fund and debt status are collected and addressed in a separate educational gate (T3) before the parameters phase. This phase does not consume them.
