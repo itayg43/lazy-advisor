@@ -58,6 +58,6 @@ Always use these exact commands — do not construct alternative invocations. Th
 | `npm run type-check` | TypeScript type checking (no emit) |
 | `npm test` | Run unit tests |
 | `npm run test:evals` | Run all eval tests |
-| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/fields/clarify.fields.eval.ts` or `…/clarify/intake/classify/clarify.classify.eval.ts`) |
+| `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/parameters/clarify.parameters.eval.ts` or `…/clarify/intake/classify/clarify.classify.eval.ts`) |
 | `npm run test:evals -- <file> -t "<pattern>"` | Run specific cases within an eval file — `-t` matches against `it()` descriptions as a substring/regex |
 | `npm run dev:server` | Start the server in dev/watch mode |

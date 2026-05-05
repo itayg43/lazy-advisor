@@ -66,8 +66,8 @@ Key decisions:
 
 ```
 User goal: <goal>
-Investment amount: ₪<fields.amount>
-Investment timeline: <fields.timeline>
+Investment amount: ₪<parameters.amount>
+Investment timeline: <parameters.timeline>
 Risk tolerance: <risk.riskTolerance>
 Equity portion of portfolio: <allocation.equityPercentage>% (buffer is <allocation.bufferPercentage>%)
 Plans to contribute periodically: yes | no (lump-sum investment)
@@ -113,9 +113,9 @@ If `equity.preStatedBuffer` is present → return `{ buffer: equity.preStatedBuf
 
 ```
 User goal: <goal>
-Investment amount: ₪<fields.amount>
+Investment amount: ₪<parameters.amount>
 Risk tolerance: <risk.riskTolerance>
-Buffer portion of portfolio: <allocation.bufferPercentage>% (₪<fields.amount × allocation.bufferPercentage / 100>)
+Buffer portion of portfolio: <allocation.bufferPercentage>% (₪<parameters.amount × allocation.bufferPercentage / 100>)
 Equity allocation (the other <allocation.equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
 ```
 
@@ -138,4 +138,4 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 
 - **`print_to_user` tool (fire-and-forget).** Add a second tool alongside `ask_user` for sending a terminal message without waiting for a user response. Fixes the class of bugs where a phase sends a closing acknowledgment via `ask_user` and inadvertently waits for input. Requires changes to `ask-user.tool.ts`, `clarify.lib.ts` (`collectToolOutputs` currently rejects non-`ask_user` tools), and all phase prompts + evals that send terminal messages.
 
-- **Hint/example at start of conversation.** Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal. Reduces unnecessary clarification turns in `collectFields`.
+- **Hint/example at start of conversation.** Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal. Reduces unnecessary clarification turns in `collectParameters`.
