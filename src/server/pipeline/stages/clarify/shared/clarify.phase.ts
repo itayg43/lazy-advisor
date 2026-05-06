@@ -1,3 +1,4 @@
+import { StatusCodes } from "http-status-codes";
 import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseFunctionToolCall,
@@ -6,7 +7,7 @@ import type {
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 import type { ZodType } from "zod";
 
-import { InternalError } from "#errors";
+import { BaseError, InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { getStageTools } from "#pipeline/tools";
 import {
@@ -17,7 +18,16 @@ import {
 } from "#pipeline/tools/ask-user.tool";
 import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/openai";
 
-const logger = createLogger("clarifyLib");
+const logger = createLogger("clarifyPhase");
+
+export class PhaseBudgetExhaustedError extends BaseError {
+  constructor(phaseName: string, maxToolCalls: number) {
+    super(
+      `${phaseName} failed to converge within ${maxToolCalls} tool calls`,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
 
 type PhaseLoopParams = {
   model: ResponsesModel;
@@ -120,9 +130,7 @@ export const runPhaseLoop = async ({
 
     toolCallCount += functionCalls.length;
     if (toolCallCount > maxToolCalls) {
-      throw new InternalError(
-        `${phaseName} failed to converge within ${maxToolCalls} tool calls`,
-      );
+      throw new PhaseBudgetExhaustedError(phaseName, maxToolCalls);
     }
 
     const toolOutputs = await collectToolOutputs(

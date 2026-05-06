@@ -3,7 +3,7 @@ import { MAX_CONTRIBUTION_TOOL_CALLS } from "#pipeline/stages/clarify/shared/cla
 import {
   runPhaseExtraction,
   runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.lib";
+} from "#pipeline/stages/clarify/shared/clarify.phase";
 import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
