@@ -1,4 +1,3 @@
-import { StatusCodes } from "http-status-codes";
 import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseFunctionToolCall,
@@ -7,7 +6,7 @@ import type {
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 import type { ZodType } from "zod";
 
-import { BaseError, InternalError } from "#errors";
+import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { getStageTools } from "#pipeline/tools";
 import {
@@ -20,12 +19,9 @@ import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/ope
 
 const logger = createLogger("clarifyPhase");
 
-export class PhaseBudgetExhaustedError extends BaseError {
+export class PhaseBudgetExhaustedError extends Error {
   constructor(phaseName: string, maxToolCalls: number) {
-    super(
-      `${phaseName} failed to converge within ${maxToolCalls} tool calls`,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-    );
+    super(`${phaseName} failed to converge within ${maxToolCalls} tool calls`);
   }
 }
 
