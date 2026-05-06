@@ -1,16 +1,16 @@
 # Tasks
 
-**Current task:** T3.7
-**Next task:** T3.8
+**Current task:** T5 (design pass — preparatory, no implementation yet)
+**Next task:** T3.7
 
 ## Task Queue
 
 | # | Task |
 |---|------|
+| T5 | Equity (design pass in progress — preparatory) |
 | T3.7 | Hard-fail on missing timeline (same pattern as `amount_missing`) |
 | T3.8 | Hard-fail on unresolved risk tolerance (remove silent conservative default) |
 | T4 | Refactor risk + contribution to `askWithClassify` |
-| T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
@@ -91,6 +91,17 @@ The risk and contribution phases each ask a single fixed question and classify t
 
 Resolves which equity instruments fill the equity bucket and how they split within it. Does not negotiate the equity percentage — that is allocation's job. `allocation.equityPercentage` is passed as grounding context.
 
+#### Design pass — in progress (preparatory, before T3.7 implementation)
+
+Following the T6 pattern: full design pass using lazyinvestor.co.il source articles, before implementation. Goals:
+
+1. **Validate existing decisions** (output schema, classify-then-route architecture, anchor decisions on TLV-125 / NASDAQ-100 / sector ETFs) against blog content. Surface contradictions or refinements. The `/portfolio/` article's holy-trinity recommendation (60% S&P 500 / 25% Europe / 15% Emerging Markets) and global-diversification preference may have implications for the `no_equity_stated` default path.
+2. **Source unread articles** — many on the lazyinvestor blog haven't been read yet. Likely starting points: `/portfolio/` (re-read for equity specifics), `/etf/` (Irish vs US-listed ETFs), `/broker/` (broker comparison), `/seker/` (most-viewed; opening a portfolio), plus any equity-specific articles surfaced via category browsing. Use the existing `reference_lazyinvestor_sources` memory entry as a starting index.
+3. **Draft `clarify.equity.knowledge.md`** — beginner-friendly educational content covering canonical instruments (S&P 500, FTSE All-World / MSCI World, NASDAQ-100, TLV-125, sector ETFs) plus tax/currency/Irish-vs-US-listed context. Same staleness rules as T6 buffer knowledge file: no specific tickers, no fund-specific fees, no specific yields, only mechanisms and direction.
+4. **Update T5 task notes** with any architectural refinements that surface during research; resolve open design questions before implementation begins.
+
+Defer T3.7 implementation until T5 design pass is complete.
+
 #### Output schema
 
 ```ts
@@ -102,37 +113,39 @@ type EquityAllocation = {
 
 type EquityPhaseOutput = {
   allocations: EquityAllocation[]; // length ≥ 1; sum === 100
-  preStatedBuffer?: string; // incidentally-stated buffer preference, if any
 };
 ```
 
 Zod: `allocations.length >= 1`, each `percentage` integer in [0, 100], sum === 100.
 
-`preStatedBuffer` is captured when the user volunteers buffer info during the equity conversation. T6 skips its conversation loop when present.
-
 Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to `clarify/shared/clarify.schemas.ts`. Add `equity: EquityAllocation[]` to `UserProfileSchema`.
 
-#### Architecture: classify-then-route
+#### Conversation pattern — single flow
 
-`classifyEquityIntent` runs once at the start and returns one of four classifications:
+No classifier. T5 runs as a single conversation flow that handles all cases inline:
 
-| Case | Condition |
-|------|-----------|
-| `resolved` | 1 instrument named (implied 100%) OR explicit percentage split stated |
-| `split_missing` | 2+ instruments named, no percentages |
-| `no_specific_instrument` | Direction signaled ("tech", "global") but no specific instrument named |
-| `no_equity_stated` | Nothing stated about equity — primary path for most beginners |
+- **Opener:** if the user has not signaled any equity preference, present the canonical options (broad-market global single-fund vs holy-trinity 3-fund split, with TLV-125 as the optional Israeli component). If the user volunteers a directional signal mid-conversation, handle it inline.
+- **Directional signals:**
+  - "Tech" → NASDAQ-100 as the primary answer; sector ETFs mentioned as a more concentrated alternative.
+  - "Global" / "diversified" → FTSE All-World or MSCI World as primary; holy-trinity split (60% S&P 500 / 25% Europe / 15% EM) mentioned as the more granular alternative.
+  - "US-only" / "S&P 500" → honor it; mention global diversification once as the lazy-investor default but accept the user's preference.
+- **Single instrument named** (e.g., "FTSE All-World"): honor as 100% allocation. Do not push a complement.
+- **Multiple instruments named without percentages**: ask for the split.
+- **Resolution:** confirm the final `EquityAllocation[]` (instruments + within-equity split) before returning.
 
-Key decisions:
-- A single named instrument is `resolved` at 100% — no complement push.
-- TLV-125 is presented as an anchor option in `no_specific_instrument` and `no_equity_stated` prompts only.
-- For tech direction: NASDAQ-100 is the primary answer; sector ETFs mentioned as a more concentrated alternative.
-- No risk-based instrument filtering — allocation sizing is the behavioral safeguard.
+Anchor decisions (preserved from the dropped 4-case design):
+- TLV-125 is always available as the Israeli-market anchor option, mentioned when relevant — not aggressively pushed.
+- For tech direction: NASDAQ-100 is the primary answer; sector ETFs are the concentrated alternative.
+- **No risk-based instrument filtering.** Allocation sizing is the behavioral safeguard; the equity instrument choice is a preference question.
+
+#### Design decisions
+
+1. **Classifier dropped — single flow instead.** The originally-planned 4-case classifier (`resolved` / `split_missing` / `no_specific_instrument` / `no_equity_stated`) cannot run as designed: it required goal-text classification, but goal is consumed by intake and not propagated to T5 (consistent with every other post-intake phase). After dropping `resolved` and `split_missing` as tail cases not worth supporting in beginner scope, the remaining binary (directional signal vs nothing stated) is small enough to handle inline. Removes a classifier LLM call, a separate prompt, and classifier eval coverage.
+2. **No goal pass-through.** Aligned with the rest of the pipeline. If T5 evals later show meaningful UX cost from losing the goal's equity hints, revisit with goal as ambient context (not for routing — just for the LLM to reference).
 
 #### Context string format
 
 ```
-User goal: <goal>
 Investment amount: ₪<parameters.amount>
 Investment timeline: <parameters.timeline>
 Risk tolerance: <risk.riskTolerance>
@@ -143,7 +156,6 @@ Plans to contribute periodically: yes | no (lump-sum investment)
 #### Files
 
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.ts`
-- `src/server/pipeline/stages/clarify/equity/clarify.equity.classify.ts`
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md`
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts`
 - `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `EquityAllocationSchema`, `EquityPhaseOutputSchema`
@@ -155,32 +167,60 @@ Plans to contribute periodically: yes | no (lump-sum investment)
 
 ### T6 — Buffer
 
-Resolves which instrument fills the buffer bucket. Receives `preStatedBuffer` from T5; skips conversation loop when present.
+Resolves which instrument fills the buffer (the "bonds half" / safe portion) of the portfolio. Presents three canonical anchor options, supports beginner Q&A about each, and converges on the user's choice.
+
+The buffer concept is structural — it's the bonds half of a classic stocks+bonds lazy portfolio, with קרן כספית and government bond funds serving as the simplified, beginner-accessible options. It is **not** dropped from the user profile.
+
+#### The three anchor options
+
+1. **קרן כספית** (money market fund) — capital-stable, daily-liquid, no interest-rate risk
+2. **קרן מחקה מדד אג"ח ממשלתי קצר** (short-term government bond fund — שקלי or צמוד מדד) — modest yield premium over קרן כספית, modest price volatility
+3. **קרן מחקה מדד אג"ח ממשלתי כללי** (general government bond fund) — more real-return potential, more volatility
+
+A fourth path: user may decline a buffer instrument entirely ("no buffer — emergency fund handled separately"). Resolved without pushback.
+
+**Stay at the category level — never name specific tickers, fund providers, or specific yields/fees.** Fund availability and fees change; specific values go stale.
 
 #### Output schema
 
 ```ts
+type BufferChoice =
+  | { kind: "money_market" }                  // קרן כספית
+  | { kind: "short_gov_bond" }                // אג"ח ממשלתי קצר
+  | { kind: "general_gov_bond" }              // אג"ח ממשלתי כללי
+  | { kind: "none"; reason: string }          // emergency fund external, or 100% equity
+  | { kind: "other"; description: string };   // user-named alternative
+
 type BufferPhaseOutput = {
-  buffer: string; // e.g. "קרן כספית", "no buffer — emergency fund held separately", "AGGU bonds"
+  buffer: BufferChoice;
 };
 ```
 
-#### Early-exit branch
+A typed discriminated union (rather than the originally-planned free-form string) lets the plan-rendering stage tailor downstream language per choice — e.g., "your general bond fund will fluctuate with rate changes" vs "your money-market fund stays capital-stable."
 
-If `equity.preStatedBuffer` is present → return `{ buffer: equity.preStatedBuffer }` directly, no LLM call. Covered by a unit test.
+#### Conversation pattern — cold 3-option presentation
 
-#### Conversation flow (when `preStatedBuffer` absent)
+Open by presenting the three options with one-line descriptions and inviting the user to pick or ask questions. Do **not** lead with a strong default.
 
-1. Explain קרן כספית (Israeli money market fund, shekel-denominated, ~4–5% yield, capital-stable, no currency risk). Ask if comfortable using it or has a different preference.
-2. Decline ("no buffer", "emergency fund outside this portfolio") → accept without pushback.
-3. Simple confirmation → resolved.
-4. Named alternative (bonds, AGGU) → capture and accept.
+Example opening: "For the safe portion, three reasonable options: [1] קרן כספית — money-market fund, capital-stable; [2] short-term government bond fund — slightly more yield, modest price volatility; [3] general government bond fund — more yield potential, more volatility. Which feels right, or want me to explain any of them?"
+
+Educational Q&A is supported during the loop — the user may ask clarifying questions about any of the three categories before committing. Canonical educational content lives in `clarify.buffer.knowledge.md` and is loaded into the system prompt at module init via `readFileSync`.
+
+**Soft default on indecision.** If the user can't decide after the natural conversation budget (e.g., 3–4 turns of "what do you recommend?" / "they all sound similar"), default to קרן כספית. Source-grounded: the lazyinvestor blog explicitly recommends קרן כספית for those who find bonds complex and don't want to learn. This is intentionally inconsistent with the hard-fail pattern in T3.7/T3.8 — the lazy-investor framing supports a graceful default here rather than aborting.
+
+#### Knowledge content architecture
+
+- `clarify.buffer.knowledge.md` — educational reference content (created as preparatory work). Topic sections: what is אג"ח, government vs corporate (incl. concentration-risk parallel with single-stock), duration (קצר vs כללי), שקלי vs צמוד מדד, why no USD, why funds vs individual bonds, tax treatment.
+- **Loaded inline at module init** (one-time `readFileSync` at the top of `clarify.buffer.ts`, interpolated into the prompt template). Matches existing codebase pattern of inline-string prompts; cleaner authoring than embedding a multi-page string in a `.ts` file.
+- **Architectural note:** inline embedding is the right call at the current ~100-line content size. If knowledge content grows past ~500 lines or starts being shared across phases, consider migrating to on-demand retrieval via a `lookup_concept` tool. Backlog item — do not build speculatively.
+- **Staleness rule:** the knowledge content must not include specific rates, yields, fees, or fund-by-fund facts. Only mechanisms and direction.
 
 #### Context string format
 
 ```
 User goal: <goal>
 Investment amount: ₪<parameters.amount>
+Investment timeline: <parameters.timeline>
 Risk tolerance: <risk.riskTolerance>
 Buffer portion of portfolio: <allocation.bufferPercentage>% (₪<parameters.amount × allocation.bufferPercentage / 100>)
 Equity allocation (the other <allocation.equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
@@ -189,11 +229,16 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 #### Files
 
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.ts`
-- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.rules.md`
+- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.rules.md` — behavior rules (anchor options, conversation pattern, soft default, terminology canonical names)
+- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.knowledge.md` — educational reference content (✅ created as prep work)
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.eval.ts`
-- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.test.ts` — unit test for early-exit branch
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `BufferPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `BufferChoiceSchema`, `BufferPhaseOutputSchema`
 - `src/server/schemas/pipeline.schemas.ts` — add `buffer` field
+
+#### Design decisions
+
+1. **Skip T6 when `bufferPercentage === 0`.** The allocation anchor table caps at 90% equity, but allocation Rule 3 explicitly allows the user to override to 100/0 via counter-proposal (with a sanity-check turn) — the rules file even has a worked 100/0 example. When `allocation.bufferPercentage === 0`, T6 returns `{ buffer: { kind: "none", reason: "100% equity allocation" } }` directly with no LLM call. No anchor-table change needed.
+2. **"No buffer" mid-phase opt-out — MVP default = Option A (external).** When the user opts out of all three instruments mid-phase ("I have an emergency fund elsewhere"), the buffer money stays outside the plan and the allocation is unchanged. Plan output documents this explicitly (e.g., "plan: ₪21,000 in stock ETFs; remaining ₪9,000 stays in your bank as your external emergency cushion"). MVP does not disambiguate between "external" and "roll into equity" — see Backlog item for the post-MVP disambiguation work. Why this default: silently giving the user *less* market exposure than expected is recoverable; silently giving them *more* is a behavioral failure mode. Adding disambiguation later is non-breaking (`BufferChoice` already supports both via the `reason` field).
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.buffer.eval.ts`
 
@@ -206,3 +251,5 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
   **Also generalize `runPhaseLoop` / `collectToolOutputs` at the same time.** Today `collectToolOutputs` hardcodes the allowed tool name (`ASK_USER_TOOL.name`) and dispatches directly to `handleAskUser`. With a second tool, replace both with a tool-handler registry (`{ [name]: handler }`) keyed by tool name; the loop validates against the registry's keys and dispatches via the map. Two concrete tools provides the second example needed to design the registry shape correctly — doing it speculatively with one tool would just shuffle the hardcode up one level.
 
 - **Hint/example at start of conversation.** Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal. Reduces unnecessary clarification turns in `collectParameters`.
+
+- **Disambiguate "no buffer" opt-out path in T6.** MVP defaults to Option A (external — buffer money stays outside the plan, allocation unchanged) when the user opts out of all three buffer instruments. A second valid sub-case exists: the user wants the buffer money rolled into equity, with allocation updated to 100/0. Real eval data will tell us how often users mean each. If non-trivial, add a disambiguating rule to T6: when the user signals "no buffer instrument," ask one question to choose between *external* and *roll into equity*. Schema change is non-breaking — `BufferChoice` already supports both via the `reason` field (`"external emergency fund"` vs `"rolled into equity"`). Possibly mirror allocation's sanity-check language for extreme roll-ins (e.g., conservative user opting to roll 85% buffer into equity).
