@@ -30,7 +30,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 
 | Document | Read when |
 |----------|-----------|
-| [Status](documentation/STATUS.md) | At the start of each session |
+| [Tasks](documentation/TASKS.md) | At the start of each session |
 | [Architecture](documentation/ARCHITECTURE.md) | Before implementing any feature — pipeline overview, phase map, and design decisions |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
@@ -40,7 +40,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 
 Work one task at a time. Each task must be fully closed before moving to the next. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
-If a refactor or design question surfaces mid-task, note it in `STATUS.md` and do not act on it until the current task is closed.
+If a refactor or design question surfaces mid-task, note it in `TASKS.md` and do not act on it until the current task is closed.
 
 Before writing code:
 - For tasks touching multiple files or areas: spawn an Explore subagent with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
