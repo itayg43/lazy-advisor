@@ -42,7 +42,7 @@ flowchart TD
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
-| parameters | Collect core profile parameters via conversation | — → `ParametersPhaseOutput` |
+| parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `ParametersPhaseOutput` → `RiskPhaseOutput` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseOutput` |

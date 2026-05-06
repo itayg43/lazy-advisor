@@ -2,7 +2,7 @@
 
 Behavioral rules for the allocation phase. This phase converts the user's risk-tolerance bucket (from the risk phase) and timeline (from the parameters phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100.
 
-This phase does **not** pick instruments. Ticker selection belongs to T4 (equity) and T5 (buffer).
+This phase does **not** pick instruments. Ticker selection belongs to T5 (equity) and T6 (buffer).
 
 ## Anchor Table (risk tolerance × timeline)
 
@@ -98,9 +98,9 @@ In the sanity-check turn, **concrete drawdown percentages are allowed** — the 
 
 ## Budget exhaustion
 
-If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws `InternalError`. Budget exhaustion is treated as a hard failure — retrying the same prompt is not expected to converge.
+If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws `PhaseBudgetExhaustedError`. `collectAllocation` catches it and returns `{ status: "failure", code: "split_unresolved" }`; the stage sends a closing message and exits rather than propagating an error.
 
 ## Out of scope
 
-- **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (T4 equity / T5 buffer) and bring the conversation back to sizing.
+- **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (T5 equity / T6 buffer) and bring the conversation back to sizing.
 - **EF / debt collection.** Emergency fund and debt status are collected and addressed in a separate educational gate (T3) before the parameters phase. This phase does not consume them.
