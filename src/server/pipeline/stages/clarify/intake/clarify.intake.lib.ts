@@ -3,7 +3,7 @@ import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.c
 import {
   runPhaseExtraction,
   runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.lib";
+} from "#pipeline/stages/clarify/shared/clarify.phase";
 import { IntakePhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";

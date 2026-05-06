@@ -4,7 +4,7 @@
 
 - Co-located test files (next to source files, not in a separate `tests/` directory)
 - Tests use `describe`/`it` blocks with clear descriptions — `it` block descriptions must start with `should`
-- Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `planService`, `stepRepository`, `withRetry`); place `beforeEach` first, then `afterAll`
+- Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `planService`, `stepRepository`, `withRetry`); place `beforeEach` first, then `afterEach`
 - Each `it` block creates its own context/options variables — no inline objects
 
 ## What Not to Test
@@ -16,7 +16,7 @@
 
 ## Mocking
 
-- **Mock at the lowest boundary possible**: prefer testing real implementations end-to-end. When mocking is unavoidable (e.g., to avoid real API calls), mock at the outermost external boundary — the OpenAI client/service — not at internal module boundaries. Mocking internal collaborators only tests that mocks are called in order, not that the real code works.
+- **Mock at the external boundary**: prefer testing real implementations end-to-end. When mocking is unavoidable (e.g., to avoid real API calls), mock at the outermost external boundary — the OpenAI client/service — not at internal module boundaries. Mocking internal collaborators only tests that mocks are called in order, not that the real code works.
 - Mock external services (OpenAI); use a real DB for repository tests (see [Repository Tests](#repository-tests))
 - Use proper types for all mock data and options objects (e.g., `const options: RetryOptions = { ... }`, not untyped object literals)
 - **Mock data placement**: shared across all `describe` blocks → top-level `describe`. Used in only one block → inside that block. Mock factories (e.g., `createMockResponse`) always go inside the block that uses them
@@ -24,6 +24,34 @@
 - Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work
 - `vi.hoisted`/`vi.mock` blocks **cannot be exported** from shared files — they must stay inline in each test file
 - Don't spy on `console.warn`/`console.log` — test logging through the real logger instead
+
+### Spying on internal functions
+
+The external-boundary rule has one exception: when the error under test originates *inside* an internal function (not at the OpenAI boundary), a global `vi.mock` would contaminate all other tests in the file. In that case, use `vi.spyOn` scoped to that specific test and call `spy.mockRestore()` at the end.
+
+In this codebase this arises when testing orchestrator branches triggered by `PhaseBudgetExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn`, queuing resolved values for phases that should succeed and a rejection for the phase that throws. All other tests in the file continue to mock at the OpenAI boundary as normal.
+
+```ts
+import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
+
+it("should handle allocation budget exhaustion", async () => {
+  // ... callOpenAIParsed setup for classify / ef-debt / extractions ...
+
+  const runPhaseLoopSpy = vi
+    .spyOn(clarifyPhase, "runPhaseLoop")
+    .mockResolvedValueOnce({ responseId: "resp_parameters_loop" }) // parameters succeeds
+    .mockResolvedValueOnce({ responseId: "resp_risk_loop" })        // risk succeeds
+    .mockRejectedValueOnce(                                         // allocation throws
+      new PhaseBudgetExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
+    );
+
+  const result = await runClarifyStage(...);
+
+  // assertions ...
+
+  runPhaseLoopSpy.mockRestore();
+});
+```
 
 ### Import ordering with `vi.hoisted`/`vi.mock`
 

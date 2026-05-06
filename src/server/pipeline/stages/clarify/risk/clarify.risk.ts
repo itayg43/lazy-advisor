@@ -3,7 +3,7 @@ import { MAX_RISK_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.con
 import {
   runPhaseExtraction,
   runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.lib";
+} from "#pipeline/stages/clarify/shared/clarify.phase";
 import { RiskScoreSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ParametersPhaseOutput,

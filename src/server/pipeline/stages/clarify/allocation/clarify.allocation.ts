@@ -6,12 +6,14 @@ import {
   RISK_LEVELS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
+  PhaseBudgetExhaustedError,
   runPhaseExtraction,
   runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.lib";
+} from "#pipeline/stages/clarify/shared/clarify.phase";
 import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
+  AllocationPhaseResult,
   ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -102,7 +104,7 @@ export const collectAllocation = async (
   risk: RiskPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<AllocationPhaseOutput> => {
+): Promise<AllocationPhaseResult> => {
   logger.info("Starting allocation phase", { parameters, risk });
 
   const context = [
@@ -111,16 +113,27 @@ export const collectAllocation = async (
     `Risk tolerance: ${risk.riskTolerance}`,
   ].join("\n");
 
-  const { responseId } = await runPhaseLoop({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: ALLOCATION_PROMPT,
-    input: context,
-    maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
-    phaseName: "Allocation phase",
-    sendToUser,
-    waitForResponse,
-  });
+  let responseId: string;
+  try {
+    ({ responseId } = await runPhaseLoop({
+      model: "gpt-5.4-nano",
+      effort: "low",
+      instructions: ALLOCATION_PROMPT,
+      input: context,
+      maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
+      phaseName: "Allocation phase",
+      sendToUser,
+      waitForResponse,
+    }));
+  } catch (err) {
+    if (err instanceof PhaseBudgetExhaustedError) {
+      logger.info("Allocation phase budget exhausted — split unresolved");
+
+      return { status: "failure", code: "split_unresolved" };
+    }
+
+    throw err;
+  }
 
   const { id, usage, output } = await runPhaseExtraction<AllocationPhaseOutput>({
     model: "gpt-5.4-nano",
@@ -133,5 +146,5 @@ export const collectAllocation = async (
   logger.info("Allocation extraction complete", { responseId: id, usage });
   logger.debug("Allocation output", { output });
 
-  return output;
+  return { status: "success", allocation: output };
 };

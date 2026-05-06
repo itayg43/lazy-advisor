@@ -3,10 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import {
+  ALLOCATION_EXIT_MESSAGE,
+  AMOUNT_EXIT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
+  MAX_ALLOCATION_TOOL_CALLS,
   PROFILE_TRANSITION_MESSAGE,
   SHORT_TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
+import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
+import { PhaseBudgetExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
@@ -272,6 +277,35 @@ describe("clarifyStage", () => {
     });
   });
 
+  describe("amount-missing exit", () => {
+    it("should return null, send AMOUNT_EXIT_MESSAGE, and skip risk/allocation/contribution when amount cannot be collected", async () => {
+      mockedCallOpenAIParsed.mockResolvedValueOnce(
+        createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
+      );
+      setupEfDebtParsedMocks();
+      mockedCallOpenAIParsed.mockResolvedValueOnce(
+        createParsedResponse(
+          { ...mockParametersOutput, amount: null },
+          "resp_parameters",
+        ),
+      );
+      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"));
+
+      const result = await runClarifyStage(
+        "I want to invest some money",
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+
+      expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(4); // PROFILE_TRANSITION + EF + debt + AMOUNT_EXIT
+      expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
+      expect(mockSendToUser).toHaveBeenNthCalledWith(4, AMOUNT_EXIT_MESSAGE);
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // parameters loop only — risk/allocation/contribution skipped
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(4); // classify + EF + debt + parameters extraction
+    });
+  });
+
   describe("short-timeline exit", () => {
     it("should return null, send exit message, and skip risk/allocation/contribution when timeline is under 3 years", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
@@ -357,6 +391,46 @@ describe("clarifyStage", () => {
       );
       expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
       expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
+    });
+  });
+
+  describe("allocation split-unresolved exit", () => {
+    it("should return null, send ALLOCATION_EXIT_MESSAGE, and skip contribution when allocation budget is exhausted", async () => {
+      mockedCallOpenAIParsed.mockResolvedValueOnce(
+        createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
+      );
+      setupEfDebtParsedMocks();
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(mockParametersOutput, "resp_parameters"),
+        )
+        .mockResolvedValueOnce(createParsedResponse(mockRiskScore, "resp_risk"));
+
+      // Spy on runPhaseLoop to control per-phase outcomes without running the real loop.
+      // parameters + risk resolve normally; allocation throws PhaseBudgetExhaustedError,
+      // which collectAllocation catches and converts to { status: "failure", code: "split_unresolved" }.
+      const runPhaseLoopSpy = vi
+        .spyOn(clarifyPhase, "runPhaseLoop")
+        .mockResolvedValueOnce({ responseId: "resp_parameters_loop" })
+        .mockResolvedValueOnce({ responseId: "resp_risk_loop" })
+        .mockRejectedValueOnce(
+          new PhaseBudgetExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
+        );
+
+      const result = await runClarifyStage(
+        "I want to invest ₪50,000",
+        mockSendToUser,
+        mockWaitForResponse,
+      );
+
+      expect(result).toBeNull();
+      expect(mockSendToUser).toHaveBeenCalledTimes(4); // PROFILE_TRANSITION + EF + debt + ALLOCATION_EXIT
+      expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
+      expect(mockSendToUser).toHaveBeenNthCalledWith(4, ALLOCATION_EXIT_MESSAGE);
+      expect(mockedCallOpenAI).not.toHaveBeenCalled(); // all loops handled by spy
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + EF + debt + parameters + risk extractions
+
+      runPhaseLoopSpy.mockRestore();
     });
   });
 });

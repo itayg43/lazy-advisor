@@ -1,3 +1,4 @@
+import { exhaustiveSwitch } from "#lib/exhaustive-switch";
 import { createLogger } from "#lib/logger";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
@@ -7,6 +8,7 @@ import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.c
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
+  ALLOCATION_EXIT_MESSAGE,
   AMOUNT_EXIT_MESSAGE,
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
@@ -49,9 +51,9 @@ export const runClarifyStage = async (
   const parametersResult = await collectParameters(sendToUser, waitForResponse);
 
   if (parametersResult.status === "failure") {
-    logger.info("Parameters phase failed", { code: parametersResult.code });
-
-    sendToUser(AMOUNT_EXIT_MESSAGE);
+    exhaustiveSwitch(parametersResult.code, {
+      amount_missing: () => sendToUser(AMOUNT_EXIT_MESSAGE),
+    });
 
     return null;
   }
@@ -67,12 +69,23 @@ export const runClarifyStage = async (
   }
 
   const risk = await collectRisk(parameters, sendToUser, waitForResponse);
-  const allocation = await collectAllocation(
+  const allocationResult = await collectAllocation(
     parameters,
     risk,
     sendToUser,
     waitForResponse,
   );
+
+  if (allocationResult.status === "failure") {
+    exhaustiveSwitch(allocationResult.code, {
+      split_unresolved: () => sendToUser(ALLOCATION_EXIT_MESSAGE),
+    });
+
+    return null;
+  }
+
+  const { allocation } = allocationResult;
+
   const contribution = await collectContribution(
     parameters,
     allocation,

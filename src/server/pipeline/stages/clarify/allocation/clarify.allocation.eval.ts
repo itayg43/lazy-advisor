@@ -9,6 +9,7 @@ import {
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import type {
   AllocationPhaseOutput,
+  AllocationPhaseResult,
   ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -55,7 +56,9 @@ describe("collectAllocation", () => {
   // extracted split — catches model arithmetic drift (e.g., "₪85,000 equity + ₪15,000
   // buffer" on a ₪50,000 investment). Looks for the expected shekels anywhere in the
   // combined agent text, since counter-proposal / sanity-check turns may supersede the
-  // initial proposal's numbers.
+  // initial proposal's numbers. Skips the zero side at 0%/100% boundaries: models phrase
+  // an empty bucket as "0% equity" rather than "₪0", and arithmetic drift can't occur
+  // there anyway.
   const expectShekelMathConsistent = (
     transcript: TranscriptEntry[],
     amount: number,
@@ -67,12 +70,27 @@ describe("collectAllocation", () => {
       .filter((t) => t.role === "agent")
       .map((t) => t.content)
       .join(" ");
-    expect(agentText).toContain(`₪${expectedEquityShekels.toLocaleString("en-US")}`);
-    expect(agentText).toContain(`₪${expectedBufferShekels.toLocaleString("en-US")}`);
+    if (output.equityPercentage > 0) {
+      expect(agentText).toContain(`₪${expectedEquityShekels.toLocaleString("en-US")}`);
+    }
+    if (output.bufferPercentage > 0) {
+      expect(agentText).toContain(`₪${expectedBufferShekels.toLocaleString("en-US")}`);
+    }
+  };
+
+  // Narrows an AllocationPhaseResult to its success branch so the rest of the
+  // test can assert on the `.allocation` payload directly.
+  const expectSuccess = (result: AllocationPhaseResult): AllocationPhaseOutput => {
+    expect(result.status).toBe("success");
+    if (result.status !== "success") {
+      throw new Error("expected allocation success result");
+    }
+
+    return result.allocation;
   };
 
   let lastTranscript: TranscriptEntry[] | undefined;
-  let lastOutput: AllocationPhaseOutput | undefined;
+  let lastOutput: AllocationPhaseResult | undefined;
 
   beforeAll(() => initLastRun(LAST_RUN_PATH));
 
@@ -93,13 +111,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Sounds good"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     // aggressive + 10+ yr cell = 80–90%
     expect(output.equityPercentage).toBeGreaterThanOrEqual(80);
@@ -127,13 +146,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       midHorizonModerateParameters,
       moderateRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBeGreaterThanOrEqual(50);
     expect(output.equityPercentage).toBeLessThanOrEqual(60);
@@ -150,13 +170,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       shortMidHorizonConservativeParameters,
       conservativeRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBeGreaterThanOrEqual(10);
     expect(output.equityPercentage).toBeLessThanOrEqual(20);
@@ -173,13 +194,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["77%", "yes"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBe(77);
     expect(output.bufferPercentage).toBe(23);
@@ -195,13 +217,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Let's do 50/50", "yes"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBe(50);
     expect(output.bufferPercentage).toBe(50);
@@ -220,13 +243,14 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonConservativeParameters,
       conservativeRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBe(100);
     expect(output.bufferPercentage).toBe(0);
@@ -246,13 +270,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["I want 0% stocks", "Yes, I'm sure"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBe(0);
     expect(output.bufferPercentage).toBe(100);
@@ -271,13 +296,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["What's a buffer?", "Got it, sounds good"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBeGreaterThanOrEqual(80);
     expect(output.equityPercentage).toBeLessThanOrEqual(90);
@@ -300,13 +326,14 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBeGreaterThanOrEqual(80);
     expect(output.equityPercentage).toBeLessThanOrEqual(90);
@@ -335,13 +362,14 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Which ETF should I buy?", "Sounds good"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBeGreaterThanOrEqual(80);
     expect(output.equityPercentage).toBeLessThanOrEqual(90);
@@ -365,13 +393,14 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectAllocation(
+    const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
       responder.sendToUser,
       responder.waitForResponse,
     );
-    lastOutput = output;
+    lastOutput = result;
+    const output = expectSuccess(result);
 
     expect(output.equityPercentage).toBe(60);
     expect(output.bufferPercentage).toBe(40);
@@ -384,5 +413,34 @@ describe("collectAllocation", () => {
       longHorizonAggressiveParameters.amount,
       output,
     );
+  });
+
+  // T3.9: PhaseBudgetExhaustedError → { status: "failure", code: "split_unresolved" }.
+  // A chain of counter-proposals forces one confirmation tool call each; once toolCallCount
+  // exceeds MAX_ALLOCATION_TOOL_CALLS (5) the phase loop throws and collectAllocation
+  // returns the failure variant.
+  it("should return failure when the user keeps counter-proposing past the tool-call budget", async () => {
+    const responder = createTrackedResponder([
+      "Actually I want 60% stocks",
+      "Wait, let's do 55%",
+      "Sorry, change to 50%",
+      "Actually 45%",
+      "Make it 40%",
+      "Hmm, 35%",
+      "OK 30%",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(
+      longHorizonAggressiveParameters,
+      aggressiveRisk,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("failure");
+    if (result.status !== "failure") return;
+    expect(result.code).toBe("split_unresolved");
   });
 });

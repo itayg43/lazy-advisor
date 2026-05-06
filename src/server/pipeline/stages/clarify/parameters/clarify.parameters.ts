@@ -8,7 +8,7 @@ import {
 import {
   runPhaseExtraction,
   runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.lib";
+} from "#pipeline/stages/clarify/shared/clarify.phase";
 import { ParametersExtractionSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ParametersExtraction,
@@ -127,6 +127,8 @@ export const collectParameters = async (
   logger.debug("Parameters output", { output });
 
   if (output.amount === null) {
+    logger.info("Parameters phase failed — amount missing");
+
     return { status: "failure", code: "amount_missing" };
   }
 

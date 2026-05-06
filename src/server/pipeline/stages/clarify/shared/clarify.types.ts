@@ -2,6 +2,7 @@ import type { z } from "zod";
 
 import type {
   AllocationPhaseOutputSchema,
+  AllocationPhaseResultSchema,
   ContributionPhaseOutputSchema,
   ParametersExtractionSchema,
   ParametersPhaseOutputSchema,
@@ -18,4 +19,5 @@ export type ParametersPhaseResult = z.infer<typeof ParametersPhaseResultSchema>;
 export type RiskScore = z.infer<typeof RiskScoreSchema>;
 export type RiskPhaseOutput = z.infer<typeof RiskPhaseOutputSchema>;
 export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
+export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
 export type ContributionPhaseOutput = z.infer<typeof ContributionPhaseOutputSchema>;

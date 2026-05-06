@@ -29,6 +29,7 @@ flowchart TD
     ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
     Risk --> Allocation[allocation]
+    Allocation -->|split unresolved| ExitAllocation([exit: allocation failure message])
     Allocation --> Contribution[contribution]
     Contribution --> Profile([UserProfile])
     Contribution -.->|T5 planned| Equity[equity]
@@ -43,7 +44,7 @@ flowchart TD
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseOutput` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `ParametersPhaseOutput` → `RiskPhaseOutput` |
-| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseOutput` |
+| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseOutput` |
 | equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
 | buffer | *(T6 — planned)* Resolve which buffer instrument fills the buffer bucket | parameters, risk, allocation, equity → `BufferPhaseOutput` |
@@ -115,6 +116,8 @@ The model locates the user's cell from `risk.riskTolerance` × `parameters.timel
 
 **What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase (T3) and are not passed to this phase.
 
+**Unresolved-split exit.** `collectAllocation` returns `{ status: "failure", code: "split_unresolved" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The stage exits with a closing message rather than locking the user into a split they were still negotiating. Modeled as an in-band failure status (mirroring `parameters.amount_missing`) instead of an exception, since this is a graceful UX outcome, not a bug.
+
 ### Contribution phase — `plansToContribute: boolean`
 
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
@@ -158,7 +161,7 @@ An earlier design used a final LLM extraction call across the full conversation 
 
 ### Phase loop guardrails
 
-`runPhaseLoop` enforces a max tool call count to guard against the model not converging, and `collectToolOutputs` rejects any tool that isn't `ask_user`. Both violations throw `InternalError`.
+`runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseBudgetExhaustedError`. Phases that treat budget exhaustion as a graceful, in-band UX outcome (currently allocation) catch it narrowly and return a `{ status: "failure", code: ... }` variant; uncaught, it propagates as a server error. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
 
 ### Stage boundary validation
 

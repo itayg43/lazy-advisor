@@ -17,7 +17,13 @@ import {
 } from "#pipeline/tools/ask-user.tool";
 import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/openai";
 
-const logger = createLogger("clarifyLib");
+const logger = createLogger("clarifyPhase");
+
+export class PhaseBudgetExhaustedError extends Error {
+  constructor(phaseName: string, maxToolCalls: number) {
+    super(`${phaseName} failed to converge within ${maxToolCalls} tool calls`);
+  }
+}
 
 type PhaseLoopParams = {
   model: ResponsesModel;
@@ -120,9 +126,7 @@ export const runPhaseLoop = async ({
 
     toolCallCount += functionCalls.length;
     if (toolCallCount > maxToolCalls) {
-      throw new InternalError(
-        `${phaseName} failed to converge within ${maxToolCalls} tool calls`,
-      );
+      throw new PhaseBudgetExhaustedError(phaseName, maxToolCalls);
     }
 
     const toolOutputs = await collectToolOutputs(
