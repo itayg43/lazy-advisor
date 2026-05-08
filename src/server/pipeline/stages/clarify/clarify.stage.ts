@@ -14,6 +14,7 @@ import {
   INTAKE_REJECTION_MESSAGES,
   PROFILE_TRANSITION_MESSAGE,
   SHORT_TIMELINE_EXIT_MESSAGE,
+  TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { TimelineBucket, UserProfileSchema } from "#schemas/pipeline.schemas";
@@ -53,6 +54,7 @@ export const runClarifyStage = async (
   if (parametersResult.status === "failure") {
     exhaustiveSwitch(parametersResult.code, {
       amount_missing: () => sendToUser(AMOUNT_EXIT_MESSAGE),
+      timeline_missing: () => sendToUser(TIMELINE_EXIT_MESSAGE),
     });
 
     return null;

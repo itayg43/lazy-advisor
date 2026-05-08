@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-05-05T17:35:47.187Z | Commit: 2f07343
+Timestamp: 2026-05-08T18:26:10.626Z | Commit: e735cd2
 
 ---
 
@@ -21,7 +21,7 @@ status: success | amount: 30000 | timeline: 10+ years
 
 ## ✓ should re-ask timeline when vague
 
-**Agent:** How much do you want to invest? (Please give a specific amount in shekels.)
+**Agent:** How much do you want to invest?
 
 **User:** ₪20,000
 
@@ -43,18 +43,16 @@ status: success | amount: 20000 | timeline: 10+ years
 
 ---
 
-## ✓ should present the four timeline bucket options when asking for timeline
+## ✗ should present the four timeline bucket options when asking for timeline
 
 **Agent:** How much do you want to invest?
 
 **User:** ₪50,000
 
-**Agent:** What's your investment timeline — `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`?
-
-**User:** 5-10 years
-
 **Output:**
-status: success | amount: 50000 | timeline: 5–10 years
+status: success | amount: 50000 | timeline: 3–5 years
+
+Error: expected '3–5 years' to be '5–10 years' // Object.is equality
 
 
 ---
@@ -103,6 +101,30 @@ status: success | amount: 20000 | timeline: 3–5 years
 
 **Output:**
 status: success | amount: 20000 | timeline: 5–10 years
+
+
+---
+
+## ✓ should return failure when timeline is never provided
+
+**Agent:** How much do you want to invest?
+
+**User:** ₪40,000
+
+**Agent:** What's your investment timeline — `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`?
+
+**User:** I have no idea
+
+**Agent:** Which of these best fits your investment timeline?
+1. under 3 years
+2. 3–5 years
+3. 5–10 years
+4. 10+ years
+
+**User:** I really can't say
+
+**Output:**
+status: failure | code: timeline_missing
 
 
 ---

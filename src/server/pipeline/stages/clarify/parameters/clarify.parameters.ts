@@ -32,7 +32,7 @@ You are the parameter-collection phase of an investment advisor pipeline. Collec
 - Keep the tone conversational and non-robotic. Beginner-friendly by default.
 - **Two-try rule:** If a parameter has been asked twice without a valid answer:
   - Amount: end the phase — do not ask for timeline.
-  - Timeline: accept the best available answer and stop.
+  - Timeline: end the phase — do not ask further.
 
 # Decision Logic
 
@@ -52,7 +52,7 @@ If still no specific number → end phase. Do NOT call \`ask_user\` again.
 → Re-ask once:
 "Which of these best fits your investment timeline?
 ${TIMELINE_BUCKET_LIST}"
-Accept whatever the user says on this second attempt.
+If still vague or no specific timeframe → end phase. Do NOT call \`ask_user\` again.
 
 **Step 5 — All parameters collected**
 → Stop. Do NOT call \`ask_user\`. Do NOT output any message to the user.
@@ -78,11 +78,11 @@ Timeline vague → re-ask:
 ${TIMELINE_BUCKET_LIST}"
 User: "I think 10+ years" → stop.
 
-## Example 3 — vague timeline accepted after second ask
+## Example 3 — vague first attempt, valid second attempt → success
 → \`ask_user\` for amount. User: "₪30,000".
 → \`ask_user\` for timeline. User: "long-term".
 → Re-ask timeline. User: "somewhere around 10 years or more".
-Timeline asked twice — accept best available (maps to "10+ years") → stop.
+Second attempt is specific enough to map → "10+ years" → stop.
 
 ## Example 4 — amount never provided
 → \`ask_user\`: "How much do you want to invest?"
@@ -91,12 +91,21 @@ User: "I'm not sure yet"
 → \`ask_user\`: "Could you give me a specific amount in shekels?"
 User: "I really don't know"
 
-Amount asked twice with no specific number → end phase. Do NOT ask for timeline.`;
+Amount asked twice with no specific number → end phase. Do NOT ask for timeline.
+
+## Example 5 — timeline never resolved
+→ \`ask_user\` for amount. User: "₪40,000".
+→ \`ask_user\` for timeline. User: "I don't know, maybe someday".
+→ Re-ask timeline:
+"Which of these best fits your investment timeline?
+${TIMELINE_BUCKET_LIST}"
+User: "I really can't say"
+Timeline asked twice with no specific timeframe → end phase. Do NOT call \`ask_user\` again.`;
 
 const PARAMETERS_EXTRACTION_INSTRUCTIONS = `Extract from the preceding investment advisor conversation.
 
 - amount: the exact investment amount as an integer (convert shorthand: "₪50k" → 50000). Set to null if the user never provided a specific number after being asked twice.
-- timeline: map the stated timeframe to the nearest of these four values — ${TIMELINE_BUCKETS}. On exact boundaries, prefer the shorter bucket: ${TIMELINE_BOUNDARY_EXAMPLES}`;
+- timeline: map the stated timeframe to the nearest of these four values — ${TIMELINE_BUCKETS}. On exact boundaries, prefer the shorter bucket: ${TIMELINE_BOUNDARY_EXAMPLES}. Set to null if the user never provided a specific timeframe or number of years after being asked twice (e.g., both responses were genuinely vague like "I don't know" or "someday").`;
 
 export const collectParameters = async (
   sendToUser: SendToUser,
@@ -130,6 +139,12 @@ export const collectParameters = async (
     logger.info("Parameters phase failed — amount missing");
 
     return { status: "failure", code: "amount_missing" };
+  }
+
+  if (output.timeline === null) {
+    logger.info("Parameters phase failed — timeline missing");
+
+    return { status: "failure", code: "timeline_missing" };
   }
 
   return {

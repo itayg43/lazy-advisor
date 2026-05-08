@@ -48,7 +48,7 @@ describe("collectParameters", () => {
     }
   });
 
-  // clarify.parameters.rules.md rule 2: vague timeline → re-asked before accepting
+  // clarify.parameters.rules.md rule 2: vague first attempt, valid second attempt → success
   it("should re-ask timeline when vague", async () => {
     const responder = createTrackedResponder([
       "₪20,000",
@@ -141,6 +141,27 @@ describe("collectParameters", () => {
     expect(result.status).toBe("success");
     if (result.status === "success") {
       expect(result.parameters.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 2: timeline asked twice with no valid answer → failure
+  it("should return failure when timeline is never provided", async () => {
+    const responder = createTrackedResponder([
+      "₪40,000",
+      "I have no idea",
+      "I really can't say",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("failure");
+    if (result.status === "failure") {
+      expect(result.code).toBe("timeline_missing");
     }
   });
 
