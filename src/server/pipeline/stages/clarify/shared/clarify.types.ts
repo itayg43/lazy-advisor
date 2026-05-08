@@ -4,7 +4,6 @@ import type {
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
   ContributionPhaseOutputSchema,
-  ParametersExtractionSchema,
   ParametersPhaseOutputSchema,
   ParametersPhaseResultSchema,
   IntakePhaseOutputSchema,
@@ -16,7 +15,6 @@ import type {
 
 export type IntakePhaseOutput = z.infer<typeof IntakePhaseOutputSchema>;
 export type ParametersPhaseOutput = z.infer<typeof ParametersPhaseOutputSchema>;
-export type ParametersExtraction = z.infer<typeof ParametersExtractionSchema>;
 export type ParametersPhaseResult = z.infer<typeof ParametersPhaseResultSchema>;
 export type RiskScore = z.infer<typeof RiskScoreSchema>;
 export type RiskScoreExtraction = z.infer<typeof RiskScoreExtractionSchema>;

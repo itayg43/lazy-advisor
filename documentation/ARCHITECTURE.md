@@ -134,7 +134,7 @@ Two patterns are used depending on whether the LLM needs to drive the conversati
 
 The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
 
-Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: parameters, risk, allocation, contribution, and intake handlers.
+Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: risk, allocation, contribution, and intake handlers.
 
 **`askWithClassify` — code as orchestrator**
 
@@ -142,7 +142,7 @@ Code drives the conversation — decides what question to ask and in what order.
 
 A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
 
-Used when questions are fixed and answers need structured extraction: ef-debt.
+Used when questions are fixed and answers need structured extraction: ef-debt, parameters.
 
 **The boundary**
 

@@ -39,9 +39,8 @@ it("should handle allocation budget exhaustion", async () => {
 
   const runPhaseLoopSpy = vi
     .spyOn(clarifyPhase, "runPhaseLoop")
-    .mockResolvedValueOnce({ responseId: "resp_parameters_loop" }) // parameters succeeds
-    .mockResolvedValueOnce({ responseId: "resp_risk_loop" })        // risk succeeds
-    .mockRejectedValueOnce(                                         // allocation throws
+    .mockResolvedValueOnce({ responseId: "resp_risk_loop" })    // risk succeeds
+    .mockRejectedValueOnce(                                     // allocation throws
       new PhaseBudgetExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
     );
 

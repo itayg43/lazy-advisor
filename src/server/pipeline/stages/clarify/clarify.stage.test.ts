@@ -2,6 +2,14 @@ import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
+import type {
+  EmergencyFundClassify,
+  DebtClassify,
+} from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
+import type {
+  AmountClassify,
+  TimelineClassify,
+} from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import {
   ALLOCATION_EXIT_MESSAGE,
   AMOUNT_EXIT_MESSAGE,
@@ -16,7 +24,6 @@ import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.sche
 import type {
   AllocationPhaseOutput,
   ContributionPhaseOutput,
-  ParametersExtraction,
   RiskScore,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
@@ -63,16 +70,25 @@ describe("clarifyStage", () => {
     output,
   });
 
-  const mockParametersOutput: ParametersExtraction = {
+  const mockAmountOutput: AmountClassify = {
+    clarificationNeeded: false,
+    clarificationMessage: null,
     amount: 50000,
+  };
+
+  const mockTimelineOutput: TimelineClassify = {
+    clarificationNeeded: false,
+    clarificationMessage: null,
     timeline: TimelineBucket.enum["10+ years"],
   };
 
   const mockRiskScore: RiskScore = { selfRatingScore: 3 }; // maps to "moderate"
+
   const mockAllocationOutput: AllocationPhaseOutput = {
     equityPercentage: 60,
     bufferPercentage: 40,
   };
+
   const mockContributionOutput: ContributionPhaseOutput = { plansToContribute: true };
 
   const expectedProfile = {
@@ -86,39 +102,42 @@ describe("clarifyStage", () => {
 
   // Sets up callOpenAIParsed for the two ef-debt question classifications, in order.
   // Also sets up waitForResponse to return user answers for both questions.
-  // Call after the classify (and any intake extraction) mocks, before setupPhaseParsedMocks.
+  // Call after the classify (and any intake extraction) mocks, before setupParametersParsedMocks.
+  const mockEfOutput: EmergencyFundClassify = {
+    clarificationNeeded: false,
+    clarificationMessage: null,
+    answer: "yes",
+  };
+
+  const mockDebtOutput: DebtClassify = {
+    clarificationNeeded: false,
+    clarificationMessage: null,
+    answer: "no",
+  };
+
   const setupEfDebtParsedMocks = () => {
     mockWaitForResponse.mockResolvedValueOnce("yes").mockResolvedValueOnce("no");
     mockedCallOpenAIParsed
-      .mockResolvedValueOnce(
-        createParsedResponse(
-          {
-            clarificationNeeded: false,
-            clarificationMessage: null,
-            answer: "yes" as const,
-          },
-          "resp_ef",
-        ),
-      )
-      .mockResolvedValueOnce(
-        createParsedResponse(
-          {
-            clarificationNeeded: false,
-            clarificationMessage: null,
-            answer: "no" as const,
-          },
-          "resp_debt",
-        ),
-      );
+      .mockResolvedValueOnce(createParsedResponse(mockEfOutput, "resp_ef"))
+      .mockResolvedValueOnce(createParsedResponse(mockDebtOutput, "resp_debt"));
   };
 
-  // Sets up callOpenAIParsed for the four phase extractions in execution order.
-  // Always call after classify and ef-debt mocks so the queue order matches execution.
+  // Sets up callOpenAIParsed for the two parameters question classifications, in order.
+  // Also sets up waitForResponse to return user answers for both questions.
+  // Call after ef-debt mocks, before setupPhaseParsedMocks.
+  const setupParametersParsedMocks = () => {
+    mockWaitForResponse
+      .mockResolvedValueOnce("₪50,000")
+      .mockResolvedValueOnce("10+ years");
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(createParsedResponse(mockAmountOutput, "resp_amount"))
+      .mockResolvedValueOnce(createParsedResponse(mockTimelineOutput, "resp_timeline"));
+  };
+
+  // Sets up callOpenAIParsed for the three phase extractions (risk, allocation, contribution).
+  // Always call after classify, ef-debt, and parameters mocks so the queue order matches execution.
   const setupPhaseParsedMocks = () => {
     mockedCallOpenAIParsed
-      .mockResolvedValueOnce(
-        createParsedResponse(mockParametersOutput, "resp_parameters"),
-      )
       .mockResolvedValueOnce(createParsedResponse(mockRiskScore, "resp_risk"))
       .mockResolvedValueOnce(
         createParsedResponse(mockAllocationOutput, "resp_allocation"),
@@ -128,12 +147,11 @@ describe("clarifyStage", () => {
       );
   };
 
-  // Sets up callOpenAI loop responses for the four loop phases in execution order.
+  // Sets up callOpenAI loop responses for the three loop phases (risk, allocation, contribution).
   // Prepend any intake loop call before invoking this.
-  // ef-debt no longer uses a loop — it uses askWithClassify (callOpenAIParsed).
+  // ef-debt and parameters use askWithClassify (callOpenAIParsed) — not loops.
   const setupPhaseLoopMocks = () => {
     mockedCallOpenAI
-      .mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_risk_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_allocation_loop"))
       .mockResolvedValueOnce(createLoopResponse("resp_contribution_loop"));
@@ -145,6 +163,7 @@ describe("clarifyStage", () => {
         createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
       );
       setupEfDebtParsedMocks();
+      setupParametersParsedMocks();
       setupPhaseParsedMocks();
       setupPhaseLoopMocks();
 
@@ -155,11 +174,11 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockWaitForResponse).toHaveBeenCalledTimes(2); // EF + debt questions
-      expect(mockSendToUser).toHaveBeenCalledTimes(3); // PROFILE_TRANSITION + EF question + debt question
+      expect(mockWaitForResponse).toHaveBeenCalledTimes(4); // EF + debt + amount + timeline
+      expect(mockSendToUser).toHaveBeenCalledTimes(5); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(4); // 4 phase loops (no ef-debt loop)
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(7); // classify + EF + debt + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(3); // risk + allocation + contribution loops
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + EF + debt + amount + timeline + 3 extractions
     });
   });
 
@@ -176,6 +195,7 @@ describe("clarifyStage", () => {
           createParsedResponse({ accepted: true }, "resp_oos_extraction"),
         );
       setupEfDebtParsedMocks();
+      setupParametersParsedMocks();
       setupPhaseParsedMocks();
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_oos_intake"));
       setupPhaseLoopMocks();
@@ -187,10 +207,10 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockSendToUser).toHaveBeenCalledTimes(3); // PROFILE_TRANSITION + EF question + debt question
+      expect(mockSendToUser).toHaveBeenCalledTimes(5); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phase loops
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + intake extraction + EF + debt + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(4); // intake loop + risk + allocation + contribution
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(9); // classify + intake extraction + EF + debt + amount + timeline + 3 extractions
     });
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
@@ -233,6 +253,7 @@ describe("clarifyStage", () => {
           createParsedResponse({ accepted: true }, "resp_unreal_extraction"),
         );
       setupEfDebtParsedMocks();
+      setupParametersParsedMocks();
       setupPhaseParsedMocks();
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_unreal_intake"));
       setupPhaseLoopMocks();
@@ -244,10 +265,10 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockSendToUser).toHaveBeenCalledTimes(3); // PROFILE_TRANSITION + EF question + debt question
+      expect(mockSendToUser).toHaveBeenCalledTimes(5); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phase loops
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + intake extraction + EF + debt + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(4); // intake loop + risk + allocation + contribution
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(9); // classify + intake extraction + EF + debt + amount + timeline + 3 extractions
     });
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
@@ -283,13 +304,13 @@ describe("clarifyStage", () => {
         createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
       );
       setupEfDebtParsedMocks();
+      mockWaitForResponse.mockResolvedValueOnce("I don't know");
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse(
-          { ...mockParametersOutput, amount: null },
-          "resp_parameters",
+          { clarificationNeeded: false, clarificationMessage: null, amount: null },
+          "resp_amount",
         ),
       );
-      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"));
 
       const result = await runClarifyStage(
         "I want to invest some money",
@@ -298,11 +319,11 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toBeNull();
-      expect(mockSendToUser).toHaveBeenCalledTimes(4); // PROFILE_TRANSITION + EF + debt + AMOUNT_EXIT
+      expect(mockSendToUser).toHaveBeenCalledTimes(5); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + AMOUNT_EXIT
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockSendToUser).toHaveBeenNthCalledWith(4, AMOUNT_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // parameters loop only — risk/allocation/contribution skipped
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(4); // classify + EF + debt + parameters extraction
+      expect(mockSendToUser).toHaveBeenNthCalledWith(5, AMOUNT_EXIT_MESSAGE);
+      expect(mockedCallOpenAI).not.toHaveBeenCalled();
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(4); // classify + EF + debt + amount
     });
   });
 
@@ -312,13 +333,26 @@ describe("clarifyStage", () => {
         createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
       );
       setupEfDebtParsedMocks();
-      mockedCallOpenAIParsed.mockResolvedValueOnce(
-        createParsedResponse(
-          { ...mockParametersOutput, timeline: TimelineBucket.enum["under 3 years"] },
-          "resp_parameters",
-        ),
-      );
-      mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_parameters_loop"));
+      mockWaitForResponse
+        .mockResolvedValueOnce("₪20,000")
+        .mockResolvedValueOnce("under 3 years");
+      mockedCallOpenAIParsed
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            { clarificationNeeded: false, clarificationMessage: null, amount: 20000 },
+            "resp_amount",
+          ),
+        )
+        .mockResolvedValueOnce(
+          createParsedResponse(
+            {
+              clarificationNeeded: false,
+              clarificationMessage: null,
+              timeline: TimelineBucket.enum["under 3 years"],
+            },
+            "resp_timeline",
+          ),
+        );
 
       const result = await runClarifyStage(
         "I want to invest ₪20,000",
@@ -327,11 +361,11 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toBeNull();
-      expect(mockSendToUser).toHaveBeenCalledTimes(4); // PROFILE_TRANSITION + EF question + debt question + SHORT_TIMELINE_EXIT
+      expect(mockSendToUser).toHaveBeenCalledTimes(6); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + SHORT_TIMELINE_EXIT
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockSendToUser).toHaveBeenNthCalledWith(4, SHORT_TIMELINE_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // parameters loop only
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(4); // classify + EF + debt + parameters extraction
+      expect(mockSendToUser).toHaveBeenNthCalledWith(6, SHORT_TIMELINE_EXIT_MESSAGE);
+      expect(mockedCallOpenAI).not.toHaveBeenCalled();
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + EF + debt + amount + timeline
     });
   });
 
@@ -348,6 +382,7 @@ describe("clarifyStage", () => {
           createParsedResponse({ accepted: true }, "resp_contra_extraction"),
         );
       setupEfDebtParsedMocks();
+      setupParametersParsedMocks();
       setupPhaseParsedMocks();
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_contra_intake"));
       setupPhaseLoopMocks();
@@ -359,10 +394,10 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toMatchObject(expectedProfile);
-      expect(mockSendToUser).toHaveBeenCalledTimes(3); // PROFILE_TRANSITION + EF question + debt question
+      expect(mockSendToUser).toHaveBeenCalledTimes(5); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(5); // intake loop + 4 phase loops
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + intake extraction + EF + debt + 4 extractions
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(4); // intake loop + risk + allocation + contribution
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(9); // classify + intake extraction + EF + debt + amount + timeline + 3 extractions
     });
 
     it("should return null, send rejection message, and stop after intake when rejected", async () => {
@@ -400,18 +435,16 @@ describe("clarifyStage", () => {
         createParsedResponse({ type: GoalClassification.enum.normal }, "resp_classify"),
       );
       setupEfDebtParsedMocks();
-      mockedCallOpenAIParsed
-        .mockResolvedValueOnce(
-          createParsedResponse(mockParametersOutput, "resp_parameters"),
-        )
-        .mockResolvedValueOnce(createParsedResponse(mockRiskScore, "resp_risk"));
+      setupParametersParsedMocks();
+      mockedCallOpenAIParsed.mockResolvedValueOnce(
+        createParsedResponse(mockRiskScore, "resp_risk"),
+      );
 
       // Spy on runPhaseLoop to control per-phase outcomes without running the real loop.
-      // parameters + risk resolve normally; allocation throws PhaseBudgetExhaustedError,
+      // risk resolves normally; allocation throws PhaseBudgetExhaustedError,
       // which collectAllocation catches and converts to { status: "failure", code: "split_unresolved" }.
       const runPhaseLoopSpy = vi
         .spyOn(clarifyPhase, "runPhaseLoop")
-        .mockResolvedValueOnce({ responseId: "resp_parameters_loop" })
         .mockResolvedValueOnce({ responseId: "resp_risk_loop" })
         .mockRejectedValueOnce(
           new PhaseBudgetExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
@@ -424,11 +457,11 @@ describe("clarifyStage", () => {
       );
 
       expect(result).toBeNull();
-      expect(mockSendToUser).toHaveBeenCalledTimes(4); // PROFILE_TRANSITION + EF + debt + ALLOCATION_EXIT
+      expect(mockSendToUser).toHaveBeenCalledTimes(6); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + ALLOCATION_EXIT
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockSendToUser).toHaveBeenNthCalledWith(4, ALLOCATION_EXIT_MESSAGE);
+      expect(mockSendToUser).toHaveBeenNthCalledWith(6, ALLOCATION_EXIT_MESSAGE);
       expect(mockedCallOpenAI).not.toHaveBeenCalled(); // all loops handled by spy
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(5); // classify + EF + debt + parameters + risk extractions
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(6); // classify + EF + debt + amount + timeline + risk
 
       runPhaseLoopSpy.mockRestore();
     });
