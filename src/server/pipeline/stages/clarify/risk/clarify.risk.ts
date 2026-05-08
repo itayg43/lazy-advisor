@@ -1,14 +1,15 @@
 import { createLogger } from "#lib/logger";
 import { MAX_RISK_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
+  PhaseBudgetExhaustedError,
   runPhaseExtraction,
   runPhaseLoop,
 } from "#pipeline/stages/clarify/shared/clarify.phase";
-import { RiskScoreSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { RiskScoreExtractionSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ParametersPhaseOutput,
-  RiskPhaseOutput,
-  RiskScore,
+  RiskPhaseResult,
+  RiskScoreExtraction,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { RiskTolerance } from "#schemas/pipeline.schemas";
@@ -53,7 +54,7 @@ Respond with one brief sentence acknowledging what the user said, then re-presen
 - Emotional or expressing intent (e.g., "I'd panic"): acknowledge the feeling without suggesting a score. e.g. "That's a valid reaction — please pick the number that fits best."
 - Vague or uncertain (e.g., "I don't know"): offer brief encouragement. e.g. "Your best guess is fine — even an approximate number helps."
 
-If you have **already sent one Step 3 re-ask**: end the phase silently — make zero tool calls. The extraction will default to 1.
+If you have **already sent one Step 3 re-ask**: end the phase silently — make zero tool calls.
 
 # Neutrality
 
@@ -65,11 +66,11 @@ If you have **already sent one Step 3 re-ask**: end the phase silently — make 
 
 const RISK_EXTRACTION_INSTRUCTIONS = `Extract a single integer from the preceding investment advisor conversation: the user's self-rating on the 1–5 comfort-with-drops scale.
 
-- selfRatingScore: integer in [1, 5]
+- selfRatingScore: integer in [1, 5], or null
   - If the user gave a digit 1–5 or its English word (one, two, three, four, five), use it. Surrounding text is fine ("I'd say 4" → 4).
-  - Do not interpret free-form wording as a score. If no 1–5 integer was given, default to 1 — the safer default when willingness is unknown.`;
+  - Do not interpret free-form wording as a score. If no valid 1–5 integer was given, return null.`;
 
-const mapScoreToBucket = (score: number): RiskPhaseOutput["riskTolerance"] => {
+const mapScoreToBucket = (score: number) => {
   if (score <= 2) return conservative;
   if (score === 3) return moderate;
 
@@ -80,36 +81,56 @@ export const collectRisk = async (
   parameters: ParametersPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<RiskPhaseOutput> => {
+): Promise<RiskPhaseResult> => {
   logger.info("Starting risk phase", { parameters });
 
   const context = `Investment timeline: ${parameters.timeline}`;
 
-  const { responseId } = await runPhaseLoop({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: RISK_PROMPT,
-    input: context,
-    maxToolCalls: MAX_RISK_TOOL_CALLS,
-    phaseName: "Risk phase",
-    sendToUser,
-    waitForResponse,
-  });
+  let responseId: string;
 
-  const { id, usage, output } = await runPhaseExtraction<RiskScore>({
+  try {
+    ({ responseId } = await runPhaseLoop({
+      model: "gpt-5.4-nano",
+      effort: "low",
+      instructions: RISK_PROMPT,
+      input: context,
+      maxToolCalls: MAX_RISK_TOOL_CALLS,
+      phaseName: "Risk phase",
+      sendToUser,
+      waitForResponse,
+    }));
+  } catch (err) {
+    if (err instanceof PhaseBudgetExhaustedError) {
+      logger.info("Risk phase budget exhausted — risk tolerance missing");
+
+      return { status: "failure", code: "risk_missing" };
+    }
+
+    throw err;
+  }
+
+  const { id, usage, output } = await runPhaseExtraction<RiskScoreExtraction>({
     model: "gpt-5.4-nano",
     effort: "low",
     instructions: RISK_EXTRACTION_INSTRUCTIONS,
     lastResponseId: responseId,
-    schema: RiskScoreSchema,
+    schema: RiskScoreExtractionSchema,
   });
 
-  const result: RiskPhaseOutput = {
+  logger.info("Risk extraction complete", { responseId: id, usage });
+
+  if (output.selfRatingScore === null) {
+    logger.info("Risk phase failed — risk tolerance missing");
+
+    return { status: "failure", code: "risk_missing" };
+  }
+
+  const result = {
+    status: "success" as const,
     selfRatingScore: output.selfRatingScore,
     riskTolerance: mapScoreToBucket(output.selfRatingScore),
   };
 
-  logger.info("Risk extraction complete", { responseId: id, usage });
   logger.debug("Risk output", { output: result });
 
   return result;
