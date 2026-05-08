@@ -29,6 +29,7 @@ flowchart TD
     Parameters --> ShortHorizon{timeline < 3yr?}
     ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
+    Risk -->|risk_missing| ExitRisk([exit: risk failure message])
     Risk --> Allocation[allocation]
     Allocation -->|split unresolved| ExitAllocation([exit: allocation failure message])
     Allocation --> Contribution[contribution]
@@ -44,7 +45,7 @@ flowchart TD
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
-| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `ParametersPhaseOutput` → `RiskPhaseOutput` |
+| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `ParametersPhaseOutput` → `RiskPhaseResult` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseOutput` |
 | equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
@@ -99,7 +100,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
-**Default-on-unresolved is conservative, not moderate.** If the user gives a non-mappable answer twice, extraction defaults to `selfRatingScore: 1` → `conservative`. Under-sizing equity is recoverable; oversizing toward intolerance triggers the panic-sell behavior the phase is meant to prevent.
+**Hard-fail on unresolved.** If the user gives a non-mappable answer twice, the extraction returns `null` and `collectRisk` returns `{ status: "failure", code: "risk_missing" }`. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the T3.7 pattern for `timeline_missing`.
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 

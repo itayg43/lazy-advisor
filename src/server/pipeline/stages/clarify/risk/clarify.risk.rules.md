@@ -44,7 +44,7 @@ Mapping is deterministic and lives in code, not in prompts:
 
 ---
 
-## 3. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask once, then default to conservative
+## 3. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask once, then hard-fail
 
 **Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask once with the full scale (anchors included). For range or decimal inputs, briefly acknowledge that the scale needs a single whole number before re-presenting. This covers:
 
@@ -53,15 +53,13 @@ Mapping is deterministic and lives in code, not in prompts:
 - Non-numeric wording (`"I'd panic"`, `"absolutely not"`, `"buying opportunity"`)
 - Vague answers (`"I don't know"`, `"depends"`)
 
-If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently. The extraction step will default to 1 (`conservative`).
-
-**Why default conservative:** when willingness is genuinely unknown, the safer behavioral default is the lower-risk bucket. Defaulting to `moderate` would size a user toward an equity allocation they may not actually tolerate; defaulting to `conservative` errs toward a sizing they are more likely to hold through.
+If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently. The extraction returns null and the phase hard-fails with `risk_missing`; no default is applied.
 
 **Scenarios:**
 
 - `"7"` → re-ask → `"4"` → selfRatingScore: 4 → riskTolerance: aggressive
 - `"I'd panic"` → re-ask → `"1"` → selfRatingScore: 1 → riskTolerance: conservative
-- `"I don't know"` → re-ask → `"still not sure"` → end silently → selfRatingScore: 1 (default) → riskTolerance: conservative
+- `"I don't know"` → re-ask → `"still not sure"` → re-ask (budget allows) → `"I really can't"` → hard-fail → `{ status: "failure", code: "risk_missing" }`
 
 ---
 
@@ -83,12 +81,12 @@ If the user has already received one re-ask in this phase, do **not** re-ask aga
 - Initial ask + clarifying Q re-presentation + Step 3 re-ask = 3
 - Initial ask + clarifying Q re-presentation + valid answer = 2 (within budget)
 
-If all 3 turns are consumed and no valid score is given, the phase ends silently and the extractor defaults to 1 (`conservative`).
+If all 3 turns are consumed and no valid score is given, the phase ends silently. The extraction returns null and the phase hard-fails with `risk_missing`.
 
 **Scenarios:**
 
 - `"What does drop temporarily mean?"` → re-present → `"2-3"` → Step 3 re-ask → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
-- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → end silently → selfRatingScore: 1 (default) → riskTolerance: conservative
+- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "failure", code: "risk_missing" }`
 
 ---
 

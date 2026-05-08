@@ -13,6 +13,7 @@ import {
   INTAKE_REJECTION_DEFAULT_MESSAGE,
   INTAKE_REJECTION_MESSAGES,
   PROFILE_TRANSITION_MESSAGE,
+  RISK_EXIT_MESSAGE,
   SHORT_TIMELINE_EXIT_MESSAGE,
   TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
@@ -70,10 +71,19 @@ export const runClarifyStage = async (
     return null;
   }
 
-  const risk = await collectRisk(parameters, sendToUser, waitForResponse);
+  const riskResult = await collectRisk(parameters, sendToUser, waitForResponse);
+
+  if (riskResult.status === "failure") {
+    exhaustiveSwitch(riskResult.code, {
+      risk_missing: () => sendToUser(RISK_EXIT_MESSAGE),
+    });
+
+    return null;
+  }
+
   const allocationResult = await collectAllocation(
     parameters,
-    risk,
+    riskResult,
     sendToUser,
     waitForResponse,
   );
@@ -97,7 +107,7 @@ export const runClarifyStage = async (
 
   const profile = {
     ...parameters,
-    riskTolerance: risk.riskTolerance,
+    riskTolerance: riskResult.riskTolerance,
     ...allocation,
     ...contribution,
   };

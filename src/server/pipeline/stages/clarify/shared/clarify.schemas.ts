@@ -43,9 +43,20 @@ export const RiskScoreSchema = z.object({
   selfRatingScore: z.number().int().min(1).max(5),
 });
 
+// LLM-facing extraction schema — permits null when no valid 1–5 score was given.
+export const RiskScoreExtractionSchema = z.object({
+  selfRatingScore: z.number().int().min(1).max(5).nullable(),
+});
+
 export const RiskPhaseOutputSchema = RiskScoreSchema.extend({
   riskTolerance: RiskTolerance,
 });
+
+// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure code.
+export const RiskPhaseResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("success") }).merge(RiskPhaseOutputSchema),
+  z.object({ status: z.literal("failure"), code: z.literal("risk_missing") }),
+]);
 
 export const AllocationPhaseOutputSchema = z
   .object({

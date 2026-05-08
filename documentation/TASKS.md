@@ -1,13 +1,12 @@
 # Tasks
 
-**Current task:** T3.8
-**Next task:** T4.1
+**Current task:** T4.1
+**Next task:** T4.2
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T3.8 | Hard-fail on unresolved risk tolerance (remove silent conservative default) |
 | T4.1 | Refactor parameters to `askWithClassify` |
 | T4.2 | Refactor risk to `askWithClassify` |
 | T4.3 | Refactor contribution to `askWithClassify` |
@@ -15,35 +14,6 @@
 | T6 | Buffer |
 
 ## Task Notes
-
-### T3.8 — Risk: hard-fail on unresolved risk tolerance
-
-Currently, if the user cannot give a 1–5 score after two attempts, the extraction defaults to `selfRatingScore: 1` → `conservative`. This is a silent fallback that builds the plan on an assumed value. Risk tolerance is the other axis of the allocation anchor table; an assumed value produces a misleading allocation. Same principle as T3.7: required profile data must be explicitly collected.
-
-**Note on T4.2 ordering:** T4.2 will rewrite `collectRisk` (runPhaseLoop → askWithClassify). Implement T3.8 in the current implementation; T4.2 carries the hard-fail behavior forward in the new pattern — no rework required.
-
-**Changes:**
-- Risk extraction instructions — remove "default to 1"; return null when no valid score given
-- `RiskScoreSchema` — make `selfRatingScore` nullable in the extraction schema (new `RiskScoreExtractionSchema`)
-- Add `RiskPhaseResultSchema` — discriminated union `{ status: "success", ...RiskPhaseOutput } | { status: "failure", code: "risk_missing" }`
-- `collectRisk` — return `RiskPhaseResult` instead of `RiskPhaseOutput`
-- `clarify.stage.ts` — handle `risk_missing`: add `RISK_EXIT_MESSAGE` constant, send message, return null
-- `clarify.risk.rules.md` — update extraction behavior (no default)
-- ARCHITECTURE.md — remove "default-on-unresolved is conservative" note from risk section; add risk failure exit node to flowchart
-- Eval — update extraction cases (no default); add failure case
-
-**Files:**
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.types.ts`
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.rules.md`
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts`
-- `src/server/pipeline/stages/clarify/clarify.stage.ts`
-- `documentation/ARCHITECTURE.md`
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`
-
----
 
 ### T4.1 — Refactor parameters to `askWithClassify`
 
