@@ -19,6 +19,9 @@ const DebtSchema = AskWithClassifyBaseSchema.extend({
   answer: z.enum(["yes", "no"]).nullable(),
 });
 
+export type EmergencyFundClassify = z.infer<typeof EmergencyFundSchema>;
+export type DebtClassify = z.infer<typeof DebtSchema>;
+
 const EF_QUESTION =
   "Do you have an emergency fund (3–6 months of living expenses set aside in a liquid account)?";
 

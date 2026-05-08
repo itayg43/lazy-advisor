@@ -23,12 +23,6 @@ export const ParametersPhaseOutputSchema = z.object({
   timeline: TimelineBucket,
 });
 
-// LLM-facing schema — permits null amount/timeline that the phase converts into failure results.
-export const ParametersExtractionSchema = z.object({
-  amount: z.number().int().positive().max(MAX_AMOUNT).nullable(),
-  timeline: TimelineBucket.nullable(),
-});
-
 // Orchestrator-facing wrapper: the Output payload on success, or a graceful failure code.
 export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), parameters: ParametersPhaseOutputSchema }),

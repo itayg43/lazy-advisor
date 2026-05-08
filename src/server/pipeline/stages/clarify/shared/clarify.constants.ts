@@ -104,7 +104,6 @@ export const ALLOCATION_EXIT_MESSAGE =
   "It looks like we couldn't settle on an equity/buffer split that fits — feel free to come back when you've had time to think it over.";
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
-export const MAX_PARAMETERS_TOOL_CALLS = 5;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
 export const MAX_RISK_TOOL_CALLS = 3;
 export const MAX_ALLOCATION_TOOL_CALLS = 5;

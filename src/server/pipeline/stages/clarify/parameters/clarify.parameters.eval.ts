@@ -70,6 +70,27 @@ describe("collectParameters", () => {
     }
   });
 
+  // clarify.parameters.rules.md rule 2: timeline asked twice with no valid answer → failure
+  it("should return failure when timeline is never provided", async () => {
+    const responder = createTrackedResponder([
+      "₪40,000",
+      "I have no idea",
+      "I really can't say",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("failure");
+    if (result.status === "failure") {
+      expect(result.code).toBe("timeline_missing");
+    }
+  });
+
   // clarify.parameters.rules.md rule 3: agent presents four bucket options when asking timeline
   it("should present the four timeline bucket options when asking for timeline", async () => {
     const responder = createTrackedResponder(["₪50,000", "5-10 years"]);
@@ -141,27 +162,6 @@ describe("collectParameters", () => {
     expect(result.status).toBe("success");
     if (result.status === "success") {
       expect(result.parameters.timeline).toBe(TimelineBucket.enum["5–10 years"]);
-    }
-  });
-
-  // clarify.parameters.rules.md rule 2: timeline asked twice with no valid answer → failure
-  it("should return failure when timeline is never provided", async () => {
-    const responder = createTrackedResponder([
-      "₪40,000",
-      "I have no idea",
-      "I really can't say",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = result;
-
-    expect(result.status).toBe("failure");
-    if (result.status === "failure") {
-      expect(result.code).toBe("timeline_missing");
     }
   });
 
