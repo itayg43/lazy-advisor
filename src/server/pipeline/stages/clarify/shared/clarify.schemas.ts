@@ -23,16 +23,19 @@ export const ParametersPhaseOutputSchema = z.object({
   timeline: TimelineBucket,
 });
 
-// LLM-facing schema — permits null amount that the phase converts into the amount_missing failure result.
+// LLM-facing schema — permits null amount/timeline that the phase converts into failure results.
 export const ParametersExtractionSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT).nullable(),
-  timeline: TimelineBucket,
+  timeline: TimelineBucket.nullable(),
 });
 
 // Orchestrator-facing wrapper: the Output payload on success, or a graceful failure code.
 export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), parameters: ParametersPhaseOutputSchema }),
-  z.object({ status: z.literal("failure"), code: z.literal("amount_missing") }),
+  z.object({
+    status: z.literal("failure"),
+    code: z.union([z.literal("amount_missing"), z.literal("timeline_missing")]),
+  }),
 ]);
 
 // LLM extraction shape — riskTolerance is derived from selfRatingScore in TypeScript, not by the model.

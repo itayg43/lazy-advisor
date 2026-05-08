@@ -25,6 +25,7 @@ flowchart TD
 
     EfDebt --> Parameters[parameters]
     Parameters -->|amount failure| ExitAmount([exit: amount failure message])
+    Parameters -->|timeline failure| ExitTimeline([exit: timeline failure message])
     Parameters --> ShortHorizon{timeline < 3yr?}
     ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
@@ -84,9 +85,9 @@ An alternative considered: skip the classifier and expose handlers as LLM tools,
 
 (The `contradictory` classification is kept despite the risk phase's self-rating resolving the stated contradiction — surfacing the conflict up-front has educational value for beginner users.)
 
-### Parameters — amount failure exit
+### Parameters — hard exits on missing data
 
-`collectParameters` returns `{ status: "failure", code: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Amount is the only required parameter with a hard-fail exit: every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline has no equivalent hard exit because the extraction schema always resolves to a bucket (non-nullable), so the model always returns a valid timeline even from an ambiguous answer.
+`collectParameters` returns `{ status: "failure", code: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern (T3.7): if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "failure", code: "timeline_missing" }` and the stage exits. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
 
 ### Short-horizon early exit (timeline < 3 years)
 

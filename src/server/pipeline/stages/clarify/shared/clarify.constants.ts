@@ -91,6 +91,9 @@ export const PROFILE_TRANSITION_MESSAGE =
 export const AMOUNT_EXIT_MESSAGE =
   "To build your investment plan I need a specific amount — feel free to come back when you have a figure in mind.";
 
+export const TIMELINE_EXIT_MESSAGE =
+  "To build your investment plan I need a sense of when you'd like to use the money — feel free to come back when you have a timeframe in mind.";
+
 export const SHORT_TIMELINE_EXIT_MESSAGE =
   "For money you plan to use within 3 years, ETFs carry too much timing risk — a market drop right before you need the funds may be hard to recover from in time. A money market fund is a better fit: lower risk, stays accessible, and still earns meaningful returns. When you're ready to invest money for a longer horizon, come back and we'll build an ETF plan.";
 
