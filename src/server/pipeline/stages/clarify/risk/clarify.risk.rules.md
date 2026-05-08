@@ -53,7 +53,7 @@ Mapping is deterministic and lives in code, not in prompts:
 - Non-numeric wording (`"I'd panic"`, `"absolutely not"`, `"buying opportunity"`)
 - Vague answers (`"I don't know"`, `"depends"`)
 
-If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently. The extraction returns null and the phase hard-fails with `risk_missing`; no default is applied.
+If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently (make zero tool calls). The extraction returns null and the phase hard-fails with `risk_missing`; no default is applied.
 
 **Scenarios:**
 
