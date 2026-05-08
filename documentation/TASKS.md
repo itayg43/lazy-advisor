@@ -1,16 +1,16 @@
 # Tasks
 
-**Current task:** T5 (design pass — preparatory, no implementation yet)
-**Next task:** T3.7
+**Current task:** T3.7
+**Next task:** T3.8
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T5 | Equity (design pass in progress — preparatory) |
 | T3.7 | Hard-fail on missing timeline (same pattern as `amount_missing`) |
 | T3.8 | Hard-fail on unresolved risk tolerance (remove silent conservative default) |
 | T4 | Refactor risk + contribution to `askWithClassify` |
+| T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
@@ -91,23 +91,17 @@ The risk and contribution phases each ask a single fixed question and classify t
 
 Resolves which equity instruments fill the equity bucket and how they split within it. Does not negotiate the equity percentage — that is allocation's job. `allocation.equityPercentage` is passed as grounding context.
 
-#### Design pass — in progress (preparatory, before T3.7 implementation)
+#### Design pass — complete (preparatory; rules file + implementation still pending)
 
-Following the T6 pattern: full design pass using lazyinvestor.co.il source articles, before implementation. Goals:
-
-1. **Validate existing decisions** (output schema, classify-then-route architecture, anchor decisions on TLV-125 / NASDAQ-100 / sector ETFs) against blog content. Surface contradictions or refinements. The `/portfolio/` article's holy-trinity recommendation (60% S&P 500 / 25% Europe / 15% Emerging Markets) and global-diversification preference may have implications for the `no_equity_stated` default path.
-2. **Source unread articles** — many on the lazyinvestor blog haven't been read yet. Likely starting points: `/portfolio/` (re-read for equity specifics), `/etf/` (Irish vs US-listed ETFs), `/broker/` (broker comparison), `/seker/` (most-viewed; opening a portfolio), plus any equity-specific articles surfaced via category browsing. Use the existing `reference_lazyinvestor_sources` memory entry as a starting index.
-3. **Draft `clarify.equity.knowledge.md`** — beginner-friendly educational content covering canonical instruments (S&P 500, FTSE All-World / MSCI World, NASDAQ-100, TLV-125, sector ETFs) plus tax/currency/Irish-vs-US-listed context. Same staleness rules as T6 buffer knowledge file: no specific tickers, no fund-specific fees, no specific yields, only mechanisms and direction.
-4. **Update T5 task notes** with any architectural refinements that surface during research; resolve open design questions before implementation begins.
-
-Defer T3.7 implementation until T5 design pass is complete.
+Followed the T6 pattern: full design pass using lazyinvestor.co.il source articles, before implementation. Knowledge file landed; rules file is the next preparatory step before implementation begins.
 
 #### Output schema
 
 ```ts
 type EquityAllocation = {
-  name: string; // canonical for known anchors: "S&P 500", "FTSE All-World",
-  // "MSCI World", "NASDAQ-100", "TLV-125". Free-form for sector ETFs.
+  name: string; // canonical for known anchors: "Single global fund" (FTSE All-World /
+  // MSCI ACWI / MSCI World), "S&P 500", "NASDAQ-100", "TLV-125", "Russell 2000".
+  // "Holy Trinity" expands into three separate allocations.
   percentage: number; // integer 0–100; within-equity split (sums to 100)
 };
 
@@ -120,28 +114,49 @@ Zod: `allocations.length >= 1`, each `percentage` integer in [0, 100], sum === 1
 
 Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to `clarify/shared/clarify.schemas.ts`. Add `equity: EquityAllocation[]` to `UserProfileSchema`.
 
-#### Conversation pattern — single flow
+#### Anchor instruments — five canonical options
 
-No classifier. T5 runs as a single conversation flow that handles all cases inline:
+Two cores (typically the primary equity holding):
 
-- **Opener:** if the user has not signaled any equity preference, present the canonical options (broad-market global single-fund vs holy-trinity 3-fund split, with TLV-125 as the optional Israeli component). If the user volunteers a directional signal mid-conversation, handle it inline.
-- **Directional signals:**
-  - "Tech" → NASDAQ-100 as the primary answer; sector ETFs mentioned as a more concentrated alternative.
-  - "Global" / "diversified" → FTSE All-World or MSCI World as primary; holy-trinity split (60% S&P 500 / 25% Europe / 15% EM) mentioned as the more granular alternative.
-  - "US-only" / "S&P 500" → honor it; mention global diversification once as the lazy-investor default but accept the user's preference.
-- **Single instrument named** (e.g., "FTSE All-World"): honor as 100% allocation. Do not push a complement.
-- **Multiple instruments named without percentages**: ask for the split.
+1. **Single global fund** — FTSE All-World / MSCI ACWI / MSCI World. EM-or-not is the primary decision axis; FTSE All-World is the pragmatic default.
+2. **S&P 500** — defensible as a sole holding via internal sector + multinational diversification, with explicit pension-overlap caveat.
+
+Three satellites (typically a small allocation alongside a core; user can pick any as 100% with a sanity-check turn):
+
+3. **NASDAQ-100** — concentrated tech bet; ~80% drawdown / ~14yr recovery in dot-com bust.
+4. **TLV-125** — small home-market complement; small-economy concentration risk.
+5. **Russell 2000** — US small-cap completer; rate-sensitive; contested small-cap premium.
+
+**Holy Trinity 3-fund split** (60% S&P 500 + 25% Europe + 15% EM) is documented in the knowledge file as an alternative for users who want explicit regional weights. **The phase does not propose it proactively** — only surfaces it on request. Sector ETFs are explicitly out of scope (knowledge file's "what we don't cover").
+
+#### Conversation pattern — single flow, cold-open 2 cores + post-core tilt offer
+
+No classifier. T5 runs as a single conversation flow:
+
+- **Cold-open:** present the two cores (single global fund vs S&P 500) with one-line descriptions and the tradeoff between them (global diversification vs US-only with pension-overlap caveat). Do not lead with a strong default. The three satellites and Holy Trinity are not in the cold-open.
+- **After the user picks a core:** offer the tilt question — "want to add a small satellite (NASDAQ-100 / TLV-125 / Russell 2000), or keep it as a single core holding?" Most users will keep it single; the tilt offer is one explicit branch rather than overwhelming the cold-open.
+- **Directional signals mid-conversation** (e.g., user names "tech" or "Israeli market" up front): handle inline by jumping to the named satellite as the primary answer, with the appropriate sanity-check on concentration.
+- **User names a US-listed instrument** (VOO, QQQ, SPY, VTI): surface the four-factor warning once (dividend withholding, distribution-vs-accumulating, US estate exposure, currency friction), then accept the user's final answer.
+- **Multiple instruments named without percentages:** ask for the split.
 - **Resolution:** confirm the final `EquityAllocation[]` (instruments + within-equity split) before returning.
 
-Anchor decisions (preserved from the dropped 4-case design):
-- TLV-125 is always available as the Israeli-market anchor option, mentioned when relevant — not aggressively pushed.
-- For tech direction: NASDAQ-100 is the primary answer; sector ETFs are the concentrated alternative.
-- **No risk-based instrument filtering.** Allocation sizing is the behavioral safeguard; the equity instrument choice is a preference question.
+Educational Q&A is supported during the loop — the user may ask clarifying questions about any anchor before committing. Knowledge content lives in `clarify.equity.knowledge.md` and is loaded into the system prompt at module init via `readFileSync`, mirroring the T6 buffer pattern.
+
+**Sanity-check pattern (mirrors allocation Rule 3).** When a user picks a satellite as 100% (NASDAQ-100, TLV-125, or Russell 2000 alone) — or any choice that takes on outsized concentration — surface the concentration tradeoff once with concrete drawdown framing where available (NASDAQ ~80% / ~14yr; Russell 40–50% in 2008/2022; TLV-125 small-economy risk), then accept whatever the user decides. Do not re-challenge.
+
+**Hard-fail on indecision (NOT soft-default).** Structurally different from T6 buffer's soft-default to קרן כספית. Equity choice is more consequential — a user who doesn't believe in their pick is more likely to panic-sell during a 30–50% drawdown, locking in losses. If the user can't converge after the natural conversation budget, deepen the educational layer first; if still unresolved, hard-fail rather than default. Aligns with T3.7/T3.8 hard-fail philosophy on profile-critical inputs.
+
+**No risk-based instrument filtering.** Allocation sizing is the behavioral safeguard; the equity instrument choice is a preference question.
 
 #### Design decisions
 
 1. **Classifier dropped — single flow instead.** The originally-planned 4-case classifier (`resolved` / `split_missing` / `no_specific_instrument` / `no_equity_stated`) cannot run as designed: it required goal-text classification, but goal is consumed by intake and not propagated to T5 (consistent with every other post-intake phase). After dropping `resolved` and `split_missing` as tail cases not worth supporting in beginner scope, the remaining binary (directional signal vs nothing stated) is small enough to handle inline. Removes a classifier LLM call, a separate prompt, and classifier eval coverage.
 2. **No goal pass-through.** Aligned with the rest of the pipeline. If T5 evals later show meaningful UX cost from losing the goal's equity hints, revisit with goal as ambient context (not for routing — just for the LLM to reference).
+3. **Cold-open is 2 cores, not all 5.** Presenting all five anchors upfront is too much for a beginner. The 2-cores-then-tilt-offer pattern keeps the initial decision tractable while still exposing satellites for users who want them.
+4. **Holy Trinity not in the cold-open.** A single global fund delivers very similar exposure with much less operational overhead. The Holy Trinity is in the knowledge file for users who specifically ask, but the phase does not propose it.
+5. **Hard-fail rather than soft-default on indecision.** Intentionally inconsistent with T6 buffer's soft-default to קרן כספית. The equity drawdown magnitudes are large enough that a user who picks something they don't believe in is at meaningful risk of panic-selling — hard-fail is the safer outcome.
+6. **Pension-overlap caveat surfaced once when user picks S&P 500 alone.** Many Israelis have actively chosen `מסלול S&P 500` in their pension or `קרן השתלמות` (popular opt-in since ~2020). Self-directed S&P 500 on top can mean concentration on top of concentration. Surface once, accept the user's final answer.
+7. **Four-factor warning for US-listed instruments.** Dividend withholding (25% vs 15%/0% for Irish), distribution-vs-accumulating tax timing, US estate exposure ($60K threshold), currency friction. Surface once when the user names a US-listed instrument (VOO, QQQ, SPY, VTI), accept their final answer. US-listed has small structural advantages (slightly lower fees, tighter spreads) acknowledged in the knowledge file.
 
 #### Context string format
 
@@ -156,7 +171,8 @@ Plans to contribute periodically: yes | no (lump-sum investment)
 #### Files
 
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.ts`
-- `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md`
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md` — behavior rules (cold-open, tilt offer, sanity-check, hard-fail, four-factor warning, pension caveat, tool-call budget)
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.knowledge.md` — educational reference content (✅ created as prep work)
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts`
 - `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `EquityAllocationSchema`, `EquityPhaseOutputSchema`
 - `src/server/schemas/pipeline.schemas.ts` — add `equity` field
