@@ -1,50 +1,26 @@
 # Tasks
 
-**Current task:** T3.7
-**Next task:** T3.8
+**Current task:** T3.8
+**Next task:** T4.1
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T3.7 | Hard-fail on missing timeline (same pattern as `amount_missing`) |
 | T3.8 | Hard-fail on unresolved risk tolerance (remove silent conservative default) |
-| T4 | Refactor risk + contribution to `askWithClassify` |
+| T4.1 | Refactor parameters to `askWithClassify` |
+| T4.2 | Refactor risk to `askWithClassify` |
+| T4.3 | Refactor contribution to `askWithClassify` |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
 
-### T3.7 — Parameters: hard-fail on missing timeline
-
-Currently, rule 2 of the parameters phase accepts "best available" on the second timeline attempt — if the user is still vague, the extraction silently maps it to a bucket with no documented fallback value. Timeline is one of the two axes of the allocation anchor table and determines the short-horizon exit; a wrong timeline produces a wrong plan. Same principle as amount: if we cannot collect it reliably, abort rather than proceed on a guess.
-
-**Changes:**
-- `ParametersExtractionSchema` — add `nullable()` to `timeline` (mirrors `amount`)
-- `ParametersPhaseResultSchema` — add `code: "timeline_missing"` to the failure union
-- Parameters prompt — change rule 2: on second vague/missing timeline response, end the phase (same two-try rule as amount, not "accept best available")
-- `clarify.parameters.rules.md` — update rule 2 and rule 4 to cover timeline failure
-- `clarify.stage.ts` — handle `timeline_missing`: add `TIMELINE_EXIT_MESSAGE` constant, send message, return null
-- ARCHITECTURE.md — add timeline failure exit node to flowchart
-- Eval — add case for `timeline_missing`
-
-**Files:**
-- `src/server/pipeline/stages/clarify/parameters/clarify.parameters.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts`
-- `src/server/pipeline/stages/clarify/parameters/clarify.parameters.rules.md`
-- `src/server/pipeline/stages/clarify/parameters/clarify.parameters.eval.ts`
-- `src/server/pipeline/stages/clarify/clarify.stage.ts`
-- `documentation/ARCHITECTURE.md`
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.parameters.eval.ts`
-
----
-
 ### T3.8 — Risk: hard-fail on unresolved risk tolerance
 
 Currently, if the user cannot give a 1–5 score after two attempts, the extraction defaults to `selfRatingScore: 1` → `conservative`. This is a silent fallback that builds the plan on an assumed value. Risk tolerance is the other axis of the allocation anchor table; an assumed value produces a misleading allocation. Same principle as T3.7: required profile data must be explicitly collected.
 
-**Note on T4 ordering:** T4 will rewrite `collectRisk` (runPhaseLoop → askWithClassify). Implement T3.8 in the current implementation; T4 carries the hard-fail behavior forward in the new pattern — no rework required.
+**Note on T4.2 ordering:** T4.2 will rewrite `collectRisk` (runPhaseLoop → askWithClassify). Implement T3.8 in the current implementation; T4.2 carries the hard-fail behavior forward in the new pattern — no rework required.
 
 **Changes:**
 - Risk extraction instructions — remove "default to 1"; return null when no valid score given
@@ -69,21 +45,63 @@ Currently, if the user cannot give a 1–5 score after two attempts, the extract
 
 ---
 
-### T4 — Refactor risk + contribution to `askWithClassify`
+### T4.1 — Refactor parameters to `askWithClassify`
 
-The risk and contribution phases each ask a single fixed question and classify the response — the same shape as ef-debt. Both currently use `runPhaseLoop`, which hands the LLM full orchestration control despite not needing it. Migration to `askWithClassify` makes state explicit in TypeScript, reduces unnecessary LLM calls, and tightens eval assertions (no conversation history to manage).
+Replace `runPhaseLoop` with two sequential `askWithClassify` calls: one classifying `{ amount: number | null }`, one classifying `{ timeline: TimelineBucket | null }`. The two-try rule becomes a code-level retry loop; `amount_missing` and `timeline_missing` failures are returned from TypeScript, not inferred from a post-loop extraction. Eliminates the loop early-termination and extraction hallucination flakiness observed in evals.
 
-**Sections:**
+**Changes:**
+- Replace `runPhaseLoop` + `runPhaseExtraction` with two `askWithClassify` calls
+- Remove `PARAMETERS_PROMPT` and `PARAMETERS_EXTRACTION_INSTRUCTIONS`; replace with per-field question strings and classify schemas
+- Remove `ParametersExtractionSchema` and `ParametersExtraction` type; replace with per-field classify schemas
+- Two-try retry logic moves to TypeScript code
+- Update ARCHITECTURE.md boundary table (parameters moves from `runPhaseLoop` to `askWithClassify`)
+- Update `clarify.parameters.eval.ts`
 
-1. **Risk** — replace `runPhaseLoop` with a fixed 1–5 scale question + `askWithClassify` classifying `{ selfRatingScore: 1 | 2 | 3 | 4 | 5 }`. Post-classification `riskTolerance` derivation stays in TypeScript. Update `clarify.risk.eval.ts`.
-2. **Contribution** — replace `runPhaseLoop` with a fixed opening question + `askWithClassify` classifying `{ plansToContribute: boolean }`. Update `clarify.contribution.eval.ts`.
+**Files:**
+- `src/server/pipeline/stages/clarify/parameters/clarify.parameters.ts`
+- `src/server/pipeline/stages/clarify/parameters/clarify.parameters.eval.ts`
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts`
+- `src/server/pipeline/stages/clarify/shared/clarify.types.ts`
+- `documentation/ARCHITECTURE.md`
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.parameters.eval.ts`
+
+---
+
+### T4.2 — Refactor risk to `askWithClassify`
+
+Replace `runPhaseLoop` with a fixed 1–5 scale question + `askWithClassify` classifying `{ selfRatingScore: 1 | 2 | 3 | 4 | 5 | null }`. Post-classification `riskTolerance` derivation stays in TypeScript. The T3.8 hard-fail behavior (risk_missing on null) carries forward into the new pattern unchanged.
+
+**Changes:**
+- Replace `runPhaseLoop` + `runPhaseExtraction` with a single `askWithClassify` call
+- Remove the loop-based prompt; replace with a question string and classify schema
+- Remove `RiskScoreExtractionSchema` and its inferred type (added by T3.8); replace with classify schema
+- Update `clarify.risk.eval.ts`
 
 **Files:**
 - `src/server/pipeline/stages/clarify/risk/clarify.risk.ts`
-- `src/server/pipeline/stages/clarify/contribution/clarify.contribution.ts`
-- Evals for both phases
+- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts`
+- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts`
+- `src/server/pipeline/stages/clarify/shared/clarify.types.ts`
 
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`, `npm run test:evals -- clarify.contribution.eval.ts`
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`
+
+---
+
+### T4.3 — Refactor contribution to `askWithClassify`
+
+Replace `runPhaseLoop` with a fixed opening question + `askWithClassify` classifying `{ plansToContribute: boolean }`.
+
+**Changes:**
+- Replace `runPhaseLoop` + `runPhaseExtraction` with a single `askWithClassify` call
+- Remove the loop-based prompt; replace with a question string and classify schema
+- Update `clarify.contribution.eval.ts`
+
+**Files:**
+- `src/server/pipeline/stages/clarify/contribution/clarify.contribution.ts`
+- `src/server/pipeline/stages/clarify/contribution/clarify.contribution.eval.ts`
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.contribution.eval.ts`
 
 ---
 
@@ -266,6 +284,6 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 
   **Also generalize `runPhaseLoop` / `collectToolOutputs` at the same time.** Today `collectToolOutputs` hardcodes the allowed tool name (`ASK_USER_TOOL.name`) and dispatches directly to `handleAskUser`. With a second tool, replace both with a tool-handler registry (`{ [name]: handler }`) keyed by tool name; the loop validates against the registry's keys and dispatches via the map. Two concrete tools provides the second example needed to design the registry shape correctly — doing it speculatively with one tool would just shuffle the hardcode up one level.
 
-- **Hint/example at start of conversation.** Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal. Reduces unnecessary clarification turns in `collectParameters`.
+- **Hint/example at start of conversation.** Before the first `ask_user` call, send a brief framing message setting expectations and nudging the user toward a well-formed goal. Reduces unnecessary clarification turns by setting pipeline context before the first question.
 
 - **Disambiguate "no buffer" opt-out path in T6.** MVP defaults to Option A (external — buffer money stays outside the plan, allocation unchanged) when the user opts out of all three buffer instruments. A second valid sub-case exists: the user wants the buffer money rolled into equity, with allocation updated to 100/0. Real eval data will tell us how often users mean each. If non-trivial, add a disambiguating rule to T6: when the user signals "no buffer instrument," ask one question to choose between *external* and *roll into equity*. Schema change is non-breaking — `BufferChoice` already supports both via the `reason` field (`"external emergency fund"` vs `"rolled into equity"`). Possibly mirror allocation's sanity-check language for extreme roll-ins (e.g., conservative user opting to roll 85% buffer into equity).
