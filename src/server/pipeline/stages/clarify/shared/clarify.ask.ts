@@ -14,6 +14,14 @@ export class RetriesExhaustedError extends Error {
     super(
       `askWithClassify failed to converge after ${retries + 1} attempts for: "${question}"`,
     );
+    this.name = "RetriesExhaustedError";
+  }
+}
+
+export class MissingClarificationMessageError extends Error {
+  constructor() {
+    super("askWithClassify: clarificationNeeded=true but clarificationMessage is null");
+    this.name = "MissingClarificationMessageError";
   }
 }
 
@@ -82,14 +90,19 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
       return output;
     }
 
+    if (!clarificationMessage) {
+      throw new MissingClarificationMessageError();
+    }
+
+    history.push({ role: "assistant", content: clarificationMessage });
+
     // Don't send clarification on the last attempt — no next turn to receive it.
-    if (clarificationMessage && attempt < retries) {
+    if (attempt < retries) {
       logger.debug("askWithClassify sending clarification", {
         clarificationMessage,
       });
 
       sendToUser(clarificationMessage);
-      history.push({ role: "assistant", content: clarificationMessage });
     }
   }
 
