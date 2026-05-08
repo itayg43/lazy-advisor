@@ -9,11 +9,13 @@ import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAsk");
 
-const ASK_WITH_CLASSIFY_DEFAULT_RETRIES = 2;
-
-type AskWithClassifyResult<TOutput> =
-  | { status: "success"; output: TOutput }
-  | { status: "failure"; code: "retries_exhausted" };
+export class RetriesExhaustedError extends Error {
+  constructor(question: string, retries: number) {
+    super(
+      `askWithClassify failed to converge after ${retries + 1} attempts for: "${question}"`,
+    );
+  }
+}
 
 export const AskWithClassifyBaseSchema = z.object({
   clarificationNeeded: z.boolean(),
@@ -24,70 +26,6 @@ export const AskWithClassifyBaseSchema = z.object({
 
 type AskWithClassifyBase = z.infer<typeof AskWithClassifyBaseSchema>;
 
-type ClassifyInstructionExample = {
-  userInput: string;
-  clarificationNeeded: boolean;
-  note: string;
-};
-
-type BuildClassifyInstructionsParams = {
-  question: string;
-  answerOptions: { value: string; description: string }[];
-  keyFacts: string;
-  examples?: ClassifyInstructionExample[];
-};
-
-export const buildClassifyInstructions = ({
-  question,
-  answerOptions,
-  keyFacts,
-  examples,
-}: BuildClassifyInstructionsParams): string => {
-  const answerRules = answerOptions
-    .map(({ value, description }) => `- "${value}" — ${description}`)
-    .join("\n");
-
-  const examplesSection =
-    examples && examples.length > 0
-      ? [
-          "",
-          "# Examples",
-          "",
-          ...examples.map(
-            ({ userInput, clarificationNeeded, note }) =>
-              `User: "${userInput}"\n→ clarificationNeeded: ${clarificationNeeded} — ${note}`,
-          ),
-        ].join("\n")
-      : "";
-
-  return `# Role and Objective
-You are classifying a user's response to: "${question}"
-Populate the three output fields based on the rules below.
-
-# Output Rules
-
-**answer**
-${answerRules}
-- null  — when clarificationNeeded is true
-
-**clarificationNeeded**
-- true — user asked a question instead of answering (e.g. "what does that mean?", "can you explain?")
-- true — user gave an ambiguous or unclear answer (e.g. "I have some savings", "kind of?")
-- true — user deflected or went off-topic (e.g. "skip this", "I don't want to answer")
-- true — user gave an answer but also asked a follow-up question (e.g. "Yes, but does X count?")
-- false — user gave a clear yes or no
-
-**clarificationMessage** (only when clarificationNeeded is true)
-- Must be non-null when clarificationNeeded is true.
-- Use the conversation history to understand what the user said or asked — tailor your response accordingly.
-- If user asked a question: answer it directly using the key facts below
-- If user gave an ambiguous answer: ask them to clarify
-- If user deflected or went off-topic: redirect them back to the question
-- If user gave an answer but also asked a question: answer their question first, then ask them to confirm their answer
-- Key facts: ${keyFacts}
-- Keep it to 1–2 sentences. Do not re-state the original question.${examplesSection}`;
-};
-
 type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
   question: string;
   classifyInstructions: string;
@@ -96,12 +34,12 @@ type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
   waitForResponse: WaitForResponse;
   model: ResponsesModel;
   effort: ReasoningEffort;
-  retries?: number;
+  retries: number;
 };
 
 export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   params: AskWithClassifyParams<TOutput>,
-): Promise<AskWithClassifyResult<TOutput>> => {
+): Promise<TOutput> => {
   const {
     question,
     classifyInstructions,
@@ -110,7 +48,7 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     waitForResponse,
     model,
     effort,
-    retries = ASK_WITH_CLASSIFY_DEFAULT_RETRIES,
+    retries,
   } = params;
 
   logger.info("askWithClassify asking", { question });
@@ -141,10 +79,11 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     });
 
     if (!clarificationNeeded) {
-      return { status: "success", output };
+      return output;
     }
 
-    if (clarificationMessage) {
+    // Don't send clarification on the last attempt — no next turn to receive it.
+    if (clarificationMessage && attempt < retries) {
       logger.debug("askWithClassify sending clarification", {
         clarificationMessage,
       });
@@ -156,5 +95,5 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
 
   logger.warn("askWithClassify retries exhausted", { question });
 
-  return { status: "failure", code: "retries_exhausted" };
+  throw new RetriesExhaustedError(question, retries);
 };

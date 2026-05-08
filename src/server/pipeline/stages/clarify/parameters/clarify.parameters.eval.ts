@@ -89,6 +89,9 @@ describe("collectParameters", () => {
     if (result.status === "failure") {
       expect(result.code).toBe("timeline_missing");
     }
+
+    // No clarification sent after the last user response — dead-end guard.
+    expect(responder.transcript[responder.transcript.length - 1].role).toBe("user");
   });
 
   // clarify.parameters.rules.md rule 3: agent presents four bucket options when asking timeline
@@ -180,5 +183,8 @@ describe("collectParameters", () => {
     if (result.status === "failure") {
       expect(result.code).toBe("amount_missing");
     }
+
+    // No clarification sent after the last user response — dead-end guard.
+    expect(responder.transcript[responder.transcript.length - 1].role).toBe("user");
   });
 });

@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-05-08T22:10:53.085Z | Commit: 0d82925
+Timestamp: 2026-05-08T22:32:15.833Z | Commit: 110f683
 
 ---
 
@@ -29,7 +29,7 @@ status: success | amount: 30000 | timeline: 10+ years
 
 **User:** long-term
 
-**Agent:** “Long-term” is a bit broad—can you choose one of these: under 3 years, 3–5 years, 5–10 years, or 10+ years?
+**Agent:** To help place you correctly, which option best fits your long-term plan: under 3 years, 3–5 years, 5–10 years, or 10+ years?
 
 **User:** I think 10-15 years
 
@@ -49,11 +49,9 @@ status: success | amount: 20000 | timeline: 10+ years
 
 **User:** I have no idea
 
-**Agent:** No worries—can you choose the closest option: under 3 years, 3–5 years, 5–10 years, or 10+ years?
+**Agent:** No problem—can you choose one option: under 3 years, 3–5 years, 5–10 years, or 10+ years?
 
 **User:** I really can't say
-
-**Agent:** That’s totally okay—please pick the closest category for now: under 3 years, 3–5 years, 5–10 years, or 10+ years.
 
 **Output:**
 status: failure | code: timeline_missing
@@ -131,11 +129,9 @@ status: success | amount: 20000 | timeline: 5–10 years
 
 **User:** I'm not sure yet
 
-**Agent:** No worries—could you share a specific amount in shekels when you’re ready? Even an estimate like ₪5,000–₪20,000 works.
+**Agent:** No problem—could you share a specific investment amount in shekels when you know it (e.g., ₪10,000)?
 
 **User:** I really don't know
-
-**Agent:** No problem—could you provide a specific estimated amount in shekels (e.g., ₪10,000)?
 
 **Output:**
 status: failure | code: amount_missing
