@@ -92,7 +92,20 @@ Set to null when clarificationNeeded is true.
 - If user gave a vague answer: ask them to pick from the four options:
 ${TIMELINE_BUCKET_LIST}
 - If user deflected: redirect back to the question.
-- Keep it to 1–2 sentences. Do not re-state the original question.`;
+- Keep it to 1–2 sentences. Do not re-state the original question.
+
+# Examples
+
+User: "long-term"
+→ clarificationNeeded: true — ask to pick from four options (e.g. "Could you pick one of these: under 3 years, 3–5 years, 5–10 years, or 10+ years?")
+User: "5 years"
+→ clarificationNeeded: false — maps to "3–5 years" (boundary: shorter bucket wins)
+User: "10 years"
+→ clarificationNeeded: false — maps to "5–10 years" (boundary: shorter bucket; "10+ years" requires strictly more than 10)
+User: "around 10 years or maybe more"
+→ clarificationNeeded: false — approximate is specific enough, maps to "10+ years"
+User: "why does this matter?"
+→ clarificationNeeded: true — answer briefly then ask (e.g. "Your timeline determines how much risk your portfolio can absorb — could you share roughly how many years you plan to invest?")`;
 
 export const collectParameters = async (
   sendToUser: SendToUser,

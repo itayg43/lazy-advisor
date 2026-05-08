@@ -60,6 +60,7 @@ Populate the three output fields based on the rules below.
 - If user gave an answer but also asked a question: answer their question first, then ask them to confirm their answer
 - Key facts: An emergency fund is 3–6 months of living expenses in a liquid, accessible account (e.g. savings or checking). Retirement accounts, investments, or illiquid assets do not qualify.
 - Keep it to 1–2 sentences. Do not re-state the original question.
+
 # Examples
 
 User: "what counts as an emergency fund?"
@@ -100,6 +101,7 @@ Populate the three output fields based on the rules below.
 - If user gave an answer but also asked a question: answer their question first, then ask them to confirm their answer
 - Key facts: High-interest debt means credit card balances, personal loans, or similar at 15–25%+ APR. Mortgages do not count.
 - Keep it to 1–2 sentences. Do not re-state the original question.
+
 # Examples
 
 User: "does my mortgage count?"
