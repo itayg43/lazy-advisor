@@ -109,15 +109,12 @@ User: "why does this matter?"
 User: "skip"
 → clarificationNeeded: true — redirect directly, no softening (e.g. "I need your timeline to continue — could you pick one: under 3 years, 3–5 years, 5–10 years, or 10+ years?")`;
 
-export const collectParameters = async (
+const askAmount = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<ParametersPhaseResult> => {
-  logger.info("Starting parameters phase");
-
-  let amountOutput: AmountClassify;
+): Promise<number | null> => {
   try {
-    amountOutput = await askWithClassify({
+    const output = await askWithClassify({
       question: AMOUNT_QUESTION,
       classifyInstructions: AMOUNT_CLASSIFY_INSTRUCTIONS,
       schema: AmountClassifySchema,
@@ -127,27 +124,29 @@ export const collectParameters = async (
       effort: "low",
       followUps: 1,
     });
-  } catch (err) {
-    if (err instanceof ConvergenceFailedError) {
-      logger.info("Parameters phase failed — amount follow-ups exhausted");
 
-      return { status: "failure", code: "amount_missing" };
+    if (output.amount === null) {
+      logger.warn("askAmount — null after convergence");
     }
 
-    throw err;
+    return output.amount;
+  } catch (error) {
+    if (error instanceof ConvergenceFailedError) {
+      logger.error("askAmount — follow-ups exhausted", error);
+
+      return null;
+    }
+
+    throw error;
   }
+};
 
-  if (amountOutput.amount === null) {
-    logger.info("Parameters phase failed — amount null after convergence");
-
-    return { status: "failure", code: "amount_missing" };
-  }
-
-  const { amount } = amountOutput;
-
-  let timelineOutput: TimelineClassify;
+const askTimeline = async (
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<z.infer<typeof TimelineBucket> | null> => {
   try {
-    timelineOutput = await askWithClassify({
+    const output = await askWithClassify({
       question: TIMELINE_QUESTION,
       classifyInstructions: TIMELINE_CLASSIFY_INSTRUCTIONS,
       schema: TimelineClassifySchema,
@@ -157,24 +156,34 @@ export const collectParameters = async (
       effort: "low",
       followUps: 1,
     });
-  } catch (err) {
-    if (err instanceof ConvergenceFailedError) {
-      logger.info("Parameters phase failed — timeline follow-ups exhausted");
 
-      return { status: "failure", code: "timeline_missing" };
+    if (output.timeline === null) {
+      logger.warn("askTimeline — null after convergence");
     }
 
-    throw err;
+    return output.timeline;
+  } catch (error) {
+    if (error instanceof ConvergenceFailedError) {
+      logger.error("askTimeline — follow-ups exhausted", error);
+
+      return null;
+    }
+
+    throw error;
   }
+};
 
-  if (timelineOutput.timeline === null) {
-    logger.info("Parameters phase failed — timeline null after convergence");
+export const collectParameters = async (
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<ParametersPhaseResult> => {
+  logger.info("Starting parameters phase");
 
-    return { status: "failure", code: "timeline_missing" };
-  }
+  const amount = await askAmount(sendToUser, waitForResponse);
+  if (amount === null) return { status: "failure", code: "amount_missing" };
 
-  return {
-    status: "success",
-    parameters: { amount, timeline: timelineOutput.timeline },
-  };
+  const timeline = await askTimeline(sendToUser, waitForResponse);
+  if (timeline === null) return { status: "failure", code: "timeline_missing" };
+
+  return { status: "success", parameters: { amount, timeline } };
 };
