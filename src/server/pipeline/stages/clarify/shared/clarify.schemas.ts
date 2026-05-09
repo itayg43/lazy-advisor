@@ -32,14 +32,9 @@ export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
   }),
 ]);
 
-// LLM extraction shape — riskTolerance is derived from selfRatingScore in TypeScript, not by the model.
+// riskTolerance is derived from selfRatingScore in TypeScript, not by the model.
 export const RiskScoreSchema = z.object({
   selfRatingScore: z.number().int().min(1).max(5),
-});
-
-// LLM-facing extraction schema — permits null when no valid 1–5 score was given.
-export const RiskScoreExtractionSchema = z.object({
-  selfRatingScore: z.number().int().min(1).max(5).nullable(),
 });
 
 export const RiskPhaseOutputSchema = RiskScoreSchema.extend({

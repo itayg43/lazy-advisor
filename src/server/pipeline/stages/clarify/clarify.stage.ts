@@ -74,7 +74,7 @@ export const runClarifyStage = async (
       return null;
     }
 
-    const riskResult = await collectRisk(parameters, sendToUser, waitForResponse);
+    const riskResult = await collectRisk(sendToUser, waitForResponse);
 
     if (riskResult.status === "failure") {
       exhaustiveSwitch(riskResult.reason, {
