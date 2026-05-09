@@ -7,22 +7,14 @@ import {
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
-import type {
-  ParametersPhaseOutput,
-  RiskPhaseResult,
-} from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
+import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
+import { RiskTolerance } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathname;
 
 const { conservative, moderate, aggressive } = RiskTolerance.enum;
 
 describe("collectRisk", () => {
-  const mockParameters: ParametersPhaseOutput = {
-    amount: 50_000,
-    timeline: TimelineBucket.enum["10+ years"],
-  };
-
   let lastTranscript: TranscriptEntry[] | undefined;
   let lastOutput: RiskPhaseResult | undefined;
 
@@ -59,11 +51,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["1"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -73,34 +61,12 @@ describe("collectRisk", () => {
     expectNoNeutralityViolation(responder.transcript);
   });
 
-  // clarify.risk.rules.md rule 1: digit 2 → conservative
-  it("should map digit 2 to conservative", async () => {
-    const responder = createTrackedResponder(["2"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(2);
-    expect(output.riskTolerance).toBe(conservative);
-    expectNoNeutralityViolation(responder.transcript);
-  });
-
   // clarify.risk.rules.md rule 1: digit 3 → moderate
   it("should map digit 3 to moderate", async () => {
     const responder = createTrackedResponder(["3"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -109,34 +75,12 @@ describe("collectRisk", () => {
     expectNoNeutralityViolation(responder.transcript);
   });
 
-  // clarify.risk.rules.md rule 1: digit 4 → aggressive
-  it("should map digit 4 to aggressive", async () => {
-    const responder = createTrackedResponder(["4"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(4);
-    expect(output.riskTolerance).toBe(aggressive);
-    expectNoNeutralityViolation(responder.transcript);
-  });
-
   // clarify.risk.rules.md rule 1: digit 5 → aggressive
   it("should map digit 5 to aggressive", async () => {
     const responder = createTrackedResponder(["5"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -150,11 +94,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["three"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -164,88 +104,12 @@ describe("collectRisk", () => {
     expectNoNeutralityViolation(responder.transcript);
   });
 
-  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (one)
-  it("should accept spelled-out 'one' as score 1 (conservative)", async () => {
-    const responder = createTrackedResponder(["one"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(1);
-    expect(output.riskTolerance).toBe(conservative);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
-  });
-
-  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (two)
-  it("should accept spelled-out 'two' as score 2 (conservative)", async () => {
-    const responder = createTrackedResponder(["two"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(2);
-    expect(output.riskTolerance).toBe(conservative);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
-  });
-
-  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (four)
-  it("should accept spelled-out 'four' as score 4 (aggressive)", async () => {
-    const responder = createTrackedResponder(["four"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(4);
-    expect(output.riskTolerance).toBe(aggressive);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
-  });
-
-  // clarify.risk.rules.md rule 1: spelled-out English word → accepted (five)
-  it("should accept spelled-out 'five' as score 5 (aggressive)", async () => {
-    const responder = createTrackedResponder(["five"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(5);
-    expect(output.riskTolerance).toBe(aggressive);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
-  });
-
   // clarify.risk.rules.md rule 1: number embedded in surrounding text → accepted
   it("should accept a number embedded in surrounding text", async () => {
     const responder = createTrackedResponder(["I'd say 4"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -262,11 +126,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -276,16 +136,12 @@ describe("collectRisk", () => {
     expectNoNeutralityViolation(responder.transcript);
   });
 
-  // clarify.risk.rules.md rule 3: out-of-range number → re-ask once → valid answer
+  // clarify.risk.rules.md rule 3: out-of-range number → re-ask → valid answer
   it("should re-ask when user gives a number outside 1-5 then accept the corrected answer", async () => {
     const responder = createTrackedResponder(["7", "4"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -304,11 +160,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["I'd panic and want to sell", "1"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -321,38 +173,12 @@ describe("collectRisk", () => {
     expectNoNeutralityViolation(responder.transcript);
   });
 
-  // clarify.risk.rules.md rule 3: still invalid after re-asks → hard-fail when budget exhausted
-  it("should hard-fail when user remains vague through the entire budget", async () => {
-    const responder = createTrackedResponder([
-      "I don't know, it's hard to say",
-      "Honestly I still can't say",
-      "I really just don't know",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.status).toBe("failure");
-    if (output.status !== "failure") return;
-    expect(output.reason).toBe("risk_missing");
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
   // clarify.risk.rules.md rule 3: decimal input → re-ask → valid answer
   it("should re-ask on a decimal input then accept the corrected answer", async () => {
     const responder = createTrackedResponder(["3.5", "3"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -366,11 +192,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["2-3", "2"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -382,51 +204,6 @@ describe("collectRisk", () => {
     expect(agentTurns[1].content.toLowerCase()).toContain("single");
   });
 
-  // clarify.risk.rules.md budget: with budget=3, clarifying Q + range gets a valid third turn
-  it("should accept a valid answer after clarifying question followed by a range input", async () => {
-    const responder = createTrackedResponder([
-      "What does drop temporarily mean?",
-      "2-3",
-      "2",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-    if (output.status !== "success") return;
-
-    expect(output.selfRatingScore).toBe(2);
-    expect(output.riskTolerance).toBe(conservative);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
-  // clarify.risk.rules.md rule 3 + tool-call budget: clarifying Q + two invalid answers exhaust budget → hard-fail
-  it("should hard-fail when a clarifying question exhausts the budget before a valid answer", async () => {
-    const responder = createTrackedResponder([
-      "What does drop temporarily mean?",
-      "I still can't decide",
-      "Honestly I still can't say",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    // budget = 3: initial ask (T1) + re-present after clarifying Q (T2) + Step 3 re-ask (T3) → still invalid → silent end → hard-fail
-    expect(output.status).toBe("failure");
-    if (output.status !== "failure") return;
-    expect(output.reason).toBe("risk_missing");
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
-  });
-
   // clarify.risk.rules.md rule 4: deflect age/timeline capacity questions, re-present 1–5 scale
   it("should deflect age/timeline capacity question and re-present the scale", async () => {
     const responder = createTrackedResponder([
@@ -435,11 +212,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(
-      mockParameters,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
     if (output.status !== "success") return;
 
@@ -453,5 +226,59 @@ describe("collectRisk", () => {
       /can afford|with your (timeline|age)|given your (timeline|age)|more aggressive/,
     );
     expectNoNeutralityViolation(responder.transcript);
+  });
+
+  // clarify.risk.rules.md tool-call budget: clarifying Q + range gets a valid third turn
+  it("should accept a valid answer after clarifying question followed by a range input", async () => {
+    const responder = createTrackedResponder([
+      "What does drop temporarily mean?",
+      "2-3",
+      "2",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    lastOutput = output;
+    if (output.status !== "success") return;
+
+    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(conservative);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
+  });
+
+  // clarify.risk.rules.md tool-call budget: clarifying Q + two invalid answers exhaust budget → hard-fail
+  it("should hard-fail when a clarifying question exhausts the budget before a valid answer", async () => {
+    const responder = createTrackedResponder([
+      "What does drop temporarily mean?",
+      "I still can't decide",
+      "Honestly I still can't say",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    lastOutput = output;
+
+    expect(output.status).toBe("failure");
+    if (output.status !== "failure") return;
+    expect(output.reason).toBe("risk_missing");
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
+  });
+
+  // clarify.risk.rules.md tool-call budget: pure vague answers exhaust budget → hard-fail
+  it("should hard-fail when user remains vague through the entire budget", async () => {
+    const responder = createTrackedResponder([
+      "I don't know, it's hard to say",
+      "Honestly I still can't say",
+      "I really just don't know",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    lastOutput = output;
+
+    expect(output.status).toBe("failure");
+    if (output.status !== "failure") return;
+    expect(output.reason).toBe("risk_missing");
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 });

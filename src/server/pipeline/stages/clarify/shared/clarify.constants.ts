@@ -105,5 +105,4 @@ export const ALLOCATION_EXIT_MESSAGE =
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
-export const MAX_RISK_TOOL_CALLS = 3;
 export const MAX_ALLOCATION_TOOL_CALLS = 5;

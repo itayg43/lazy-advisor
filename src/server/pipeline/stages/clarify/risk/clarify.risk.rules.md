@@ -12,6 +12,8 @@ Mapping is deterministic and lives in code, not in prompts:
 - 3 → `moderate`
 - 4–5 → `aggressive`
 
+One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval tests need one representative digit per bucket — not all five — to confirm LLM extraction wires through to the correct bucket.
+
 ## Neutrality requirements
 
 - Do **not** suggest a "typical" answer or imply a socially-desired response.
@@ -26,11 +28,13 @@ Mapping is deterministic and lives in code, not in prompts:
 
 **Rule:** If the user replies with one of the integers 1, 2, 3, 4, or 5 — as a digit or as an English word (`one`, `two`, `three`, `four`, `five`), with or without surrounding text — accept it and end the phase. The score → bucket mapping is applied in code.
 
-**Scenarios:**
+**Scenarios** (one per bucket + extraction variants; all-digit and all-word coverage is owned by unit tests):
 
+- `"1"` → selfRatingScore: 1 → riskTolerance: conservative
 - `"3"` → selfRatingScore: 3 → riskTolerance: moderate
-- `"three"` → selfRatingScore: 3 → riskTolerance: moderate
-- `"I'd say 4"` → selfRatingScore: 4 → riskTolerance: aggressive
+- `"5"` → selfRatingScore: 5 → riskTolerance: aggressive
+- `"three"` → selfRatingScore: 3 → riskTolerance: moderate (word-form acceptance)
+- `"I'd say 4"` → selfRatingScore: 4 → riskTolerance: aggressive (digit embedded in surrounding text)
 
 ---
 
@@ -44,22 +48,21 @@ Mapping is deterministic and lives in code, not in prompts:
 
 ---
 
-## 3. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask once, then hard-fail
+## 3. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask within remaining budget, then hard-fail
 
-**Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask once with the full scale (anchors included). For range or decimal inputs, briefly acknowledge that the scale needs a single whole number before re-presenting. This covers:
+**Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask with the full scale (anchors included). For range or decimal inputs, briefly acknowledge that the scale needs a single whole number before re-presenting. Re-asking continues for as long as the tool-call budget allows; see the budget section for hard-fail behavior. This covers:
 
 - Numbers outside 1–5 (`"7"`, `"0"`)
 - Decimals or ranges (`"3.5"`, `"2-3"`) — acknowledge "single whole number needed" before re-presenting
 - Non-numeric wording (`"I'd panic"`, `"absolutely not"`, `"buying opportunity"`)
 - Vague answers (`"I don't know"`, `"depends"`)
 
-If the user has already received one re-ask in this phase, do **not** re-ask again — end the phase silently (make zero tool calls). The extraction returns null and the phase hard-fails with `risk_missing`; no default is applied.
-
 **Scenarios:**
 
 - `"7"` → re-ask → `"4"` → selfRatingScore: 4 → riskTolerance: aggressive
 - `"I'd panic"` → re-ask → `"1"` → selfRatingScore: 1 → riskTolerance: conservative
-- `"I don't know"` → re-ask → `"still not sure"` → re-ask (budget allows) → `"I really can't"` → hard-fail → `{ status: "failure", reason: "risk_missing" }`
+- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → selfRatingScore: 3 → riskTolerance: moderate
+- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
 
 ---
 
@@ -87,6 +90,7 @@ If all 3 turns are consumed and no valid score is given, the phase ends silently
 
 - `"What does drop temporarily mean?"` → re-present → `"2-3"` → Step 3 re-ask → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
 - `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "failure", reason: "risk_missing" }`
+- `"I don't know"` → re-ask → `"still not sure"` → re-ask → `"I really can't"` → budget exhausted → `{ status: "failure", reason: "risk_missing" }`
 
 ---
 
