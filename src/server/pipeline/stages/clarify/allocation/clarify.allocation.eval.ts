@@ -415,7 +415,7 @@ describe("collectAllocation", () => {
     );
   });
 
-  // T3.9: PhaseBudgetExhaustedError → { status: "failure", code: "split_unresolved" }.
+  // T3.9: PhaseBudgetExhaustedError → { status: "failure", reason: "split_unresolved" }.
   // A chain of counter-proposals forces one confirmation tool call each; once toolCallCount
   // exceeds MAX_ALLOCATION_TOOL_CALLS (5) the phase loop throws and collectAllocation
   // returns the failure variant.
@@ -441,6 +441,6 @@ describe("collectAllocation", () => {
 
     expect(result.status).toBe("failure");
     if (result.status !== "failure") return;
-    expect(result.code).toBe("split_unresolved");
+    expect(result.reason).toBe("split_unresolved");
   });
 });

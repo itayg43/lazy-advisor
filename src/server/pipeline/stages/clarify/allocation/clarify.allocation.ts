@@ -129,7 +129,7 @@ export const collectAllocation = async (
     if (err instanceof PhaseBudgetExhaustedError) {
       logger.info("Allocation phase budget exhausted — split unresolved");
 
-      return { status: "failure", code: "split_unresolved" };
+      return { status: "failure", reason: "split_unresolved" };
     }
 
     throw err;

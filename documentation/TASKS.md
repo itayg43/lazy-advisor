@@ -1,67 +1,18 @@
 # Tasks
 
-**Current task:** T4.1.5
-**Next task:** T4.2
+**Current task:** T4.2
+**Next task:** T4.3
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T4.1.5 | Clean up `askWithClassify`: throw on `retries_exhausted`; remove `buildClassifyInstructions` |
 | T4.2 | Refactor risk to `askWithClassify` |
 | T4.3 | Refactor contribution to `askWithClassify` |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
-
-### T4.1.5 — Clean up `askWithClassify`
-
-Two related cleanups to the shared classify infrastructure, batched because they touch the same files.
-
-**1. Convert `askWithClassify` to throw on `retries_exhausted`**
-
-Currently returns `{ status: "failure", code: "retries_exhausted" }`. Change to throw a typed `RetriesExhaustedError` instead, aligning with `runPhaseLoop`'s `PhaseBudgetExhaustedError` precedent. Return type simplifies from `Promise<AskWithClassifyResult<TOutput>>` to `Promise<TOutput>`. Callers that need graceful handling (parameters, risk, ef-debt) wrap in try/catch and return their phase failure code. The stage orchestrator's error handling is unchanged.
-
-**2. Don't send clarification message on the last attempt**
-
-Currently `askWithClassify` sends the clarification message unconditionally inside the loop — including on the final iteration. Observed in the parameters eval last-run: after retries are exhausted, the agent sends "That's totally okay—please pick the closest category for now…" with no follow-up, leaving the user in a dead-end state. Fix: guard the send with `attempt < retries` so the clarification is only sent when there is a next turn to receive it.
-
-```
-// current — sends clarification even on last attempt
-attempt 1 (last): classify → clarificationNeeded: true
-  sendToUser("That's totally okay—please pick...")   ← sent, but no waitForResponse follows
-  loop exits → retries_exhausted
-
-// fixed
-attempt 1 (last): classify → clarificationNeeded: true
-  (no sendToUser)
-  loop exits → retries_exhausted
-```
-
-**3. Remove `buildClassifyInstructions`**
-
-The helper hardcodes `**answer**` as the field name and only handles enum-style `answerOptions` — it doesn't generalize to numeric or non-enum fields. ef-debt is the only user; inline its two instruction strings directly.
-
-**4. Make `retries` required**
-
-Remove `ASK_WITH_CLASSIFY_DEFAULT_RETRIES` and the `retries?` default. Each caller must explicitly pass `retries` so the intended turn budget is visible at the call site. ef-debt currently relies on the default of 2 — make it explicit. Parameters already passes `retries: 1` (two-try rule per rules 2 and 4); ef-debt should pass `retries: 2` (3-turn budget for yes/no + follow-up chains; see ef-debt watch item).
-
-**Changes:**
-- `clarify.ask.ts` — throw `RetriesExhaustedError` instead of returning failure; don't send clarification on last attempt; remove `buildClassifyInstructions` export; simplify return type to `Promise<TOutput>`; remove `ASK_WITH_CLASSIFY_DEFAULT_RETRIES`; make `retries` required in `AskWithClassifyParams`
-- `clarify.ef-debt.ts` — replace `buildClassifyInstructions(...)` calls with inline strings; update to catch `RetriesExhaustedError`; add explicit `retries: 2`
-- `clarify.parameters.ts` — update to catch `RetriesExhaustedError`; remove `status === "failure"` checks (null output checks remain)
-- `clarify.risk.ts` — update to catch `RetriesExhaustedError` (after T4.2)
-
-**Files:**
-- `src/server/pipeline/stages/clarify/shared/clarify.ask.ts`
-- `src/server/pipeline/stages/clarify/ef-debt/clarify.ef-debt.ts`
-- `src/server/pipeline/stages/clarify/parameters/clarify.parameters.ts`
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts` *(after T4.2)*
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.parameters.eval.ts`, `npm run test:evals -- clarify.ef-debt.eval.ts`
-
----
 
 ### T4.2 — Refactor risk to `askWithClassify`
 

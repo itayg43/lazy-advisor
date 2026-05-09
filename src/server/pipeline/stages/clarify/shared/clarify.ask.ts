@@ -3,17 +3,28 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 import { z } from "zod";
 
+import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAsk");
 
-const ASK_WITH_CLASSIFY_DEFAULT_RETRIES = 2;
+export class ConvergenceFailedError extends InternalError {
+  constructor(question: string, followUps: number) {
+    super(
+      `askWithClassify failed to converge after ${followUps + 1} attempts for: "${question}"`,
+    );
+    this.name = "ConvergenceFailedError";
+  }
+}
 
-type AskWithClassifyResult<TOutput> =
-  | { status: "success"; output: TOutput }
-  | { status: "failure"; code: "retries_exhausted" };
+export class MissingClarificationMessageError extends InternalError {
+  constructor() {
+    super("askWithClassify: clarificationNeeded=true but clarificationMessage is null");
+    this.name = "MissingClarificationMessageError";
+  }
+}
 
 export const AskWithClassifyBaseSchema = z.object({
   clarificationNeeded: z.boolean(),
@@ -24,70 +35,6 @@ export const AskWithClassifyBaseSchema = z.object({
 
 type AskWithClassifyBase = z.infer<typeof AskWithClassifyBaseSchema>;
 
-type ClassifyInstructionExample = {
-  userInput: string;
-  clarificationNeeded: boolean;
-  note: string;
-};
-
-type BuildClassifyInstructionsParams = {
-  question: string;
-  answerOptions: { value: string; description: string }[];
-  keyFacts: string;
-  examples?: ClassifyInstructionExample[];
-};
-
-export const buildClassifyInstructions = ({
-  question,
-  answerOptions,
-  keyFacts,
-  examples,
-}: BuildClassifyInstructionsParams): string => {
-  const answerRules = answerOptions
-    .map(({ value, description }) => `- "${value}" — ${description}`)
-    .join("\n");
-
-  const examplesSection =
-    examples && examples.length > 0
-      ? [
-          "",
-          "# Examples",
-          "",
-          ...examples.map(
-            ({ userInput, clarificationNeeded, note }) =>
-              `User: "${userInput}"\n→ clarificationNeeded: ${clarificationNeeded} — ${note}`,
-          ),
-        ].join("\n")
-      : "";
-
-  return `# Role and Objective
-You are classifying a user's response to: "${question}"
-Populate the three output fields based on the rules below.
-
-# Output Rules
-
-**answer**
-${answerRules}
-- null  — when clarificationNeeded is true
-
-**clarificationNeeded**
-- true — user asked a question instead of answering (e.g. "what does that mean?", "can you explain?")
-- true — user gave an ambiguous or unclear answer (e.g. "I have some savings", "kind of?")
-- true — user deflected or went off-topic (e.g. "skip this", "I don't want to answer")
-- true — user gave an answer but also asked a follow-up question (e.g. "Yes, but does X count?")
-- false — user gave a clear yes or no
-
-**clarificationMessage** (only when clarificationNeeded is true)
-- Must be non-null when clarificationNeeded is true.
-- Use the conversation history to understand what the user said or asked — tailor your response accordingly.
-- If user asked a question: answer it directly using the key facts below
-- If user gave an ambiguous answer: ask them to clarify
-- If user deflected or went off-topic: redirect them back to the question
-- If user gave an answer but also asked a question: answer their question first, then ask them to confirm their answer
-- Key facts: ${keyFacts}
-- Keep it to 1–2 sentences. Do not re-state the original question.${examplesSection}`;
-};
-
 type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
   question: string;
   classifyInstructions: string;
@@ -96,12 +43,14 @@ type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
   waitForResponse: WaitForResponse;
   model: ResponsesModel;
   effort: ReasoningEffort;
-  retries?: number;
+  // Number of follow-up clarification exchanges allowed before giving up.
+  // Total classification attempts = followUps + 1 (the final attempt below the loop).
+  followUps: number;
 };
 
 export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   params: AskWithClassifyParams<TOutput>,
-): Promise<AskWithClassifyResult<TOutput>> => {
+): Promise<TOutput> => {
   const {
     question,
     classifyInstructions,
@@ -110,7 +59,7 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     waitForResponse,
     model,
     effort,
-    retries = ASK_WITH_CLASSIFY_DEFAULT_RETRIES,
+    followUps,
   } = params;
 
   logger.info("askWithClassify asking", { question });
@@ -118,13 +67,19 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   sendToUser(question);
 
   const history: EasyInputMessage[] = [{ role: "assistant", content: question }];
+
   const format = zodTextFormat(schema, "output");
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  // Each iteration classifies the user's response and, if clarification is needed,
+  // sends a follow-up and loops. The final attempt is handled separately below
+  // because there is no next turn — we classify but never send after it.
+  for (let attempt = 0; attempt < followUps; attempt++) {
     const userResponse = await waitForResponse();
     history.push({ role: "user", content: userResponse });
 
-    const { output, usage } = await callOpenAIParsed<TOutput>({
+    logger.debug("User response", { userResponse });
+
+    const { id, output, usage } = await callOpenAIParsed<TOutput>({
       model,
       instructions: classifyInstructions,
       input: history,
@@ -137,24 +92,57 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     logger.info("askWithClassify classification", {
       clarificationNeeded,
       attempt,
+      responseId: id,
+      question,
       usage,
     });
 
     if (!clarificationNeeded) {
-      return { status: "success", output };
+      logger.info("askWithClassify complete", { attempt, question });
+
+      return output;
     }
 
-    if (clarificationMessage) {
-      logger.debug("askWithClassify sending clarification", {
-        clarificationMessage,
-      });
-
-      sendToUser(clarificationMessage);
-      history.push({ role: "assistant", content: clarificationMessage });
+    if (!clarificationMessage) {
+      throw new MissingClarificationMessageError();
     }
+
+    history.push({ role: "assistant", content: clarificationMessage });
+
+    logger.debug("askWithClassify sending clarification", { clarificationMessage });
+
+    sendToUser(clarificationMessage);
   }
 
-  logger.warn("askWithClassify retries exhausted", { question });
+  // Final attempt — classify the last response but do not send a follow-up.
+  const finalResponse = await waitForResponse();
+  history.push({ role: "user", content: finalResponse });
 
-  return { status: "failure", code: "retries_exhausted" };
+  logger.debug("User response", { userResponse: finalResponse });
+
+  const { id, output, usage } = await callOpenAIParsed<TOutput>({
+    model,
+    instructions: classifyInstructions,
+    input: history,
+    text: { format },
+    reasoning: { effort },
+  });
+
+  logger.info("askWithClassify classification", {
+    clarificationNeeded: output.clarificationNeeded,
+    attempt: followUps,
+    responseId: id,
+    question,
+    usage,
+  });
+
+  if (!output.clarificationNeeded) {
+    logger.info("askWithClassify complete", { attempt: followUps, question });
+
+    return output;
+  }
+
+  logger.warn("askWithClassify follow-ups exhausted", { question });
+
+  throw new ConvergenceFailedError(question, followUps);
 };

@@ -46,6 +46,30 @@ Each entry: the rule, a one-line scenario, and the expected behavior for verifyi
 
 ---
 
+## 5. Mixed message → answer the embedded question, then confirm the answer
+
+**Rule:** If the user both answers and asks a follow-up question (e.g., "Yes, but does a savings account count?"), the agent answers the question first, then asks the user to confirm their answer. The answer field is only extracted after explicit confirmation on the next turn.
+
+**Scenario:** Agent has asked about emergency fund; user responds "Yes, but does a savings account count?"
+
+**Expected behavior:** Agent answers whether a savings account qualifies, then asks the user to confirm their yes/no answer.
+
+---
+
+## 6. Follow-up exhaustion → conservative default
+
+**Rule:** If the model fails to converge after all follow-ups, the phase applies a conservative default: EF defaults to `false` (no EF → education sent), debt defaults to `true` (has debt → education sent). Rationale: when in doubt, educate.
+
+**Scenario (EF):** User gives three ambiguous EF responses — follow-ups are exhausted without a clear yes/no.
+
+**Expected behavior:** EF education is shown.
+
+**Scenario (debt):** User gives three ambiguous debt responses — follow-ups are exhausted without a clear yes/no.
+
+**Expected behavior:** Debt education is shown.
+
+---
+
 ## Watch Items (check after evals)
 
 - **Mixed message + Option B.** Current design (Option A): when user both answers and asks a question (e.g. "Yes, but does a savings account count?"), `answer` is set to null, the question is answered, and the answer is re-confirmed on the next turn. If evals show this breaks or causes too many retries, consider Option B: allow `answer` to be non-null when `clarificationNeeded: true` so the orchestrator can use the answer immediately without an extra round-trip. Trade-off: breaks the clean discriminated contract, adds orchestrator complexity.

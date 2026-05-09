@@ -4,6 +4,7 @@ import { MAX_AMOUNT } from "#constants/validation.constants";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
+  ConvergenceFailedError,
   askWithClassify,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
@@ -52,9 +53,20 @@ Populate the three output fields based on the rules below.
 **clarificationMessage** (only when clarificationNeeded is true)
 - Must be non-null when clarificationNeeded is true.
 - If user asked a question: answer it briefly, then ask for a specific amount in shekels.
-- If user gave a vague answer: ask for a specific number in shekels (e.g., "Could you give me a specific amount in shekels?").
+- If user gave a vague answer: ask for a specific number in shekels. Do not add encouraging phrases like "even a rough number helps" — a specific number is required.
 - If user deflected: redirect back to the question.
-- Keep it to 1–2 sentences. Do not re-state the original question.`;
+- Keep it to 1–2 sentences. Do not re-state the original question.
+
+# Examples
+
+User: "I'm not sure yet"
+→ clarificationNeeded: true — ask for a specific number (e.g. "Could you give me a specific amount in shekels?")
+User: "some money"
+→ clarificationNeeded: true — ask for a specific number (e.g. "Could you give me a specific amount in shekels?")
+User: "why do you need to know?"
+→ clarificationNeeded: true — answer briefly then ask (e.g. "I need the amount to build your investment plan — could you share a specific number in shekels?")
+User: "₪50,000"
+→ clarificationNeeded: false — specific amount provided`;
 
 const TIMELINE_CLASSIFY_INSTRUCTIONS = `# Role and Objective
 You are classifying a user's response to: "${TIMELINE_QUESTION}"
@@ -80,7 +92,86 @@ Set to null when clarificationNeeded is true.
 - If user gave a vague answer: ask them to pick from the four options:
 ${TIMELINE_BUCKET_LIST}
 - If user deflected: redirect back to the question.
-- Keep it to 1–2 sentences. Do not re-state the original question.`;
+- Keep it to 1–2 sentences. Do not re-state the original question.
+
+# Examples
+
+User: "long-term"
+→ clarificationNeeded: true — ask to pick from four options (e.g. "Could you pick one of these: under 3 years, 3–5 years, 5–10 years, or 10+ years?")
+User: "5 years"
+→ clarificationNeeded: false — maps to "3–5 years" (boundary: shorter bucket wins)
+User: "10 years"
+→ clarificationNeeded: false — maps to "5–10 years" (boundary: shorter bucket; "10+ years" requires strictly more than 10)
+User: "around 10 years or maybe more"
+→ clarificationNeeded: false — approximate is specific enough, maps to "10+ years"
+User: "why does this matter?"
+→ clarificationNeeded: true — answer briefly then ask (e.g. "Your timeline determines how much risk your portfolio can absorb — could you share roughly how many years you plan to invest?")
+User: "skip"
+→ clarificationNeeded: true — redirect directly, no softening (e.g. "I need your timeline to continue — could you pick one: under 3 years, 3–5 years, 5–10 years, or 10+ years?")`;
+
+const askAmount = async (
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<number | null> => {
+  try {
+    const output = await askWithClassify({
+      question: AMOUNT_QUESTION,
+      classifyInstructions: AMOUNT_CLASSIFY_INSTRUCTIONS,
+      schema: AmountClassifySchema,
+      sendToUser,
+      waitForResponse,
+      model: "gpt-5.4-nano",
+      effort: "low",
+      followUps: 1,
+    });
+
+    if (output.amount === null) {
+      logger.warn("askAmount — null after convergence");
+    }
+
+    return output.amount;
+  } catch (error) {
+    if (error instanceof ConvergenceFailedError) {
+      logger.error("askAmount — follow-ups exhausted", error);
+
+      return null;
+    }
+
+    throw error;
+  }
+};
+
+const askTimeline = async (
+  sendToUser: SendToUser,
+  waitForResponse: WaitForResponse,
+): Promise<z.infer<typeof TimelineBucket> | null> => {
+  try {
+    const output = await askWithClassify({
+      question: TIMELINE_QUESTION,
+      classifyInstructions: TIMELINE_CLASSIFY_INSTRUCTIONS,
+      schema: TimelineClassifySchema,
+      sendToUser,
+      waitForResponse,
+      model: "gpt-5.4-nano",
+      effort: "low",
+      followUps: 1,
+    });
+
+    if (output.timeline === null) {
+      logger.warn("askTimeline — null after convergence");
+    }
+
+    return output.timeline;
+  } catch (error) {
+    if (error instanceof ConvergenceFailedError) {
+      logger.error("askTimeline — follow-ups exhausted", error);
+
+      return null;
+    }
+
+    throw error;
+  }
+};
 
 export const collectParameters = async (
   sendToUser: SendToUser,
@@ -88,56 +179,11 @@ export const collectParameters = async (
 ): Promise<ParametersPhaseResult> => {
   logger.info("Starting parameters phase");
 
-  const amountResult = await askWithClassify({
-    question: AMOUNT_QUESTION,
-    classifyInstructions: AMOUNT_CLASSIFY_INSTRUCTIONS,
-    schema: AmountClassifySchema,
-    sendToUser,
-    waitForResponse,
-    model: "gpt-5.4-nano",
-    effort: "low",
-    retries: 1,
-  });
+  const amount = await askAmount(sendToUser, waitForResponse);
+  if (amount === null) return { status: "failure", reason: "amount_missing" };
 
-  if (amountResult.status === "failure") {
-    logger.info("Parameters phase failed — amount missing");
+  const timeline = await askTimeline(sendToUser, waitForResponse);
+  if (timeline === null) return { status: "failure", reason: "timeline_missing" };
 
-    return { status: "failure", code: "amount_missing" };
-  }
-
-  if (amountResult.output.amount === null) {
-    logger.info("Parameters phase failed — amount missing");
-
-    return { status: "failure", code: "amount_missing" };
-  }
-
-  const { amount } = amountResult.output;
-
-  const timelineResult = await askWithClassify({
-    question: TIMELINE_QUESTION,
-    classifyInstructions: TIMELINE_CLASSIFY_INSTRUCTIONS,
-    schema: TimelineClassifySchema,
-    sendToUser,
-    waitForResponse,
-    model: "gpt-5.4-nano",
-    effort: "low",
-    retries: 1,
-  });
-
-  if (timelineResult.status === "failure") {
-    logger.info("Parameters phase failed — timeline missing");
-
-    return { status: "failure", code: "timeline_missing" };
-  }
-
-  if (timelineResult.output.timeline === null) {
-    logger.info("Parameters phase failed — timeline missing");
-
-    return { status: "failure", code: "timeline_missing" };
-  }
-
-  return {
-    status: "success",
-    parameters: { amount, timeline: timelineResult.output.timeline },
-  };
+  return { status: "success", parameters: { amount, timeline } };
 };

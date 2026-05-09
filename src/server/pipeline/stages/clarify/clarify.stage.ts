@@ -1,5 +1,6 @@
 import { exhaustiveSwitch } from "#lib/exhaustive-switch";
 import { createLogger } from "#lib/logger";
+import { runWithSession } from "#lib/session-context";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
@@ -24,96 +25,99 @@ import type { UserProfile } from "#types/pipeline.types";
 const logger = createLogger("clarifyStage");
 
 export const runClarifyStage = async (
+  sessionId: string,
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
 ): Promise<UserProfile | null> => {
-  logger.info("Starting clarify stage", { goal });
+  return runWithSession(sessionId, async () => {
+    logger.info("Starting clarify stage", { goal });
 
-  const classification = await classifyGoal(goal);
+    const classification = await classifyGoal(goal);
 
-  const handler = INTAKE_HANDLERS[classification];
-  if (handler) {
-    const result = await handler(goal, sendToUser, waitForResponse);
-    if (!result.accepted) {
-      logger.info("User rejected intake redirect, ending session");
+    const handler = INTAKE_HANDLERS[classification];
+    if (handler) {
+      const result = await handler(goal, sendToUser, waitForResponse);
+      if (!result.accepted) {
+        logger.info("User rejected intake redirect, ending session");
 
-      sendToUser(
-        INTAKE_REJECTION_MESSAGES[classification] ?? INTAKE_REJECTION_DEFAULT_MESSAGE,
-      );
+        sendToUser(
+          INTAKE_REJECTION_MESSAGES[classification] ?? INTAKE_REJECTION_DEFAULT_MESSAGE,
+        );
+
+        return null;
+      }
+    }
+
+    sendToUser(PROFILE_TRANSITION_MESSAGE);
+
+    await collectEfDebt(sendToUser, waitForResponse);
+
+    const parametersResult = await collectParameters(sendToUser, waitForResponse);
+
+    if (parametersResult.status === "failure") {
+      exhaustiveSwitch(parametersResult.reason, {
+        amount_missing: () => sendToUser(AMOUNT_EXIT_MESSAGE),
+        timeline_missing: () => sendToUser(TIMELINE_EXIT_MESSAGE),
+      });
 
       return null;
     }
-  }
 
-  sendToUser(PROFILE_TRANSITION_MESSAGE);
+    const { parameters } = parametersResult;
 
-  await collectEfDebt(sendToUser, waitForResponse);
+    if (parameters.timeline === TimelineBucket.enum["under 3 years"]) {
+      logger.info("Short timeline — exiting pipeline", { timeline: parameters.timeline });
 
-  const parametersResult = await collectParameters(sendToUser, waitForResponse);
+      sendToUser(SHORT_TIMELINE_EXIT_MESSAGE);
 
-  if (parametersResult.status === "failure") {
-    exhaustiveSwitch(parametersResult.code, {
-      amount_missing: () => sendToUser(AMOUNT_EXIT_MESSAGE),
-      timeline_missing: () => sendToUser(TIMELINE_EXIT_MESSAGE),
-    });
+      return null;
+    }
 
-    return null;
-  }
+    const riskResult = await collectRisk(parameters, sendToUser, waitForResponse);
 
-  const { parameters } = parametersResult;
+    if (riskResult.status === "failure") {
+      exhaustiveSwitch(riskResult.reason, {
+        risk_missing: () => sendToUser(RISK_EXIT_MESSAGE),
+      });
 
-  if (parameters.timeline === TimelineBucket.enum["under 3 years"]) {
-    logger.info("Short timeline — exiting pipeline", { timeline: parameters.timeline });
+      return null;
+    }
 
-    sendToUser(SHORT_TIMELINE_EXIT_MESSAGE);
+    const allocationResult = await collectAllocation(
+      parameters,
+      riskResult,
+      sendToUser,
+      waitForResponse,
+    );
 
-    return null;
-  }
+    if (allocationResult.status === "failure") {
+      exhaustiveSwitch(allocationResult.reason, {
+        split_unresolved: () => sendToUser(ALLOCATION_EXIT_MESSAGE),
+      });
 
-  const riskResult = await collectRisk(parameters, sendToUser, waitForResponse);
+      return null;
+    }
 
-  if (riskResult.status === "failure") {
-    exhaustiveSwitch(riskResult.code, {
-      risk_missing: () => sendToUser(RISK_EXIT_MESSAGE),
-    });
+    const { allocation } = allocationResult;
 
-    return null;
-  }
+    const contribution = await collectContribution(
+      parameters,
+      allocation,
+      sendToUser,
+      waitForResponse,
+    );
 
-  const allocationResult = await collectAllocation(
-    parameters,
-    riskResult,
-    sendToUser,
-    waitForResponse,
-  );
+    const profile = {
+      ...parameters,
+      riskTolerance: riskResult.riskTolerance,
+      ...allocation,
+      ...contribution,
+    };
 
-  if (allocationResult.status === "failure") {
-    exhaustiveSwitch(allocationResult.code, {
-      split_unresolved: () => sendToUser(ALLOCATION_EXIT_MESSAGE),
-    });
+    logger.info("Clarify stage complete");
+    logger.debug("Assembled profile before validation", { profile });
 
-    return null;
-  }
-
-  const { allocation } = allocationResult;
-
-  const contribution = await collectContribution(
-    parameters,
-    allocation,
-    sendToUser,
-    waitForResponse,
-  );
-
-  const profile = {
-    ...parameters,
-    riskTolerance: riskResult.riskTolerance,
-    ...allocation,
-    ...contribution,
-  };
-
-  logger.info("Clarify stage complete");
-  logger.debug("Assembled profile before validation", { profile });
-
-  return UserProfileSchema.parse(profile);
+    return UserProfileSchema.parse(profile);
+  });
 };

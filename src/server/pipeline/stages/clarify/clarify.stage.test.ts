@@ -168,6 +168,7 @@ describe("clarifyStage", () => {
       setupPhaseLoopMocks();
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
@@ -201,6 +202,7 @@ describe("clarifyStage", () => {
       setupPhaseLoopMocks();
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to buy NVIDIA",
         mockSendToUser,
         mockWaitForResponse,
@@ -227,6 +229,7 @@ describe("clarifyStage", () => {
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_oos_intake"));
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to buy NVIDIA",
         mockSendToUser,
         mockWaitForResponse,
@@ -259,6 +262,7 @@ describe("clarifyStage", () => {
       setupPhaseLoopMocks();
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to double my money in a month",
         mockSendToUser,
         mockWaitForResponse,
@@ -285,6 +289,7 @@ describe("clarifyStage", () => {
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_unreal_intake"));
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to double my money in a month",
         mockSendToUser,
         mockWaitForResponse,
@@ -313,6 +318,7 @@ describe("clarifyStage", () => {
       );
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to invest some money",
         mockSendToUser,
         mockWaitForResponse,
@@ -355,6 +361,7 @@ describe("clarifyStage", () => {
         );
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to invest ₪20,000",
         mockSendToUser,
         mockWaitForResponse,
@@ -388,6 +395,7 @@ describe("clarifyStage", () => {
       setupPhaseLoopMocks();
 
       const result = await runClarifyStage(
+        "test-session",
         "I want max returns but can't lose money",
         mockSendToUser,
         mockWaitForResponse,
@@ -414,6 +422,7 @@ describe("clarifyStage", () => {
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse("resp_contra_intake"));
 
       const result = await runClarifyStage(
+        "test-session",
         "I want max returns but can't lose money",
         mockSendToUser,
         mockWaitForResponse,
@@ -442,7 +451,7 @@ describe("clarifyStage", () => {
 
       // Spy on runPhaseLoop to control per-phase outcomes without running the real loop.
       // risk resolves normally; allocation throws PhaseBudgetExhaustedError,
-      // which collectAllocation catches and converts to { status: "failure", code: "split_unresolved" }.
+      // which collectAllocation catches and converts to { status: "failure", reason: "split_unresolved" }.
       const runPhaseLoopSpy = vi
         .spyOn(clarifyPhase, "runPhaseLoop")
         .mockResolvedValueOnce({ responseId: "resp_risk_loop" })
@@ -451,6 +460,7 @@ describe("clarifyStage", () => {
         );
 
       const result = await runClarifyStage(
+        "test-session",
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,

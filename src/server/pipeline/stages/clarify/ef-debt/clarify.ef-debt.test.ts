@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
-import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
+import {
+  collectEfDebt,
+  type EmergencyFundClassify,
+} from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -23,15 +26,20 @@ describe("collectEfDebt", () => {
     output,
   });
 
-  const answerYes = createParsedResponse({
+  const answerYes: OpenAIResponse<EmergencyFundClassify> = createParsedResponse({
     clarificationNeeded: false,
     clarificationMessage: null,
     answer: "yes",
   });
-  const answerNo = createParsedResponse({
+  const answerNo: OpenAIResponse<EmergencyFundClassify> = createParsedResponse({
     clarificationNeeded: false,
     clarificationMessage: null,
     answer: "no",
+  });
+  const needsClarification: OpenAIResponse<EmergencyFundClassify> = createParsedResponse({
+    clarificationNeeded: true,
+    clarificationMessage: "Can you clarify?",
+    answer: null,
   });
 
   it("should end silently when user has EF and no debt", async () => {
@@ -97,5 +105,37 @@ describe("collectEfDebt", () => {
     await collectEfDebt(responder.sendToUser, responder.waitForResponse);
 
     expect(responder.transcript.filter((t) => t.role === "user")).toHaveLength(2);
+  });
+
+  it("should default to no EF and show EF education when EF askWithClassify exhausts follow-ups", async () => {
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(needsClarification)
+      .mockResolvedValueOnce(needsClarification)
+      .mockResolvedValueOnce(needsClarification)
+      .mockResolvedValueOnce(answerNo);
+    const responder = createTrackedResponder(["r1", "r2", "r3", "No"]);
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const lastMessage = agentTurns[agentTurns.length - 1].content;
+    expect(lastMessage).toMatch(/unexpected expense/i);
+    expect(lastMessage).not.toMatch(/paying it off first|costs more than ETF/i);
+  });
+
+  it("should default to has debt and show debt education when debt askWithClassify exhausts follow-ups", async () => {
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(answerYes)
+      .mockResolvedValueOnce(needsClarification)
+      .mockResolvedValueOnce(needsClarification)
+      .mockResolvedValueOnce(needsClarification);
+    const responder = createTrackedResponder(["Yes", "r1", "r2", "r3"]);
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const lastMessage = agentTurns[agentTurns.length - 1].content;
+    expect(lastMessage).toMatch(/paying it off first|costs more than ETF/i);
+    expect(lastMessage).not.toMatch(/unexpected expense/i);
   });
 });

@@ -88,7 +88,7 @@ An alternative considered: skip the classifier and expose handlers as LLM tools,
 
 ### Parameters — hard exits on missing data
 
-`collectParameters` returns `{ status: "failure", code: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern (T3.7): if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "failure", code: "timeline_missing" }` and the stage exits. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
+`collectParameters` returns `{ status: "failure", reason: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern (T3.7): if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "failure", reason: "timeline_missing" }` and the stage exits. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
 
 ### Short-horizon early exit (timeline < 3 years)
 
@@ -100,7 +100,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
-**Hard-fail on unresolved.** If the phase budget (3 tool calls) is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", code: "risk_missing" }`. The same result occurs if the LLM ends the phase silently and the extraction subsequently returns null. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the T3.7 pattern for `timeline_missing`.
+**Hard-fail on unresolved.** If the phase budget (3 tool calls) is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", reason: "risk_missing" }`. The same result occurs if the LLM ends the phase silently and the extraction subsequently returns null. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the T3.7 pattern for `timeline_missing`.
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 
@@ -118,7 +118,7 @@ The model locates the user's cell from `risk.riskTolerance` × `parameters.timel
 
 **What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase (T3) and are not passed to this phase.
 
-**Unresolved-split exit.** `collectAllocation` returns `{ status: "failure", code: "split_unresolved" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The stage exits with a closing message rather than locking the user into a split they were still negotiating. Modeled as an in-band failure status (mirroring `parameters.amount_missing`) instead of an exception, since this is a graceful UX outcome, not a bug.
+**Unresolved-split exit.** `collectAllocation` returns `{ status: "failure", reason: "split_unresolved" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The stage exits with a closing message rather than locking the user into a split they were still negotiating. Modeled as an in-band failure status (mirroring `parameters.amount_missing`) instead of an exception, since this is a graceful UX outcome, not a bug.
 
 ### Contribution phase — `plansToContribute: boolean`
 
@@ -163,11 +163,28 @@ An earlier design used a final LLM extraction call across the full conversation 
 
 ### Phase loop guardrails
 
-`runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseBudgetExhaustedError`. Phases that treat budget exhaustion as a graceful, in-band UX outcome (currently allocation) catch it narrowly and return a `{ status: "failure", code: ... }` variant; uncaught, it propagates as a server error. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
+`runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseBudgetExhaustedError`. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
+
+### Phase error contract
+
+Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
+
+- `runPhaseLoop` → throws `PhaseBudgetExhaustedError` on budget exhaustion → phase catches, returns `{ status: "failure", reason: "..." }`
+- `askWithClassify` → throws `ConvergenceFailedError` when follow-ups are exhausted → phase either catches and returns a default (ef-debt: safe fallback) or catches and returns `{ status: "failure", reason: "..." }` (parameters: no safe default exists)
+
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate as server errors. Only expected, graceful UX outcomes are surfaced as failure variants.
 
 ### Stage boundary validation
 
 The clarify stage output is validated with `UserProfileSchema`. If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
+
+### Session correlation
+
+Each pipeline run is assigned a `sessionId` (UUID) at its entry point and propagated implicitly via `AsyncLocalStorage` (`src/server/lib/session-context.ts`). Every log call across all phases automatically carries `sessionId` — no phase function needs it as a parameter.
+
+Concurrent sessions on the same server instance are fully isolated: `AsyncLocalStorage` tracks which async context each continuation belongs to, so interleaved log lines from different sessions each carry only their own `sessionId`. This is a concurrency guarantee, not a parallelism one — Node.js is single-threaded; isolation is achieved by the event loop restoring the correct store on each async resumption.
+
+`runWithSession` is currently called inside `runClarifyStage`. As more stages are added, it should move up to the pipeline runner so the context spans all stages — at that point `runClarifyStage`'s `sessionId` parameter is removed and stages simply inherit the ambient context.
 
 ### OpenAI failure handling
 
