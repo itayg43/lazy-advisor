@@ -169,6 +169,14 @@ An earlier design used a final LLM extraction call across the full conversation 
 
 The clarify stage output is validated with `UserProfileSchema`. If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
 
+### Session correlation
+
+Each pipeline run is assigned a `sessionId` (UUID) at its entry point and propagated implicitly via `AsyncLocalStorage` (`src/server/lib/session-context.ts`). Every log call across all phases automatically carries `sessionId` — no phase function needs it as a parameter.
+
+Concurrent sessions on the same server instance are fully isolated: `AsyncLocalStorage` tracks which async context each continuation belongs to, so interleaved log lines from different sessions each carry only their own `sessionId`. This is a concurrency guarantee, not a parallelism one — Node.js is single-threaded; isolation is achieved by the event loop restoring the correct store on each async resumption.
+
+`runWithSession` is currently called inside `runClarifyStage`. As more stages are added, it should move up to the pipeline runner so the context spans all stages — at that point `runClarifyStage`'s `sessionId` parameter is removed and stages simply inherit the ambient context.
+
 ### OpenAI failure handling
 
 All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the pipeline sends an `error` event and the user retries from scratch.

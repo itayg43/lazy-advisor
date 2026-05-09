@@ -76,7 +76,9 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     const userResponse = await waitForResponse();
     history.push({ role: "user", content: userResponse });
 
-    const { output, usage } = await callOpenAIParsed<TOutput>({
+    logger.debug("User response", { userResponse });
+
+    const { id, output, usage } = await callOpenAIParsed<TOutput>({
       model,
       instructions: classifyInstructions,
       input: history,
@@ -89,10 +91,14 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     logger.info("askWithClassify classification", {
       clarificationNeeded,
       attempt: i,
+      responseId: id,
+      question,
       usage,
     });
 
     if (!clarificationNeeded) {
+      logger.info("askWithClassify complete", { attempt: i, question });
+
       return output;
     }
 
@@ -111,7 +117,9 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   const finalResponse = await waitForResponse();
   history.push({ role: "user", content: finalResponse });
 
-  const { output, usage } = await callOpenAIParsed<TOutput>({
+  logger.debug("User response", { userResponse: finalResponse });
+
+  const { id, output, usage } = await callOpenAIParsed<TOutput>({
     model,
     instructions: classifyInstructions,
     input: history,
@@ -122,10 +130,14 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   logger.info("askWithClassify classification", {
     clarificationNeeded: output.clarificationNeeded,
     attempt: followUps,
+    responseId: id,
+    question,
     usage,
   });
 
   if (!output.clarificationNeeded) {
+    logger.info("askWithClassify complete", { attempt: followUps, question });
+
     return output;
   }
 

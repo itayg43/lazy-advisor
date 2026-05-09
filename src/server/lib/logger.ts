@@ -1,3 +1,5 @@
+import { getSessionId } from "#lib/session-context";
+
 type LogContext = Record<string, unknown>;
 
 type Logger = {
@@ -42,12 +44,15 @@ const log = (
 ): void => {
   const base = `[${new Date().toISOString()}] [${level}] [${tag}]: ${message}`;
 
+  const sessionId = getSessionId();
+  const fullContext = sessionId ? { sessionId, ...context } : context;
+
   const args: unknown[] = [];
   if (error !== undefined) {
     args.push(serializeError(error));
   }
-  if (context) {
-    args.push(JSON.stringify(context, null, 2));
+  if (fullContext) {
+    args.push(JSON.stringify(fullContext, null, 2));
   }
 
   CONSOLE_METHODS[level](base, ...args);
