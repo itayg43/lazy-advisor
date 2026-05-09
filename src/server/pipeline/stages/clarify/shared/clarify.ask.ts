@@ -3,13 +3,14 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 import { z } from "zod";
 
+import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAsk");
 
-export class ConvergenceFailedError extends Error {
+export class ConvergenceFailedError extends InternalError {
   constructor(question: string, followUps: number) {
     super(
       `askWithClassify failed to converge after ${followUps + 1} attempts for: "${question}"`,
@@ -18,7 +19,7 @@ export class ConvergenceFailedError extends Error {
   }
 }
 
-export class MissingClarificationMessageError extends Error {
+export class MissingClarificationMessageError extends InternalError {
   constructor() {
     super("askWithClassify: clarificationNeeded=true but clarificationMessage is null");
     this.name = "MissingClarificationMessageError";
@@ -72,7 +73,7 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   // Each iteration classifies the user's response and, if clarification is needed,
   // sends a follow-up and loops. The final attempt is handled separately below
   // because there is no next turn — we classify but never send after it.
-  for (let i = 0; i < followUps; i++) {
+  for (let attempt = 0; attempt < followUps; attempt++) {
     const userResponse = await waitForResponse();
     history.push({ role: "user", content: userResponse });
 
@@ -90,14 +91,14 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
 
     logger.info("askWithClassify classification", {
       clarificationNeeded,
-      attempt: i,
+      attempt,
       responseId: id,
       question,
       usage,
     });
 
     if (!clarificationNeeded) {
-      logger.info("askWithClassify complete", { attempt: i, question });
+      logger.info("askWithClassify complete", { attempt, question });
 
       return output;
     }
