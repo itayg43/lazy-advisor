@@ -36,12 +36,6 @@ describe("collectRisk", () => {
       selfRatingScore,
     });
 
-  const needsClarification: OpenAIResponse<RiskClassify> = createParsedResponse({
-    clarificationNeeded: true,
-    clarificationMessage: "Please pick a whole number between 1 and 5.",
-    selfRatingScore: null,
-  });
-
   // One case per mapScoreToBucket branch: ≤2 → conservative, =3 → moderate, >3 → aggressive
   it.each([
     { score: 2, riskTolerance: conservative },
@@ -70,6 +64,11 @@ describe("collectRisk", () => {
 
   it("should return risk_missing when follow-up budget is exhausted", async () => {
     // followUps: 2 → 3 total classification attempts (loop × 2 + final)
+    const needsClarification: OpenAIResponse<RiskClassify> = createParsedResponse({
+      clarificationNeeded: true,
+      clarificationMessage: "Please pick a whole number between 1 and 5.",
+      selfRatingScore: null,
+    });
     mockedCallOpenAIParsed
       .mockResolvedValueOnce(needsClarification)
       .mockResolvedValueOnce(needsClarification)

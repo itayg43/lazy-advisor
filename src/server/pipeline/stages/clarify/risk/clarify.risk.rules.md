@@ -78,7 +78,7 @@ One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval test
 
 ## Tool-call budget
 
-`MAX_RISK_TOOL_CALLS = 3`. Worst case: clarifying question (T1 initial ask + T2 re-presentation after Q) followed by an invalid answer (T3 Step 3 re-ask) = 3 turns. The budget covers:
+`followUps: 2` → 3 total turns. Worst case: clarifying question (T1 initial ask + T2 re-presentation after Q) followed by an invalid answer (T3 Step 3 re-ask) = 3 turns. The budget covers:
 
 - Initial ask + invalid answer + Step 3 re-ask = 3
 - Initial ask + clarifying Q re-presentation + Step 3 re-ask = 3
