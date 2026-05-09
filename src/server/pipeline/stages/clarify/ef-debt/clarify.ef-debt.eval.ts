@@ -139,6 +139,28 @@ describe("collectEfDebt", () => {
     expect(clarificationTurn).toBeDefined();
   });
 
+  // clarify.ef-debt.rules.md rule 4: ambiguous answer → ask for clarification — debt side
+  it("should ask for clarification when debt answer is ambiguous", async () => {
+    const responder = createTrackedResponder([
+      "Yes, I have an emergency fund",
+      "kind of?",
+      "Yes, I have credit card debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const clarificationTurn = agentTurns.find((t) =>
+      /specific|credit card|APR|clarify/i.test(t.content),
+    );
+    expect(clarificationTurn).toBeDefined();
+    // has debt → education shown
+    expect(agentTurns[agentTurns.length - 1].content).toMatch(
+      /paying it off first|costs more than ETF/i,
+    );
+  });
+
   // clarify.ef-debt.rules.md rule 5: mixed message — agent answers question, then confirms answer (EF side)
   it("should answer embedded question and confirm EF answer on mixed message", async () => {
     const responder = createTrackedResponder([
@@ -213,27 +235,5 @@ describe("collectEfDebt", () => {
     const lastMessage = agentTurns[agentTurns.length - 1].content;
     expect(lastMessage).toMatch(/paying it off first|costs more than ETF/i);
     expect(lastMessage).not.toMatch(/unexpected expense|liquid account/i);
-  });
-
-  // clarify.ef-debt.rules.md rule 4: ambiguous answer → ask for clarification — debt side
-  it("should ask for clarification when debt answer is ambiguous", async () => {
-    const responder = createTrackedResponder([
-      "Yes, I have an emergency fund",
-      "kind of?",
-      "Yes, I have credit card debt",
-    ]);
-    lastTranscript = responder.transcript;
-
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const clarificationTurn = agentTurns.find((t) =>
-      /specific|credit card|APR|clarify/i.test(t.content),
-    );
-    expect(clarificationTurn).toBeDefined();
-    // has debt → education shown
-    expect(agentTurns[agentTurns.length - 1].content).toMatch(
-      /paying it off first|costs more than ETF/i,
-    );
   });
 });
