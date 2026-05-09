@@ -1,38 +1,17 @@
 # Tasks
 
-**Current task:** T4.2
-**Next task:** T4.3
+**Current task:** T4.3
+**Next task:** T5
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T4.2 | Refactor risk to `askWithClassify` |
 | T4.3 | Refactor contribution to `askWithClassify` |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
-
-### T4.2 — Refactor risk to `askWithClassify`
-
-Replace `runPhaseLoop` with a fixed 1–5 scale question + `askWithClassify` classifying `{ selfRatingScore: 1 | 2 | 3 | 4 | 5 | null }`. Post-classification `riskTolerance` derivation stays in TypeScript. The T3.8 hard-fail behavior (risk_missing on null) carries forward into the new pattern unchanged.
-
-**Changes:**
-- Replace `runPhaseLoop` + `runPhaseExtraction` with a single `askWithClassify` call
-- Remove the loop-based prompt; replace with a question string and classify schema
-- Remove `RiskScoreExtractionSchema` and its inferred type (added by T3.8); replace with classify schema
-- Update `clarify.risk.eval.ts`
-
-**Files:**
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.ts`
-- `src/server/pipeline/stages/clarify/risk/clarify.risk.eval.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.types.ts`
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.risk.eval.ts`
-
----
 
 ### T4.3 — Refactor contribution to `askWithClassify`
 
