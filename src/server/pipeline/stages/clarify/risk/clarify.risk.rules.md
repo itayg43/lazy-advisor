@@ -2,7 +2,7 @@
 
 Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The numeric score is mapped deterministically to one of three internal labels (`conservative`, `moderate`, `aggressive`) — these labels are **never shown to the user**.
 
-The phase is willingness-only. Capacity factors (timeline, age) are available as context but do not affect the question asked or the score mapping — both remain willingness-only. They may be referenced when answering clarifying questions (e.g., "does my age affect what score I should give?").
+The phase is willingness-only. Age and investment timeline are not passed as context and do not affect the question asked or the score mapping.
 
 ## Score → bucket mapping
 

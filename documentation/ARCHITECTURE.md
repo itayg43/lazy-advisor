@@ -45,7 +45,7 @@ flowchart TD
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
-| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | `ParametersPhaseOutput` → `RiskPhaseResult` |
+| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseOutput` |
 | equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
@@ -65,7 +65,7 @@ Two patterns are used depending on whether the LLM needs to drive the conversati
 
 The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
 
-Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: risk, allocation, contribution, and intake handlers.
+Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: allocation, contribution, and intake handlers.
 
 **`askWithClassify` — code as orchestrator**
 
@@ -73,7 +73,7 @@ Code drives the conversation — decides what question to ask and in what order.
 
 A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
 
-Used when questions are fixed and answers need structured extraction: ef-debt, parameters.
+Used when questions are fixed and answers need structured extraction: ef-debt, parameters, risk.
 
 **The boundary**
 
@@ -111,7 +111,7 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
   → handleOutOfScopeRedirect   → IntakePhaseOutput { accepted: true }
   → collectEfDebt()
   → collectParameters()
-  → collectRisk(parameters) → collectAllocation(parameters, risk) → ... → UserProfile
+  → collectRisk() → collectAllocation(parameters, risk) → ... → UserProfile
 ```
 
 Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakePhaseOutput`. Acceptance is determined by a post-loop structured LLM call:
@@ -134,15 +134,15 @@ After parameters collection, the orchestrator checks `parameters.timeline`. If i
 
 ### Risk phase — single 1–5 self-rating
 
-The risk phase asks one question: a 1–5 self-rating of comfort with seeing investments drop temporarily, with behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The integer maps deterministically in code: 1–2 → `conservative`, 3 → `moderate`, 4–5 → `aggressive`. The post-loop extraction returns only `selfRatingScore`; `riskTolerance` is computed in TypeScript, not by an LLM.
+The risk phase asks one question: a 1–5 self-rating of comfort with seeing investments drop temporarily, with behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The integer maps deterministically in code: 1–2 → `conservative`, 3 → `moderate`, 4–5 → `aggressive`. The classify call returns only `selfRatingScore`; `riskTolerance` is computed deterministically in TypeScript, not by the LLM.
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
-**Hard-fail on unresolved.** If the phase budget (3 tool calls) is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", reason: "risk_missing" }`. The same result occurs if the LLM ends the phase silently and the extraction subsequently returns null. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline_missing` hard-fail pattern.
+**Hard-fail on unresolved.** If the retry budget is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", reason: "risk_missing" }`. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline_missing` hard-fail pattern.
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 
-**Timeline context available, not surfaced in responses.** The user's timeline is passed to the risk phase as grounding context, but the phase prompt does not instruct the model to reference it. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Prompting the model to say "with your 20-year timeline, you can afford more risk" would reintroduce the framing bias the design avoids.
+**Willingness-only, no external context.** No timeline, age, or amount is passed to the phase. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Surfacing the timeline would reintroduce the framing bias the design avoids.
 
 ### Allocation phase — 2-axis anchor (risk tolerance × timeline)
 
