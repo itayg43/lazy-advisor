@@ -186,7 +186,7 @@ describe("collectParameters", () => {
     }
   });
 
-  // clarify.parameters.rules.md rule 4: k-notation shorthand parsed to integer
+  // clarify.parameters.rules.md rule 1: k-notation shorthand parsed to integer
   it("should accept k-notation amounts", async () => {
     const responder = createTrackedResponder(["50k", "5-10 years"]);
     lastTranscript = responder.transcript;
@@ -227,6 +227,24 @@ describe("collectParameters", () => {
   // clarify.parameters.rules.md rule 5: deflection treated as non-answer → redirect → success
   it("should redirect when user deflects the timeline question", async () => {
     const responder = createTrackedResponder(["₪30,000", "skip", "5-10 years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.parameters.amount).toBe(30_000);
+      expect(result.parameters.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 5: deflection on amount question → redirect → success
+  it("should redirect when user deflects the amount question", async () => {
+    const responder = createTrackedResponder(["skip", "₪30,000", "5-10 years"]);
     lastTranscript = responder.transcript;
 
     const result = await collectParameters(
