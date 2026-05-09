@@ -87,7 +87,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("failure");
     if (result.status === "failure") {
-      expect(result.code).toBe("timeline_missing");
+      expect(result.reason).toBe("timeline_missing");
     }
 
     // No clarification sent after the last user response — dead-end guard.
@@ -217,7 +217,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("failure");
     if (result.status === "failure") {
-      expect(result.code).toBe("amount_missing");
+      expect(result.reason).toBe("amount_missing");
     }
 
     // No clarification sent after the last user response — dead-end guard.

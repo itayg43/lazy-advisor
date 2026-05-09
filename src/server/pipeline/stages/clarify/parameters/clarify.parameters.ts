@@ -180,10 +180,10 @@ export const collectParameters = async (
   logger.info("Starting parameters phase");
 
   const amount = await askAmount(sendToUser, waitForResponse);
-  if (amount === null) return { status: "failure", code: "amount_missing" };
+  if (amount === null) return { status: "failure", reason: "amount_missing" };
 
   const timeline = await askTimeline(sendToUser, waitForResponse);
-  if (timeline === null) return { status: "failure", code: "timeline_missing" };
+  if (timeline === null) return { status: "failure", reason: "timeline_missing" };
 
   return { status: "success", parameters: { amount, timeline } };
 };

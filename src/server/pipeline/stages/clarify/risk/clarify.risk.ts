@@ -103,7 +103,7 @@ export const collectRisk = async (
     if (err instanceof PhaseBudgetExhaustedError) {
       logger.info("Risk phase budget exhausted — risk tolerance missing");
 
-      return { status: "failure", code: "risk_missing" };
+      return { status: "failure", reason: "risk_missing" };
     }
 
     throw err;
@@ -122,7 +122,7 @@ export const collectRisk = async (
   if (output.selfRatingScore === null) {
     logger.info("Risk phase failed — risk tolerance missing");
 
-    return { status: "failure", code: "risk_missing" };
+    return { status: "failure", reason: "risk_missing" };
   }
 
   const result = {

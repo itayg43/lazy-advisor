@@ -339,7 +339,7 @@ describe("collectRisk", () => {
 
     expect(output.status).toBe("failure");
     if (output.status !== "failure") return;
-    expect(output.code).toBe("risk_missing");
+    expect(output.reason).toBe("risk_missing");
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 
@@ -423,7 +423,7 @@ describe("collectRisk", () => {
     // budget = 3: initial ask (T1) + re-present after clarifying Q (T2) + Step 3 re-ask (T3) → still invalid → silent end → hard-fail
     expect(output.status).toBe("failure");
     if (output.status !== "failure") return;
-    expect(output.code).toBe("risk_missing");
+    expect(output.reason).toBe("risk_missing");
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 

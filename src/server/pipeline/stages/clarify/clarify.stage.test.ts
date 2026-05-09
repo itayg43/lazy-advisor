@@ -451,7 +451,7 @@ describe("clarifyStage", () => {
 
       // Spy on runPhaseLoop to control per-phase outcomes without running the real loop.
       // risk resolves normally; allocation throws PhaseBudgetExhaustedError,
-      // which collectAllocation catches and converts to { status: "failure", code: "split_unresolved" }.
+      // which collectAllocation catches and converts to { status: "failure", reason: "split_unresolved" }.
       const runPhaseLoopSpy = vi
         .spyOn(clarifyPhase, "runPhaseLoop")
         .mockResolvedValueOnce({ responseId: "resp_risk_loop" })

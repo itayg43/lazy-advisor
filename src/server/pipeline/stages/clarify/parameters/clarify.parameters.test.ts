@@ -53,7 +53,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("failure");
     if (result.status === "failure") {
-      expect(result.code).toBe("amount_missing");
+      expect(result.reason).toBe("amount_missing");
     }
   });
 
@@ -74,7 +74,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("failure");
     if (result.status === "failure") {
-      expect(result.code).toBe("amount_missing");
+      expect(result.reason).toBe("amount_missing");
     }
   });
 
@@ -103,7 +103,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("failure");
     if (result.status === "failure") {
-      expect(result.code).toBe("timeline_missing");
+      expect(result.reason).toBe("timeline_missing");
     }
   });
 
@@ -124,7 +124,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("failure");
     if (result.status === "failure") {
-      expect(result.code).toBe("timeline_missing");
+      expect(result.reason).toBe("timeline_missing");
     }
   });
 });

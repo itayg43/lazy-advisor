@@ -56,7 +56,7 @@ export const runClarifyStage = async (
     const parametersResult = await collectParameters(sendToUser, waitForResponse);
 
     if (parametersResult.status === "failure") {
-      exhaustiveSwitch(parametersResult.code, {
+      exhaustiveSwitch(parametersResult.reason, {
         amount_missing: () => sendToUser(AMOUNT_EXIT_MESSAGE),
         timeline_missing: () => sendToUser(TIMELINE_EXIT_MESSAGE),
       });
@@ -77,7 +77,7 @@ export const runClarifyStage = async (
     const riskResult = await collectRisk(parameters, sendToUser, waitForResponse);
 
     if (riskResult.status === "failure") {
-      exhaustiveSwitch(riskResult.code, {
+      exhaustiveSwitch(riskResult.reason, {
         risk_missing: () => sendToUser(RISK_EXIT_MESSAGE),
       });
 
@@ -92,7 +92,7 @@ export const runClarifyStage = async (
     );
 
     if (allocationResult.status === "failure") {
-      exhaustiveSwitch(allocationResult.code, {
+      exhaustiveSwitch(allocationResult.reason, {
         split_unresolved: () => sendToUser(ALLOCATION_EXIT_MESSAGE),
       });
 

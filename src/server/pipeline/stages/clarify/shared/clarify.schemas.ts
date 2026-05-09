@@ -23,12 +23,12 @@ export const ParametersPhaseOutputSchema = z.object({
   timeline: TimelineBucket,
 });
 
-// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure code.
+// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure reason.
 export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), parameters: ParametersPhaseOutputSchema }),
   z.object({
     status: z.literal("failure"),
-    code: z.union([z.literal("amount_missing"), z.literal("timeline_missing")]),
+    reason: z.union([z.literal("amount_missing"), z.literal("timeline_missing")]),
   }),
 ]);
 
@@ -46,10 +46,10 @@ export const RiskPhaseOutputSchema = RiskScoreSchema.extend({
   riskTolerance: RiskTolerance,
 });
 
-// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure code.
+// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure reason.
 export const RiskPhaseResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success") }).merge(RiskPhaseOutputSchema),
-  z.object({ status: z.literal("failure"), code: z.literal("risk_missing") }),
+  z.object({ status: z.literal("failure"), reason: z.literal("risk_missing") }),
 ]);
 
 export const AllocationPhaseOutputSchema = z
@@ -61,10 +61,10 @@ export const AllocationPhaseOutputSchema = z
     message: "equityPercentage + bufferPercentage must equal 100",
   });
 
-// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure code.
+// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure reason.
 export const AllocationPhaseResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), allocation: AllocationPhaseOutputSchema }),
-  z.object({ status: z.literal("failure"), code: z.literal("split_unresolved") }),
+  z.object({ status: z.literal("failure"), reason: z.literal("split_unresolved") }),
 ]);
 
 export const ContributionPhaseOutputSchema = z.object({

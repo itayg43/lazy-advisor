@@ -59,7 +59,7 @@ If the user has already received one re-ask in this phase, do **not** re-ask aga
 
 - `"7"` → re-ask → `"4"` → selfRatingScore: 4 → riskTolerance: aggressive
 - `"I'd panic"` → re-ask → `"1"` → selfRatingScore: 1 → riskTolerance: conservative
-- `"I don't know"` → re-ask → `"still not sure"` → re-ask (budget allows) → `"I really can't"` → hard-fail → `{ status: "failure", code: "risk_missing" }`
+- `"I don't know"` → re-ask → `"still not sure"` → re-ask (budget allows) → `"I really can't"` → hard-fail → `{ status: "failure", reason: "risk_missing" }`
 
 ---
 
@@ -86,7 +86,7 @@ If all 3 turns are consumed and no valid score is given, the phase ends silently
 **Scenarios:**
 
 - `"What does drop temporarily mean?"` → re-present → `"2-3"` → Step 3 re-ask → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
-- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "failure", code: "risk_missing" }`
+- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "failure", reason: "risk_missing" }`
 
 ---
 

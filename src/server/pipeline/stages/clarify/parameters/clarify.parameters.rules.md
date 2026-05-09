@@ -20,7 +20,7 @@ Behavioral rules for the parameters collection phase. Each entry: the rule, a on
 
 **Scenario:** User says "I don't know" on first ask, "I really can't say" on retry. Agent stops without proceeding.
 
-**Extracted:** `{ status: "failure", code: "timeline_missing" }`
+**Extracted:** `{ status: "failure", reason: "timeline_missing" }`
 
 ---
 
@@ -45,7 +45,7 @@ Behavioral rules for the parameters collection phase. Each entry: the rule, a on
 
 **Scenario:** User says "I'm not sure" on first ask, "I really don't know" on retry. Agent stops without asking for timeline.
 
-**Extracted:** `{ status: "failure", code: "amount_missing" }`
+**Extracted:** `{ status: "failure", reason: "amount_missing" }`
 
 ---
 
