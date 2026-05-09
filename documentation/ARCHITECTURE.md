@@ -57,6 +57,44 @@ Phases use one of two conversation patterns depending on whether the LLM needs t
 
 ## Design Decisions
 
+### Phase conversation patterns
+
+Two patterns are used depending on whether the LLM needs to drive the conversation or just classify a response to a fixed question.
+
+**`runPhaseLoop` — LLM as orchestrator**
+
+The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
+
+Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: risk, allocation, contribution, and intake handlers.
+
+**`askWithClassify` — code as orchestrator**
+
+Code drives the conversation — decides what question to ask and in what order. The LLM does one narrow job per call: classify a single user response into a typed schema. Code calls `sendToUser`/`waitForResponse` directly (the same primitives `ask_user` is built on). State lives in TypeScript variables, not conversation history.
+
+A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
+
+Used when questions are fixed and answers need structured extraction: ef-debt, parameters.
+
+**The boundary**
+
+| Need | Pattern |
+|------|---------|
+| LLM generates the question content dynamically | `runPhaseLoop` |
+| LLM decides what question to ask next | `runPhaseLoop` |
+| Questions are fixed; answers need classification | `askWithClassify` |
+| Multi-turn negotiation or complex branching | `runPhaseLoop` |
+
+### Phase error contract
+
+Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
+
+**Why in-band results at the phase boundary.** The stage needs to branch on failure reasons — `amount_missing` produces a different exit message than `timeline_missing`. If phases threw instead, the stage would need a try-catch per phase call plus re-throw discipline for unexpected errors. Result types make the branching explicit and flat at each call site; thrown errors are reserved for genuinely unexpected failures that the stage has no specific response to.
+
+- `runPhaseLoop` → throws `PhaseBudgetExhaustedError` on budget exhaustion → phase catches, returns `{ status: "failure", reason: "..." }`
+- `askWithClassify` → throws `ConvergenceFailedError` when follow-ups are exhausted → phase either catches and returns a default (ef-debt: safe fallback) or catches and returns `{ status: "failure", reason: "..." }` (parameters: no safe default exists)
+
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate as server errors. Only expected, graceful UX outcomes are surfaced as failure variants.
+
 ### Multi-phase split
 
 Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
@@ -88,7 +126,7 @@ An alternative considered: skip the classifier and expose handlers as LLM tools,
 
 ### Parameters — hard exits on missing data
 
-`collectParameters` returns `{ status: "failure", reason: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern (T3.7): if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "failure", reason: "timeline_missing" }` and the stage exits. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
+`collectParameters` returns `{ status: "failure", reason: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "failure", reason: "timeline_missing" }` and the stage exits. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
 
 ### Short-horizon early exit (timeline < 3 years)
 
@@ -100,7 +138,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
-**Hard-fail on unresolved.** If the phase budget (3 tool calls) is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", reason: "risk_missing" }`. The same result occurs if the LLM ends the phase silently and the extraction subsequently returns null. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the T3.7 pattern for `timeline_missing`.
+**Hard-fail on unresolved.** If the phase budget (3 tool calls) is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", reason: "risk_missing" }`. The same result occurs if the LLM ends the phase silently and the extraction subsequently returns null. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline_missing` hard-fail pattern.
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 
@@ -116,46 +154,15 @@ The model locates the user's cell from `risk.riskTolerance` × `parameters.timel
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
-**What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase (T3) and are not passed to this phase.
+**What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase and are not passed to this phase.
 
-**Unresolved-split exit.** `collectAllocation` returns `{ status: "failure", reason: "split_unresolved" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The stage exits with a closing message rather than locking the user into a split they were still negotiating. Modeled as an in-band failure status (mirroring `parameters.amount_missing`) instead of an exception, since this is a graceful UX outcome, not a bug.
+**Unresolved-split exit.** `collectAllocation` returns `{ status: "failure", reason: "split_unresolved" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The stage exits with a closing message rather than locking the user into a split they were still negotiating.
 
 ### Contribution phase — `plansToContribute: boolean`
 
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
 
 **Allocation context passed to contribution.** The contribution phase receives `parameters` and `allocation` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
-
-### Phase conversation patterns
-
-Two patterns are used depending on whether the LLM needs to drive the conversation or just classify a response to a fixed question.
-
-**`runPhaseLoop` — LLM as orchestrator**
-
-The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
-
-Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: risk, allocation, contribution, and intake handlers.
-
-**`askWithClassify` — code as orchestrator**
-
-Code drives the conversation — decides what question to ask and in what order. The LLM does one narrow job per call: classify a single user response into a typed schema. Code calls `sendToUser`/`waitForResponse` directly (the same primitives `ask_user` is built on). State lives in TypeScript variables, not conversation history.
-
-A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
-
-Used when questions are fixed and answers need structured extraction: ef-debt, parameters.
-
-**The boundary**
-
-| Need | Pattern |
-|------|---------|
-| LLM generates the question content dynamically | `runPhaseLoop` |
-| LLM decides what question to ask next | `runPhaseLoop` |
-| Questions are fixed; answers need classification | `askWithClassify` |
-| Multi-turn negotiation or complex branching | `runPhaseLoop` |
-
-### Inline assembly from typed outputs
-
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase outputs are mapped directly into the profile before a final `UserProfileSchema.parse()` boundary check. Most phase outputs are spread (`parameters`, `allocation`, `contribution`); risk is selectively extracted — only `riskTolerance` is taken because `selfRatingScore` is not a profile field (it remains on `RiskPhaseOutput` for use by the allocation phase). With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ---
 
@@ -165,18 +172,13 @@ An earlier design used a final LLM extraction call across the full conversation 
 
 `runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseBudgetExhaustedError`. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
 
-### Phase error contract
-
-Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
-
-- `runPhaseLoop` → throws `PhaseBudgetExhaustedError` on budget exhaustion → phase catches, returns `{ status: "failure", reason: "..." }`
-- `askWithClassify` → throws `ConvergenceFailedError` when follow-ups are exhausted → phase either catches and returns a default (ef-debt: safe fallback) or catches and returns `{ status: "failure", reason: "..." }` (parameters: no safe default exists)
-
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate as server errors. Only expected, graceful UX outcomes are surfaced as failure variants.
-
 ### Stage boundary validation
 
 The clarify stage output is validated with `UserProfileSchema`. If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
+
+### Inline assembly from typed outputs
+
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase outputs are mapped directly into the profile before a final `UserProfileSchema.parse()` boundary check. Most phase outputs are spread (`parameters`, `allocation`, `contribution`); risk is selectively extracted — only `riskTolerance` is taken because `selfRatingScore` is not a profile field (it remains on `RiskPhaseOutput` for use by the allocation phase). With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ### Session correlation
 
