@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  RetriesExhaustedError,
+  ConvergenceFailedError,
   askWithClassify,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
@@ -128,12 +128,12 @@ const askEmergencyFund = async (
       waitForResponse,
       model: "gpt-5.4-nano",
       effort: "low",
-      retries: 2,
+      followUps: 2,
     });
 
     return output.answer === "yes";
   } catch (err) {
-    if (err instanceof RetriesExhaustedError) {
+    if (err instanceof ConvergenceFailedError) {
       // Intentional: default to no EF → education sent. When in doubt, educate.
       return false;
     }
@@ -155,12 +155,12 @@ const askDebt = async (
       waitForResponse,
       model: "gpt-5.4-nano",
       effort: "low",
-      retries: 2,
+      followUps: 2,
     });
 
     return output.answer === "yes";
   } catch (err) {
-    if (err instanceof RetriesExhaustedError) {
+    if (err instanceof ConvergenceFailedError) {
       // Intentional: default to has debt → education sent. When in doubt, educate.
       return true;
     }

@@ -9,12 +9,12 @@ import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAsk");
 
-export class RetriesExhaustedError extends Error {
-  constructor(question: string, retries: number) {
+export class ConvergenceFailedError extends Error {
+  constructor(question: string, followUps: number) {
     super(
-      `askWithClassify failed to converge after ${retries + 1} attempts for: "${question}"`,
+      `askWithClassify failed to converge after ${followUps + 1} attempts for: "${question}"`,
     );
-    this.name = "RetriesExhaustedError";
+    this.name = "ConvergenceFailedError";
   }
 }
 
@@ -42,7 +42,9 @@ type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
   waitForResponse: WaitForResponse;
   model: ResponsesModel;
   effort: ReasoningEffort;
-  retries: number;
+  // Number of follow-up clarification exchanges allowed before giving up.
+  // Total classification attempts = followUps + 1 (the final attempt below the loop).
+  followUps: number;
 };
 
 export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
@@ -56,7 +58,7 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     waitForResponse,
     model,
     effort,
-    retries,
+    followUps,
   } = params;
 
   logger.info("askWithClassify asking", { question });
@@ -64,9 +66,13 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   sendToUser(question);
 
   const history: EasyInputMessage[] = [{ role: "assistant", content: question }];
+
   const format = zodTextFormat(schema, "output");
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  // Each iteration classifies the user's response and, if clarification is needed,
+  // sends a follow-up and loops. The final attempt is handled separately below
+  // because there is no next turn — we classify but never send after it.
+  for (let i = 0; i < followUps; i++) {
     const userResponse = await waitForResponse();
     history.push({ role: "user", content: userResponse });
 
@@ -82,7 +88,7 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
 
     logger.info("askWithClassify classification", {
       clarificationNeeded,
-      attempt,
+      attempt: i,
       usage,
     });
 
@@ -96,17 +102,34 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
 
     history.push({ role: "assistant", content: clarificationMessage });
 
-    // Don't send clarification on the last attempt — no next turn to receive it.
-    if (attempt < retries) {
-      logger.debug("askWithClassify sending clarification", {
-        clarificationMessage,
-      });
+    logger.debug("askWithClassify sending clarification", { clarificationMessage });
 
-      sendToUser(clarificationMessage);
-    }
+    sendToUser(clarificationMessage);
   }
 
-  logger.warn("askWithClassify retries exhausted", { question });
+  // Final attempt — classify the last response but do not send a follow-up.
+  const finalResponse = await waitForResponse();
+  history.push({ role: "user", content: finalResponse });
 
-  throw new RetriesExhaustedError(question, retries);
+  const { output, usage } = await callOpenAIParsed<TOutput>({
+    model,
+    instructions: classifyInstructions,
+    input: history,
+    text: { format },
+    reasoning: { effort },
+  });
+
+  logger.info("askWithClassify classification", {
+    clarificationNeeded: output.clarificationNeeded,
+    attempt: followUps,
+    usage,
+  });
+
+  if (!output.clarificationNeeded) {
+    return output;
+  }
+
+  logger.warn("askWithClassify follow-ups exhausted", { question });
+
+  throw new ConvergenceFailedError(question, followUps);
 };

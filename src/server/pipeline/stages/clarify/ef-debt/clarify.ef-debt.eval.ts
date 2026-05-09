@@ -139,6 +139,82 @@ describe("collectEfDebt", () => {
     expect(clarificationTurn).toBeDefined();
   });
 
+  // clarify.ef-debt.rules.md rule 5: mixed message — agent answers question, then confirms answer (EF side)
+  it("should answer embedded question and confirm EF answer on mixed message", async () => {
+    const responder = createTrackedResponder([
+      "Yes, but does a savings account count?",
+      "Yes, I have 6 months in savings",
+      "No debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const mixedTurn = agentTurns.find((t) => /savings account|qualif/i.test(t.content));
+    expect(mixedTurn).toBeDefined();
+    // phase ends silently — has EF, no debt
+    expect(agentTurns[agentTurns.length - 1].content).not.toMatch(
+      /unexpected expense|paying it off first|costs more than ETF/i,
+    );
+  });
+
+  // clarify.ef-debt.rules.md rule 5: mixed message — agent answers question, then confirms answer (debt side)
+  it("should answer embedded question and confirm debt answer on mixed message", async () => {
+    const responder = createTrackedResponder([
+      "Yes, I have an emergency fund",
+      "No, but does my car loan count?",
+      "No, no high-interest debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const mixedTurn = agentTurns.find((t) => /car loan|mortgage|count/i.test(t.content));
+    expect(mixedTurn).toBeDefined();
+    // phase ends silently — has EF, no debt
+    expect(agentTurns[agentTurns.length - 1].content).not.toMatch(
+      /unexpected expense|paying it off first|costs more than ETF/i,
+    );
+  });
+
+  // clarify.ef-debt.rules.md rule 6: EF follow-ups exhausted → defaults to no EF → education shown
+  it("should default to no EF and show education when EF follow-ups are exhausted", async () => {
+    const responder = createTrackedResponder([
+      "I think so maybe?",
+      "Sort of, kind of",
+      "I'm really not sure",
+      "No debt",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const lastMessage = agentTurns[agentTurns.length - 1].content;
+    expect(lastMessage).toMatch(/unexpected expense|liquid account/i);
+    expect(lastMessage).not.toMatch(/paying it off first|costs more than ETF/i);
+  });
+
+  // clarify.ef-debt.rules.md rule 6: debt follow-ups exhausted → defaults to has debt → education shown
+  it("should default to has debt and show education when debt follow-ups are exhausted", async () => {
+    const responder = createTrackedResponder([
+      "Yes, I have an emergency fund",
+      "I think I might have some",
+      "Sort of?",
+      "I'm not really sure",
+    ]);
+    lastTranscript = responder.transcript;
+
+    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const lastMessage = agentTurns[agentTurns.length - 1].content;
+    expect(lastMessage).toMatch(/paying it off first|costs more than ETF/i);
+    expect(lastMessage).not.toMatch(/unexpected expense|liquid account/i);
+  });
+
   // clarify.ef-debt.rules.md rule 4: ambiguous answer → ask for clarification — debt side
   it("should ask for clarification when debt answer is ambiguous", async () => {
     const responder = createTrackedResponder([

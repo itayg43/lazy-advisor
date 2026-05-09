@@ -4,7 +4,7 @@ import { MAX_AMOUNT } from "#constants/validation.constants";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  RetriesExhaustedError,
+  ConvergenceFailedError,
   askWithClassify,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
@@ -53,14 +53,14 @@ Populate the three output fields based on the rules below.
 **clarificationMessage** (only when clarificationNeeded is true)
 - Must be non-null when clarificationNeeded is true.
 - If user asked a question: answer it briefly, then ask for a specific amount in shekels.
-- If user gave a vague answer: ask for a specific number in shekels (e.g., "Could you give me a specific amount in shekels?").
+- If user gave a vague answer: ask for a specific number in shekels. Do not add encouraging phrases like "even a rough number helps" — a specific number is required.
 - If user deflected: redirect back to the question.
 - Keep it to 1–2 sentences. Do not re-state the original question.
 
 # Examples
 
 User: "I'm not sure yet"
-→ clarificationNeeded: true — ask for a specific number, no deferral (e.g. "Could you give me a specific amount in shekels?")
+→ clarificationNeeded: true — ask for a specific number (e.g. "Could you give me a specific amount in shekels?")
 User: "some money"
 → clarificationNeeded: true — ask for a specific number (e.g. "Could you give me a specific amount in shekels?")
 User: "why do you need to know?"
@@ -105,7 +105,9 @@ User: "10 years"
 User: "around 10 years or maybe more"
 → clarificationNeeded: false — approximate is specific enough, maps to "10+ years"
 User: "why does this matter?"
-→ clarificationNeeded: true — answer briefly then ask (e.g. "Your timeline determines how much risk your portfolio can absorb — could you share roughly how many years you plan to invest?")`;
+→ clarificationNeeded: true — answer briefly then ask (e.g. "Your timeline determines how much risk your portfolio can absorb — could you share roughly how many years you plan to invest?")
+User: "skip"
+→ clarificationNeeded: true — redirect directly, no softening (e.g. "I need your timeline to continue — could you pick one: under 3 years, 3–5 years, 5–10 years, or 10+ years?")`;
 
 export const collectParameters = async (
   sendToUser: SendToUser,
@@ -123,11 +125,11 @@ export const collectParameters = async (
       waitForResponse,
       model: "gpt-5.4-nano",
       effort: "low",
-      retries: 1,
+      followUps: 1,
     });
   } catch (err) {
-    if (err instanceof RetriesExhaustedError) {
-      logger.info("Parameters phase failed — amount retries exhausted");
+    if (err instanceof ConvergenceFailedError) {
+      logger.info("Parameters phase failed — amount follow-ups exhausted");
 
       return { status: "failure", code: "amount_missing" };
     }
@@ -153,11 +155,11 @@ export const collectParameters = async (
       waitForResponse,
       model: "gpt-5.4-nano",
       effort: "low",
-      retries: 1,
+      followUps: 1,
     });
   } catch (err) {
-    if (err instanceof RetriesExhaustedError) {
-      logger.info("Parameters phase failed — timeline retries exhausted");
+    if (err instanceof ConvergenceFailedError) {
+      logger.info("Parameters phase failed — timeline follow-ups exhausted");
 
       return { status: "failure", code: "timeline_missing" };
     }

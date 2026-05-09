@@ -46,3 +46,13 @@ Behavioral rules for the parameters collection phase. Each entry: the rule, a on
 **Scenario:** User says "I'm not sure" on first ask, "I really don't know" on retry. Agent stops without asking for timeline.
 
 **Extracted:** `{ status: "failure", code: "amount_missing" }`
+
+---
+
+## 5. Deflection or off-topic response → redirect back
+
+**Rule:** If the user deflects (e.g., "skip", "I don't want to answer") or goes off-topic on either the amount or timeline question, the agent redirects them back to answer the current question. Applies to both questions.
+
+**Scenario:** Agent has asked for timeline; user responds "skip".
+
+**Expected behavior:** Agent redirects the user back to pick one of the four timeline options.

@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-05-08T22:32:15.833Z | Commit: 110f683
+Timestamp: 2026-05-09T00:16:57.855Z | Commit: 6340346
 
 ---
 
@@ -29,7 +29,7 @@ status: success | amount: 30000 | timeline: 10+ years
 
 **User:** long-term
 
-**Agent:** To help place you correctly, which option best fits your long-term plan: under 3 years, 3–5 years, 5–10 years, or 10+ years?
+**Agent:** Could you pick one from these options: under 3 years, 3–5 years, 5–10 years, or 10+ years?
 
 **User:** I think 10-15 years
 
@@ -49,7 +49,7 @@ status: success | amount: 20000 | timeline: 10+ years
 
 **User:** I have no idea
 
-**Agent:** No problem—can you choose one option: under 3 years, 3–5 years, 5–10 years, or 10+ years?
+**Agent:** No worries—could you pick the closest option for your timeline: under 3 years, 3–5 years, 5–10 years, or 10+ years?
 
 **User:** I really can't say
 
@@ -123,13 +123,69 @@ status: success | amount: 20000 | timeline: 5–10 years
 
 ---
 
+## ✓ should re-ask amount when answer is vague
+
+**Agent:** How much do you want to invest?
+
+**User:** around 20-30k
+
+**Agent:** What exact amount in shekels do you want to invest—e.g., ₪20000 or ₪30000?
+
+**User:** ₪25,000
+
+**Agent:** What's your investment timeline — `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`?
+
+**User:** 10+ years
+
+**Output:**
+status: success | amount: 25000 | timeline: 10+ years
+
+
+---
+
+## ✓ should redirect when user deflects the timeline question
+
+**Agent:** How much do you want to invest?
+
+**User:** ₪30,000
+
+**Agent:** What's your investment timeline — `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`?
+
+**User:** skip
+
+**Agent:** I need your timeline to continue—could you pick one: under 3 years, 3–5 years, 5–10 years, or 10+ years?
+
+**User:** 5-10 years
+
+**Output:**
+status: success | amount: 30000 | timeline: 5–10 years
+
+
+---
+
+## ✓ should accept k-notation amounts
+
+**Agent:** How much do you want to invest?
+
+**User:** 50k
+
+**Agent:** What's your investment timeline — `under 3 years`, `3–5 years`, `5–10 years`, `10+ years`?
+
+**User:** 5-10 years
+
+**Output:**
+status: success | amount: 50000 | timeline: 5–10 years
+
+
+---
+
 ## ✓ should return failure when amount is never provided
 
 **Agent:** How much do you want to invest?
 
 **User:** I'm not sure yet
 
-**Agent:** No problem—could you share a specific investment amount in shekels when you know it (e.g., ₪10,000)?
+**Agent:** Could you give me a specific amount you want to invest in shekels?
 
 **User:** I really don't know
 

@@ -168,6 +168,60 @@ describe("collectParameters", () => {
     }
   });
 
+  // clarify.parameters.rules.md rule 4: vague first attempt, specific second attempt → success
+  it("should re-ask amount when answer is vague", async () => {
+    const responder = createTrackedResponder(["around 20-30k", "₪25,000", "10+ years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.parameters.amount).toBe(25_000);
+      expect(result.parameters.timeline).toBe(TimelineBucket.enum["10+ years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 5: deflection treated as non-answer → redirect → success
+  it("should redirect when user deflects the timeline question", async () => {
+    const responder = createTrackedResponder(["₪30,000", "skip", "5-10 years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.parameters.amount).toBe(30_000);
+      expect(result.parameters.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 4: k-notation shorthand parsed to integer
+  it("should accept k-notation amounts", async () => {
+    const responder = createTrackedResponder(["50k", "5-10 years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = result;
+
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.parameters.amount).toBe(50_000);
+      expect(result.parameters.timeline).toBe(TimelineBucket.enum["5–10 years"]);
+    }
+  });
+
   // clarify.parameters.rules.md rule 4: amount asked twice with no number → failure
   it("should return failure when amount is never provided", async () => {
     const responder = createTrackedResponder(["I'm not sure yet", "I really don't know"]);
