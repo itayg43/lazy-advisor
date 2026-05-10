@@ -1,6 +1,7 @@
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ClarifyErroredReason,
+  ClarifyHaltReason,
   ClarifyUnresolvedReason,
   RedirectingClassification,
 } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -118,7 +119,10 @@ export const CLARIFY_UNRESOLVED_MESSAGES: Record<ClarifyUnresolvedReason, string
 
 // `intake_rejected` is intentionally absent — its message depends on the carried
 // classification and is resolved via INTAKE_REDIRECT_REJECTION_MESSAGES.
-export const CLARIFY_HALT_MESSAGES: Record<"short_timeline", string> = {
+export const CLARIFY_HALT_MESSAGES: Record<
+  Exclude<ClarifyHaltReason, "intake_rejected">,
+  string
+> = {
   short_timeline: SHORT_TIMELINE_EXIT_MESSAGE,
 };
 
@@ -128,5 +132,4 @@ export const CLARIFY_ERRORED_MESSAGES: Record<ClarifyErroredReason, string> = {
 };
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
-export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
 export const MAX_ALLOCATION_TOOL_CALLS = 5;

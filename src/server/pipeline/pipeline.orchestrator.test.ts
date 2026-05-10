@@ -6,6 +6,7 @@ import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runPipeline } from "#pipeline/pipeline.orchestrator";
+import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
   EmergencyFundClassify,
   DebtClassify,
@@ -29,10 +30,7 @@ import {
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type {
-  AllocationPhaseOutput,
-  ContributionPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
+import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
@@ -133,10 +131,13 @@ describe("runPipeline", () => {
   };
 
   const setupContributionMocks = () => {
-    const mockContributionOutput: ContributionPhaseOutput = { plansToContribute: true };
-    mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
+    mockWaitForResponse.mockResolvedValueOnce("yes");
     mockedCallOpenAIParsed.mockResolvedValueOnce(
-      createParsedResponse(mockContributionOutput),
+      createParsedResponse<ContributionClassify>({
+        clarificationNeeded: false,
+        clarificationMessage: null,
+        answer: "yes",
+      }),
     );
   };
 
@@ -158,8 +159,8 @@ describe("runPipeline", () => {
         mockWaitForResponse,
       );
 
-      expect(mockWaitForResponse).toHaveBeenCalledTimes(5); // EF + debt + amount + timeline + risk
-      expect(mockSendToUser).toHaveBeenCalledTimes(6); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + RISK_Q
+      expect(mockWaitForResponse).toHaveBeenCalledTimes(6); // EF + debt + amount + timeline + risk + contribution
+      expect(mockSendToUser).toHaveBeenCalledTimes(7); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + RISK_Q + CONTRIBUTION_Q
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
       // No terminal message — every phase completed
       const sentMessages = mockSendToUser.mock.calls.map((c) => c[0]);
@@ -169,8 +170,10 @@ describe("runPipeline", () => {
       expect(sentMessages).not.toContain(RISK_EXIT_MESSAGE);
       expect(sentMessages).not.toContain(ALLOCATION_EXIT_MESSAGE);
       expect(sentMessages).not.toContain(SYSTEM_ERROR_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(2); // allocation + contribution loops (risk uses askWithClassify)
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + EF + debt + amount + timeline + risk + allocation + contribution
+      // UserProfileSchema.parse() in the stage validates the assembled profile —
+      // a regression in the spread would throw a ZodError and fail this test.
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // allocation loop only; contribution uses askWithClassify
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + EF + debt + amount + timeline + risk + allocation extraction + contribution classify
     });
   });
 
@@ -202,10 +205,10 @@ describe("runPipeline", () => {
 
       await runPipeline("test-session", goal, mockSendToUser, mockWaitForResponse);
 
-      expect(mockSendToUser).toHaveBeenCalledTimes(6); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + RISK_Q
+      expect(mockSendToUser).toHaveBeenCalledTimes(7); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + RISK_Q + CONTRIBUTION_Q
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(3); // intake loop + allocation + contribution (risk uses askWithClassify)
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(9); // classify + intake extraction + EF + debt + amount + timeline + risk + allocation + contribution
+      expect(mockedCallOpenAI).toHaveBeenCalledTimes(2); // intake loop + allocation; contribution uses askWithClassify
+      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(9); // classify + intake extraction + EF + debt + amount + timeline + risk + allocation extraction + contribution classify
     });
 
     it("should send rejection message and stop after intake when rejected", async () => {

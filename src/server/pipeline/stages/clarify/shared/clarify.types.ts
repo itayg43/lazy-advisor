@@ -6,7 +6,7 @@ import type {
   ClarifyErroredReasonEnum,
   ClarifyHaltReasonEnum,
   ClarifyUnresolvedReasonEnum,
-  ContributionPhaseOutputSchema,
+  ContributionPhaseResultSchema,
   GoalClassificationEnum,
   GoalClassificationSchema,
   IntakePhaseOutputSchema,
@@ -14,7 +14,6 @@ import type {
   ParametersPhaseResultSchema,
   RiskPhaseOutputSchema,
   RiskPhaseResultSchema,
-  RiskScoreSchema,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { PipelineStatus, UserProfile } from "#types/pipeline.types";
 
@@ -29,12 +28,11 @@ export type ClarifyErroredReason = z.infer<typeof ClarifyErroredReasonEnum>;
 export type IntakePhaseOutput = z.infer<typeof IntakePhaseOutputSchema>;
 export type ParametersPhaseOutput = z.infer<typeof ParametersPhaseOutputSchema>;
 export type ParametersPhaseResult = z.infer<typeof ParametersPhaseResultSchema>;
-export type RiskScore = z.infer<typeof RiskScoreSchema>;
 export type RiskPhaseOutput = z.infer<typeof RiskPhaseOutputSchema>;
 export type RiskPhaseResult = z.infer<typeof RiskPhaseResultSchema>;
 export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
 export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
-export type ContributionPhaseOutput = z.infer<typeof ContributionPhaseOutputSchema>;
+export type ContributionPhaseResult = z.infer<typeof ContributionPhaseResultSchema>;
 
 export type ClarifyStageResult =
   | { status: Extract<PipelineStatus, "completed">; profile: UserProfile }

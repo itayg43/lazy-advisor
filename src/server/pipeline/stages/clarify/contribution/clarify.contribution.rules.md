@@ -2,6 +2,8 @@
 
 Behavioral rules for the contribution phase. This phase resolves one boolean: whether the user plans to add money to their portfolio periodically after the initial investment.
 
+The phase uses `askWithClassify`. The classify model receives the user's response and the investment context (equity/buffer amounts), then produces `answer: "yes" | "no"` plus an optional clarification message.
+
 Cases are evaluated in priority order. Israel-specific concerns and clarification questions are handled before yes/no resolution.
 
 ---
@@ -30,7 +32,7 @@ Cover: the real constraint is fractional shares (Israeli brokerages generally do
 
 ## 3. Explicit yes → true immediately
 
-**Rule:** If the user clearly says they plan to contribute periodically, accept `true` and end the phase.
+**Rule:** If the user clearly says they plan to contribute periodically, classify as `answer: "yes"` and end the phase.
 
 **Scenario:** "Yes, I plan to add around ₪500 every month."
 
@@ -40,7 +42,7 @@ Cover: the real constraint is fractional shares (Israeli brokerages generally do
 
 ## 4. Explicit no → false immediately
 
-**Rule:** If the user clearly says they will not be adding money periodically, accept `false` and end the phase — no follow-up.
+**Rule:** If the user clearly says they will not be adding money periodically, classify as `answer: "no"` and end the phase — no follow-up.
 
 **Scenario:** "No, this is a one-time investment."
 
@@ -48,15 +50,29 @@ Cover: the real constraint is fractional shares (Israeli brokerages generally do
 
 ---
 
-## 5. Vague or uncertain → acknowledge briefly, then resolve to false
+## 5. Vague or uncertain → resolve to false immediately
 
-**Rule:** Any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly" — resolves to `false`. Acknowledge briefly so the user doesn't feel cut off, then end the phase. Do not re-ask.
-
-**Acknowledgment to use:** "No problem — you can always start with a one-time investment and add more later when you're ready." Send this via `ask_user` and stop calling tools immediately — do not respond to any follow-up from the user.
+**Rule:** Any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly" — classifies as `answer: "no"` directly. No clarification message, no re-ask. The user can revisit this decision later.
 
 **Scenario:** "Maybe someday, but not regularly."
 
-**Extracted:** plansToContribute: false
+**Extracted:** plansToContribute: false (resolved in 1 turn — no follow-up sent)
+
+Note: this behavior is deterministic code once the classify model returns `answer: "no"` — covered by unit tests. The eval does not test this case.
+
+---
+
+## Follow-up budget
+
+`followUps: 2` → 3 total classification attempts (loop × 2 + final).
+
+- **Happy path:** initial ask → clear answer = 1 turn.
+- **Israel/DCA clarification:** initial ask → clarification exchange → answer = 2 turns.
+- **Worst case:** two clarification exchanges (e.g., Israel concern + follow-up question) → final attempt = 3 turns.
+
+If all 3 turns are consumed and `clarificationNeeded` remains `true`, `askWithClassify` throws `ClassifyFollowUpsExhaustedError`. `collectContribution` catches it and returns `{ status: "completed", plansToContribute: false }` — cannot resolve → assume no. User-driven, not a system error.
+
+`ClassifyOutputInvalidError` and `ClassifyMessageMissingError` are system errors → `{ status: "errored", reason: ... }`. The stage logs these and defaults to `plansToContribute: false` — contribution is non-blocking by design.
 
 ---
 

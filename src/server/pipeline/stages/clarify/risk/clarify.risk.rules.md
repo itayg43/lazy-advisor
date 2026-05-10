@@ -84,13 +84,13 @@ One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval test
 - Initial ask + clarifying Q re-presentation + Step 3 re-ask = 3
 - Initial ask + clarifying Q re-presentation + valid answer = 2 (within budget)
 
-If all 3 turns are consumed and no valid score is given, the phase ends silently. The extraction returns null and the phase hard-fails with `risk_missing`.
+If all 3 turns are consumed and no valid score is given, the phase ends silently. The classify output returns null and the phase returns `{ status: "unresolved", reason: "risk_tolerance" }`.
 
 **Scenarios:**
 
 - `"What does drop temporarily mean?"` → re-present → `"2-3"` → Step 3 re-ask → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
-- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "failure", reason: "risk_missing" }`
-- `"I don't know"` → re-ask → `"still not sure"` → re-ask → `"I really can't"` → budget exhausted → `{ status: "failure", reason: "risk_missing" }`
+- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "unresolved", reason: "risk_tolerance" }`
+- `"I don't know"` → re-ask → `"still not sure"` → re-ask → `"I really can't"` → budget exhausted → `{ status: "unresolved", reason: "risk_tolerance" }`
 
 ---
 

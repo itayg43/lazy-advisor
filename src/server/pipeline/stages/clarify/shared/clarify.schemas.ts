@@ -60,11 +60,8 @@ export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
 ]);
 
 // riskTolerance is derived from selfRatingScore in TypeScript, not by the model.
-export const RiskScoreSchema = z.object({
+export const RiskPhaseOutputSchema = z.object({
   selfRatingScore: z.number().int().min(1).max(5),
-});
-
-export const RiskPhaseOutputSchema = RiskScoreSchema.extend({
   riskTolerance: RiskToleranceEnum,
 });
 
@@ -105,6 +102,16 @@ export const AllocationPhaseResultSchema = z.discriminatedUnion("status", [
   }),
 ]);
 
-export const ContributionPhaseOutputSchema = z.object({
-  plansToContribute: z.boolean(),
-});
+export const ContributionPhaseResultSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: PipelineStatusEnum.extract(["completed"]),
+    plansToContribute: z.boolean(),
+  }),
+  z.object({
+    status: PipelineStatusEnum.extract(["errored"]),
+    reason: ClarifyErroredReasonEnum.extract([
+      "classify_output_invalid",
+      "classify_message_missing",
+    ]),
+  }),
+]);

@@ -1,64 +1,86 @@
+import { z } from "zod";
+
 import { createLogger } from "#lib/logger";
-import { MAX_CONTRIBUTION_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
-  runPhaseExtraction,
-  runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.phase";
-import { ContributionPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+  AskWithClassifyBaseSchema,
+  ClassifyFollowUpsExhaustedError,
+  ClassifyMessageMissingError,
+  ClassifyOutputInvalidError,
+  askWithClassify,
+} from "#pipeline/stages/clarify/shared/clarify.ask";
+import { ClarifyErroredReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
-  ContributionPhaseOutput,
+  ContributionPhaseResult,
   ParametersPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyContribution");
 
-const CONTRIBUTION_PROMPT = `# Role and Objective
-You are the contribution phase of an investment advisor pipeline. Your sole responsibility is to determine whether the user plans to add money to their portfolio periodically after their initial investment. Do **not** provide investment advice, portfolio suggestions, or fund names.
+const ContributionClassifySchema = AskWithClassifyBaseSchema.extend({
+  answer: z.enum(["yes", "no"]).nullable(),
+});
 
-# Turn 1 — Initial Question
-You have not yet asked the user anything. Send exactly this question via the \`ask_user\` tool:
-"After your initial investment, do you plan to add money to your portfolio periodically — for example, every month or quarter?"
+const ContributionClassifyResolvedSchema = ContributionClassifySchema.extend({
+  answer: z.enum(["yes", "no"]),
+});
 
-# Turn 2+ — Processing the User's Response
-The user has now responded. All replies — including re-asks after an explanation — must be sent via the \`ask_user\` tool. Never output a question as plain text.
+export type ContributionClassify = z.infer<typeof ContributionClassifySchema>;
 
-**Before matching any case below:** if the user raises a practical constraint on making periodic contributions — such as difficulty buying fractional ETF units, investing from Israel, brokerage minimums, or investing small amounts — go directly to Case 1. Do not evaluate Cases 2–5.
+const CONTRIBUTION_QUESTION =
+  "After your initial investment, do you plan to add money to your portfolio periodically — for example, every month or quarter?";
 
-Otherwise, evaluate the cases below in order and execute the first match.
+const buildClassifyInstructions = (equityAmount: number, bufferAmount: number): string =>
+  `# Role and Objective
+You are classifying a user's response to: "${CONTRIBUTION_QUESTION}"
+Populate the three output fields based on the rules below.
 
-**Case 1 — Israel-specific concern (fractional shares, small amounts)**
-Triggered when: user mentions Israel, Israeli brokerages, fractional ETF units, partial shares, minimum purchase sizes, or difficulty investing small amounts.
-Your response must be a full explanation paragraph followed by a separate re-ask — do not fold the explanation into the question as a parenthetical or a single sentence. The explanation must include the user's actual equity and buffer shekel amounts from the input context (e.g. "With your ₪21,000 equity and ₪9,000 buffer...") — do not omit them. Cover: the real constraint is fractional shares (Israeli brokerages generally don't support fractional ETF units, so you need enough to buy at least one full unit); brokerage fees are not a meaningful barrier (a few shekels per trade, paid at most once a month or less); the practical workaround is accumulating savings and investing quarterly. Do not validate skipping contributions as equally good. Then re-ask.
-Do not write: "After your initial investment, do you plan to add money periodically? (Given the usual workaround is accumulating savings and investing quarterly, would you want to do that?)" — this compresses the explanation into a parenthetical and omits the required equity/buffer amounts.
-Example (adapt tone and phrasing; replace equity/buffer with actual values from the input context): "The main practical consideration in Israel is that most brokerages don't support fractional ETF units — so you need enough saved up to buy at least one full unit at a time. With your ₪[equity] equity and ₪[buffer] buffer in mind, the common workaround is to accumulate a few months of savings and invest quarterly rather than monthly. As for fees — you only pay them once per purchase, which is at most once a month or even less, and the cost is just a few shekels per trade, so it's not a real barrier. So — do you think you'd want to invest periodically (even if quarterly rather than monthly), or is this a one-time investment for now?"
+Context — the user's investment split:
+- Equity: ₪${equityAmount.toLocaleString()}
+- Buffer: ₪${bufferAmount.toLocaleString()}
 
-**Case 2 — Clarification question about DCA or periodic contributing**
-Triggered when: user asks what DCA means, what "periodically" means, or asks for any clarification about the question itself.
-Give a beginner-friendly explanation in 2 sentences: one for mechanics (reference the user's actual equity amount from the input context — do not use generic placeholder amounts), one for the benefit. Then re-ask the original question.
-Example (adapt tone and phrasing, use actual equity amount from context): "It means adding a fixed amount to your ₪[equity amount] equity position every month or quarter. The main benefit is that you buy more units when prices are low and fewer when prices are high, which smooths out the effect of market swings over time. So — do you think you'd want to add money periodically, or is this a one-time investment for now?"
+# Output Rules
 
-**Case 3 — Clear yes**
-Triggered when: user confirms they plan to contribute periodically. Do not call ask_user. Do not send any message. End the phase immediately.
+**answer**
+- "yes" — user confirmed they plan to contribute periodically
+- "no" — user confirmed they will not, OR gave a vague/uncertain answer (not sure, maybe, I don't know, etc.)
+- null  — when clarificationNeeded is true
 
-**Case 4 — Clear no**
-Triggered when: user confirms this is a one-time investment. Do not call ask_user. Do not send any message. End the phase immediately.
+**clarificationNeeded**
+- true — user asked what "periodically" or DCA means
+- true — user raised an Israel-specific constraint (fractional shares, small amounts, brokerage minimums)
+- true — user gave an answer but also asked a follow-up question
+- false — user gave a clear yes or no
+- false — user gave a vague or uncertain answer (resolve as "no" directly)
 
-**Case 5 — Vague or uncertain answer**
-Triggered when: any answer that is not a clear "yes" — including "not sure", "maybe", "I don't know", "sometimes", "possibly".
-Send the following via \`ask_user\`: "No problem — you can always start with a one-time investment and add more later when you're ready." Then stop calling tools and end the phase (resolve to false). Do not respond to any follow-up from the user.`;
+**clarificationMessage** (only when clarificationNeeded is true)
+- Must be non-null when clarificationNeeded is true.
+- Use the conversation history to understand what the user said — tailor your response accordingly.
+- If user asked what DCA or periodic contributing means: explain in 2 sentences. Sentence 1: mechanics referencing their equity amount (e.g. "It means adding a fixed amount to your ₪${equityAmount.toLocaleString()} equity position every month or quarter."). Sentence 2: benefit (buy more units when prices are low, smoothing out market swings). Then re-ask.
+- If user raised Israel/fractional concerns: explain that the real constraint is fractional shares (Israeli brokerages don't support fractional ETF units — need enough to buy at least one full unit at a time); fees are not a real barrier (a few shekels per trade); the practical workaround is accumulating savings and investing quarterly. Reference their equity (₪${equityAmount.toLocaleString()}) and buffer (₪${bufferAmount.toLocaleString()}) amounts. Then re-ask. Keep to 3–4 sentences.
+- Keep it direct. Do not re-state the original question.
 
-const CONTRIBUTION_EXTRACTION_INSTRUCTIONS = `Extract a structured record from the preceding investment advisor conversation.
+# Examples
 
-- plansToContribute: true if the user confirmed they plan to add money periodically, false otherwise (explicit no, vague answer, or no clear signal)`;
+User: "yes"
+→ clarificationNeeded: false, answer: "yes"
+User: "no, one-time only"
+→ clarificationNeeded: false, answer: "no"
+User: "maybe someday"
+→ clarificationNeeded: false, answer: "no" (vague — resolve directly)
+User: "what does periodically mean?"
+→ clarificationNeeded: true — explain DCA mechanics with their equity amount, then re-ask
+User: "in Israel you can't buy partial shares so it's hard to add small amounts"
+→ clarificationNeeded: true — explain fractional shares constraint and quarterly workaround, include their equity/buffer amounts, then re-ask`;
 
 export const collectContribution = async (
   parameters: ParametersPhaseOutput,
   allocation: AllocationPhaseOutput,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<ContributionPhaseOutput> => {
+): Promise<ContributionPhaseResult> => {
   logger.info("Starting contribution phase", { parameters, allocation });
 
   const equityAmount = Math.round(
@@ -66,31 +88,52 @@ export const collectContribution = async (
   );
   const bufferAmount = parameters.amount - equityAmount;
 
-  const context = `Investment amount: ₪${parameters.amount.toLocaleString()}
-Investment timeline: ${parameters.timeline}
-Allocation: ${allocation.equityPercentage}% equity (₪${equityAmount.toLocaleString()}), ${allocation.bufferPercentage}% buffer (₪${bufferAmount.toLocaleString()})`;
+  try {
+    const output = await askWithClassify({
+      question: CONTRIBUTION_QUESTION,
+      classifyInstructions: buildClassifyInstructions(equityAmount, bufferAmount),
+      schema: ContributionClassifySchema,
+      resolvedSchema: ContributionClassifyResolvedSchema,
+      sendToUser,
+      waitForResponse,
+      model: "gpt-5.4-nano",
+      effort: "low",
+      followUps: 2,
+    });
 
-  const { responseId } = await runPhaseLoop({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: CONTRIBUTION_PROMPT,
-    input: context,
-    maxToolCalls: MAX_CONTRIBUTION_TOOL_CALLS,
-    phaseName: "Contribution phase",
-    sendToUser,
-    waitForResponse,
-  });
+    return {
+      status: PipelineStatusEnum.enum.completed,
+      plansToContribute: output.answer === "yes",
+    };
+  } catch (error) {
+    if (error instanceof ClassifyFollowUpsExhaustedError) {
+      logger.warn(
+        "collectContribution — follow-ups exhausted, defaulting to no contribution",
+      );
 
-  const { id, usage, output } = await runPhaseExtraction<ContributionPhaseOutput>({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: CONTRIBUTION_EXTRACTION_INSTRUCTIONS,
-    lastResponseId: responseId,
-    schema: ContributionPhaseOutputSchema,
-  });
+      return { status: PipelineStatusEnum.enum.completed, plansToContribute: false };
+    }
 
-  logger.info("Contribution extraction complete", { responseId: id, usage });
-  logger.debug("Contribution output", { output });
+    if (error instanceof ClassifyOutputInvalidError) {
+      logger.error("collectContribution — classify output invalid", error, {
+        cause: error.cause,
+      });
 
-  return output;
+      return {
+        status: PipelineStatusEnum.enum.errored,
+        reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
+      };
+    }
+
+    if (error instanceof ClassifyMessageMissingError) {
+      logger.error("collectContribution — classify message missing", error);
+
+      return {
+        status: PipelineStatusEnum.enum.errored,
+        reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
+      };
+    }
+
+    throw error;
+  }
 };

@@ -40,10 +40,13 @@ const handleClarifyTermination = (
   switch (result.status) {
     case PipelineStatusEnum.enum.halted: {
       logger.info("Clarify stage halted", { reason: result.reason });
-      if (result.reason === ClarifyHaltReasonEnum.enum.intake_rejected) {
-        sendToUser(INTAKE_REDIRECT_REJECTION_MESSAGES[result.classification]);
-      } else {
-        sendToUser(CLARIFY_HALT_MESSAGES[result.reason]);
+      switch (result.reason) {
+        case ClarifyHaltReasonEnum.enum.intake_rejected:
+          sendToUser(INTAKE_REDIRECT_REJECTION_MESSAGES[result.classification]);
+          break;
+        case ClarifyHaltReasonEnum.enum.short_timeline:
+          sendToUser(CLARIFY_HALT_MESSAGES[result.reason]);
+          break;
       }
 
       return;
