@@ -15,6 +15,7 @@
 - **Parameter variations on the same branch**: Don't add a second test for the same code path with a different numeric input (e.g. `attempts: 2` vs `attempts: 3`). Varying a value without hitting a new branch adds no safety net.
 - **Mock delegation without logic**: Don't write tests that only assert a mock was called with the same arguments passed in. If a function has no conditionals, transformations, or error handling of its own, there is nothing to assert — add tests when logic is added.
 - **Thin orchestration**: If a function only calls other functions in sequence with no branching or transformation, skip the unit test — it would only verify call order on mocks. Use evals to test the real behavior end-to-end.
+- **Single test file when layers are observably equivalent.** When an upper layer (e.g. an orchestrator) only dispatches results from a lower layer (e.g. a stage) and the lower layer's full result space is observable through the upper layer, write one test file at the upper-layer level. A separate lower-layer test would duplicate setup and assertions for the same behavior. Add a separate lower-layer test only when it grows logic that isn't visible to the upper layer (transformations, side effects, multi-input invariants).
 
 ## Mocking
 
@@ -31,21 +32,19 @@
 
 The external-boundary rule has one exception: when the error under test originates *inside* an internal function (not at the OpenAI boundary), a global `vi.mock` would contaminate all other tests in the file. In that case, use `vi.spyOn` scoped to that specific test — `vi.restoreAllMocks()` in `beforeEach` handles cleanup automatically, so no manual `spy.mockRestore()` is needed.
 
-In this codebase this arises when testing orchestrator branches triggered by `PhaseBudgetExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its budget. Phases that use `askWithClassify` instead of `runPhaseLoop` (e.g., risk) are unaffected by the spy — mock those at the OpenAI boundary as normal.
+In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` instead of `runPhaseLoop` (e.g., risk) are unaffected by the spy — mock those at the OpenAI boundary as normal.
 
 ```ts
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 
-it("should handle allocation budget exhaustion", async () => {
+it("should handle allocation tool-call exhaustion", async () => {
   // ... callOpenAIParsed setup for classify / ef-debt / parameters / risk ...
 
-  const runPhaseLoopSpy = vi
-    .spyOn(clarifyPhase, "runPhaseLoop")
-    .mockRejectedValueOnce(
-      new PhaseBudgetExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
-    );
+  vi.spyOn(clarifyPhase, "runPhaseLoop").mockRejectedValueOnce(
+    new PhaseLoopToolCallsExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
+  );
 
-  const result = await runClarifyStage(...);
+  await runPipeline(...);
 
   // assertions ...
 });

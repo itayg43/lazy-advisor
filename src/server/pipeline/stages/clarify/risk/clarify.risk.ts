@@ -3,19 +3,29 @@ import { z } from "zod";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  ConvergenceFailedError,
+  ClassifyFollowUpsExhaustedError,
+  ClassifyMessageMissingError,
+  ClassifyOutputInvalidError,
   askWithClassify,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
+import {
+  ClarifyErroredReasonEnum,
+  ClarifyUnresolvedReasonEnum,
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { RiskTolerance } from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyRisk");
 
-const { conservative, moderate, aggressive } = RiskTolerance.enum;
+const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 const RiskClassifySchema = AskWithClassifyBaseSchema.extend({
   selfRatingScore: z.number().int().min(1).max(5).nullable(),
+});
+
+const RiskClassifyResolvedSchema = RiskClassifySchema.extend({
+  selfRatingScore: z.number().int().min(1).max(5),
 });
 
 export type RiskClassify = z.infer<typeof RiskClassifySchema>;
@@ -118,6 +128,7 @@ export const collectRisk = async (
       question: RISK_QUESTION,
       classifyInstructions: RISK_CLASSIFY_INSTRUCTIONS,
       schema: RiskClassifySchema,
+      resolvedSchema: RiskClassifyResolvedSchema,
       sendToUser,
       waitForResponse,
       model: "gpt-5.4-nano",
@@ -125,26 +136,41 @@ export const collectRisk = async (
       followUps: 2,
     });
 
-    if (output.selfRatingScore === null) {
-      logger.info("Risk phase failed — risk tolerance missing");
-
-      return { status: "failure", reason: "risk_missing" };
-    }
-
     const result = {
-      status: "success" as const,
+      status: PipelineStatusEnum.enum.completed,
       selfRatingScore: output.selfRatingScore,
       riskTolerance: mapScoreToBucket(output.selfRatingScore),
-    };
+    } as const;
 
     logger.debug("Risk output", { output: result });
 
     return result;
   } catch (error) {
-    if (error instanceof ConvergenceFailedError) {
-      logger.info("Risk phase budget exhausted — risk tolerance missing");
+    if (error instanceof ClassifyFollowUpsExhaustedError) {
+      logger.info("Risk phase unresolved — follow-ups exhausted");
 
-      return { status: "failure", reason: "risk_missing" };
+      return {
+        status: PipelineStatusEnum.enum.unresolved,
+        reason: ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
+      };
+    }
+    if (error instanceof ClassifyOutputInvalidError) {
+      logger.error("Risk phase errored — classify output invalid", error, {
+        cause: error.cause,
+      });
+
+      return {
+        status: PipelineStatusEnum.enum.errored,
+        reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
+      };
+    }
+    if (error instanceof ClassifyMessageMissingError) {
+      logger.error("Risk phase errored — classify message missing", error);
+
+      return {
+        status: PipelineStatusEnum.enum.errored,
+        reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
+      };
     }
 
     throw error;

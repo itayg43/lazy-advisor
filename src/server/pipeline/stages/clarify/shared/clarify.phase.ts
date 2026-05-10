@@ -19,7 +19,7 @@ import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/ope
 
 const logger = createLogger("clarifyPhase");
 
-export class PhaseBudgetExhaustedError extends Error {
+export class PhaseLoopToolCallsExhaustedError extends Error {
   constructor(phaseName: string, maxToolCalls: number) {
     super(`${phaseName} failed to converge within ${maxToolCalls} tool calls`);
   }
@@ -126,7 +126,7 @@ export const runPhaseLoop = async ({
 
     toolCallCount += functionCalls.length;
     if (toolCallCount > maxToolCalls) {
-      throw new PhaseBudgetExhaustedError(phaseName, maxToolCalls);
+      throw new PhaseLoopToolCallsExhaustedError(phaseName, maxToolCalls);
     }
 
     const toolOutputs = await collectToolOutputs(

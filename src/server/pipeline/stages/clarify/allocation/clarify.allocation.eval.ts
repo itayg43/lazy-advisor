@@ -13,16 +13,16 @@ import type {
   ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
+import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
 
-const { conservative, moderate, aggressive } = RiskTolerance.enum;
+const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 describe("collectAllocation", () => {
   const longHorizonAggressiveParameters: ParametersPhaseOutput = {
     amount: 50_000,
-    timeline: TimelineBucket.enum["10+ years"],
+    timeline: TimelineBucketEnum.enum["10+ years"],
   };
   const aggressiveRisk: RiskPhaseOutput = {
     selfRatingScore: 5,
@@ -31,7 +31,7 @@ describe("collectAllocation", () => {
 
   const midHorizonModerateParameters: ParametersPhaseOutput = {
     amount: 80_000,
-    timeline: TimelineBucket.enum["5–10 years"],
+    timeline: TimelineBucketEnum.enum["5–10 years"],
   };
   const moderateRisk: RiskPhaseOutput = {
     selfRatingScore: 3,
@@ -40,7 +40,7 @@ describe("collectAllocation", () => {
 
   const longHorizonConservativeParameters: ParametersPhaseOutput = {
     amount: 60_000,
-    timeline: TimelineBucket.enum["10+ years"],
+    timeline: TimelineBucketEnum.enum["10+ years"],
   };
   const conservativeRisk: RiskPhaseOutput = {
     selfRatingScore: 2,
@@ -49,7 +49,7 @@ describe("collectAllocation", () => {
 
   const shortMidHorizonConservativeParameters: ParametersPhaseOutput = {
     amount: 30_000,
-    timeline: TimelineBucket.enum["3–5 years"],
+    timeline: TimelineBucketEnum.enum["3–5 years"],
   };
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
@@ -81,9 +81,9 @@ describe("collectAllocation", () => {
   // Narrows an AllocationPhaseResult to its success branch so the rest of the
   // test can assert on the `.allocation` payload directly.
   const expectSuccess = (result: AllocationPhaseResult): AllocationPhaseOutput => {
-    expect(result.status).toBe("success");
-    if (result.status !== "success") {
-      throw new Error("expected allocation success result");
+    expect(result.status).toBe("completed");
+    if (result.status !== "completed") {
+      throw new Error("expected allocation completed result");
     }
 
     return result.allocation;
@@ -439,8 +439,8 @@ describe("collectAllocation", () => {
     );
     lastOutput = result;
 
-    expect(result.status).toBe("failure");
-    if (result.status !== "failure") return;
-    expect(result.reason).toBe("split_unresolved");
+    expect(result.status).toBe("unresolved");
+    if (result.status !== "unresolved") return;
+    expect(result.reason).toBe("allocation");
   });
 });

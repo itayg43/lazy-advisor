@@ -42,6 +42,8 @@ Work one task at a time. Each task must be fully closed before moving to the nex
 
 If a refactor or design question surfaces mid-task, note it in `TASKS.md` and do not act on it until the current task is closed.
 
+**Task tool usage:** Use `TaskCreate` whenever a request has more than one sub-step, or when new asks stack on top of unfinished ones in the same session. This applies to conversational back-and-forth, not just written plans. Single small edits don't need a list.
+
 Before writing code:
 - For tasks touching multiple files or areas: spawn an Explore subagent with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
 - Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it

@@ -1,7 +1,7 @@
 import { zodTextFormat } from "openai/helpers/zod";
 import type { EasyInputMessage } from "openai/resources/responses/responses";
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
-import { z } from "zod";
+import { z, type ZodError } from "zod";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
@@ -10,21 +10,41 @@ import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAsk");
 
-export class ConvergenceFailedError extends InternalError {
+export class ClassifyFollowUpsExhaustedError extends InternalError {
   constructor(question: string, followUps: number) {
     super(
       `askWithClassify failed to converge after ${followUps + 1} attempts for: "${question}"`,
     );
-    this.name = "ConvergenceFailedError";
+    this.name = "ClassifyFollowUpsExhaustedError";
   }
 }
 
-export class MissingClarificationMessageError extends InternalError {
+export class ClassifyMessageMissingError extends InternalError {
   constructor() {
     super("askWithClassify: clarificationNeeded=true but clarificationMessage is null");
-    this.name = "MissingClarificationMessageError";
+    this.name = "ClassifyMessageMissingError";
   }
 }
+
+export class ClassifyOutputInvalidError extends InternalError {
+  readonly cause: ZodError;
+
+  constructor(cause: ZodError) {
+    super("askWithClassify: classify output failed resolved-schema validation");
+    this.name = "ClassifyOutputInvalidError";
+    this.cause = cause;
+  }
+}
+
+export type ClassifyError =
+  | ClassifyFollowUpsExhaustedError
+  | ClassifyMessageMissingError
+  | ClassifyOutputInvalidError;
+
+export const isClassifyError = (error: unknown): error is ClassifyError =>
+  error instanceof ClassifyFollowUpsExhaustedError ||
+  error instanceof ClassifyMessageMissingError ||
+  error instanceof ClassifyOutputInvalidError;
 
 export const AskWithClassifyBaseSchema = z.object({
   clarificationNeeded: z.boolean(),
@@ -35,10 +55,19 @@ export const AskWithClassifyBaseSchema = z.object({
 
 type AskWithClassifyBase = z.infer<typeof AskWithClassifyBaseSchema>;
 
-type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
+// Two-schema pattern: OpenAI structured outputs only accept a single z.object
+// (no discriminated unions), so the model is given the loose `schema` with nullable
+// domain fields. After convergence we re-validate against `resolvedSchema` (typically
+// the loose one with only the post-convergence-required fields tightened to non-null)
+// — failures surface as ClassifyOutputInvalidError instead of leaking a null downstream.
+type AskWithClassifyParams<
+  TOutput extends AskWithClassifyBase,
+  TResolved extends TOutput,
+> = {
   question: string;
   classifyInstructions: string;
   schema: z.ZodType<TOutput>;
+  resolvedSchema: z.ZodType<TResolved>;
   sendToUser: SendToUser;
   waitForResponse: WaitForResponse;
   model: ResponsesModel;
@@ -48,13 +77,17 @@ type AskWithClassifyParams<TOutput extends AskWithClassifyBase> = {
   followUps: number;
 };
 
-export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
-  params: AskWithClassifyParams<TOutput>,
-): Promise<TOutput> => {
+export const askWithClassify = async <
+  TOutput extends AskWithClassifyBase,
+  TResolved extends TOutput,
+>(
+  params: AskWithClassifyParams<TOutput, TResolved>,
+): Promise<TResolved> => {
   const {
     question,
     classifyInstructions,
     schema,
+    resolvedSchema,
     sendToUser,
     waitForResponse,
     model,
@@ -100,11 +133,11 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
     if (!clarificationNeeded) {
       logger.info("askWithClassify complete", { attempt, question });
 
-      return output;
+      return validateResolved(output, resolvedSchema);
     }
 
     if (!clarificationMessage) {
-      throw new MissingClarificationMessageError();
+      throw new ClassifyMessageMissingError();
     }
 
     history.push({ role: "assistant", content: clarificationMessage });
@@ -139,10 +172,22 @@ export const askWithClassify = async <TOutput extends AskWithClassifyBase>(
   if (!output.clarificationNeeded) {
     logger.info("askWithClassify complete", { attempt: followUps, question });
 
-    return output;
+    return validateResolved(output, resolvedSchema);
   }
 
   logger.warn("askWithClassify follow-ups exhausted", { question });
 
-  throw new ConvergenceFailedError(question, followUps);
+  throw new ClassifyFollowUpsExhaustedError(question, followUps);
+};
+
+const validateResolved = <TOutput, TResolved extends TOutput>(
+  output: TOutput,
+  resolvedSchema: z.ZodType<TResolved>,
+): TResolved => {
+  const parsed = resolvedSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new ClassifyOutputInvalidError(parsed.error);
+  }
+
+  return parsed.data;
 };

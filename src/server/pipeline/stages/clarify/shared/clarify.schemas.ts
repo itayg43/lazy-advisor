@@ -1,9 +1,13 @@
 import { z } from "zod";
 
 import { MAX_AMOUNT } from "#constants/validation.constants";
-import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
+import {
+  PipelineStatusEnum,
+  RiskToleranceEnum,
+  TimelineBucketEnum,
+} from "#schemas/pipeline.schemas";
 
-export const GoalClassification = z.enum([
+export const GoalClassificationEnum = z.enum([
   "normal",
   "out_of_scope",
   "unrealistic",
@@ -11,8 +15,22 @@ export const GoalClassification = z.enum([
 ]);
 
 export const GoalClassificationSchema = z.object({
-  type: GoalClassification,
+  type: GoalClassificationEnum,
 });
+
+export const ClarifyUnresolvedReasonEnum = z.enum([
+  "amount",
+  "timeline",
+  "risk_tolerance",
+  "allocation",
+]);
+
+export const ClarifyHaltReasonEnum = z.enum(["short_timeline", "intake_rejected"]);
+
+export const ClarifyErroredReasonEnum = z.enum([
+  "classify_output_invalid",
+  "classify_message_missing",
+]);
 
 export const IntakePhaseOutputSchema = z.object({
   accepted: z.boolean(),
@@ -20,15 +38,24 @@ export const IntakePhaseOutputSchema = z.object({
 
 export const ParametersPhaseOutputSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
-  timeline: TimelineBucket,
+  timeline: TimelineBucketEnum,
 });
 
-// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure reason.
 export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("success"), parameters: ParametersPhaseOutputSchema }),
   z.object({
-    status: z.literal("failure"),
-    reason: z.union([z.literal("amount_missing"), z.literal("timeline_missing")]),
+    status: PipelineStatusEnum.extract(["completed"]),
+    parameters: ParametersPhaseOutputSchema,
+  }),
+  z.object({
+    status: PipelineStatusEnum.extract(["unresolved"]),
+    reason: ClarifyUnresolvedReasonEnum.extract(["amount", "timeline"]),
+  }),
+  z.object({
+    status: PipelineStatusEnum.extract(["errored"]),
+    reason: ClarifyErroredReasonEnum.extract([
+      "classify_output_invalid",
+      "classify_message_missing",
+    ]),
   }),
 ]);
 
@@ -38,13 +65,24 @@ export const RiskScoreSchema = z.object({
 });
 
 export const RiskPhaseOutputSchema = RiskScoreSchema.extend({
-  riskTolerance: RiskTolerance,
+  riskTolerance: RiskToleranceEnum,
 });
 
-// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure reason.
 export const RiskPhaseResultSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("success") }).merge(RiskPhaseOutputSchema),
-  z.object({ status: z.literal("failure"), reason: z.literal("risk_missing") }),
+  z
+    .object({ status: PipelineStatusEnum.extract(["completed"]) })
+    .merge(RiskPhaseOutputSchema),
+  z.object({
+    status: PipelineStatusEnum.extract(["unresolved"]),
+    reason: ClarifyUnresolvedReasonEnum.extract(["risk_tolerance"]),
+  }),
+  z.object({
+    status: PipelineStatusEnum.extract(["errored"]),
+    reason: ClarifyErroredReasonEnum.extract([
+      "classify_output_invalid",
+      "classify_message_missing",
+    ]),
+  }),
 ]);
 
 export const AllocationPhaseOutputSchema = z
@@ -56,10 +94,15 @@ export const AllocationPhaseOutputSchema = z
     message: "equityPercentage + bufferPercentage must equal 100",
   });
 
-// Orchestrator-facing wrapper: the Output payload on success, or a graceful failure reason.
 export const AllocationPhaseResultSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("success"), allocation: AllocationPhaseOutputSchema }),
-  z.object({ status: z.literal("failure"), reason: z.literal("split_unresolved") }),
+  z.object({
+    status: PipelineStatusEnum.extract(["completed"]),
+    allocation: AllocationPhaseOutputSchema,
+  }),
+  z.object({
+    status: PipelineStatusEnum.extract(["unresolved"]),
+    reason: ClarifyUnresolvedReasonEnum.extract(["allocation"]),
+  }),
 ]);
 
 export const ContributionPhaseOutputSchema = z.object({

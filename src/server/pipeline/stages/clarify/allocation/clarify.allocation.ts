@@ -6,11 +6,14 @@ import {
   RISK_LEVELS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
-  PhaseBudgetExhaustedError,
+  PhaseLoopToolCallsExhaustedError,
   runPhaseExtraction,
   runPhaseLoop,
 } from "#pipeline/stages/clarify/shared/clarify.phase";
-import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import {
+  AllocationPhaseOutputSchema,
+  ClarifyUnresolvedReasonEnum,
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
   AllocationPhaseResult,
@@ -18,6 +21,7 @@ import type {
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
 
@@ -126,10 +130,13 @@ export const collectAllocation = async (
       waitForResponse,
     }));
   } catch (err) {
-    if (err instanceof PhaseBudgetExhaustedError) {
-      logger.info("Allocation phase budget exhausted — split unresolved");
+    if (err instanceof PhaseLoopToolCallsExhaustedError) {
+      logger.info("Allocation phase unresolved — tool calls exhausted");
 
-      return { status: "failure", reason: "split_unresolved" };
+      return {
+        status: PipelineStatusEnum.enum.unresolved,
+        reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+      };
     }
 
     throw err;
@@ -146,5 +153,5 @@ export const collectAllocation = async (
   logger.info("Allocation extraction complete", { responseId: id, usage });
   logger.debug("Allocation output", { output });
 
-  return { status: "success", allocation: output };
+  return { status: PipelineStatusEnum.enum.completed, allocation: output };
 };

@@ -8,11 +8,11 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskTolerance } from "#schemas/pipeline.schemas";
+import { RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathname;
 
-const { conservative, moderate, aggressive } = RiskTolerance.enum;
+const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 describe("collectRisk", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -53,7 +53,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
@@ -68,7 +68,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
@@ -82,7 +82,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(5);
     expect(output.riskTolerance).toBe(aggressive);
@@ -96,7 +96,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
@@ -111,7 +111,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(4);
     expect(output.riskTolerance).toBe(aggressive);
@@ -128,7 +128,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
@@ -143,7 +143,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(4);
     expect(output.riskTolerance).toBe(aggressive);
@@ -162,7 +162,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
@@ -180,7 +180,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
@@ -194,7 +194,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(2);
     expect(output.riskTolerance).toBe(conservative);
@@ -214,7 +214,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
@@ -239,7 +239,7 @@ describe("collectRisk", () => {
 
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
-    if (output.status !== "success") return;
+    if (output.status !== "completed") return;
 
     expect(output.selfRatingScore).toBe(2);
     expect(output.riskTolerance).toBe(conservative);
@@ -258,9 +258,9 @@ describe("collectRisk", () => {
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
-    expect(output.status).toBe("failure");
-    if (output.status !== "failure") return;
-    expect(output.reason).toBe("risk_missing");
+    expect(output.status).toBe("unresolved");
+    if (output.status !== "unresolved") return;
+    expect(output.reason).toBe("risk_tolerance");
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 
@@ -276,9 +276,9 @@ describe("collectRisk", () => {
     const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
     lastOutput = output;
 
-    expect(output.status).toBe("failure");
-    if (output.status !== "failure") return;
-    expect(output.reason).toBe("risk_missing");
+    expect(output.status).toBe("unresolved");
+    if (output.status !== "unresolved") return;
+    expect(output.reason).toBe("risk_tolerance");
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 });

@@ -1,25 +1,30 @@
-import { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import { RiskTolerance, TimelineBucket } from "#schemas/pipeline.schemas";
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type {
+  ClarifyErroredReason,
+  ClarifyUnresolvedReason,
+  RedirectingClassification,
+} from "#pipeline/stages/clarify/shared/clarify.types";
+import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import type { RiskTolerance, TimelineBucket } from "#types/pipeline.types";
 
 const {
   "under 3 years": under3,
   "3–5 years": t3to5,
   "5–10 years": t5to10,
   "10+ years": t10plus,
-} = TimelineBucket.enum;
+} = TimelineBucketEnum.enum;
 
-export const TIMELINE_BUCKETS = TimelineBucket.options.map((o) => `\`${o}\``).join(", ");
-export const TIMELINE_BUCKET_LIST = TimelineBucket.options
+export const TIMELINE_BUCKETS = TimelineBucketEnum.options
+  .map((o) => `\`${o}\``)
+  .join(", ");
+export const TIMELINE_BUCKET_LIST = TimelineBucketEnum.options
   .map((o, i) => `${i + 1}. ${o}`)
   .join("\n");
 export const TIMELINE_BOUNDARY_EXAMPLES = `"3 years" → "${under3}" (not "${t3to5}"), "5 years" → "${t3to5}" (not "${t5to10}"), "10 years" → "${t5to10}" (not "${t10plus}" — "${t10plus}" means strictly more than 10 years)`;
 
-export const RISK_LEVELS = RiskTolerance.options.map((o) => `\`${o}\``).join(", ");
+export const RISK_LEVELS = RiskToleranceEnum.options.map((o) => `\`${o}\``).join(", ");
 
-type AllocationTimeline = Exclude<
-  (typeof TimelineBucket.options)[number],
-  "under 3 years"
->;
+type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
 
 const ALLOCATION_ANCHOR_DATA = {
   conservative: {
@@ -38,17 +43,17 @@ const ALLOCATION_ANCHOR_DATA = {
     [t10plus]: { min: 80, max: 90 },
   },
 } satisfies Record<
-  (typeof RiskTolerance.options)[number],
+  RiskTolerance,
   Record<AllocationTimeline, { min: number; max: number }>
 >;
 
 const buildAnchorTable = (): string => {
-  const timelines = TimelineBucket.options.filter(
+  const timelines = TimelineBucketEnum.options.filter(
     (o): o is AllocationTimeline => o !== under3,
   );
   const header = `| Willingness \\ Timeline | ${timelines.join(" | ")} |`;
   const separator = `|${"---|".repeat(timelines.length + 1)}`;
-  const rows = RiskTolerance.options.map((risk) => {
+  const rows = RiskToleranceEnum.options.map((risk) => {
     const cells = timelines.map((t) => {
       const { min, max } = ALLOCATION_ANCHOR_DATA[risk][t];
 
@@ -62,26 +67,24 @@ const buildAnchorTable = (): string => {
 };
 
 export const ALLOCATION_ANCHOR_TABLE = buildAnchorTable();
-export const ALLOCATION_TIMELINE_BUCKETS = TimelineBucket.options
+export const ALLOCATION_TIMELINE_BUCKETS = TimelineBucketEnum.options
   .filter((o) => o !== under3)
   .map((o) => `\`${o}\``)
   .join(", ");
 
-export const GOAL_CLASSIFICATIONS = GoalClassification.options
+export const GOAL_CLASSIFICATIONS = GoalClassificationEnum.options
   .map((o) => `\`${o}\``)
   .join(", ");
 
-export const INTAKE_REJECTION_DEFAULT_MESSAGE =
-  "No problem — feel free to come back when you're ready.";
-
-export const INTAKE_REJECTION_MESSAGES: Partial<
-  Record<(typeof GoalClassification.options)[number], string>
+export const INTAKE_REDIRECT_REJECTION_MESSAGES: Record<
+  RedirectingClassification,
+  string
 > = {
-  [GoalClassification.enum.out_of_scope]:
+  [GoalClassificationEnum.enum.out_of_scope]:
     "No problem — feel free to come back when you're ready to explore ETF-based investing.",
-  [GoalClassification.enum.unrealistic]:
+  [GoalClassificationEnum.enum.unrealistic]:
     "No problem — feel free to come back when you're ready to explore a realistic long-term plan.",
-  [GoalClassification.enum.contradictory]:
+  [GoalClassificationEnum.enum.contradictory]:
     "No problem — feel free to come back when you have a clearer picture of your risk tolerance.",
 };
 
@@ -89,19 +92,40 @@ export const PROFILE_TRANSITION_MESSAGE =
   "I'll now ask you a few questions to understand your financial situation and investment preferences — your answers will shape the plan we build together.";
 
 export const AMOUNT_EXIT_MESSAGE =
-  "To build your investment plan I need a specific amount — feel free to come back when you have a figure in mind.";
+  "We couldn't settle on a specific amount — feel free to come back when you have a figure in mind.";
 
 export const TIMELINE_EXIT_MESSAGE =
-  "To build your investment plan I need a sense of when you'd like to use the money — feel free to come back when you have a timeframe in mind.";
+  "We couldn't settle on a timeframe for when you'd like to use the money — feel free to come back when you have one in mind.";
 
 export const SHORT_TIMELINE_EXIT_MESSAGE =
   "For money you plan to use within 3 years, ETFs carry too much timing risk — a market drop right before you need the funds may be hard to recover from in time. A money market fund is a better fit: lower risk, stays accessible, and still earns meaningful returns. When you're ready to invest money for a longer horizon, come back and we'll build an ETF plan.";
 
 export const RISK_EXIT_MESSAGE =
-  "To build a plan, I need to know how much volatility you're comfortable with. Feel free to come back when you have a sense of your risk tolerance.";
+  "We couldn't settle on how much volatility you're comfortable with — feel free to come back when you have a sense of your risk tolerance.";
 
 export const ALLOCATION_EXIT_MESSAGE =
-  "It looks like we couldn't settle on an equity/buffer split that fits — feel free to come back when you've had time to think it over.";
+  "We couldn't settle on an equity/buffer split that fits — feel free to come back when you've had time to think it over.";
+
+export const SYSTEM_ERROR_EXIT_MESSAGE =
+  "Something went wrong on our end — please try again later.";
+
+export const CLARIFY_UNRESOLVED_MESSAGES: Record<ClarifyUnresolvedReason, string> = {
+  amount: AMOUNT_EXIT_MESSAGE,
+  timeline: TIMELINE_EXIT_MESSAGE,
+  risk_tolerance: RISK_EXIT_MESSAGE,
+  allocation: ALLOCATION_EXIT_MESSAGE,
+};
+
+// `intake_rejected` is intentionally absent — its message depends on the carried
+// classification and is resolved via INTAKE_REDIRECT_REJECTION_MESSAGES.
+export const CLARIFY_HALT_MESSAGES: Record<"short_timeline", string> = {
+  short_timeline: SHORT_TIMELINE_EXIT_MESSAGE,
+};
+
+export const CLARIFY_ERRORED_MESSAGES: Record<ClarifyErroredReason, string> = {
+  classify_output_invalid: SYSTEM_ERROR_EXIT_MESSAGE,
+  classify_message_missing: SYSTEM_ERROR_EXIT_MESSAGE,
+};
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
 export const MAX_CONTRIBUTION_TOOL_CALLS = 5;
