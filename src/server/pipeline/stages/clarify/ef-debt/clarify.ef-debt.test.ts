@@ -48,7 +48,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["Yes", "No"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
@@ -60,7 +60,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["No", "No"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const educationTurn = agentTurns[agentTurns.length - 1];
@@ -74,7 +74,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerYes);
     const responder = createTrackedResponder(["Yes", "Yes"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const educationTurn = agentTurns[agentTurns.length - 1];
@@ -88,7 +88,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerYes);
     const responder = createTrackedResponder(["No", "Yes"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const educationTurn = agentTurns[agentTurns.length - 1];
@@ -102,7 +102,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["No", "No"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     expect(responder.transcript.filter((t) => t.role === "user")).toHaveLength(2);
   });
@@ -115,7 +115,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["r1", "r2", "r3", "No"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const lastMessage = agentTurns[agentTurns.length - 1].content;
@@ -131,7 +131,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(needsClarification);
     const responder = createTrackedResponder(["Yes", "r1", "r2", "r3"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const lastMessage = agentTurns[agentTurns.length - 1].content;
@@ -154,7 +154,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["unclear", "No"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const lastMessage = agentTurns[agentTurns.length - 1].content;
@@ -175,7 +175,7 @@ describe("collectEfDebt", () => {
       .mockResolvedValueOnce(answerNo);
     const responder = createTrackedResponder(["unclear", "No"]);
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const lastMessage = agentTurns[agentTurns.length - 1].content;

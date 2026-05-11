@@ -11,7 +11,7 @@ import type {
   ContributionPhaseResult,
   ParametersPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyContribution");
@@ -75,8 +75,7 @@ User: "in Israel you can't buy partial shares so it's hard to add small amounts"
 export const collectContribution = async (
   parameters: ParametersPhaseOutput,
   allocation: AllocationPhaseOutput,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<ContributionPhaseResult> => {
   logger.info("Starting contribution phase", { parameters, allocation });
 
@@ -91,8 +90,7 @@ export const collectContribution = async (
       classifyInstructions: buildClassifyInstructions(equityAmount, bufferAmount),
       schema: ContributionClassifySchema,
       resolvedSchema: ContributionClassifyResolvedSchema,
-      sendToUser,
-      waitForResponse,
+      responder,
       model: "gpt-5.4-nano",
       effort: "low",
       followUps: 2,

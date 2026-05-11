@@ -34,7 +34,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const mortgageTurn = agentTurns.find((t) => /mortgage/i.test(t.content));
@@ -54,7 +54,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const clarificationTurn = agentTurns.find((t) =>
@@ -76,7 +76,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const clarificationTurn = agentTurns.find((t) =>
@@ -94,7 +94,7 @@ describe("collectEfDebt", () => {
     const responder = createTrackedResponder(["skip this", "Yes, I have one", "No debt"]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const redirectTurn = agentTurns.find((t) =>
@@ -112,7 +112,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const redirectTurn = agentTurns.find((t) =>
@@ -130,7 +130,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const clarificationTurn = agentTurns.find((t) =>
@@ -148,7 +148,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const clarificationTurn = agentTurns.find((t) =>
@@ -170,7 +170,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const mixedTurn = agentTurns.find((t) => /savings account|qualif/i.test(t.content));
@@ -190,7 +190,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const mixedTurn = agentTurns.find((t) => /car loan|mortgage|count/i.test(t.content));
@@ -211,7 +211,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const lastMessage = agentTurns[agentTurns.length - 1].content;
@@ -229,7 +229,7 @@ describe("collectEfDebt", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    await collectEfDebt(responder.sendToUser, responder.waitForResponse);
+    await collectEfDebt(responder);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     const lastMessage = agentTurns[agentTurns.length - 1].content;

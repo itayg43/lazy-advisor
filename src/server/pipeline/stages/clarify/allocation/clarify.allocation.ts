@@ -20,7 +20,7 @@ import type {
   ParametersPhaseOutput,
   RiskPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
@@ -106,8 +106,7 @@ Extract only the final agreed split — not an intermediate proposal. Use the us
 export const collectAllocation = async (
   parameters: ParametersPhaseOutput,
   risk: RiskPhaseOutput,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<AllocationPhaseResult> => {
   logger.info("Starting allocation phase", { parameters, risk });
 
@@ -126,8 +125,7 @@ export const collectAllocation = async (
       input: context,
       maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
       phaseName: "Allocation phase",
-      sendToUser,
-      waitForResponse,
+      responder,
     }));
   } catch (err) {
     if (err instanceof PhaseLoopToolCallsExhaustedError) {

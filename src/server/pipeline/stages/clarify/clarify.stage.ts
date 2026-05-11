@@ -12,7 +12,7 @@ import {
   GoalClassificationEnum,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { ClarifyStageResult } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import {
   PipelineStatusEnum,
   TimelineBucketEnum,
@@ -23,8 +23,7 @@ const logger = createLogger("clarifyStage");
 
 export const runClarifyStage = async (
   goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<ClarifyStageResult> => {
   logger.info("Starting clarify stage", { goal });
 
@@ -32,7 +31,7 @@ export const runClarifyStage = async (
 
   if (classification !== GoalClassificationEnum.enum.normal) {
     const handler = INTAKE_HANDLERS[classification];
-    const result = await handler(goal, sendToUser, waitForResponse);
+    const result = await handler(goal, responder);
     if (!result.accepted) {
       logger.info("User rejected intake redirect, ending session");
 
@@ -44,11 +43,11 @@ export const runClarifyStage = async (
     }
   }
 
-  sendToUser(PROFILE_TRANSITION_MESSAGE);
+  responder.sendToUser(PROFILE_TRANSITION_MESSAGE);
 
-  await collectEfDebt(sendToUser, waitForResponse);
+  await collectEfDebt(responder);
 
-  const parametersResult = await collectParameters(sendToUser, waitForResponse);
+  const parametersResult = await collectParameters(responder);
   if (parametersResult.status !== PipelineStatusEnum.enum.completed) {
     return parametersResult;
   }
@@ -63,28 +62,18 @@ export const runClarifyStage = async (
     };
   }
 
-  const riskResult = await collectRisk(sendToUser, waitForResponse);
+  const riskResult = await collectRisk(responder);
   if (riskResult.status !== PipelineStatusEnum.enum.completed) {
     return riskResult;
   }
 
-  const allocationResult = await collectAllocation(
-    parameters,
-    riskResult,
-    sendToUser,
-    waitForResponse,
-  );
+  const allocationResult = await collectAllocation(parameters, riskResult, responder);
   if (allocationResult.status !== PipelineStatusEnum.enum.completed) {
     return allocationResult;
   }
   const { allocation } = allocationResult;
 
-  const contributionResult = await collectContribution(
-    parameters,
-    allocation,
-    sendToUser,
-    waitForResponse,
-  );
+  const contributionResult = await collectContribution(parameters, allocation, responder);
 
   const profile = UserProfileSchema.parse({
     ...parameters,

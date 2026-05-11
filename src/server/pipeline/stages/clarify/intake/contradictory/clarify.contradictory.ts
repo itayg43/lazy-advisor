@@ -1,6 +1,6 @@
 import { runIntakePhase } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
 import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const CONTRADICTORY_PROMPT = `# Role and Objective
 You are the intake phase of an investment advisor pipeline.
@@ -64,15 +64,13 @@ Set accepted to false only if the user disengaged, said they are no longer inter
 
 export const handleContradictoryRisk = async (
   goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<IntakePhaseOutput> => {
   return runIntakePhase(
     CONTRADICTORY_PROMPT,
     "Contradictory risk resolution phase",
     goal,
-    sendToUser,
-    waitForResponse,
+    responder,
     CONTRADICTORY_EXTRACTION_INSTRUCTIONS,
   );
 };

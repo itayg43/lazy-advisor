@@ -6,7 +6,7 @@ import {
   askWithClassify,
   isClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyEfDebt");
 
@@ -125,18 +125,14 @@ User: "No"
 
 // All three classify error classes default to the safe educational fallback —
 // "when in doubt, educate" extends to system errors. Phase stays non-blocking by design.
-const askEmergencyFund = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<boolean> => {
+const askEmergencyFund = async (responder: Responder): Promise<boolean> => {
   try {
     const output = await askWithClassify({
       question: EF_QUESTION,
       classifyInstructions: EF_CLASSIFY_INSTRUCTIONS,
       schema: EmergencyFundSchema,
       resolvedSchema: EmergencyFundResolvedSchema,
-      sendToUser,
-      waitForResponse,
+      responder,
       model: "gpt-5.4-nano",
       effort: "low",
       followUps: 2,
@@ -156,18 +152,14 @@ const askEmergencyFund = async (
   }
 };
 
-const askDebt = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<boolean> => {
+const askDebt = async (responder: Responder): Promise<boolean> => {
   try {
     const output = await askWithClassify({
       question: DEBT_QUESTION,
       classifyInstructions: DEBT_CLASSIFY_INSTRUCTIONS,
       schema: DebtSchema,
       resolvedSchema: DebtResolvedSchema,
-      sendToUser,
-      waitForResponse,
+      responder,
       model: "gpt-5.4-nano",
       effort: "low",
       followUps: 2,
@@ -185,14 +177,11 @@ const askDebt = async (
   }
 };
 
-export const collectEfDebt = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<void> => {
+export const collectEfDebt = async (responder: Responder): Promise<void> => {
   logger.info("Starting EF/debt phase");
 
-  const hasEF = await askEmergencyFund(sendToUser, waitForResponse);
-  const hasDebt = await askDebt(sendToUser, waitForResponse);
+  const hasEF = await askEmergencyFund(responder);
+  const hasDebt = await askDebt(responder);
 
   if (hasEF && !hasDebt) {
     logger.info("EF/debt phase complete — no education needed");
@@ -204,7 +193,7 @@ export const collectEfDebt = async (
   if (!hasEF) educationParts.push(EF_EDUCATION);
   if (hasDebt) educationParts.push(DEBT_EDUCATION);
 
-  sendToUser(educationParts.join("\n\n"));
+  responder.sendToUser(educationParts.join("\n\n"));
 
   logger.info("EF/debt phase complete");
 };

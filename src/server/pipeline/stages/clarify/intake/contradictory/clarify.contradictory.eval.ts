@@ -40,11 +40,7 @@ describe("handleContradictoryRisk", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleContradictoryRisk(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleContradictoryRisk(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
     });
@@ -57,11 +53,7 @@ describe("handleContradictoryRisk", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleContradictoryRisk(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleContradictoryRisk(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
     });
@@ -75,11 +67,7 @@ describe("handleContradictoryRisk", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleContradictoryRisk(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleContradictoryRisk(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
     });
@@ -92,11 +80,7 @@ describe("handleContradictoryRisk", () => {
     const responder = createTrackedResponder(["I'd hold and wait for recovery."]);
     lastTranscript = responder.transcript;
 
-    await handleContradictoryRisk(
-      lastGoal,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    await handleContradictoryRisk(lastGoal, responder);
 
     const agentText = responder.transcript
       .filter((t) => t.role === "agent")
@@ -118,11 +102,7 @@ describe("handleContradictoryRisk", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleContradictoryRisk(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleContradictoryRisk(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
     });

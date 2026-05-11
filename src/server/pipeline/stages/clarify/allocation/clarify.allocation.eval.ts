@@ -114,8 +114,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -149,8 +148,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       midHorizonModerateParameters,
       moderateRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -173,8 +171,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       shortMidHorizonConservativeParameters,
       conservativeRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -197,8 +194,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -220,8 +216,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -246,8 +241,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonConservativeParameters,
       conservativeRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -273,8 +267,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -299,8 +292,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -329,8 +321,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -365,8 +356,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -396,8 +386,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
     const output = expectSuccess(result);
@@ -434,8 +423,7 @@ describe("collectAllocation", () => {
     const result = await collectAllocation(
       longHorizonAggressiveParameters,
       aggressiveRisk,
-      responder.sendToUser,
-      responder.waitForResponse,
+      responder,
     );
     lastOutput = result;
 

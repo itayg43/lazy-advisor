@@ -49,7 +49,7 @@ describe("collectRisk", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged(score));
     const responder = createTrackedResponder([String(score)]);
 
-    const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const result = await collectRisk(responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -62,7 +62,7 @@ describe("collectRisk", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged(null));
     const responder = createTrackedResponder(["I don't know"]);
 
-    const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const result = await collectRisk(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
@@ -80,7 +80,7 @@ describe("collectRisk", () => {
     );
     const responder = createTrackedResponder(["I don't know"]);
 
-    const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const result = await collectRisk(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
@@ -105,7 +105,7 @@ describe("collectRisk", () => {
       "I really can't decide",
     ]);
 
-    const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const result = await collectRisk(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.unresolved);
     if (result.status === PipelineStatusEnum.enum.unresolved) {

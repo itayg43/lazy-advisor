@@ -52,12 +52,7 @@ describe("collectContribution", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged("yes"));
     const responder = createTrackedResponder(["yes"]);
 
-    const result = await collectContribution(
-      parameters,
-      allocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectContribution(parameters, allocation, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -69,12 +64,7 @@ describe("collectContribution", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged("no"));
     const responder = createTrackedResponder(["no"]);
 
-    const result = await collectContribution(
-      parameters,
-      allocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectContribution(parameters, allocation, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -88,12 +78,7 @@ describe("collectContribution", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged("no"));
     const responder = createTrackedResponder(["maybe someday"]);
 
-    const result = await collectContribution(
-      parameters,
-      allocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectContribution(parameters, allocation, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -120,12 +105,7 @@ describe("collectContribution", () => {
       "I really can't say",
     ]);
 
-    const result = await collectContribution(
-      parameters,
-      allocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectContribution(parameters, allocation, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -143,12 +123,7 @@ describe("collectContribution", () => {
     );
     const responder = createTrackedResponder(["unclear"]);
 
-    const result = await collectContribution(
-      parameters,
-      allocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectContribution(parameters, allocation, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -166,12 +141,7 @@ describe("collectContribution", () => {
     );
     const responder = createTrackedResponder(["unclear"]);
 
-    const result = await collectContribution(
-      parameters,
-      allocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectContribution(parameters, allocation, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,

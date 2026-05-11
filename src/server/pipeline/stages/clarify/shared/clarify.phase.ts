@@ -12,8 +12,7 @@ import { getStageTools } from "#pipeline/tools";
 import {
   ASK_USER_TOOL,
   handleAskUser,
-  type SendToUser,
-  type WaitForResponse,
+  type Responder,
 } from "#pipeline/tools/ask-user.tool";
 import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/openai";
 
@@ -32,8 +31,7 @@ type PhaseLoopParams = {
   input: string | ResponseInputItem[];
   maxToolCalls: number;
   phaseName: string;
-  sendToUser: SendToUser;
-  waitForResponse: WaitForResponse;
+  responder: Responder;
 };
 
 type PhaseExtractionParams<T> = {
@@ -46,8 +44,7 @@ type PhaseExtractionParams<T> = {
 
 export const collectToolOutputs = async (
   functionCalls: ResponseFunctionToolCall[],
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<ResponseInputItem.FunctionCallOutput[]> => {
   const toolOutputs: ResponseInputItem.FunctionCallOutput[] = [];
 
@@ -64,11 +61,7 @@ export const collectToolOutputs = async (
       arguments: functionCall.arguments,
     });
 
-    const result = await handleAskUser(
-      functionCall.arguments,
-      sendToUser,
-      waitForResponse,
-    );
+    const result = await handleAskUser(functionCall.arguments, responder);
 
     logger.info("Tool call completed", {
       tool: functionCall.name,
@@ -95,8 +88,7 @@ export const runPhaseLoop = async ({
   input,
   maxToolCalls,
   phaseName,
-  sendToUser,
-  waitForResponse,
+  responder,
 }: PhaseLoopParams): Promise<{ responseId: string }> => {
   const tools = getStageTools();
 
@@ -129,11 +121,7 @@ export const runPhaseLoop = async ({
       throw new PhaseLoopToolCallsExhaustedError(phaseName, maxToolCalls);
     }
 
-    const toolOutputs = await collectToolOutputs(
-      functionCalls,
-      sendToUser,
-      waitForResponse,
-    );
+    const toolOutputs = await collectToolOutputs(functionCalls, responder);
 
     response = await callOpenAI({
       model,

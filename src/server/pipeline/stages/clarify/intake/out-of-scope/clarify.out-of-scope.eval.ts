@@ -49,11 +49,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["ok fine, I'm open to ETFs"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -64,11 +60,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["ok, I'll try an index ETF instead"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -79,11 +71,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["ok, a crypto ETF sounds good"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -95,11 +83,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["I guess I'll try ETFs"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -111,11 +95,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["what's an ETF?", "ok, sounds good"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -129,11 +109,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["ok, just ETFs is fine"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -146,11 +122,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["no, I really want to include NVIDIA"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -166,11 +138,7 @@ describe("handleOutOfScopeRedirect", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -183,11 +151,7 @@ describe("handleOutOfScopeRedirect", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
       expectNoTickersInAgentMessages(responder.transcript);
@@ -198,11 +162,7 @@ describe("handleOutOfScopeRedirect", () => {
       const responder = createTrackedResponder(["No, I only want Bitcoin directly"]);
       lastTranscript = responder.transcript;
 
-      const result = await handleOutOfScopeRedirect(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleOutOfScopeRedirect(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
       expectNoTickersInAgentMessages(responder.transcript);

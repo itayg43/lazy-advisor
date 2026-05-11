@@ -10,7 +10,7 @@ import type {
   ClarifyErroredReason,
   ClarifyUnresolvedReason,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import { callOpenAIParsed } from "#services/openai";
 import type { PipelineStatus } from "#types/pipeline.types";
@@ -129,8 +129,7 @@ type AskWithClassifyParams<
   classifyInstructions: string;
   schema: z.ZodType<TOutput>;
   resolvedSchema: z.ZodType<TResolved>;
-  sendToUser: SendToUser;
-  waitForResponse: WaitForResponse;
+  responder: Responder;
   model: ResponsesModel;
   effort: ReasoningEffort;
   // Number of follow-up clarification exchanges allowed before giving up.
@@ -149,8 +148,7 @@ export const askWithClassify = async <
     classifyInstructions,
     schema,
     resolvedSchema,
-    sendToUser,
-    waitForResponse,
+    responder,
     model,
     effort,
     followUps,
@@ -158,7 +156,7 @@ export const askWithClassify = async <
 
   logger.info("askWithClassify asking", { question });
 
-  sendToUser(question);
+  responder.sendToUser(question);
 
   const history: EasyInputMessage[] = [{ role: "assistant", content: question }];
 
@@ -168,7 +166,7 @@ export const askWithClassify = async <
   // sends a follow-up and loops. The final attempt is handled separately below
   // because there is no next turn — we classify but never send after it.
   for (let attempt = 0; attempt < followUps; attempt++) {
-    const userResponse = await waitForResponse();
+    const userResponse = await responder.waitForResponse();
     history.push({ role: "user", content: userResponse });
 
     logger.debug("User response", { userResponse });
@@ -205,11 +203,11 @@ export const askWithClassify = async <
 
     logger.debug("askWithClassify sending clarification", { clarificationMessage });
 
-    sendToUser(clarificationMessage);
+    responder.sendToUser(clarificationMessage);
   }
 
   // Final attempt — classify the last response but do not send a follow-up.
-  const finalResponse = await waitForResponse();
+  const finalResponse = await responder.waitForResponse();
   history.push({ role: "user", content: finalResponse });
 
   logger.debug("User response", { userResponse: finalResponse });
