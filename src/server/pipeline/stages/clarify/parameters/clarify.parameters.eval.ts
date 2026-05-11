@@ -35,10 +35,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["₪30,000", "about 20 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -53,10 +50,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["50k", "5-10 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -75,10 +69,7 @@ describe("collectParameters", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -97,10 +88,7 @@ describe("collectParameters", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("unresolved");
@@ -117,10 +105,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["₪50,000", "5-10 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -140,10 +125,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["₪20,000", "3 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -157,10 +139,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["₪20,000", "5 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -174,10 +153,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["₪20,000", "10 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -191,10 +167,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["around 20-30k", "₪25,000", "10+ years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -209,10 +182,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["I'm not sure yet", "I really don't know"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("unresolved");
@@ -229,10 +199,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["₪30,000", "skip", "5-10 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");
@@ -247,10 +214,7 @@ describe("collectParameters", () => {
     const responder = createTrackedResponder(["skip", "₪30,000", "5-10 years"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
     lastOutput = result;
 
     expect(result.status).toBe("completed");

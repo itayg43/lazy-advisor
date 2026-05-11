@@ -9,7 +9,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyRisk");
@@ -113,10 +113,7 @@ const mapScoreToBucket = (score: number) => {
   return aggressive;
 };
 
-export const collectRisk = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<RiskPhaseResult> => {
+export const collectRisk = async (responder: Responder): Promise<RiskPhaseResult> => {
   logger.info("Starting risk phase");
 
   try {
@@ -125,8 +122,7 @@ export const collectRisk = async (
       classifyInstructions: RISK_CLASSIFY_INSTRUCTIONS,
       schema: RiskClassifySchema,
       resolvedSchema: RiskClassifyResolvedSchema,
-      sendToUser,
-      waitForResponse,
+      responder,
       model: "gpt-5.4-nano",
       effort: "low",
       followUps: 2,

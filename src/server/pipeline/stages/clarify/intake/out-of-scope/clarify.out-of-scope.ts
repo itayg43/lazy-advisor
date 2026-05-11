@@ -1,6 +1,6 @@
 import { runIntakePhase } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
 import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const OUT_OF_SCOPE_PROMPT = `# Role and Objective
 You are the intake phase of an investment advisor pipeline.
@@ -83,15 +83,13 @@ Set accepted to false if the user's final response:
 
 export const handleOutOfScopeRedirect = async (
   goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<IntakePhaseOutput> => {
   return runIntakePhase(
     OUT_OF_SCOPE_PROMPT,
     "Out-of-scope redirect phase",
     goal,
-    sendToUser,
-    waitForResponse,
+    responder,
     OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS,
   );
 };

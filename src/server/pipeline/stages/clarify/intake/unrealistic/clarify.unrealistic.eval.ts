@@ -40,11 +40,7 @@ describe("handleUnrealisticExpectations", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleUnrealisticExpectations(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
     });
@@ -58,11 +54,7 @@ describe("handleUnrealisticExpectations", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleUnrealisticExpectations(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
     });
@@ -76,11 +68,7 @@ describe("handleUnrealisticExpectations", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleUnrealisticExpectations(lastGoal, responder);
 
       expect(result.accepted).toBe(true);
     });
@@ -95,11 +83,7 @@ describe("handleUnrealisticExpectations", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleUnrealisticExpectations(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
     });
@@ -113,11 +97,7 @@ describe("handleUnrealisticExpectations", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleUnrealisticExpectations(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
     });
@@ -131,11 +111,7 @@ describe("handleUnrealisticExpectations", () => {
       ]);
       lastTranscript = responder.transcript;
 
-      const result = await handleUnrealisticExpectations(
-        lastGoal,
-        responder.sendToUser,
-        responder.waitForResponse,
-      );
+      const result = await handleUnrealisticExpectations(lastGoal, responder);
 
       expect(result.accepted).toBe(false);
     });

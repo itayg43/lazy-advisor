@@ -19,7 +19,7 @@ import type {
   ClarifyUnresolvedReason,
   ParametersPhaseResult,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { PipelineStatus, TimelineBucket } from "#types/pipeline.types";
 
@@ -140,18 +140,14 @@ type AskTimelineResult =
     }
   | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
 
-const askAmount = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<AskAmountResult> => {
+const askAmount = async (responder: Responder): Promise<AskAmountResult> => {
   try {
     const output = await askWithClassify({
       question: AMOUNT_QUESTION,
       classifyInstructions: AMOUNT_CLASSIFY_INSTRUCTIONS,
       schema: AmountClassifySchema,
       resolvedSchema: AmountClassifyResolvedSchema,
-      sendToUser,
-      waitForResponse,
+      responder,
       model: "gpt-5.4-nano",
       effort: "low",
       followUps: 1,
@@ -180,18 +176,14 @@ const askAmount = async (
   }
 };
 
-const askTimeline = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-): Promise<AskTimelineResult> => {
+const askTimeline = async (responder: Responder): Promise<AskTimelineResult> => {
   try {
     const output = await askWithClassify({
       question: TIMELINE_QUESTION,
       classifyInstructions: TIMELINE_CLASSIFY_INSTRUCTIONS,
       schema: TimelineClassifySchema,
       resolvedSchema: TimelineClassifyResolvedSchema,
-      sendToUser,
-      waitForResponse,
+      responder,
       model: "gpt-5.4-nano",
       effort: "low",
       followUps: 1,
@@ -221,15 +213,14 @@ const askTimeline = async (
 };
 
 export const collectParameters = async (
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<ParametersPhaseResult> => {
   logger.info("Starting parameters phase");
 
-  const amountResult = await askAmount(sendToUser, waitForResponse);
+  const amountResult = await askAmount(responder);
   if (amountResult.status !== PipelineStatusEnum.enum.completed) return amountResult;
 
-  const timelineResult = await askTimeline(sendToUser, waitForResponse);
+  const timelineResult = await askTimeline(responder);
   if (timelineResult.status !== PipelineStatusEnum.enum.completed) return timelineResult;
 
   const result = {

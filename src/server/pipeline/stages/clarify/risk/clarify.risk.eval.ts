@@ -51,7 +51,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["1"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -66,7 +66,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["3"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -80,7 +80,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["5"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -94,7 +94,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["three"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -109,7 +109,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["I'd say 4"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -126,7 +126,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -141,7 +141,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["7", "4"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -160,7 +160,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["I'd panic and want to sell", "1"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -178,7 +178,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["3.5", "3"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -192,7 +192,7 @@ describe("collectRisk", () => {
     const responder = createTrackedResponder(["2-3", "2"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -212,7 +212,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -237,7 +237,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -255,7 +255,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
 
     expect(output.status).toBe("unresolved");
@@ -273,7 +273,7 @@ describe("collectRisk", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectRisk(responder.sendToUser, responder.waitForResponse);
+    const output = await collectRisk(responder);
     lastOutput = output;
 
     expect(output.status).toBe("unresolved");

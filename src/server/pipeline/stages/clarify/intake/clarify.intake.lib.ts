@@ -6,7 +6,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { IntakePhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyIntake");
 
@@ -14,8 +14,7 @@ export const runIntakePhase = async (
   instructions: string,
   phaseName: string,
   goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
   extractionInstructions: string,
 ): Promise<IntakePhaseOutput> => {
   logger.info(`Starting ${phaseName}`);
@@ -27,8 +26,7 @@ export const runIntakePhase = async (
     input: goal,
     maxToolCalls: MAX_INTAKE_TOOL_CALLS,
     phaseName,
-    sendToUser,
-    waitForResponse,
+    responder,
   });
 
   const { output, usage } = await runPhaseExtraction<IntakePhaseOutput>({

@@ -8,7 +8,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { ClarifyHaltReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { ClarifyStageTermination } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -16,23 +16,22 @@ const logger = createLogger("clarifyOrchestrator");
 
 export const runClarifyOrTerminate = async (
   goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<UserProfile | null> => {
   let result;
 
   try {
-    result = await runClarifyStage(goal, sendToUser, waitForResponse);
+    result = await runClarifyStage(goal, responder);
   } catch (error) {
     logger.error("Clarify stage failed unexpectedly", error);
 
-    sendToUser(SYSTEM_ERROR_EXIT_MESSAGE);
+    responder.sendToUser(SYSTEM_ERROR_EXIT_MESSAGE);
 
     return null;
   }
 
   if (result.status !== PipelineStatusEnum.enum.completed) {
-    sendToUser(handleClarifyTerminationMessage(result));
+    responder.sendToUser(handleClarifyTerminationMessage(result));
 
     return null;
   }

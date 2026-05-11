@@ -53,12 +53,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectContribution(mockParameters, mockAllocation, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -77,12 +72,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectContribution(mockParameters, mockAllocation, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -98,12 +88,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectContribution(mockParameters, mockAllocation, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -122,12 +107,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectContribution(mockParameters, mockAllocation, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -139,12 +119,7 @@ describe("collectContribution", () => {
     const responder = createTrackedResponder(["Yes, I plan to add ₪500 every month"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectContribution(mockParameters, mockAllocation, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -156,12 +131,7 @@ describe("collectContribution", () => {
     const responder = createTrackedResponder(["No, this is a one-time investment"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const output = await collectContribution(mockParameters, mockAllocation, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 

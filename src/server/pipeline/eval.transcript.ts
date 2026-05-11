@@ -1,11 +1,11 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
+import type { Responder } from "#pipeline/tools/ask-user.tool";
+
 export type TranscriptEntry = { role: "agent" | "user"; content: string };
 
-type TrackedResponder = {
-  sendToUser: (message: string) => void;
-  waitForResponse: () => Promise<string>;
+type TrackedResponder = Responder & {
   transcript: TranscriptEntry[];
 };
 

@@ -47,6 +47,10 @@ vi.mock("#services/openai", () => ({
 describe("runClarifyOrTerminate", () => {
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
+  const mockResponder = {
+    sendToUser: mockSendToUser,
+    waitForResponse: mockWaitForResponse,
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -163,8 +167,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toEqual(expectedHappyPathProfile);
@@ -198,11 +201,7 @@ describe("runClarifyOrTerminate", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      const profile = await runClarifyOrTerminate(
-        goal,
-        mockSendToUser,
-        mockWaitForResponse,
-      );
+      const profile = await runClarifyOrTerminate(goal, mockResponder);
 
       expect(profile).toEqual(expectedHappyPathProfile);
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
@@ -214,11 +213,7 @@ describe("runClarifyOrTerminate", () => {
         .mockResolvedValueOnce(createParsedResponse({ accepted: false }));
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
 
-      const profile = await runClarifyOrTerminate(
-        goal,
-        mockSendToUser,
-        mockWaitForResponse,
-      );
+      const profile = await runClarifyOrTerminate(goal, mockResponder);
 
       expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenCalledWith(
@@ -254,8 +249,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest some money",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();
@@ -296,8 +290,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();
@@ -330,8 +323,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪20,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();
@@ -360,8 +352,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();
@@ -387,8 +378,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();
@@ -414,8 +404,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();
@@ -439,8 +428,7 @@ describe("runClarifyOrTerminate", () => {
 
       const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
-        mockSendToUser,
-        mockWaitForResponse,
+        mockResponder,
       );
 
       expect(profile).toBeNull();

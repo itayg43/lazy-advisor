@@ -51,10 +51,7 @@ describe("collectParameters", () => {
       .mockResolvedValueOnce(amountNeedsClarification);
     const responder = createTrackedResponder(["I'm not sure", "still not sure"]);
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.unresolved);
     if (result.status === PipelineStatusEnum.enum.unresolved) {
@@ -72,10 +69,7 @@ describe("collectParameters", () => {
     );
     const responder = createTrackedResponder(["some money"]);
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
@@ -93,10 +87,7 @@ describe("collectParameters", () => {
     );
     const responder = createTrackedResponder(["I'm not sure"]);
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
@@ -122,10 +113,7 @@ describe("collectParameters", () => {
       "really can't say",
     ]);
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.unresolved);
     if (result.status === PipelineStatusEnum.enum.unresolved) {
@@ -143,10 +131,7 @@ describe("collectParameters", () => {
     );
     const responder = createTrackedResponder(["₪30,000", "someday"]);
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
@@ -164,10 +149,7 @@ describe("collectParameters", () => {
     );
     const responder = createTrackedResponder(["₪30,000", "someday"]);
 
-    const result = await collectParameters(
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
+    const result = await collectParameters(responder);
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {

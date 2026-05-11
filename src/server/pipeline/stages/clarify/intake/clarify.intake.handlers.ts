@@ -6,13 +6,9 @@ import type {
   IntakePhaseOutput,
   RedirectingClassification,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import type { Responder } from "#pipeline/tools/ask-user.tool";
 
-type IntakeHandler = (
-  goal: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
-) => Promise<IntakePhaseOutput>;
+type IntakeHandler = (goal: string, responder: Responder) => Promise<IntakePhaseOutput>;
 
 export const INTAKE_HANDLERS: Record<RedirectingClassification, IntakeHandler> = {
   [GoalClassificationEnum.enum.out_of_scope]: handleOutOfScopeRedirect,

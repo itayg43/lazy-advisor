@@ -6,6 +6,11 @@ import { InternalError } from "#errors";
 export type SendToUser = (message: string) => void;
 export type WaitForResponse = () => Promise<string>;
 
+export type Responder = {
+  sendToUser: SendToUser;
+  waitForResponse: WaitForResponse;
+};
+
 export const ASK_USER_TOOL: FunctionTool = {
   type: "function",
   name: "ask_user",
@@ -31,8 +36,7 @@ const AskUserArgsSchema = z.object({
 
 export const handleAskUser = async (
   args: string,
-  sendToUser: SendToUser,
-  waitForResponse: WaitForResponse,
+  responder: Responder,
 ): Promise<string> => {
   let question: string;
 
@@ -42,7 +46,7 @@ export const handleAskUser = async (
     throw new InternalError("Failed to parse ask_user arguments");
   }
 
-  sendToUser(question);
+  responder.sendToUser(question);
 
-  return waitForResponse();
+  return responder.waitForResponse();
 };
