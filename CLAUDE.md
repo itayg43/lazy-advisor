@@ -32,6 +32,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 |----------|-----------|
 | [Tasks](documentation/TASKS.md) | At the start of each session |
 | [Architecture](documentation/ARCHITECTURE.md) | Before implementing any feature — pipeline overview, phase map, and design decisions |
+| [Architecture Notes](documentation/ARCHITECTURE-NOTES.md) | When evaluating architectural alternatives or pattern trade-offs — pattern rationale, alternatives surveyed, and out-of-scope concerns |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files (`*.rules.md`) are co-located with each phase |

@@ -1,11 +1,12 @@
 // See documentation/TESTING.md § "Single test file when layers are observably equivalent"
-// — orchestrator dispatch + stage outcomes are exercised here in one file rather than
-// duplicated across stage and orchestrator levels.
+// — clarify orchestrator dispatch + stage outcomes are exercised here in one file rather
+// than duplicated across stage and orchestrator levels.
 
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { runPipeline } from "#pipeline/pipeline.orchestrator";
+import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
+import { runClarifyOrTerminate } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
   EmergencyFundClassify,
@@ -24,14 +25,13 @@ import {
   PROFILE_TRANSITION_MESSAGE,
   RISK_EXIT_MESSAGE,
   SHORT_TIMELINE_EXIT_MESSAGE,
-  SYSTEM_ERROR_EXIT_MESSAGE,
   TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
-import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -44,7 +44,7 @@ vi.mock("#services/openai", () => ({
   callOpenAIParsed: mockedCallOpenAIParsed,
 }));
 
-describe("runPipeline", () => {
+describe("runClarifyOrTerminate", () => {
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
 
@@ -141,8 +141,17 @@ describe("runPipeline", () => {
     );
   };
 
+  const expectedHappyPathProfile = {
+    amount: 50000,
+    timeline: TimelineBucketEnum.enum["10+ years"],
+    riskTolerance: RiskToleranceEnum.enum.moderate,
+    equityPercentage: 60,
+    bufferPercentage: 40,
+    plansToContribute: true,
+  };
+
   describe("normal goal", () => {
-    it("should run all phases and send no exit message on the happy path", async () => {
+    it("should run all phases and return the assembled profile on the happy path", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -152,28 +161,14 @@ describe("runPipeline", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
-      expect(mockWaitForResponse).toHaveBeenCalledTimes(6); // EF + debt + amount + timeline + risk + contribution
-      expect(mockSendToUser).toHaveBeenCalledTimes(7); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + RISK_Q + CONTRIBUTION_Q
+      expect(profile).toEqual(expectedHappyPathProfile);
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      // No terminal message — every phase completed
-      const sentMessages = mockSendToUser.mock.calls.map((c) => c[0]);
-      expect(sentMessages).not.toContain(AMOUNT_EXIT_MESSAGE);
-      expect(sentMessages).not.toContain(TIMELINE_EXIT_MESSAGE);
-      expect(sentMessages).not.toContain(SHORT_TIMELINE_EXIT_MESSAGE);
-      expect(sentMessages).not.toContain(RISK_EXIT_MESSAGE);
-      expect(sentMessages).not.toContain(ALLOCATION_EXIT_MESSAGE);
-      expect(sentMessages).not.toContain(SYSTEM_ERROR_EXIT_MESSAGE);
-      // UserProfileSchema.parse() in the stage validates the assembled profile —
-      // a regression in the spread would throw a ZodError and fail this test.
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1); // allocation loop only; contribution uses askWithClassify
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(8); // classify + EF + debt + amount + timeline + risk + allocation extraction + contribution classify
     });
   });
 
@@ -191,7 +186,7 @@ describe("runPipeline", () => {
       goal: "I want max returns but can't lose money",
     },
   ])("$type intake", ({ type, goal }) => {
-    it("should complete full flow when accepted", async () => {
+    it("should return the assembled profile when accepted", async () => {
       mockedCallOpenAIParsed
         .mockResolvedValueOnce(createParsedResponse({ type }))
         .mockResolvedValueOnce(createParsedResponse({ accepted: true }));
@@ -203,33 +198,37 @@ describe("runPipeline", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      await runPipeline("test-session", goal, mockSendToUser, mockWaitForResponse);
+      const profile = await runClarifyOrTerminate(
+        goal,
+        mockSendToUser,
+        mockWaitForResponse,
+      );
 
-      expect(mockSendToUser).toHaveBeenCalledTimes(7); // PROFILE_TRANSITION + EF_Q + debt_Q + amount_Q + timeline_Q + RISK_Q + CONTRIBUTION_Q
+      expect(profile).toEqual(expectedHappyPathProfile);
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(2); // intake loop + allocation; contribution uses askWithClassify
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(9); // classify + intake extraction + EF + debt + amount + timeline + risk + allocation extraction + contribution classify
     });
 
-    it("should send rejection message and stop after intake when rejected", async () => {
+    it("should send rejection message and return null when rejected", async () => {
       mockedCallOpenAIParsed
         .mockResolvedValueOnce(createParsedResponse({ type }))
         .mockResolvedValueOnce(createParsedResponse({ accepted: false }));
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
 
-      await runPipeline("test-session", goal, mockSendToUser, mockWaitForResponse);
+      const profile = await runClarifyOrTerminate(
+        goal,
+        mockSendToUser,
+        mockWaitForResponse,
+      );
 
-      expect(mockSendToUser).toHaveBeenCalledTimes(1);
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenCalledWith(
         INTAKE_REDIRECT_REJECTION_MESSAGES[type],
       );
-      expect(mockedCallOpenAI).toHaveBeenCalledTimes(1);
-      expect(mockedCallOpenAIParsed).toHaveBeenCalledTimes(2); // classify + intake extraction
     });
   });
 
   describe("clarify terminations", () => {
-    it("should send AMOUNT_EXIT_MESSAGE and skip risk/allocation/contribution when amount is unresolved", async () => {
+    it("should send AMOUNT_EXIT_MESSAGE and return null when amount is unresolved", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -253,18 +252,17 @@ describe("runPipeline", () => {
           }),
         );
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest some money",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(AMOUNT_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).not.toHaveBeenCalled();
     });
 
-    it("should send TIMELINE_EXIT_MESSAGE and skip risk/allocation/contribution when timeline is unresolved", async () => {
+    it("should send TIMELINE_EXIT_MESSAGE and return null when timeline is unresolved", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -296,18 +294,17 @@ describe("runPipeline", () => {
           }),
         );
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(TIMELINE_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).not.toHaveBeenCalled();
     });
 
-    it("should send SHORT_TIMELINE_EXIT_MESSAGE when timeline is under 3 years", async () => {
+    it("should send SHORT_TIMELINE_EXIT_MESSAGE and return null when timeline is under 3 years", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -331,18 +328,17 @@ describe("runPipeline", () => {
           }),
         );
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪20,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(SHORT_TIMELINE_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).not.toHaveBeenCalled();
     });
 
-    it("should send RISK_EXIT_MESSAGE when risk follow-ups are exhausted", async () => {
+    it("should send RISK_EXIT_MESSAGE and return null when risk follow-ups are exhausted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -362,18 +358,17 @@ describe("runPipeline", () => {
         .mockResolvedValueOnce(needs)
         .mockResolvedValueOnce(needs);
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(RISK_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).not.toHaveBeenCalled();
     });
 
-    it("should send ALLOCATION_EXIT_MESSAGE when allocation tool calls are exhausted", async () => {
+    it("should send ALLOCATION_EXIT_MESSAGE and return null when allocation tool calls are exhausted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -390,20 +385,19 @@ describe("runPipeline", () => {
         ),
       );
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(ALLOCATION_EXIT_MESSAGE);
-      expect(mockedCallOpenAI).not.toHaveBeenCalled(); // allocation loop handled by spy
     });
 
     // System-error dispatch wiring — one canonical case (risk) is sufficient at the
     // orchestrator layer; per-phase errored-result coverage lives in phase tests.
-    it("should send SYSTEM_ERROR_EXIT_MESSAGE when risk classify output is invalid", async () => {
+    it("should send SYSTEM_ERROR_EXIT_MESSAGE and return null when risk classify output is invalid", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -418,17 +412,17 @@ describe("runPipeline", () => {
         }),
       );
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(SYSTEM_ERROR_EXIT_MESSAGE);
     });
 
-    it("should send SYSTEM_ERROR_EXIT_MESSAGE when risk classify message is missing mid-loop", async () => {
+    it("should send SYSTEM_ERROR_EXIT_MESSAGE and return null when risk classify message is missing mid-loop", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -443,13 +437,13 @@ describe("runPipeline", () => {
         }),
       );
 
-      await runPipeline(
-        "test-session",
+      const profile = await runClarifyOrTerminate(
         "I want to invest ₪50,000",
         mockSendToUser,
         mockWaitForResponse,
       );
 
+      expect(profile).toBeNull();
       expect(mockSendToUser).toHaveBeenLastCalledWith(SYSTEM_ERROR_EXIT_MESSAGE);
     });
   });

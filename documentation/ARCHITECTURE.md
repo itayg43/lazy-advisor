@@ -107,7 +107,7 @@ Both conversation patterns share the same error contract: internal primitives th
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate as server errors. Only expected, graceful UX outcomes are surfaced as result variants.
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the orchestrator (`runPipeline`), which catches them at the boundary, logs the error, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
 ### Multi-phase split
 
@@ -204,4 +204,4 @@ Concurrent sessions on the same server instance are fully isolated: `AsyncLocalS
 
 ### OpenAI failure handling
 
-All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the pipeline sends an `error` event and the user retries from scratch.
+All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the exception propagates to the orchestrator, which catches it, logs the failure, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. The user retries from scratch.

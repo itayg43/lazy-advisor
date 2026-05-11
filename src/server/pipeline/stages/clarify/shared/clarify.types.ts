@@ -47,3 +47,8 @@ export type ClarifyStageResult =
     }
   | { status: Extract<PipelineStatus, "unresolved">; reason: ClarifyUnresolvedReason }
   | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
+
+export type ClarifyStageTermination = Exclude<
+  ClarifyStageResult,
+  { status: Extract<PipelineStatus, "completed"> }
+>;

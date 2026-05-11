@@ -1,6 +1,5 @@
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
-  ClarifyErroredReason,
   ClarifyHaltReason,
   ClarifyUnresolvedReason,
   RedirectingClassification,
@@ -107,9 +106,6 @@ export const RISK_EXIT_MESSAGE =
 export const ALLOCATION_EXIT_MESSAGE =
   "We couldn't settle on an equity/buffer split that fits — feel free to come back when you've had time to think it over.";
 
-export const SYSTEM_ERROR_EXIT_MESSAGE =
-  "Something went wrong on our end — please try again later.";
-
 export const CLARIFY_UNRESOLVED_MESSAGES: Record<ClarifyUnresolvedReason, string> = {
   amount: AMOUNT_EXIT_MESSAGE,
   timeline: TIMELINE_EXIT_MESSAGE,
@@ -124,11 +120,6 @@ export const CLARIFY_HALT_MESSAGES: Record<
   string
 > = {
   short_timeline: SHORT_TIMELINE_EXIT_MESSAGE,
-};
-
-export const CLARIFY_ERRORED_MESSAGES: Record<ClarifyErroredReason, string> = {
-  classify_output_invalid: SYSTEM_ERROR_EXIT_MESSAGE,
-  classify_message_missing: SYSTEM_ERROR_EXIT_MESSAGE,
 };
 
 export const MAX_INTAKE_TOOL_CALLS = 5;
