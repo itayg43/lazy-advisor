@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BadRequestError, ServiceUnavailableError, TooManyRequestsError } from "#errors";
 import {
@@ -11,6 +11,10 @@ describe("withRetry", () => {
   const mockContext: RetryContext = {
     operation: "test",
   };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("should return the result on first success", async () => {
     const fn = vi.fn().mockResolvedValue("ok");

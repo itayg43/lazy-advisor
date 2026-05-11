@@ -3,8 +3,8 @@ import { z } from "zod";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  ConvergenceFailedError,
   askWithClassify,
+  isClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 
@@ -14,8 +14,16 @@ const EmergencyFundSchema = AskWithClassifyBaseSchema.extend({
   answer: z.enum(["yes", "no"]).nullable(),
 });
 
+const EmergencyFundResolvedSchema = EmergencyFundSchema.extend({
+  answer: z.enum(["yes", "no"]),
+});
+
 const DebtSchema = AskWithClassifyBaseSchema.extend({
   answer: z.enum(["yes", "no"]).nullable(),
+});
+
+const DebtResolvedSchema = DebtSchema.extend({
+  answer: z.enum(["yes", "no"]),
 });
 
 export type EmergencyFundClassify = z.infer<typeof EmergencyFundSchema>;
@@ -115,6 +123,8 @@ User: "I don't want to answer that"
 User: "No"
 → clarificationNeeded: false — clear answer, no clarification needed`;
 
+// All three classify error classes default to the safe educational fallback —
+// "when in doubt, educate" extends to system errors. Phase stays non-blocking by design.
 const askEmergencyFund = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
@@ -124,6 +134,7 @@ const askEmergencyFund = async (
       question: EF_QUESTION,
       classifyInstructions: EF_CLASSIFY_INSTRUCTIONS,
       schema: EmergencyFundSchema,
+      resolvedSchema: EmergencyFundResolvedSchema,
       sendToUser,
       waitForResponse,
       model: "gpt-5.4-nano",
@@ -132,13 +143,16 @@ const askEmergencyFund = async (
     });
 
     return output.answer === "yes";
-  } catch (err) {
-    if (err instanceof ConvergenceFailedError) {
-      // Intentional: default to no EF → education sent. When in doubt, educate.
+  } catch (error) {
+    if (isClassifyError(error)) {
+      logger.warn("askEmergencyFund — defaulting to no EF (educate)", {
+        error: error.name,
+      });
+
       return false;
     }
 
-    throw err;
+    throw error;
   }
 };
 
@@ -151,6 +165,7 @@ const askDebt = async (
       question: DEBT_QUESTION,
       classifyInstructions: DEBT_CLASSIFY_INSTRUCTIONS,
       schema: DebtSchema,
+      resolvedSchema: DebtResolvedSchema,
       sendToUser,
       waitForResponse,
       model: "gpt-5.4-nano",
@@ -159,13 +174,14 @@ const askDebt = async (
     });
 
     return output.answer === "yes";
-  } catch (err) {
-    if (err instanceof ConvergenceFailedError) {
-      // Intentional: default to has debt → education sent. When in doubt, educate.
+  } catch (error) {
+    if (isClassifyError(error)) {
+      logger.warn("askDebt — defaulting to has debt (educate)", { error: error.name });
+
       return true;
     }
 
-    throw err;
+    throw error;
   }
 };
 

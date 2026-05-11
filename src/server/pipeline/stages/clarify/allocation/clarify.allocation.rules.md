@@ -98,7 +98,7 @@ In the sanity-check turn, **concrete drawdown percentages are allowed** — the 
 
 ## Budget exhaustion
 
-If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws `PhaseBudgetExhaustedError`. `collectAllocation` catches it and returns `{ status: "failure", reason: "split_unresolved" }`; the stage sends a closing message and exits rather than propagating an error.
+If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws `PhaseLoopToolCallsExhaustedError`. `collectAllocation` catches it and returns `{ status: "unresolved", reason: "allocation" }`; the orchestrator sends a closing message and the pipeline exits.
 
 ## Out of scope
 

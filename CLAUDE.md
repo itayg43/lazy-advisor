@@ -32,6 +32,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 |----------|-----------|
 | [Tasks](documentation/TASKS.md) | At the start of each session |
 | [Architecture](documentation/ARCHITECTURE.md) | Before implementing any feature — pipeline overview, phase map, and design decisions |
+| [Architecture Notes](documentation/ARCHITECTURE-NOTES.md) | When evaluating architectural alternatives or pattern trade-offs — pattern rationale, alternatives surveyed, and out-of-scope concerns |
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files (`*.rules.md`) are co-located with each phase |
@@ -41,6 +42,8 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 Work one task at a time. Each task must be fully closed before moving to the next. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
 If a refactor or design question surfaces mid-task, note it in `TASKS.md` and do not act on it until the current task is closed.
+
+**Task tool usage:** Use `TaskCreate` whenever a request has more than one sub-step, or when new asks stack on top of unfinished ones in the same session. This applies to conversational back-and-forth, not just written plans. Single small edits don't need a list.
 
 Before writing code:
 - For tasks touching multiple files or areas: spawn an Explore subagent with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing

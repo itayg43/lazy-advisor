@@ -1,17 +1,17 @@
 import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
 
 import { createLogger } from "#lib/logger";
 import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
-  GoalClassification,
+  GoalClassificationEnum,
   GoalClassificationSchema,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { GoalClassificationOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyClassify");
 
-const { out_of_scope, unrealistic, contradictory, normal } = GoalClassification.enum;
+const { out_of_scope, unrealistic, contradictory, normal } = GoalClassificationEnum.enum;
 
 const CLASSIFY_SYSTEM_PROMPT = `# Role and Objective
 You are a goal classifier for an investment advisor pipeline. Your sole job is to classify the user's initial investment goal into exactly one of: ${GOAL_CLASSIFICATIONS}.
@@ -26,9 +26,7 @@ You are a goal classifier for an investment advisor pipeline. Your sole job is t
 When in doubt, classify as **${normal}**.`;
 
 export const classifyGoal = async (goal: string) => {
-  const { output, usage } = await callOpenAIParsed<
-    z.infer<typeof GoalClassificationSchema>
-  >({
+  const { output, usage } = await callOpenAIParsed<GoalClassificationOutput>({
     model: "gpt-5.4-nano",
     instructions: CLASSIFY_SYSTEM_PROMPT,
     input: goal,

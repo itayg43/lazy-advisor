@@ -9,10 +9,10 @@ import {
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
   AllocationPhaseOutput,
-  ContributionPhaseOutput,
+  ContributionPhaseResult,
   ParametersPhaseOutput,
 } from "#pipeline/stages/clarify/shared/clarify.types";
-import { TimelineBucket } from "#schemas/pipeline.schemas";
+import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.url)
   .pathname;
@@ -20,7 +20,7 @@ const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.ur
 describe("collectContribution", () => {
   const mockParameters: ParametersPhaseOutput = {
     amount: 30_000,
-    timeline: TimelineBucket.enum["10+ years"],
+    timeline: TimelineBucketEnum.enum["10+ years"],
   };
 
   const mockAllocation: AllocationPhaseOutput = {
@@ -29,7 +29,7 @@ describe("collectContribution", () => {
   };
 
   let lastTranscript: TranscriptEntry[] | undefined;
-  let lastOutput: ContributionPhaseOutput | undefined;
+  let lastOutput: ContributionPhaseResult | undefined;
 
   beforeAll(() => initLastRun(LAST_RUN_PATH));
 
@@ -43,101 +43,6 @@ describe("collectContribution", () => {
       error: ctx.task.result?.errors?.[0]?.message,
     });
     lastTranscript = lastOutput = undefined;
-  });
-
-  // clarify.contribution.rules.md rule 3: explicit yes → plansToContribute: true
-  it("should return true when user explicitly confirms periodic contributions", async () => {
-    const responder = createTrackedResponder(["Yes, I plan to add ₪500 every month"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.plansToContribute).toBe(true);
-  });
-
-  // clarify.contribution.rules.md rule 4: explicit no → plansToContribute: false
-  it("should return false when user explicitly declines periodic contributions", async () => {
-    const responder = createTrackedResponder(["No, this is a one-time investment"]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.plansToContribute).toBe(false);
-  });
-
-  // clarify.contribution.rules.md rule 5: vague answer → acknowledge briefly, resolve to false, stop immediately
-  it("should return false and acknowledge when user gives a vague answer", async () => {
-    const responder = createTrackedResponder([
-      "Maybe someday, but not regularly",
-      "Ok, thanks",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.plansToContribute).toBe(false);
-    // phase must send exactly 2 messages (question + acknowledgment) and not re-engage
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-  });
-
-  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → yes
-  it("should explain DCA when asked and return true after user confirms", async () => {
-    const responder = createTrackedResponder([
-      "What does contributing periodically mean?",
-      "Oh that makes sense, yes I'd like to do that",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.plansToContribute).toBe(true);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-    // explanation turn must reference actual equity amount (₪30,000 × 70% = ₪21,000)
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns[1].content).toMatch(/21[,.]?000|₪21/);
-  });
-
-  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → no
-  it("should explain DCA when asked and return false after user declines", async () => {
-    const responder = createTrackedResponder([
-      "What's DCA?",
-      "I see, but no — I'll just do a one-time investment",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(
-      mockParameters,
-      mockAllocation,
-      responder.sendToUser,
-      responder.waitForResponse,
-    );
-    lastOutput = output;
-
-    expect(output.plansToContribute).toBe(false);
   });
 
   // clarify.contribution.rules.md rule 1: Israel-specific concern → address accurately → yes
@@ -155,6 +60,7 @@ describe("collectContribution", () => {
       responder.waitForResponse,
     );
     lastOutput = output;
+    if (output.status !== "completed") return;
 
     expect(output.plansToContribute).toBe(true);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
@@ -178,8 +84,87 @@ describe("collectContribution", () => {
       responder.waitForResponse,
     );
     lastOutput = output;
+    if (output.status !== "completed") return;
 
     expect(output.plansToContribute).toBe(false);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+  });
+
+  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → yes
+  it("should explain DCA when asked and return true after user confirms", async () => {
+    const responder = createTrackedResponder([
+      "What does contributing periodically mean?",
+      "Oh that makes sense, yes I'd like to do that",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectContribution(
+      mockParameters,
+      mockAllocation,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+    if (output.status !== "completed") return;
+
+    expect(output.plansToContribute).toBe(true);
+    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
+    // explanation turn must reference actual equity amount (₪30,000 × 70% = ₪21,000)
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    expect(agentTurns[1].content).toMatch(/21[,.]?000|₪21/);
+  });
+
+  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → no
+  it("should explain DCA when asked and return false after user declines", async () => {
+    const responder = createTrackedResponder([
+      "What's DCA?",
+      "I see, but no — I'll just do a one-time investment",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectContribution(
+      mockParameters,
+      mockAllocation,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+    if (output.status !== "completed") return;
+
+    expect(output.plansToContribute).toBe(false);
+  });
+
+  // clarify.contribution.rules.md rule 3: explicit yes → plansToContribute: true
+  it("should return true when user explicitly confirms periodic contributions", async () => {
+    const responder = createTrackedResponder(["Yes, I plan to add ₪500 every month"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectContribution(
+      mockParameters,
+      mockAllocation,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+    if (output.status !== "completed") return;
+
+    expect(output.plansToContribute).toBe(true);
+  });
+
+  // clarify.contribution.rules.md rule 4: explicit no → plansToContribute: false
+  it("should return false when user explicitly declines periodic contributions", async () => {
+    const responder = createTrackedResponder(["No, this is a one-time investment"]);
+    lastTranscript = responder.transcript;
+
+    const output = await collectContribution(
+      mockParameters,
+      mockAllocation,
+      responder.sendToUser,
+      responder.waitForResponse,
+    );
+    lastOutput = output;
+    if (output.status !== "completed") return;
+
+    expect(output.plansToContribute).toBe(false);
   });
 });

@@ -1,6 +1,4 @@
-import { exhaustiveSwitch } from "#lib/exhaustive-switch";
 import { createLogger } from "#lib/logger";
-import { runWithSession } from "#lib/session-context";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
@@ -8,116 +6,94 @@ import { INTAKE_HANDLERS } from "#pipeline/stages/clarify/intake/clarify.intake.
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
+import { PROFILE_TRANSITION_MESSAGE } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
-  ALLOCATION_EXIT_MESSAGE,
-  AMOUNT_EXIT_MESSAGE,
-  INTAKE_REJECTION_DEFAULT_MESSAGE,
-  INTAKE_REJECTION_MESSAGES,
-  PROFILE_TRANSITION_MESSAGE,
-  RISK_EXIT_MESSAGE,
-  SHORT_TIMELINE_EXIT_MESSAGE,
-  TIMELINE_EXIT_MESSAGE,
-} from "#pipeline/stages/clarify/shared/clarify.constants";
+  ClarifyHaltReasonEnum,
+  GoalClassificationEnum,
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { ClarifyStageResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { TimelineBucket, UserProfileSchema } from "#schemas/pipeline.schemas";
-import type { UserProfile } from "#types/pipeline.types";
+import {
+  PipelineStatusEnum,
+  TimelineBucketEnum,
+  UserProfileSchema,
+} from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyStage");
 
 export const runClarifyStage = async (
-  sessionId: string,
   goal: string,
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<UserProfile | null> => {
-  return runWithSession(sessionId, async () => {
-    logger.info("Starting clarify stage", { goal });
+): Promise<ClarifyStageResult> => {
+  logger.info("Starting clarify stage", { goal });
 
-    const classification = await classifyGoal(goal);
+  const classification = await classifyGoal(goal);
 
+  if (classification !== GoalClassificationEnum.enum.normal) {
     const handler = INTAKE_HANDLERS[classification];
-    if (handler) {
-      const result = await handler(goal, sendToUser, waitForResponse);
-      if (!result.accepted) {
-        logger.info("User rejected intake redirect, ending session");
+    const result = await handler(goal, sendToUser, waitForResponse);
+    if (!result.accepted) {
+      logger.info("User rejected intake redirect, ending session");
 
-        sendToUser(
-          INTAKE_REJECTION_MESSAGES[classification] ?? INTAKE_REJECTION_DEFAULT_MESSAGE,
-        );
-
-        return null;
-      }
+      return {
+        status: PipelineStatusEnum.enum.halted,
+        reason: ClarifyHaltReasonEnum.enum.intake_rejected,
+        classification,
+      };
     }
+  }
 
-    sendToUser(PROFILE_TRANSITION_MESSAGE);
+  sendToUser(PROFILE_TRANSITION_MESSAGE);
 
-    await collectEfDebt(sendToUser, waitForResponse);
+  await collectEfDebt(sendToUser, waitForResponse);
 
-    const parametersResult = await collectParameters(sendToUser, waitForResponse);
+  const parametersResult = await collectParameters(sendToUser, waitForResponse);
+  if (parametersResult.status !== PipelineStatusEnum.enum.completed) {
+    return parametersResult;
+  }
+  const { parameters } = parametersResult;
 
-    if (parametersResult.status === "failure") {
-      exhaustiveSwitch(parametersResult.reason, {
-        amount_missing: () => sendToUser(AMOUNT_EXIT_MESSAGE),
-        timeline_missing: () => sendToUser(TIMELINE_EXIT_MESSAGE),
-      });
+  if (parameters.timeline === TimelineBucketEnum.enum["under 3 years"]) {
+    logger.info("Short timeline — halting pipeline", { timeline: parameters.timeline });
 
-      return null;
-    }
-
-    const { parameters } = parametersResult;
-
-    if (parameters.timeline === TimelineBucket.enum["under 3 years"]) {
-      logger.info("Short timeline — exiting pipeline", { timeline: parameters.timeline });
-
-      sendToUser(SHORT_TIMELINE_EXIT_MESSAGE);
-
-      return null;
-    }
-
-    const riskResult = await collectRisk(sendToUser, waitForResponse);
-
-    if (riskResult.status === "failure") {
-      exhaustiveSwitch(riskResult.reason, {
-        risk_missing: () => sendToUser(RISK_EXIT_MESSAGE),
-      });
-
-      return null;
-    }
-
-    const allocationResult = await collectAllocation(
-      parameters,
-      riskResult,
-      sendToUser,
-      waitForResponse,
-    );
-
-    if (allocationResult.status === "failure") {
-      exhaustiveSwitch(allocationResult.reason, {
-        split_unresolved: () => sendToUser(ALLOCATION_EXIT_MESSAGE),
-      });
-
-      return null;
-    }
-
-    const { allocation } = allocationResult;
-
-    const contribution = await collectContribution(
-      parameters,
-      allocation,
-      sendToUser,
-      waitForResponse,
-    );
-
-    const profile = {
-      ...parameters,
-      riskTolerance: riskResult.riskTolerance,
-      ...allocation,
-      ...contribution,
+    return {
+      status: PipelineStatusEnum.enum.halted,
+      reason: ClarifyHaltReasonEnum.enum.short_timeline,
     };
+  }
 
-    logger.info("Clarify stage complete");
-    logger.debug("Assembled profile before validation", { profile });
+  const riskResult = await collectRisk(sendToUser, waitForResponse);
+  if (riskResult.status !== PipelineStatusEnum.enum.completed) {
+    return riskResult;
+  }
 
-    return UserProfileSchema.parse(profile);
+  const allocationResult = await collectAllocation(
+    parameters,
+    riskResult,
+    sendToUser,
+    waitForResponse,
+  );
+  if (allocationResult.status !== PipelineStatusEnum.enum.completed) {
+    return allocationResult;
+  }
+  const { allocation } = allocationResult;
+
+  const contributionResult = await collectContribution(
+    parameters,
+    allocation,
+    sendToUser,
+    waitForResponse,
+  );
+
+  const profile = UserProfileSchema.parse({
+    ...parameters,
+    riskTolerance: riskResult.riskTolerance,
+    ...allocation,
+    plansToContribute: contributionResult.plansToContribute,
   });
+
+  logger.info("Clarify stage complete");
+
+  return { status: PipelineStatusEnum.enum.completed, profile };
 };

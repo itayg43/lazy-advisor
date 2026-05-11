@@ -4,17 +4,24 @@ import { MAX_AMOUNT } from "#constants/validation.constants";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  ConvergenceFailedError,
   askWithClassify,
+  mapClassifyErrorToErrored,
+  mapClassifyErrorToUnresolved,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
   TIMELINE_BOUNDARY_EXAMPLES,
   TIMELINE_BUCKET_LIST,
   TIMELINE_BUCKETS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import type { ParametersPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type {
+  ClarifyErroredReason,
+  ClarifyUnresolvedReason,
+  ParametersPhaseResult,
+} from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
-import { TimelineBucket } from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import type { PipelineStatus, TimelineBucket } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyParameters");
 
@@ -22,8 +29,16 @@ const AmountClassifySchema = AskWithClassifyBaseSchema.extend({
   amount: z.number().int().positive().max(MAX_AMOUNT).nullable(),
 });
 
+const AmountClassifyResolvedSchema = AmountClassifySchema.extend({
+  amount: z.number().int().positive().max(MAX_AMOUNT),
+});
+
 const TimelineClassifySchema = AskWithClassifyBaseSchema.extend({
-  timeline: TimelineBucket.nullable(),
+  timeline: TimelineBucketEnum.nullable(),
+});
+
+const TimelineClassifyResolvedSchema = TimelineClassifySchema.extend({
+  timeline: TimelineBucketEnum,
 });
 
 export type AmountClassify = z.infer<typeof AmountClassifySchema>;
@@ -109,15 +124,32 @@ User: "why does this matter?"
 User: "skip"
 → clarificationNeeded: true — redirect directly, no softening (e.g. "I need your timeline to continue — could you pick one: under 3 years, 3–5 years, 5–10 years, or 10+ years?")`;
 
+type AskAmountResult =
+  | { status: Extract<PipelineStatus, "completed">; amount: number }
+  | {
+      status: Extract<PipelineStatus, "unresolved">;
+      reason: Extract<ClarifyUnresolvedReason, "amount">;
+    }
+  | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
+
+type AskTimelineResult =
+  | { status: Extract<PipelineStatus, "completed">; timeline: TimelineBucket }
+  | {
+      status: Extract<PipelineStatus, "unresolved">;
+      reason: Extract<ClarifyUnresolvedReason, "timeline">;
+    }
+  | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
+
 const askAmount = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<number | null> => {
+): Promise<AskAmountResult> => {
   try {
     const output = await askWithClassify({
       question: AMOUNT_QUESTION,
       classifyInstructions: AMOUNT_CLASSIFY_INSTRUCTIONS,
       schema: AmountClassifySchema,
+      resolvedSchema: AmountClassifyResolvedSchema,
       sendToUser,
       waitForResponse,
       model: "gpt-5.4-nano",
@@ -125,17 +157,24 @@ const askAmount = async (
       followUps: 1,
     });
 
-    if (output.amount === null) {
-      logger.warn("askAmount — null after convergence");
-    }
+    const result = {
+      status: PipelineStatusEnum.enum.completed,
+      amount: output.amount,
+    } as const;
 
-    return output.amount;
+    logger.debug("askAmount output", { output: result });
+
+    return result;
   } catch (error) {
-    if (error instanceof ConvergenceFailedError) {
-      logger.error("askAmount — follow-ups exhausted", error);
+    const unresolved = mapClassifyErrorToUnresolved(
+      error,
+      "askAmount",
+      ClarifyUnresolvedReasonEnum.enum.amount,
+    );
+    if (unresolved) return unresolved;
 
-      return null;
-    }
+    const errored = mapClassifyErrorToErrored(error, "askAmount");
+    if (errored) return errored;
 
     throw error;
   }
@@ -144,12 +183,13 @@ const askAmount = async (
 const askTimeline = async (
   sendToUser: SendToUser,
   waitForResponse: WaitForResponse,
-): Promise<z.infer<typeof TimelineBucket> | null> => {
+): Promise<AskTimelineResult> => {
   try {
     const output = await askWithClassify({
       question: TIMELINE_QUESTION,
       classifyInstructions: TIMELINE_CLASSIFY_INSTRUCTIONS,
       schema: TimelineClassifySchema,
+      resolvedSchema: TimelineClassifyResolvedSchema,
       sendToUser,
       waitForResponse,
       model: "gpt-5.4-nano",
@@ -157,17 +197,24 @@ const askTimeline = async (
       followUps: 1,
     });
 
-    if (output.timeline === null) {
-      logger.warn("askTimeline — null after convergence");
-    }
+    const result = {
+      status: PipelineStatusEnum.enum.completed,
+      timeline: output.timeline,
+    } as const;
 
-    return output.timeline;
+    logger.debug("askTimeline output", { output: result });
+
+    return result;
   } catch (error) {
-    if (error instanceof ConvergenceFailedError) {
-      logger.error("askTimeline — follow-ups exhausted", error);
+    const unresolved = mapClassifyErrorToUnresolved(
+      error,
+      "askTimeline",
+      ClarifyUnresolvedReasonEnum.enum.timeline,
+    );
+    if (unresolved) return unresolved;
 
-      return null;
-    }
+    const errored = mapClassifyErrorToErrored(error, "askTimeline");
+    if (errored) return errored;
 
     throw error;
   }
@@ -179,11 +226,18 @@ export const collectParameters = async (
 ): Promise<ParametersPhaseResult> => {
   logger.info("Starting parameters phase");
 
-  const amount = await askAmount(sendToUser, waitForResponse);
-  if (amount === null) return { status: "failure", reason: "amount_missing" };
+  const amountResult = await askAmount(sendToUser, waitForResponse);
+  if (amountResult.status !== PipelineStatusEnum.enum.completed) return amountResult;
 
-  const timeline = await askTimeline(sendToUser, waitForResponse);
-  if (timeline === null) return { status: "failure", reason: "timeline_missing" };
+  const timelineResult = await askTimeline(sendToUser, waitForResponse);
+  if (timelineResult.status !== PipelineStatusEnum.enum.completed) return timelineResult;
 
-  return { status: "success", parameters: { amount, timeline } };
+  const result = {
+    status: PipelineStatusEnum.enum.completed,
+    parameters: { amount: amountResult.amount, timeline: timelineResult.timeline },
+  } as const;
+
+  logger.debug("Parameters output", { output: result });
+
+  return result;
 };

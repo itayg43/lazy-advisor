@@ -24,14 +24,14 @@ flowchart TD
     Contra -->|rejected| End
 
     EfDebt --> Parameters[parameters]
-    Parameters -->|amount failure| ExitAmount([exit: amount failure message])
-    Parameters -->|timeline failure| ExitTimeline([exit: timeline failure message])
+    Parameters -->|amount unresolved| ExitAmount([exit: amount unresolved message])
+    Parameters -->|timeline unresolved| ExitTimeline([exit: timeline unresolved message])
     Parameters --> ShortHorizon{timeline < 3yr?}
-    ShortHorizon -->|yes| ExitShort([exit: money market fund redirect])
+    ShortHorizon -->|yes| ExitShort([halt: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
-    Risk -->|risk_missing| ExitRisk([exit: risk failure message])
+    Risk -->|risk_tolerance unresolved| ExitRisk([exit: risk unresolved message])
     Risk --> Allocation[allocation]
-    Allocation -->|split unresolved| ExitAllocation([exit: allocation failure message])
+    Allocation -->|allocation unresolved| ExitAllocation([exit: allocation unresolved message])
     Allocation --> Contribution[contribution]
     Contribution --> Profile([UserProfile])
     Contribution -.->|T5 planned| Equity[equity]
@@ -41,7 +41,7 @@ flowchart TD
 
 | Phase | Job | Input → Output |
 |-------|-----|----------------|
-| classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` | `goal` → `GoalClassification` |
+| classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` (`GoalClassificationEnum`) | `goal` → `GoalClassification` |
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
@@ -88,12 +88,26 @@ Used when questions are fixed and answers need structured extraction: ef-debt, p
 
 Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
 
-**Why in-band results at the phase boundary.** The stage needs to branch on failure reasons — `amount_missing` produces a different exit message than `timeline_missing`. If phases threw instead, the stage would need a try-catch per phase call plus re-throw discipline for unexpected errors. Result types make the branching explicit and flat at each call site; thrown errors are reserved for genuinely unexpected failures that the stage has no specific response to.
+**Why in-band results at the phase boundary.** The stage needs to branch on the result's status and reason — an `amount` unresolved produces a different exit message than a `timeline` unresolved. If phases threw instead, the stage would need a try-catch per phase call plus re-throw discipline for unexpected errors. Result types make the branching explicit and flat at each call site; thrown errors are reserved for genuinely unexpected failures that the stage has no specific response to.
 
-- `runPhaseLoop` → throws `PhaseBudgetExhaustedError` on budget exhaustion → phase catches, returns `{ status: "failure", reason: "..." }`
-- `askWithClassify` → throws `ConvergenceFailedError` when follow-ups are exhausted → phase either catches and returns a default (ef-debt: safe fallback) or catches and returns `{ status: "failure", reason: "..." }` (parameters: no safe default exists)
+**Status taxonomy (`PipelineStatusEnum`).** Every phase and stage reports one of four statuses:
 
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate as server errors. Only expected, graceful UX outcomes are surfaced as failure variants.
+- `completed` — contract honored, pipeline continues.
+- `halted` — contract honored, pipeline stops *by design* (today: `short_timeline`, `intake_rejected`).
+- `unresolved` — phase couldn't gather required data, user-driven (today: missing amount/timeline/risk_tolerance, allocation didn't converge).
+- `errored` — system-driven failure where our code/model misbehaved (today: classify output failed resolved-schema validation, classify message was missing mid-loop).
+
+**Primitive → phase result mapping.**
+
+- `runPhaseLoop` → throws `PhaseLoopToolCallsExhaustedError` when its tool-call budget is exhausted → phase catches, returns `{ status: "unresolved", reason: "..." }`
+- `askWithClassify` → throws one of three typed errors:
+  - `ClassifyFollowUpsExhaustedError` when follow-ups are exhausted → user-driven; phase returns `unresolved` (or, for ef-debt and contribution, defaults to the safe fallback)
+  - `ClassifyOutputInvalidError` when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
+  - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
+
+The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
+
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the orchestrator (`runPipeline`), which catches them at the boundary, logs the error, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
 ### Multi-phase split
 
@@ -115,8 +129,8 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
 ```
 
 Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakePhaseOutput`. Acceptance is determined by a post-loop structured LLM call:
-- `{ accepted: true }` — user accepted the redirect; orchestrator continues to parameter collection
-- `{ accepted: false }` — end the session; stage sends a per-classification closing message from `INTAKE_REJECTION_MESSAGES`
+- `{ accepted: true }` — user accepted the redirect; stage continues to parameter collection
+- `{ accepted: false }` — stage returns `{ status: "halted", reason: "intake_rejected", classification }`; the orchestrator dispatches the per-classification closing message from `INTAKE_REDIRECT_REJECTION_MESSAGES`
 
 The parameters prompt is left with one job: collect required profile parameters.
 
@@ -126,11 +140,11 @@ An alternative considered: skip the classifier and expose handlers as LLM tools,
 
 ### Parameters — hard exits on missing data
 
-`collectParameters` returns `{ status: "failure", reason: "amount_missing" }` if the user cannot provide a valid investment amount after two attempts, and the stage exits immediately. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "failure", reason: "timeline_missing" }` and the stage exits. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
+`collectParameters` returns `{ status: "unresolved", reason: "amount" }` if the user cannot provide a valid investment amount after two attempts, and the stage propagates the result so the orchestrator dispatches the exit message. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "unresolved", reason: "timeline" }`. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
 
-### Short-horizon early exit (timeline < 3 years)
+### Short-horizon early halt (timeline < 3 years)
 
-After parameters collection, the orchestrator checks `parameters.timeline`. If it is `"under 3 years"`, the stage exits immediately — sends a money market fund redirect and returns `null`. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
+After parameters collection, the stage checks `parameters.timeline`. If it is `"under 3 years"`, the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
 
 ### Risk phase — single 1–5 self-rating
 
@@ -138,7 +152,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
-**Hard-fail on unresolved.** If the retry budget is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "failure", reason: "risk_missing" }`. The stage exits with a closing message rather than defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline_missing` hard-fail pattern.
+**Hard-fail on unresolved.** If the retry budget is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "unresolved", reason: "risk_tolerance" }`. The orchestrator dispatches a closing message rather than the stage defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline` hard-fail pattern.
 
 **`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
 
@@ -156,7 +170,7 @@ The model locates the user's cell from `risk.riskTolerance` × `parameters.timel
 
 **What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase and are not passed to this phase.
 
-**Unresolved-split exit.** `collectAllocation` returns `{ status: "failure", reason: "split_unresolved" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The stage exits with a closing message rather than locking the user into a split they were still negotiating.
+**Unresolved-split exit.** `collectAllocation` returns `{ status: "unresolved", reason: "allocation" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The orchestrator dispatches a closing message rather than locking the user into a split they were still negotiating.
 
 ### Contribution phase — `plansToContribute: boolean`
 
@@ -170,7 +184,7 @@ Users contribute on irregular schedules, and a fixed monthly number creates fals
 
 ### Phase loop guardrails
 
-`runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseBudgetExhaustedError`. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
+`runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseLoopToolCallsExhaustedError`. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
 
 ### Stage boundary validation
 
@@ -186,8 +200,8 @@ Each pipeline run is assigned a `sessionId` (UUID) at its entry point and propag
 
 Concurrent sessions on the same server instance are fully isolated: `AsyncLocalStorage` tracks which async context each continuation belongs to, so interleaved log lines from different sessions each carry only their own `sessionId`. This is a concurrency guarantee, not a parallelism one — Node.js is single-threaded; isolation is achieved by the event loop restoring the correct store on each async resumption.
 
-`runWithSession` is currently called inside `runClarifyStage`. As more stages are added, it should move up to the pipeline runner so the context spans all stages — at that point `runClarifyStage`'s `sessionId` parameter is removed and stages simply inherit the ambient context.
+`runWithSession` is established once in `runPipeline` (the orchestrator) so the context spans all stages. Stages take no `sessionId` parameter — they simply inherit the ambient context from the orchestrator's wrapper.
 
 ### OpenAI failure handling
 
-All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the pipeline sends an `error` event and the user retries from scratch.
+All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the exception propagates to the orchestrator, which catches it, logs the failure, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. The user retries from scratch.

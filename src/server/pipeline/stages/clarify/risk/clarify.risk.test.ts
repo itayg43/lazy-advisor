@@ -5,7 +5,11 @@ import {
   collectRisk,
   type RiskClassify,
 } from "#pipeline/stages/clarify/risk/clarify.risk";
-import { RiskTolerance } from "#schemas/pipeline.schemas";
+import {
+  ClarifyErroredReasonEnum,
+  ClarifyUnresolvedReasonEnum,
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -21,7 +25,7 @@ describe("collectRisk", () => {
     vi.clearAllMocks();
   });
 
-  const { conservative, moderate, aggressive } = RiskTolerance.enum;
+  const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
   const createParsedResponse = <T>(output: T): OpenAIResponse<T> => ({
     id: "resp_test",
@@ -47,22 +51,44 @@ describe("collectRisk", () => {
 
     const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
 
-    expect(result).toEqual({ status: "success", selfRatingScore: score, riskTolerance });
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.completed,
+      selfRatingScore: score,
+      riskTolerance,
+    });
   });
 
-  it("should return risk_missing when score converges as null", async () => {
+  it("should return errored/classify_output_invalid when score converges as null", async () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged(null));
     const responder = createTrackedResponder(["I don't know"]);
 
     const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
 
-    expect(result.status).toBe("failure");
-    if (result.status === "failure") {
-      expect(result.reason).toBe("risk_missing");
+    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
+    if (result.status === PipelineStatusEnum.enum.errored) {
+      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_output_invalid);
     }
   });
 
-  it("should return risk_missing when follow-up budget is exhausted", async () => {
+  it("should return errored/classify_message_missing when mid-loop clarificationMessage is null", async () => {
+    mockedCallOpenAIParsed.mockResolvedValueOnce(
+      createParsedResponse<RiskClassify>({
+        clarificationNeeded: true,
+        clarificationMessage: null,
+        selfRatingScore: null,
+      }),
+    );
+    const responder = createTrackedResponder(["I don't know"]);
+
+    const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
+
+    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
+    if (result.status === PipelineStatusEnum.enum.errored) {
+      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_message_missing);
+    }
+  });
+
+  it("should return unresolved/risk_tolerance when follow-up budget is exhausted", async () => {
     // followUps: 2 → 3 total classification attempts (loop × 2 + final)
     const needsClarification: OpenAIResponse<RiskClassify> = createParsedResponse({
       clarificationNeeded: true,
@@ -81,9 +107,9 @@ describe("collectRisk", () => {
 
     const result = await collectRisk(responder.sendToUser, responder.waitForResponse);
 
-    expect(result.status).toBe("failure");
-    if (result.status === "failure") {
-      expect(result.reason).toBe("risk_missing");
+    expect(result.status).toBe(PipelineStatusEnum.enum.unresolved);
+    if (result.status === PipelineStatusEnum.enum.unresolved) {
+      expect(result.reason).toBe(ClarifyUnresolvedReasonEnum.enum.risk_tolerance);
     }
   });
 });
