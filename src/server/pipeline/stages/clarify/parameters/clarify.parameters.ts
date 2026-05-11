@@ -4,20 +4,16 @@ import { MAX_AMOUNT } from "#constants/validation.constants";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  ClassifyFollowUpsExhaustedError,
-  ClassifyMessageMissingError,
-  ClassifyOutputInvalidError,
   askWithClassify,
+  mapClassifyErrorToErrored,
+  mapClassifyErrorToUnresolved,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
   TIMELINE_BOUNDARY_EXAMPLES,
   TIMELINE_BUCKET_LIST,
   TIMELINE_BUCKETS,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import {
-  ClarifyErroredReasonEnum,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ClarifyErroredReason,
   ClarifyUnresolvedReason,
@@ -170,32 +166,15 @@ const askAmount = async (
 
     return result;
   } catch (error) {
-    if (error instanceof ClassifyFollowUpsExhaustedError) {
-      logger.info("askAmount — follow-ups exhausted");
+    const unresolved = mapClassifyErrorToUnresolved(
+      error,
+      "askAmount",
+      ClarifyUnresolvedReasonEnum.enum.amount,
+    );
+    if (unresolved) return unresolved;
 
-      return {
-        status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.amount,
-      };
-    }
-    if (error instanceof ClassifyOutputInvalidError) {
-      logger.error("askAmount — classify output invalid", error, {
-        cause: error.cause,
-      });
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
-      };
-    }
-    if (error instanceof ClassifyMessageMissingError) {
-      logger.error("askAmount — classify message missing", error);
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
-      };
-    }
+    const errored = mapClassifyErrorToErrored(error, "askAmount");
+    if (errored) return errored;
 
     throw error;
   }
@@ -227,32 +206,15 @@ const askTimeline = async (
 
     return result;
   } catch (error) {
-    if (error instanceof ClassifyFollowUpsExhaustedError) {
-      logger.info("askTimeline — follow-ups exhausted");
+    const unresolved = mapClassifyErrorToUnresolved(
+      error,
+      "askTimeline",
+      ClarifyUnresolvedReasonEnum.enum.timeline,
+    );
+    if (unresolved) return unresolved;
 
-      return {
-        status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.timeline,
-      };
-    }
-    if (error instanceof ClassifyOutputInvalidError) {
-      logger.error("askTimeline — classify output invalid", error, {
-        cause: error.cause,
-      });
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
-      };
-    }
-    if (error instanceof ClassifyMessageMissingError) {
-      logger.error("askTimeline — classify message missing", error);
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
-      };
-    }
+    const errored = mapClassifyErrorToErrored(error, "askTimeline");
+    if (errored) return errored;
 
     throw error;
   }

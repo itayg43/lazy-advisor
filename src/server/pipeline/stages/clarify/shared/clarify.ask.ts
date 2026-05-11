@@ -5,8 +5,15 @@ import { z, type ZodError } from "zod";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
+import { ClarifyErroredReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type {
+  ClarifyErroredReason,
+  ClarifyUnresolvedReason,
+} from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
+import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import { callOpenAIParsed } from "#services/openai";
+import type { PipelineStatus } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyAsk");
 
@@ -45,6 +52,60 @@ export const isClassifyError = (error: unknown): error is ClassifyError =>
   error instanceof ClassifyFollowUpsExhaustedError ||
   error instanceof ClassifyMessageMissingError ||
   error instanceof ClassifyOutputInvalidError;
+
+// Maps ClassifyFollowUpsExhaustedError to an unresolved phase-result and emits the log.
+// The reason is the caller's responsibility — generic preserves the literal narrowing
+// so the result fits caller-side `Extract<ClarifyUnresolvedReason, "...">` arms.
+export type ClassifyUnresolvedResult<TReason extends ClarifyUnresolvedReason> = {
+  status: Extract<PipelineStatus, "unresolved">;
+  reason: TReason;
+};
+
+export const mapClassifyErrorToUnresolved = <TReason extends ClarifyUnresolvedReason>(
+  error: unknown,
+  label: string,
+  reason: TReason,
+): ClassifyUnresolvedResult<TReason> | null => {
+  if (error instanceof ClassifyFollowUpsExhaustedError) {
+    logger.info(`${label} — follow-ups exhausted`);
+
+    return { status: PipelineStatusEnum.enum.unresolved, reason };
+  }
+
+  return null;
+};
+
+// Maps the two system-driven classify errors (output-invalid, message-missing)
+// to an errored phase-result and emits the log. Returns null for everything else
+// (including ClassifyFollowUpsExhaustedError) — callers decide what to do.
+export type ClassifyErroredResult = {
+  status: Extract<PipelineStatus, "errored">;
+  reason: ClarifyErroredReason;
+};
+
+export const mapClassifyErrorToErrored = (
+  error: unknown,
+  label: string,
+): ClassifyErroredResult | null => {
+  if (error instanceof ClassifyOutputInvalidError) {
+    logger.error(`${label} — classify output invalid`, error, { cause: error.cause });
+
+    return {
+      status: PipelineStatusEnum.enum.errored,
+      reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
+    };
+  }
+  if (error instanceof ClassifyMessageMissingError) {
+    logger.error(`${label} — classify message missing`, error);
+
+    return {
+      status: PipelineStatusEnum.enum.errored,
+      reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
+    };
+  }
+
+  return null;
+};
 
 export const AskWithClassifyBaseSchema = z.object({
   clarificationNeeded: z.boolean(),

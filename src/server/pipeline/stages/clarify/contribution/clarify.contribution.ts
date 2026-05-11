@@ -4,11 +4,9 @@ import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
   ClassifyFollowUpsExhaustedError,
-  ClassifyMessageMissingError,
-  ClassifyOutputInvalidError,
   askWithClassify,
+  mapClassifyErrorToErrored,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
-import { ClarifyErroredReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
   ContributionPhaseResult,
@@ -101,10 +99,14 @@ export const collectContribution = async (
       followUps: 2,
     });
 
-    return {
+    const result = {
       status: PipelineStatusEnum.enum.completed,
       plansToContribute: output.answer === "yes",
-    };
+    } as const;
+
+    logger.debug("Contribution output", { output: result });
+
+    return result;
   } catch (error) {
     if (error instanceof ClassifyFollowUpsExhaustedError) {
       logger.warn(
@@ -114,25 +116,8 @@ export const collectContribution = async (
       return { status: PipelineStatusEnum.enum.completed, plansToContribute: false };
     }
 
-    if (error instanceof ClassifyOutputInvalidError) {
-      logger.error("collectContribution — classify output invalid", error, {
-        cause: error.cause,
-      });
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
-      };
-    }
-
-    if (error instanceof ClassifyMessageMissingError) {
-      logger.error("collectContribution — classify message missing", error);
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
-      };
-    }
+    const errored = mapClassifyErrorToErrored(error, "collectContribution");
+    if (errored) return errored;
 
     throw error;
   }

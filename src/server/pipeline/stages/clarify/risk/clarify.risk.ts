@@ -3,15 +3,11 @@ import { z } from "zod";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  ClassifyFollowUpsExhaustedError,
-  ClassifyMessageMissingError,
-  ClassifyOutputInvalidError,
   askWithClassify,
+  mapClassifyErrorToErrored,
+  mapClassifyErrorToUnresolved,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
-import {
-  ClarifyErroredReasonEnum,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
@@ -146,32 +142,15 @@ export const collectRisk = async (
 
     return result;
   } catch (error) {
-    if (error instanceof ClassifyFollowUpsExhaustedError) {
-      logger.info("Risk phase unresolved — follow-ups exhausted");
+    const unresolved = mapClassifyErrorToUnresolved(
+      error,
+      "collectRisk",
+      ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
+    );
+    if (unresolved) return unresolved;
 
-      return {
-        status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
-      };
-    }
-    if (error instanceof ClassifyOutputInvalidError) {
-      logger.error("Risk phase errored — classify output invalid", error, {
-        cause: error.cause,
-      });
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_output_invalid,
-      };
-    }
-    if (error instanceof ClassifyMessageMissingError) {
-      logger.error("Risk phase errored — classify message missing", error);
-
-      return {
-        status: PipelineStatusEnum.enum.errored,
-        reason: ClarifyErroredReasonEnum.enum.classify_message_missing,
-      };
-    }
+    const errored = mapClassifyErrorToErrored(error, "collectRisk");
+    if (errored) return errored;
 
     throw error;
   }
