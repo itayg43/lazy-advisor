@@ -70,9 +70,7 @@ Note: this behavior is deterministic code once the classify model returns `answe
 - **Israel/DCA clarification:** initial ask → clarification exchange → answer = 2 turns.
 - **Worst case:** two clarification exchanges (e.g., Israel concern + follow-up question) → final attempt = 3 turns.
 
-If all 3 turns are consumed and `clarificationNeeded` remains `true`, `askWithClassify` throws `ClassifyFollowUpsExhaustedError`. `collectContribution` catches it and returns `{ status: "completed", plansToContribute: false }` — cannot resolve → assume no. User-driven, not a system error.
-
-`ClassifyOutputInvalidError` and `ClassifyMessageMissingError` are system errors → `{ status: "errored", reason: ... }`. The stage logs these and defaults to `plansToContribute: false` — contribution is non-blocking by design.
+Contribution is non-blocking by design — every classify-error mode collapses to the same safe default: `{ status: "completed", plansToContribute: false }`. `ClassifyFollowUpsExhaustedError`, `ClassifyOutputInvalidError`, and `ClassifyMessageMissingError` all resolve via the `isClassifyError(error)` collapse, mirroring ef-debt's pattern: when in doubt, the safe assumption is better than killing the flow at the last phase. The underlying classify failure is still recorded at the `askWithClassify` layer; the phase emits a single `warn` noting the collapse and `error.name` for traceability.
 
 ---
 

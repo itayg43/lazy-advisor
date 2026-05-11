@@ -101,9 +101,9 @@ Both conversation patterns share the same error contract: internal primitives th
 
 - `runPhaseLoop` → throws `PhaseLoopToolCallsExhaustedError` when its tool-call budget is exhausted → phase catches, returns `{ status: "unresolved", reason: "..." }`
 - `askWithClassify` → throws one of three typed errors:
-  - `ClassifyFollowUpsExhaustedError` when follow-ups are exhausted → user-driven; phase returns `unresolved` (or, for ef-debt, defaults to the safe educational fallback)
-  - `ClassifyOutputInvalidError` when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"`
-  - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"`
+  - `ClassifyFollowUpsExhaustedError` when follow-ups are exhausted → user-driven; phase returns `unresolved` (or, for ef-debt and contribution, defaults to the safe fallback)
+  - `ClassifyOutputInvalidError` when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
+  - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 

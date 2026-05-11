@@ -3,9 +3,8 @@ import { z } from "zod";
 import { createLogger } from "#lib/logger";
 import {
   AskWithClassifyBaseSchema,
-  ClassifyFollowUpsExhaustedError,
   askWithClassify,
-  mapClassifyErrorToErrored,
+  isClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import type {
   AllocationPhaseOutput,
@@ -108,16 +107,17 @@ export const collectContribution = async (
 
     return result;
   } catch (error) {
-    if (error instanceof ClassifyFollowUpsExhaustedError) {
+    // Contribution is non-blocking by design — every classify-error mode
+    // (follow-ups exhausted, output invalid, message missing) collapses to
+    // the safe default. Mirrors ef-debt: "when in doubt, assume no contribution."
+    if (isClassifyError(error)) {
       logger.warn(
-        "collectContribution — follow-ups exhausted, defaulting to no contribution",
+        "collectContribution — classify error, defaulting to no contribution",
+        { error: error.name },
       );
 
       return { status: PipelineStatusEnum.enum.completed, plansToContribute: false };
     }
-
-    const errored = mapClassifyErrorToErrored(error, "collectContribution");
-    if (errored) return errored;
 
     throw error;
   }

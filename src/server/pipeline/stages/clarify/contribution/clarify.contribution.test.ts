@@ -5,7 +5,6 @@ import {
   collectContribution,
   type ContributionClassify,
 } from "#pipeline/stages/clarify/contribution/clarify.contribution";
-import { ClarifyErroredReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   AllocationPhaseOutput,
   ParametersPhaseOutput,
@@ -134,7 +133,7 @@ describe("collectContribution", () => {
     });
   });
 
-  it("should return errored/classify_output_invalid when answer converges as null", async () => {
+  it("should default to plansToContribute: false when answer converges as null (output-invalid collapse)", async () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(
       createParsedResponse<ContributionClassify>({
         clarificationNeeded: false,
@@ -151,13 +150,13 @@ describe("collectContribution", () => {
       responder.waitForResponse,
     );
 
-    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
-    if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_output_invalid);
-    }
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.completed,
+      plansToContribute: false,
+    });
   });
 
-  it("should return errored/classify_message_missing when mid-loop clarificationMessage is null", async () => {
+  it("should default to plansToContribute: false when mid-loop clarificationMessage is null (message-missing collapse)", async () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(
       createParsedResponse<ContributionClassify>({
         clarificationNeeded: true,
@@ -174,9 +173,9 @@ describe("collectContribution", () => {
       responder.waitForResponse,
     );
 
-    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
-    if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_message_missing);
-    }
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.completed,
+      plansToContribute: false,
+    });
   });
 });

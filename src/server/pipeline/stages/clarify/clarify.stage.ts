@@ -86,21 +86,11 @@ export const runClarifyStage = async (
     waitForResponse,
   );
 
-  let plansToContribute: boolean;
-  if (contributionResult.status === PipelineStatusEnum.enum.errored) {
-    logger.error("Contribution phase errored — defaulting to no contribution", {
-      reason: contributionResult.reason,
-    });
-    plansToContribute = false;
-  } else {
-    plansToContribute = contributionResult.plansToContribute;
-  }
-
   const profile = UserProfileSchema.parse({
     ...parameters,
     riskTolerance: riskResult.riskTolerance,
     ...allocation,
-    plansToContribute,
+    plansToContribute: contributionResult.plansToContribute,
   });
 
   logger.info("Clarify stage complete");
