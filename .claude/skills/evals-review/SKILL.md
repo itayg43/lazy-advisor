@@ -1,7 +1,5 @@
 ---
 name: evals-review
-model: sonnet
-effort: high
 description: Run evals, read last-run files, and produce a full quality report — conversation tone, flow, edge-case coverage, and ranked improvement opportunities.
 ---
 

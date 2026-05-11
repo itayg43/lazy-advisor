@@ -1,7 +1,5 @@
 ---
 name: merge-pr
-model: sonnet
-effort: low
 description: Merge the current branch's PR, delete the remote and local branch, and sync main.
 ---
 
