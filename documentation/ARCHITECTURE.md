@@ -107,7 +107,16 @@ Both conversation patterns share the same error contract: internal primitives th
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the orchestrator (`runPipeline`), which catches them at the boundary, logs the error, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarifyOrTerminate`), which catches them at the stage boundary, logs the error, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
+
+### Stage vs. orchestrator split
+
+`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarifyOrTerminate` (`clarify.orchestrator.ts`) wraps it with two responsibilities:
+
+1. **Stage error boundary** — any thrown exception is caught, logged, and converted to `SYSTEM_ERROR_EXIT_MESSAGE`. The stage stays exception-free in its return contract.
+2. **Termination dispatch** — `halted` / `unresolved` / `errored` results map to user-facing strings via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`. The orchestrator returns the profile on `completed`, or `null` after dispatching the terminal message.
+
+`runPipeline` is the thin top-level wrapper that runs all stages inside `runWithSession`; it holds no error-handling logic of its own.
 
 ### Multi-phase split
 
@@ -188,7 +197,7 @@ Users contribute on irregular schedules, and a fixed monthly number creates fals
 
 ### Stage boundary validation
 
-The clarify stage output is validated with `UserProfileSchema`. If the LLM produces output that fails validation, the pipeline stops immediately and sends an `error` event — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
+The clarify stage output is validated with `UserProfileSchema` before returning. A validation failure throws, propagating to the clarify orchestrator's catch block, which logs the error and sends `SYSTEM_ERROR_EXIT_MESSAGE` — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
 
 ### Inline assembly from typed outputs
 

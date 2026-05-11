@@ -14,9 +14,9 @@ Behavioral rules for the parameters collection phase. Each entry: the rule, a on
 
 ---
 
-## 2. Timeline asked twice with no valid answer → phase ends with failure
+## 2. Timeline asked twice with no valid answer → phase ends with unresolved
 
-**Rule:** If the timeline has been asked twice without a specific, mappable timeframe, the phase ends with `timeline_missing` — same two-try rule as amount. A valid second response (e.g., "around 10 years or so") is still mapped and accepted; null is only returned when both responses are genuinely unmappable (e.g., "I don't know", "someday").
+**Rule:** If the timeline has been asked twice without a specific, mappable timeframe, the phase ends with `timeline` — same two-try rule as amount. A valid second response (e.g., "around 10 years or so") is still mapped and accepted; null is only returned when both responses are genuinely unmappable (e.g., "I don't know", "someday").
 
 **Scenario:** User says "I don't know" on first ask, "I really can't say" on retry. Agent stops without proceeding.
 
@@ -39,7 +39,7 @@ Behavioral rules for the parameters collection phase. Each entry: the rule, a on
 
 ---
 
-## 4. Amount asked twice with no valid number → phase ends with failure
+## 4. Amount asked twice with no valid number → phase ends with unresolved
 
 **Rule:** If the user fails to provide a specific amount after two attempts, the phase ends immediately — timeline is not asked. Timeline follows the same two-try rule (see rule 2).
 
