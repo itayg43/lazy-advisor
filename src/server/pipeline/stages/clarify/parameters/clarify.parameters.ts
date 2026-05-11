@@ -20,6 +20,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ClarifyErroredReason,
+  ClarifyUnresolvedReason,
   ParametersPhaseResult,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { SendToUser, WaitForResponse } from "#pipeline/tools/ask-user.tool";
@@ -129,12 +130,18 @@ User: "skip"
 
 type AskAmountResult =
   | { status: Extract<PipelineStatus, "completed">; amount: number }
-  | { status: Extract<PipelineStatus, "unresolved"> }
+  | {
+      status: Extract<PipelineStatus, "unresolved">;
+      reason: Extract<ClarifyUnresolvedReason, "amount">;
+    }
   | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
 
 type AskTimelineResult =
   | { status: Extract<PipelineStatus, "completed">; timeline: TimelineBucket }
-  | { status: Extract<PipelineStatus, "unresolved"> }
+  | {
+      status: Extract<PipelineStatus, "unresolved">;
+      reason: Extract<ClarifyUnresolvedReason, "timeline">;
+    }
   | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
 
 const askAmount = async (
@@ -154,12 +161,22 @@ const askAmount = async (
       followUps: 1,
     });
 
-    return { status: PipelineStatusEnum.enum.completed, amount: output.amount };
+    const result = {
+      status: PipelineStatusEnum.enum.completed,
+      amount: output.amount,
+    } as const;
+
+    logger.debug("askAmount output", { output: result });
+
+    return result;
   } catch (error) {
     if (error instanceof ClassifyFollowUpsExhaustedError) {
       logger.info("askAmount — follow-ups exhausted");
 
-      return { status: PipelineStatusEnum.enum.unresolved };
+      return {
+        status: PipelineStatusEnum.enum.unresolved,
+        reason: ClarifyUnresolvedReasonEnum.enum.amount,
+      };
     }
     if (error instanceof ClassifyOutputInvalidError) {
       logger.error("askAmount — classify output invalid", error, {
@@ -201,12 +218,22 @@ const askTimeline = async (
       followUps: 1,
     });
 
-    return { status: PipelineStatusEnum.enum.completed, timeline: output.timeline };
+    const result = {
+      status: PipelineStatusEnum.enum.completed,
+      timeline: output.timeline,
+    } as const;
+
+    logger.debug("askTimeline output", { output: result });
+
+    return result;
   } catch (error) {
     if (error instanceof ClassifyFollowUpsExhaustedError) {
       logger.info("askTimeline — follow-ups exhausted");
 
-      return { status: PipelineStatusEnum.enum.unresolved };
+      return {
+        status: PipelineStatusEnum.enum.unresolved,
+        reason: ClarifyUnresolvedReasonEnum.enum.timeline,
+      };
     }
     if (error instanceof ClassifyOutputInvalidError) {
       logger.error("askTimeline — classify output invalid", error, {
@@ -238,25 +265,17 @@ export const collectParameters = async (
   logger.info("Starting parameters phase");
 
   const amountResult = await askAmount(sendToUser, waitForResponse);
-  if (amountResult.status === PipelineStatusEnum.enum.errored) return amountResult;
-  if (amountResult.status === PipelineStatusEnum.enum.unresolved) {
-    return {
-      status: PipelineStatusEnum.enum.unresolved,
-      reason: ClarifyUnresolvedReasonEnum.enum.amount,
-    };
-  }
+  if (amountResult.status !== PipelineStatusEnum.enum.completed) return amountResult;
 
   const timelineResult = await askTimeline(sendToUser, waitForResponse);
-  if (timelineResult.status === PipelineStatusEnum.enum.errored) return timelineResult;
-  if (timelineResult.status === PipelineStatusEnum.enum.unresolved) {
-    return {
-      status: PipelineStatusEnum.enum.unresolved,
-      reason: ClarifyUnresolvedReasonEnum.enum.timeline,
-    };
-  }
+  if (timelineResult.status !== PipelineStatusEnum.enum.completed) return timelineResult;
 
-  return {
+  const result = {
     status: PipelineStatusEnum.enum.completed,
     parameters: { amount: amountResult.amount, timeline: timelineResult.timeline },
-  };
+  } as const;
+
+  logger.debug("Parameters output", { output: result });
+
+  return result;
 };
