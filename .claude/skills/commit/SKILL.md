@@ -1,7 +1,5 @@
 ---
 name: commit
-model: sonnet
-effort: medium
 description: Run all checks, draft a commit message, commit, and push to the current branch. Use when implementation and doc updates are complete.
 ---
 

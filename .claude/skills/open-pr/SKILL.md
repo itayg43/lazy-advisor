@@ -1,7 +1,5 @@
 ---
 name: open-pr
-model: sonnet
-effort: medium
 description: Push the branch if needed and create a PR. Use after the commit is pushed and ready for review.
 ---
 
