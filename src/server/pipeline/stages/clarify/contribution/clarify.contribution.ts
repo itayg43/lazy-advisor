@@ -111,10 +111,9 @@ export const collectContribution = async (
     // (follow-ups exhausted, output invalid, message missing) collapses to
     // the safe default. Mirrors ef-debt: "when in doubt, assume no contribution."
     if (isClassifyError(error)) {
-      logger.warn(
-        "collectContribution — classify error, defaulting to no contribution",
-        { error: error.name },
-      );
+      logger.warn("collectContribution — classify error, defaulting to no contribution", {
+        error: error.name,
+      });
 
       return { status: PipelineStatusEnum.enum.completed, plansToContribute: false };
     }
