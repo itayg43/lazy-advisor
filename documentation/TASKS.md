@@ -1,34 +1,16 @@
 # Tasks
 
-**Current task:** T4.3
-**Next task:** T5
+**Current task:** T5
+**Next task:** T6
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T4.3 | Refactor contribution to `askWithClassify` |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
-
-### T4.3 — Refactor contribution to `askWithClassify`
-
-Replace `runPhaseLoop` with a fixed opening question + `askWithClassify` classifying `{ plansToContribute: boolean }`.
-
-**Changes:**
-- Replace `runPhaseLoop` + `runPhaseExtraction` with a single `askWithClassify` call
-- Remove the loop-based prompt; replace with a question string and classify schema
-- Update `clarify.contribution.eval.ts`
-
-**Files:**
-- `src/server/pipeline/stages/clarify/contribution/clarify.contribution.ts`
-- `src/server/pipeline/stages/clarify/contribution/clarify.contribution.eval.ts`
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.contribution.eval.ts`
-
----
 
 ### T5 — Equity
 
