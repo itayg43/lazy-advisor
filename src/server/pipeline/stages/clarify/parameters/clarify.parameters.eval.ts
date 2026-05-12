@@ -30,8 +30,55 @@ describe("collectParameters", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.parameters.rules.md rule 1: amount and timeline collected in separate turns
-  it("should collect amount then timeline in separate questions", async () => {
+  // clarify.parameters.rules.md rule 1: vague first attempt, specific second attempt → success
+  it("should re-ask amount when answer is vague", async () => {
+    const responder = createTrackedResponder(["around 20-30k", "₪25,000", "10+ years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(responder);
+    lastOutput = result;
+
+    expect(result.status).toBe("completed");
+    if (result.status === "completed") {
+      expect(result.amount).toBe(25_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 1: k-notation shorthand normalized to integer
+  it("should accept k-notation amounts", async () => {
+    const responder = createTrackedResponder(["50k", "5-10 years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(responder);
+    lastOutput = result;
+
+    expect(result.status).toBe("completed");
+    if (result.status === "completed") {
+      expect(result.amount).toBe(50_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 1: amount asked twice with no number → failure
+  it("should return failure when amount is never provided", async () => {
+    const responder = createTrackedResponder(["I'm not sure yet", "I really don't know"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(responder);
+    lastOutput = result;
+
+    expect(result.status).toBe("unresolved");
+    if (result.status === "unresolved") {
+      expect(result.reason).toBe("amount");
+    }
+
+    // No clarification sent after the last user response — dead-end guard.
+    expect(responder.transcript[responder.transcript.length - 1].role).toBe("user");
+  });
+
+  // clarify.parameters.rules.md rule 2: approximate timeframe phrasing maps to the nearest bucket
+  it("should map approximate timeframe phrasing to correct bucket", async () => {
     const responder = createTrackedResponder(["₪30,000", "about 20 years"]);
     lastTranscript = responder.transcript;
 
@@ -45,9 +92,9 @@ describe("collectParameters", () => {
     }
   });
 
-  // clarify.parameters.rules.md rule 1: k-notation shorthand parsed to integer
-  it("should accept k-notation amounts", async () => {
-    const responder = createTrackedResponder(["50k", "5-10 years"]);
+  // clarify.parameters.rules.md rule 2: agent presents four bucket options when asking timeline
+  it("should present the four timeline bucket options when asking for timeline", async () => {
+    const responder = createTrackedResponder(["₪50,000", "5-10 years"]);
     lastTranscript = responder.transcript;
 
     const result = await collectParameters(responder);
@@ -55,8 +102,31 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.amount).toBe(50_000);
       expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+    }
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const timelineTurn = agentTurns.find((t) => /under 3 years/i.test(t.content));
+    expect(timelineTurn?.content).toMatch(/3[–-]5 years/i);
+    expect(timelineTurn?.content).toMatch(/5[–-]10 years/i);
+    expect(timelineTurn?.content).toMatch(/10\+ years/i);
+  });
+
+  // clarify.parameters.rules.md rule 2: exact boundary values map to shorter bucket
+  it.each([
+    { input: "3 years", expected: TimelineBucketEnum.enum["under 3 years"] },
+    { input: "5 years", expected: TimelineBucketEnum.enum["3–5 years"] },
+    { input: "10 years", expected: TimelineBucketEnum.enum["5–10 years"] },
+  ])("should map exactly $input to $expected", async ({ input, expected }) => {
+    const responder = createTrackedResponder(["₪20,000", input]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(responder);
+    lastOutput = result;
+
+    expect(result.status).toBe("completed");
+    if (result.status === "completed") {
+      expect(result.timeline).toBe(expected);
     }
   });
 
@@ -100,101 +170,7 @@ describe("collectParameters", () => {
     expect(responder.transcript[responder.transcript.length - 1].role).toBe("user");
   });
 
-  // clarify.parameters.rules.md rule 3: agent presents four bucket options when asking timeline
-  it("should present the four timeline bucket options when asking for timeline", async () => {
-    const responder = createTrackedResponder(["₪50,000", "5-10 years"]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(responder);
-    lastOutput = result;
-
-    expect(result.status).toBe("completed");
-    if (result.status === "completed") {
-      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
-    }
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const timelineTurn = agentTurns.find((t) => /under 3 years/i.test(t.content));
-    expect(timelineTurn?.content).toMatch(/3[–-]5 years/i);
-    expect(timelineTurn?.content).toMatch(/5[–-]10 years/i);
-    expect(timelineTurn?.content).toMatch(/10\+ years/i);
-  });
-
-  // clarify.parameters.rules.md rule 3: exact boundary values map to shorter bucket
-  it("should map exactly 3 years to 'under 3 years'", async () => {
-    const responder = createTrackedResponder(["₪20,000", "3 years"]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(responder);
-    lastOutput = result;
-
-    expect(result.status).toBe("completed");
-    if (result.status === "completed") {
-      expect(result.timeline).toBe(TimelineBucketEnum.enum["under 3 years"]);
-    }
-  });
-
-  // clarify.parameters.rules.md rule 3: exact boundary values map to shorter bucket
-  it("should map exactly 5 years to '3–5 years'", async () => {
-    const responder = createTrackedResponder(["₪20,000", "5 years"]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(responder);
-    lastOutput = result;
-
-    expect(result.status).toBe("completed");
-    if (result.status === "completed") {
-      expect(result.timeline).toBe(TimelineBucketEnum.enum["3–5 years"]);
-    }
-  });
-
-  // clarify.parameters.rules.md rule 3: exact boundary values map to shorter bucket
-  it("should map exactly 10 years to '5–10 years'", async () => {
-    const responder = createTrackedResponder(["₪20,000", "10 years"]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(responder);
-    lastOutput = result;
-
-    expect(result.status).toBe("completed");
-    if (result.status === "completed") {
-      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
-    }
-  });
-
-  // clarify.parameters.rules.md rule 4: vague first attempt, specific second attempt → success
-  it("should re-ask amount when answer is vague", async () => {
-    const responder = createTrackedResponder(["around 20-30k", "₪25,000", "10+ years"]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(responder);
-    lastOutput = result;
-
-    expect(result.status).toBe("completed");
-    if (result.status === "completed") {
-      expect(result.amount).toBe(25_000);
-      expect(result.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
-    }
-  });
-
-  // clarify.parameters.rules.md rule 4: amount asked twice with no number → failure
-  it("should return failure when amount is never provided", async () => {
-    const responder = createTrackedResponder(["I'm not sure yet", "I really don't know"]);
-    lastTranscript = responder.transcript;
-
-    const result = await collectParameters(responder);
-    lastOutput = result;
-
-    expect(result.status).toBe("unresolved");
-    if (result.status === "unresolved") {
-      expect(result.reason).toBe("amount");
-    }
-
-    // No clarification sent after the last user response — dead-end guard.
-    expect(responder.transcript[responder.transcript.length - 1].role).toBe("user");
-  });
-
-  // clarify.parameters.rules.md rule 5: deflection treated as non-answer → redirect → success
+  // clarify.parameters.rules.md rule 3: deflection treated as non-answer → redirect → success
   it("should redirect when user deflects the timeline question", async () => {
     const responder = createTrackedResponder(["₪30,000", "skip", "5-10 years"]);
     lastTranscript = responder.transcript;
@@ -209,9 +185,47 @@ describe("collectParameters", () => {
     }
   });
 
-  // clarify.parameters.rules.md rule 5: deflection on amount question → redirect → success
+  // clarify.parameters.rules.md rule 3: deflection on amount question → redirect → success
   it("should redirect when user deflects the amount question", async () => {
     const responder = createTrackedResponder(["skip", "₪30,000", "5-10 years"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(responder);
+    lastOutput = result;
+
+    expect(result.status).toBe("completed");
+    if (result.status === "completed") {
+      expect(result.amount).toBe(30_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 4: user asks a clarifying question on amount → educate + re-ask → success
+  it("should answer briefly then re-ask amount when user asks a clarifying question", async () => {
+    const responder = createTrackedResponder([
+      "why do you need to know?",
+      "₪30,000",
+      "5-10 years",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectParameters(responder);
+    lastOutput = result;
+
+    expect(result.status).toBe("completed");
+    if (result.status === "completed") {
+      expect(result.amount).toBe(30_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+    }
+  });
+
+  // clarify.parameters.rules.md rule 4: user asks a clarifying question on timeline → educate + re-ask → success
+  it("should answer briefly then re-ask timeline when user asks a clarifying question", async () => {
+    const responder = createTrackedResponder([
+      "₪30,000",
+      "why does this matter?",
+      "5-10 years",
+    ]);
     lastTranscript = responder.transcript;
 
     const result = await collectParameters(responder);
