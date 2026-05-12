@@ -5,8 +5,8 @@ import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/intake/clarify.in
 import {
   GoalClassificationEnum,
   GoalClassificationSchema,
-} from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
-import type { GoalClassificationOutput } from "#pipeline/stages/clarify/intake/clarify.intake.types";
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { GoalClassificationOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyClassify");

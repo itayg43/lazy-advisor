@@ -12,7 +12,6 @@ import type {
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
-import type { RiskPhaseOutput } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
@@ -24,27 +23,15 @@ describe("collectAllocation", () => {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
   };
-  const aggressiveRisk: RiskPhaseOutput = {
-    selfRatingScore: 5,
-    riskTolerance: aggressive,
-  };
 
   const midHorizonModerateParameters: ParametersPhaseOutput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
   };
-  const moderateRisk: RiskPhaseOutput = {
-    selfRatingScore: 3,
-    riskTolerance: moderate,
-  };
 
   const longHorizonConservativeParameters: ParametersPhaseOutput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-  };
-  const conservativeRisk: RiskPhaseOutput = {
-    selfRatingScore: 2,
-    riskTolerance: conservative,
   };
 
   const shortMidHorizonConservativeParameters: ParametersPhaseOutput = {
@@ -79,14 +66,14 @@ describe("collectAllocation", () => {
   };
 
   // Narrows an AllocationPhaseResult to its success branch so the rest of the
-  // test can assert on the `.allocation` payload directly.
+  // test can assert on the equity/buffer fields directly.
   const expectSuccess = (result: AllocationPhaseResult): AllocationPhaseOutput => {
     expect(result.status).toBe("completed");
     if (result.status !== "completed") {
       throw new Error("expected allocation completed result");
     }
 
-    return result.allocation;
+    return result;
   };
 
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -112,8 +99,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -146,8 +134,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      midHorizonModerateParameters,
-      moderateRisk,
+      midHorizonModerateParameters.amount,
+      midHorizonModerateParameters.timeline,
+      moderate,
       responder,
     );
     lastOutput = result;
@@ -169,8 +158,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      shortMidHorizonConservativeParameters,
-      conservativeRisk,
+      shortMidHorizonConservativeParameters.amount,
+      shortMidHorizonConservativeParameters.timeline,
+      conservative,
       responder,
     );
     lastOutput = result;
@@ -192,8 +182,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -214,8 +205,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -239,8 +231,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonConservativeParameters,
-      conservativeRisk,
+      longHorizonConservativeParameters.amount,
+      longHorizonConservativeParameters.timeline,
+      conservative,
       responder,
     );
     lastOutput = result;
@@ -265,8 +258,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -290,8 +284,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -319,8 +314,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -354,8 +350,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -384,8 +381,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;
@@ -421,8 +419,9 @@ describe("collectAllocation", () => {
     lastTranscript = responder.transcript;
 
     const result = await collectAllocation(
-      longHorizonAggressiveParameters,
-      aggressiveRisk,
+      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveParameters.timeline,
+      aggressive,
       responder,
     );
     lastOutput = result;

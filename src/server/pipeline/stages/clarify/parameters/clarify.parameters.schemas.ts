@@ -13,10 +13,9 @@ export const ParametersPhaseOutputSchema = z.object({
 });
 
 export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
-  z.object({
-    status: PipelineStatusEnum.extract(["completed"]),
-    parameters: ParametersPhaseOutputSchema,
-  }),
+  z
+    .object({ status: PipelineStatusEnum.extract(["completed"]) })
+    .merge(ParametersPhaseOutputSchema),
   z.object({
     status: PipelineStatusEnum.extract(["unresolved"]),
     reason: ClarifyUnresolvedReasonEnum.extract(["amount", "timeline"]),

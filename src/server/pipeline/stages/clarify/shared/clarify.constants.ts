@@ -1,6 +1,8 @@
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ClarifyHaltReason,
   ClarifyUnresolvedReason,
+  RedirectingClassification,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
@@ -40,4 +42,16 @@ export const CLARIFY_HALT_MESSAGES: Record<
   string
 > = {
   short_timeline: SHORT_TIMELINE_EXIT_MESSAGE,
+};
+
+export const INTAKE_REDIRECT_REJECTION_MESSAGES: Record<
+  RedirectingClassification,
+  string
+> = {
+  [GoalClassificationEnum.enum.out_of_scope]:
+    "No problem — feel free to come back when you're ready to explore ETF-based investing.",
+  [GoalClassificationEnum.enum.unrealistic]:
+    "No problem — feel free to come back when you're ready to explore a realistic long-term plan.",
+  [GoalClassificationEnum.enum.contradictory]:
+    "No problem — feel free to come back when you have a clearer picture of your risk tolerance.",
 };

@@ -1,14 +1,17 @@
 import type { z } from "zod";
 
-// Stage→intake type-only import is intentional: ClarifyStageResult's intake_rejected
-// variant carries this intake-owned concept.
-import type { RedirectingClassification } from "#pipeline/stages/clarify/intake/clarify.intake.types";
 import type {
   ClarifyErroredReasonEnum,
   ClarifyHaltReasonEnum,
   ClarifyUnresolvedReasonEnum,
+  GoalClassificationEnum,
+  GoalClassificationSchema,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { PipelineStatus, UserProfile } from "#types/pipeline.types";
+
+export type GoalClassification = z.infer<typeof GoalClassificationEnum>;
+export type GoalClassificationOutput = z.infer<typeof GoalClassificationSchema>;
+export type RedirectingClassification = Exclude<GoalClassification, "normal">;
 
 export type ClarifyUnresolvedReason = z.infer<typeof ClarifyUnresolvedReasonEnum>;
 export type ClarifyHaltReason = z.infer<typeof ClarifyHaltReasonEnum>;

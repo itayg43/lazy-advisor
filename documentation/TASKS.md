@@ -174,7 +174,8 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.rules.md` — behavior rules (anchor options, conversation pattern, soft default, terminology canonical names)
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.knowledge.md` — educational reference content (✅ created as prep work)
 - `src/server/pipeline/stages/clarify/buffer/clarify.buffer.eval.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `BufferChoiceSchema`, `BufferPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.schemas.ts` — new file: `BufferChoiceSchema`, `BufferPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/buffer/clarify.buffer.types.ts` — new file: `BufferChoice`, `BufferPhaseOutput` (inferred from schemas, per CONVENTIONS.md § Types)
 - `src/server/schemas/pipeline.schemas.ts` — add `buffer` field
 
 #### Design decisions

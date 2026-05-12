@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { appendLastRunEntry, initLastRun } from "#pipeline/eval.transcript";
-import { GoalClassificationEnum } from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.classify.last-run.md", import.meta.url).pathname;
 

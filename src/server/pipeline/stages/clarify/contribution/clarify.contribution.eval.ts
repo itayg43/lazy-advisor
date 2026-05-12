@@ -6,25 +6,15 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
-import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type { ContributionPhaseResult } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
-import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
-import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.url)
   .pathname;
 
 describe("collectContribution", () => {
-  const mockParameters: ParametersPhaseOutput = {
-    amount: 30_000,
-    timeline: TimelineBucketEnum.enum["10+ years"],
-  };
-
-  const mockAllocation: AllocationPhaseOutput = {
-    equityPercentage: 70,
-    bufferPercentage: 30,
-  };
+  const mockAmount = 30_000;
+  const mockEquityPercentage = 70;
 
   let lastTranscript: TranscriptEntry[] | undefined;
   let lastOutput: ContributionPhaseResult | undefined;
@@ -51,7 +41,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockParameters, mockAllocation, responder);
+    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -70,7 +60,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockParameters, mockAllocation, responder);
+    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -86,7 +76,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockParameters, mockAllocation, responder);
+    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -105,7 +95,7 @@ describe("collectContribution", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockParameters, mockAllocation, responder);
+    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -117,7 +107,7 @@ describe("collectContribution", () => {
     const responder = createTrackedResponder(["Yes, I plan to add ₪500 every month"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockParameters, mockAllocation, responder);
+    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 
@@ -129,7 +119,7 @@ describe("collectContribution", () => {
     const responder = createTrackedResponder(["No, this is a one-time investment"]);
     lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockParameters, mockAllocation, responder);
+    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
     if (output.status !== "completed") return;
 

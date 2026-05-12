@@ -14,8 +14,6 @@ import type {
   EmergencyFundClassify,
   DebtClassify,
 } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
-import { INTAKE_REDIRECT_REJECTION_MESSAGES } from "#pipeline/stages/clarify/intake/clarify.intake.constants";
-import { GoalClassificationEnum } from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
 import type {
   AmountClassify,
   TimelineClassify,
@@ -24,6 +22,7 @@ import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   ALLOCATION_EXIT_MESSAGE,
   AMOUNT_EXIT_MESSAGE,
+  INTAKE_REDIRECT_REJECTION_MESSAGES,
   PROFILE_TRANSITION_MESSAGE,
   RISK_EXIT_MESSAGE,
   SHORT_TIMELINE_BUCKET,
@@ -32,6 +31,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import {
   PipelineStatusEnum,
   RiskToleranceEnum,

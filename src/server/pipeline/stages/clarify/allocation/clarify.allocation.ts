@@ -3,15 +3,13 @@ import {
   ALLOCATION_ANCHOR_TABLE,
   ALLOCATION_TIMELINE_BUCKETS,
   MAX_ALLOCATION_TOOL_CALLS,
-  RISK_LEVELS,
+  ALLOCATION_RISK_LEVELS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
-import type { RiskPhaseOutput } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   PhaseLoopToolCallsExhaustedError,
   runPhaseExtraction,
@@ -20,6 +18,7 @@ import {
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
+import type { RiskTolerance, TimelineBucket } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyAllocation");
 
@@ -79,13 +78,13 @@ If the user replies with a question instead of an answer ("what's a buffer?", "w
 
 Explanation scope:
 - **Concept questions** (what equity is, what a buffer is for, why split at all, what a money-market fund is): answer in one or two sentences.
-- **Method questions** ("how did you arrive at 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** use the words ${RISK_LEVELS} or show the table.
+- **Method questions** ("how did you arrive at 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** use the words ${ALLOCATION_RISK_LEVELS} or show the table.
 - **Instrument questions** ("which ETF?", "which money-market fund?"): say that's the next step after we settle on the split, and bring the conversation back to sizing.
 
 # Presentation rules
 
 - Always state the split in shekels and percent — never percentage alone.
-- Do **not** use the words ${RISK_LEVELS} when speaking to the user — not even as general adjectives.
+- Do **not** use the words ${ALLOCATION_RISK_LEVELS} when speaking to the user — not even as general adjectives.
 - Do **not** open with filler phrases (e.g., "Great question", "Sure", "Of course").
 - The user has final say. If they want a split different from the anchor (and it's not an extreme mismatch), honor it.
 
@@ -102,16 +101,17 @@ The two integers **must sum to exactly 100**. If the user agreed to 70% stocks, 
 Extract only the final agreed split — not an intermediate proposal. Use the user's exact number (e.g., 77, not snapped to a round value).`;
 
 export const collectAllocation = async (
-  parameters: ParametersPhaseOutput,
-  risk: RiskPhaseOutput,
+  amount: number,
+  timeline: TimelineBucket,
+  riskTolerance: RiskTolerance,
   responder: Responder,
 ): Promise<AllocationPhaseResult> => {
-  logger.info("Starting allocation phase", { parameters, risk });
+  logger.info("Starting allocation phase", { amount, timeline, riskTolerance });
 
   const context = [
-    `Investment amount: ₪${parameters.amount.toLocaleString()}`,
-    `Investment timeline: ${parameters.timeline}`,
-    `Risk tolerance: ${risk.riskTolerance}`,
+    `Investment amount: ₪${amount.toLocaleString()}`,
+    `Investment timeline: ${timeline}`,
+    `Risk tolerance: ${riskTolerance}`,
   ].join("\n");
 
   let responseId: string;
@@ -149,5 +149,5 @@ export const collectAllocation = async (
   logger.info("Allocation extraction complete", { responseId: id, usage });
   logger.debug("Allocation output", { output });
 
-  return { status: PipelineStatusEnum.enum.completed, allocation: output };
+  return { status: PipelineStatusEnum.enum.completed, ...output };
 };

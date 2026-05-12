@@ -9,8 +9,8 @@ import {
 } from "#pipeline/stages/clarify/parameters/clarify.parameters.constants";
 import type { ParametersPhaseResult } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import {
-  AskWithClassifyBaseSchema,
   askWithClassify,
+  AskWithClassifyBaseSchema,
   mapClassifyErrorToErrored,
   mapClassifyErrorToUnresolved,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
@@ -225,7 +225,8 @@ export const collectParameters = async (
 
   const result = {
     status: PipelineStatusEnum.enum.completed,
-    parameters: { amount: amountResult.amount, timeline: timelineResult.timeline },
+    amount: amountResult.amount,
+    timeline: timelineResult.timeline,
   } as const;
 
   logger.debug("Parameters output", { output: result });

@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 import { createLogger } from "#lib/logger";
-import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { ContributionPhaseResult } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
-import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import {
   AskWithClassifyBaseSchema,
   askWithClassify,
@@ -71,16 +69,14 @@ User: "in Israel you can't buy partial shares so it's hard to add small amounts"
 → clarificationNeeded: true — explain fractional shares constraint and quarterly workaround, include their equity/buffer amounts, then re-ask`;
 
 export const collectContribution = async (
-  parameters: ParametersPhaseOutput,
-  allocation: AllocationPhaseOutput,
+  amount: number,
+  equityPercentage: number,
   responder: Responder,
 ): Promise<ContributionPhaseResult> => {
-  logger.info("Starting contribution phase", { parameters, allocation });
+  logger.info("Starting contribution phase", { amount, equityPercentage });
 
-  const equityAmount = Math.round(
-    (parameters.amount * allocation.equityPercentage) / 100,
-  );
-  const bufferAmount = parameters.amount - equityAmount;
+  const equityAmount = Math.round((amount * equityPercentage) / 100);
+  const bufferAmount = amount - equityAmount;
 
   try {
     const output = await askWithClassify({

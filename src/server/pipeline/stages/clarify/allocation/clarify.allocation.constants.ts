@@ -8,7 +8,9 @@ const {
   "10+ years": t10plus,
 } = TimelineBucketEnum.enum;
 
-export const RISK_LEVELS = RiskToleranceEnum.options.map((o) => `\`${o}\``).join(", ");
+export const ALLOCATION_RISK_LEVELS = RiskToleranceEnum.options
+  .map((o) => `\`${o}\``)
+  .join(", ");
 
 type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
 
