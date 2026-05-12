@@ -107,16 +107,18 @@ Both conversation patterns share the same error contract: internal primitives th
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarifyOrTerminate`), which catches them at the stage boundary, logs the error, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarify`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
 ### Stage vs. orchestrator split
 
-`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarifyOrTerminate` (`clarify.orchestrator.ts`) wraps it with two responsibilities:
+`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarify` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
 
-1. **Stage error boundary** — any thrown exception is caught, logged, and converted to `SYSTEM_ERROR_EXIT_MESSAGE`. The stage stays exception-free in its return contract.
-2. **Termination dispatch** — `halted` / `unresolved` / `errored` results map to user-facing strings via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`. The orchestrator returns the profile on `completed`, or `null` after dispatching the terminal message.
+1. **Stage error boundary** — any thrown exception is caught, logged, and converted to an errored result carrying `SYSTEM_ERROR_EXIT_MESSAGE`. The stage stays exception-free in its return contract.
+2. **Termination resolution** — `halted` / `unresolved` / `errored` results map to user-facing strings via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`, then wrapped as `{ status, message }` preserving the original status. The `completed` arm returns `{ status: "completed", profile }`.
 
-`runPipeline` is the thin top-level wrapper that runs all stages inside `runWithSession`; it holds no error-handling logic of its own.
+`ClarifyResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
+
+`runPipeline` is the thin top-level wrapper that runs all stages inside `runWithSession`, switches on each stage's result status, and delivers any terminal message via `responder.sendToUser`. It holds no error-handling logic of its own.
 
 ### Multi-phase split
 

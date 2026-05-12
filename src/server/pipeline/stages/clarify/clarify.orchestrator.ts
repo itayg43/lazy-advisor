@@ -7,39 +7,48 @@ import {
   INTAKE_REDIRECT_REJECTION_MESSAGES,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { ClarifyHaltReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type { ClarifyStageTermination } from "#pipeline/stages/clarify/shared/clarify.types";
+import type {
+  ClarifyStageResult,
+  ClarifyStageTermination,
+} from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
-import type { UserProfile } from "#types/pipeline.types";
+import type { PipelineStatus, UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyOrchestrator");
 
-export const runClarifyOrTerminate = async (
+export type ClarifyResult =
+  | { status: Extract<PipelineStatus, "completed">; profile: UserProfile }
+  | { status: Exclude<PipelineStatus, "completed">; message: string };
+
+export const runClarify = async (
   goal: string,
   responder: Responder,
-): Promise<UserProfile | null> => {
-  let result;
+): Promise<ClarifyResult> => {
+  let result: ClarifyStageResult;
 
+  // Narrow try: only wraps the stage call so unrelated throws (e.g. from
+  // message resolution below) propagate up instead of being misattributed as
+  // a stage failure.
   try {
     result = await runClarifyStage(goal, responder);
   } catch (error) {
     logger.error("Clarify stage failed unexpectedly", error);
 
-    responder.sendToUser(SYSTEM_ERROR_EXIT_MESSAGE);
-
-    return null;
+    return {
+      status: PipelineStatusEnum.enum.errored,
+      message: SYSTEM_ERROR_EXIT_MESSAGE,
+    };
   }
 
   if (result.status !== PipelineStatusEnum.enum.completed) {
-    responder.sendToUser(handleClarifyTerminationMessage(result));
-
-    return null;
+    return { status: result.status, message: resolveTerminationMessage(result) };
   }
 
-  return result.profile;
+  return { status: result.status, profile: result.profile };
 };
 
-const resolveClarifyHaltMessage = (
+const resolveHaltMessage = (
   result: Extract<ClarifyStageTermination, { status: "halted" }>,
 ): string => {
   switch (result.reason) {
@@ -60,12 +69,12 @@ const resolveClarifyHaltMessage = (
   }
 };
 
-const handleClarifyTerminationMessage = (result: ClarifyStageTermination): string => {
+const resolveTerminationMessage = (result: ClarifyStageTermination): string => {
   switch (result.status) {
     case PipelineStatusEnum.enum.halted: {
       logger.info("Clarify stage halted", { reason: result.reason });
 
-      return resolveClarifyHaltMessage(result);
+      return resolveHaltMessage(result);
     }
     case PipelineStatusEnum.enum.unresolved: {
       logger.info("Clarify stage unresolved", { reason: result.reason });
