@@ -103,4 +103,4 @@ If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws 
 ## Out of scope
 
 - **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (T5 equity / T6 buffer) and bring the conversation back to sizing.
-- **EF / debt collection.** Emergency fund and debt status are collected and addressed in a separate educational gate (T3) before the parameters phase. This phase does not consume them.
+- **EF / debt collection.** Emergency fund and debt status are collected and addressed in the ef-debt phase (an educational gate) before the parameters phase. This phase does not consume them.
