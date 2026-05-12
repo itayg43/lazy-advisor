@@ -11,9 +11,18 @@ const AllocationPhaseOutputShape = z.object({
   bufferPercentage: z.number().int().min(0).max(100),
 });
 
+const equityBufferSumsTo100 = (v: {
+  equityPercentage: number;
+  bufferPercentage: number;
+}) => v.equityPercentage + v.bufferPercentage === 100;
+
+const SUM_TO_100_ERROR = {
+  message: "equityPercentage + bufferPercentage must equal 100",
+};
+
 export const AllocationPhaseOutputSchema = AllocationPhaseOutputShape.refine(
-  (v) => v.equityPercentage + v.bufferPercentage === 100,
-  { message: "equityPercentage + bufferPercentage must equal 100" },
+  equityBufferSumsTo100,
+  SUM_TO_100_ERROR,
 );
 
 export const AllocationPhaseResultSchema = z
@@ -26,7 +35,4 @@ export const AllocationPhaseResultSchema = z
       reason: ClarifyUnresolvedReasonEnum.extract(["allocation"]),
     }),
   ])
-  .refine(
-    (v) => v.status !== "completed" || v.equityPercentage + v.bufferPercentage === 100,
-    { message: "equityPercentage + bufferPercentage must equal 100" },
-  );
+  .refine((v) => v.status !== "completed" || equityBufferSumsTo100(v), SUM_TO_100_ERROR);
