@@ -5,8 +5,7 @@ import type { RiskPhaseResult } from "#pipeline/stages/clarify/risk/clarify.risk
 import {
   AskWithClassifyBaseSchema,
   askWithClassify,
-  mapClassifyErrorToErrored,
-  mapClassifyErrorToUnresolved,
+  mapClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -138,15 +137,12 @@ export const collectRisk = async (responder: Responder): Promise<RiskPhaseResult
 
     return result;
   } catch (error) {
-    const unresolved = mapClassifyErrorToUnresolved(
+    const mapped = mapClassifyError(
       error,
       "collectRisk",
       ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
     );
-    if (unresolved) return unresolved;
-
-    const errored = mapClassifyErrorToErrored(error, "collectRisk");
-    if (errored) return errored;
+    if (mapped) return mapped;
 
     throw error;
   }
