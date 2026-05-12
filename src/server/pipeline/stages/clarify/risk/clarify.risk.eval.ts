@@ -7,7 +7,7 @@ import {
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
-import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
+import type { RiskPhaseResult } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathname;

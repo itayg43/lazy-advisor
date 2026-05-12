@@ -1,19 +1,11 @@
 import type { z } from "zod";
 
 import type {
-  AllocationPhaseOutputSchema,
-  AllocationPhaseResultSchema,
   ClarifyErroredReasonEnum,
   ClarifyHaltReasonEnum,
   ClarifyUnresolvedReasonEnum,
-  ContributionPhaseResultSchema,
   GoalClassificationEnum,
   GoalClassificationSchema,
-  IntakePhaseOutputSchema,
-  ParametersPhaseOutputSchema,
-  ParametersPhaseResultSchema,
-  RiskPhaseOutputSchema,
-  RiskPhaseResultSchema,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { PipelineStatus, UserProfile } from "#types/pipeline.types";
 
@@ -24,15 +16,6 @@ export type RedirectingClassification = Exclude<GoalClassification, "normal">;
 export type ClarifyUnresolvedReason = z.infer<typeof ClarifyUnresolvedReasonEnum>;
 export type ClarifyHaltReason = z.infer<typeof ClarifyHaltReasonEnum>;
 export type ClarifyErroredReason = z.infer<typeof ClarifyErroredReasonEnum>;
-
-export type IntakePhaseOutput = z.infer<typeof IntakePhaseOutputSchema>;
-export type ParametersPhaseOutput = z.infer<typeof ParametersPhaseOutputSchema>;
-export type ParametersPhaseResult = z.infer<typeof ParametersPhaseResultSchema>;
-export type RiskPhaseOutput = z.infer<typeof RiskPhaseOutputSchema>;
-export type RiskPhaseResult = z.infer<typeof RiskPhaseResultSchema>;
-export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
-export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
-export type ContributionPhaseResult = z.infer<typeof ContributionPhaseResultSchema>;
 
 export type ClarifyStageResult =
   | { status: Extract<PipelineStatus, "completed">; profile: UserProfile }

@@ -3,21 +3,21 @@ import { z } from "zod";
 import { MAX_AMOUNT } from "#constants/validation.constants";
 import { createLogger } from "#lib/logger";
 import {
-  AskWithClassifyBaseSchema,
-  askWithClassify,
-  mapClassifyErrorToErrored,
-  mapClassifyErrorToUnresolved,
-} from "#pipeline/stages/clarify/shared/clarify.ask";
-import {
   TIMELINE_BOUNDARY_EXAMPLES,
   TIMELINE_BUCKET_LIST,
   TIMELINE_BUCKETS,
-} from "#pipeline/stages/clarify/shared/clarify.constants";
+} from "#pipeline/stages/clarify/parameters/clarify.parameters.constants";
+import type { ParametersPhaseResult } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
+import {
+  askWithClassify,
+  AskWithClassifyBaseSchema,
+  mapClassifyErrorToErrored,
+  mapClassifyErrorToUnresolved,
+} from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
   ClarifyErroredReason,
   ClarifyUnresolvedReason,
-  ParametersPhaseResult,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
@@ -225,7 +225,8 @@ export const collectParameters = async (
 
   const result = {
     status: PipelineStatusEnum.enum.completed,
-    parameters: { amount: amountResult.amount, timeline: timelineResult.timeline },
+    amount: amountResult.amount,
+    timeline: timelineResult.timeline,
   } as const;
 
   logger.debug("Parameters output", { output: result });

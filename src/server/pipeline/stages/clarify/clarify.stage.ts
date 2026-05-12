@@ -6,18 +6,17 @@ import { INTAKE_HANDLERS } from "#pipeline/stages/clarify/intake/clarify.intake.
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
-import { PROFILE_TRANSITION_MESSAGE } from "#pipeline/stages/clarify/shared/clarify.constants";
+import {
+  PROFILE_TRANSITION_MESSAGE,
+  SHORT_TIMELINE_BUCKET,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
   ClarifyHaltReasonEnum,
   GoalClassificationEnum,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { ClarifyStageResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
-import {
-  PipelineStatusEnum,
-  TimelineBucketEnum,
-  UserProfileSchema,
-} from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, UserProfileSchema } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyStage");
 
@@ -51,10 +50,11 @@ export const runClarifyStage = async (
   if (parametersResult.status !== PipelineStatusEnum.enum.completed) {
     return parametersResult;
   }
-  const { parameters } = parametersResult;
 
-  if (parameters.timeline === TimelineBucketEnum.enum["under 3 years"]) {
-    logger.info("Short timeline — halting pipeline", { timeline: parameters.timeline });
+  const { amount, timeline } = parametersResult;
+
+  if (timeline === SHORT_TIMELINE_BUCKET) {
+    logger.info("Short timeline — halting pipeline", { timeline });
 
     return {
       status: PipelineStatusEnum.enum.halted,
@@ -67,22 +67,39 @@ export const runClarifyStage = async (
     return riskResult;
   }
 
-  const allocationResult = await collectAllocation(parameters, riskResult, responder);
+  const { riskTolerance } = riskResult;
+
+  const allocationResult = await collectAllocation(
+    amount,
+    timeline,
+    riskTolerance,
+    responder,
+  );
   if (allocationResult.status !== PipelineStatusEnum.enum.completed) {
     return allocationResult;
   }
-  const { allocation } = allocationResult;
 
-  const contributionResult = await collectContribution(parameters, allocation, responder);
+  const { equityPercentage, bufferPercentage } = allocationResult;
+
+  const contributionResult = await collectContribution(
+    amount,
+    equityPercentage,
+    responder,
+  );
+
+  const { plansToContribute } = contributionResult;
 
   const profile = UserProfileSchema.parse({
-    ...parameters,
-    riskTolerance: riskResult.riskTolerance,
-    ...allocation,
-    plansToContribute: contributionResult.plansToContribute,
+    amount,
+    timeline,
+    riskTolerance,
+    equityPercentage,
+    bufferPercentage,
+    plansToContribute,
   });
 
   logger.info("Clarify stage complete");
+  logger.debug("Profile output", { profile });
 
   return { status: PipelineStatusEnum.enum.completed, profile };
 };

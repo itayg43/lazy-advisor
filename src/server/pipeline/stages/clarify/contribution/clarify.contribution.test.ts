@@ -5,11 +5,7 @@ import {
   collectContribution,
   type ContributionClassify,
 } from "#pipeline/stages/clarify/contribution/clarify.contribution";
-import type {
-  AllocationPhaseOutput,
-  ParametersPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
-import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -25,15 +21,8 @@ describe("collectContribution", () => {
     vi.clearAllMocks();
   });
 
-  const parameters: ParametersPhaseOutput = {
-    amount: 50_000,
-    timeline: TimelineBucketEnum.enum["10+ years"],
-  };
-
-  const allocation: AllocationPhaseOutput = {
-    equityPercentage: 60,
-    bufferPercentage: 40,
-  };
+  const mockAmount = 50_000;
+  const mockEquityPercentage = 60;
 
   const createParsedResponse = <T>(output: T): OpenAIResponse<T> => ({
     id: "resp_test",
@@ -52,7 +41,7 @@ describe("collectContribution", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged("yes"));
     const responder = createTrackedResponder(["yes"]);
 
-    const result = await collectContribution(parameters, allocation, responder);
+    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -64,7 +53,7 @@ describe("collectContribution", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged("no"));
     const responder = createTrackedResponder(["no"]);
 
-    const result = await collectContribution(parameters, allocation, responder);
+    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -78,7 +67,7 @@ describe("collectContribution", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged("no"));
     const responder = createTrackedResponder(["maybe someday"]);
 
-    const result = await collectContribution(parameters, allocation, responder);
+    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -105,7 +94,7 @@ describe("collectContribution", () => {
       "I really can't say",
     ]);
 
-    const result = await collectContribution(parameters, allocation, responder);
+    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -123,7 +112,7 @@ describe("collectContribution", () => {
     );
     const responder = createTrackedResponder(["unclear"]);
 
-    const result = await collectContribution(parameters, allocation, responder);
+    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
@@ -141,7 +130,7 @@ describe("collectContribution", () => {
     );
     const responder = createTrackedResponder(["unclear"]);
 
-    const result = await collectContribution(parameters, allocation, responder);
+    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,

@@ -7,7 +7,7 @@ import {
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
-import type { ParametersPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
+import type { ParametersPhaseResult } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.parameters.last-run.md", import.meta.url).pathname;
@@ -40,8 +40,8 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.amount).toBe(30_000);
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
+      expect(result.amount).toBe(30_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
     }
   });
 
@@ -55,8 +55,8 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.amount).toBe(50_000);
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+      expect(result.amount).toBe(50_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
     }
   });
 
@@ -74,8 +74,8 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.amount).toBe(20_000);
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
+      expect(result.amount).toBe(20_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
     }
   });
 
@@ -110,7 +110,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
     }
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
@@ -130,7 +130,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["under 3 years"]);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["under 3 years"]);
     }
   });
 
@@ -144,7 +144,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["3–5 years"]);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["3–5 years"]);
     }
   });
 
@@ -158,7 +158,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
     }
   });
 
@@ -172,8 +172,8 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.amount).toBe(25_000);
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
+      expect(result.amount).toBe(25_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["10+ years"]);
     }
   });
 
@@ -204,8 +204,8 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.amount).toBe(30_000);
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+      expect(result.amount).toBe(30_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
     }
   });
 
@@ -219,8 +219,8 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe("completed");
     if (result.status === "completed") {
-      expect(result.parameters.amount).toBe(30_000);
-      expect(result.parameters.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
+      expect(result.amount).toBe(30_000);
+      expect(result.timeline).toBe(TimelineBucketEnum.enum["5–10 years"]);
     }
   });
 });
