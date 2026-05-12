@@ -32,7 +32,7 @@
 
 The external-boundary rule has one exception: when the error under test originates *inside* an internal function (not at the OpenAI boundary), a global `vi.mock` would contaminate all other tests in the file. In that case, use `vi.spyOn` scoped to that specific test — `vi.restoreAllMocks()` in `beforeEach` handles cleanup automatically, so no manual `spy.mockRestore()` is needed.
 
-In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` instead of `runPhaseLoop` (e.g., risk) are unaffected by the spy — mock those at the OpenAI boundary as normal.
+In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., parameters, risk, contribution) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal.
 
 ```ts
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
@@ -98,7 +98,7 @@ Evals test actual LLM behavior against real OpenAI — they are not unit tests a
 - **Eval granularity**: stages with multiple phases have one `.eval.ts` file per phase, co-located with the phase. Stages with a single prompt have one eval file. All run via `npm run test:evals`.
 - **Unit tests vs evals**: unit tests are only written where there is branching or transformation logic; thin orchestration layers rely on evals for end-to-end verification.
 - **Assertion strength**: tight (exact equality) for values explicitly present in the input. Loose (schema validation, regex) for values the model derives or summarizes. Exception: when stage rules instruct the model to return specific terminal phrases (e.g., `"Got it."` for acceptance signals), use regex matching on those markers — exact equality on the full message is too brittle.
-- **Scenarios**: come from the `*.rules.md` file co-located with the phase. One test case per rule.
+- **Scenarios**: come from the `*.rules.md` file co-located with the phase. One or more test cases per rule.
 - **Rule reference in comments**: each eval case is prefixed with a comment pointing at the rule it covers, in the form `// clarify.<phase>.rules.md rule N: <one-line summary>`. Use the filename form (not a macro like `CLARIFY_FIELDS_RULES #N`) so the reference is greppable to the actual file. When a test exercises multiple rules, cite all (`rule 4 + rule 6: ...`).
 - **Test case order mirrors rule order** for phase evals whose rules live in a single co-located file (parameters, contribution, risk): tests are ordered by ascending rule number, with multiple tests for the same rule grouped together. When adding a new rule, insert its test at the matching position — do not append. Each intake handler (classify, out-of-scope, unrealistic, contradictory) lives in its own `intake/<handler>/` subfolder with its eval co-located.
 - **Multiple trials per eval deferred** — run history (`.runs.jsonl`) is the prerequisite. Add multi-trial averaging only if the logs show consistent instability on a stable codebase.

@@ -1,16 +1,73 @@
 # Tasks
 
-**Current task:** T5
-**Next task:** T6
+**Current task:** T7
+**Next task:** T8
 
 ## Task Queue
 
 | # | Task |
 |---|------|
+| T7 | Apply parameters-phase improvements to risk |
+| T8 | Apply parameters-phase improvements to contribution |
+| T9 | Apply parameters-phase improvements to ef-debt |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
+
+### T7 — Apply parameters-phase improvements to risk
+
+Replicate the parameters-phase refactor on the risk phase. First of three similar tasks (T7/T8/T9) — start with risk because it uses the same `askWithClassify` mechanism as parameters, so the playbook should transfer most directly. Use this task to validate the playbook before applying to T8/T9.
+
+#### Playbook (referenced by T8 and T9)
+
+1. **Slim prompts.** Remove the `# Examples` section where inline `(e.g., ...)` snippets in `# Output Rules` cover the same cases. Add inline tone anchors only for branches that lose coverage. Verify with eval; inspect `*.last-run.md` for tone regressions.
+2. **Restructure rules.md.** Delete structural-only rules (code-enforced, not LLM behavior). Merge related concerns into symmetric rule shapes. Add rules for any prompted behavior not yet documented.
+3. **Align eval with TESTING.md.** Reorder cases by ascending rule number (TESTING.md line 103). Collapse parameterized variants into `it.each` (line 9). Ensure every case maps to a rule (line 101). Rename tests whose names no longer match what they assert.
+
+#### Phase-specific notes
+
+- Risk uses `askWithClassify` — same mechanism as parameters; playbook should transfer cleanly.
+- Inspect `clarify.risk.prompts.ts` for `# Examples` block redundancy against inline `# Output Rules` snippets.
+- Check `clarify.risk.rules.md` for structural-only rules, asymmetries between sub-classifications, and undocumented prompt behavior.
+- Verify `clarify.risk.eval.ts` ordering and rule mapping.
+
+**Verify:** baseline eval before changes (`npm run test:evals -- clarify.risk.eval.ts`); re-run after each change set; spot-check `clarify.risk.last-run.md` for tone. Track input-token deltas as a secondary metric.
+
+**Blocked on:** PR `refactor/clarify-parameters-prompts-and-rules` merging.
+
+---
+
+### T8 — Apply parameters-phase improvements to contribution
+
+Apply the playbook from T7 to the contribution phase.
+
+#### Phase-specific notes
+
+- Contribution uses `askWithClassify` — same mechanism as parameters and risk.
+- Playbook adjustments discovered during T7 may inform decisions here.
+
+**Verify:** same as T7 but on `clarify.contribution.eval.ts`.
+
+**Blocked on:** T7 complete (validate playbook before applying further).
+
+---
+
+### T9 — Apply parameters-phase improvements to ef-debt
+
+Apply the playbook from T7 to the ef-debt phase. Expect this one to require playbook adaptation — ef-debt has dual classify (`EmergencyFundClassify` + `DebtClassify`) in a single phase, structurally different from single-parameter phases.
+
+#### Phase-specific notes
+
+- Verify whether the two classifications share a single prompt or use separate prompts; slim each independently if separate.
+- Rules.md may need restructuring to handle two parallel classifications cleanly; treat the parameters-phase amount/timeline symmetry as a starting reference, not a template.
+- Eval cases likely span both sub-classifications — confirm rule mapping covers each independently.
+
+**Verify:** same as T7 but on `clarify.ef-debt.eval.ts`.
+
+**Blocked on:** T8 complete (let playbook settle through risk + contribution first).
+
+---
 
 ### T5 — Equity
 

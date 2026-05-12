@@ -1,5 +1,5 @@
+import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
 import { createLogger } from "#lib/logger";
-import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
 import {
   CLARIFY_HALT_MESSAGES,
