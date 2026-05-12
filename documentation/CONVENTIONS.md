@@ -20,8 +20,8 @@
 
 ## Functions
 
-- Arrow functions (`const foo = () => ...`) over `function` declarations — enforces top-to-bottom declaration order and is consistent with the rest of the codebase
-- Module declaration order: logger (treated as import-level dependency) → types → constants → helpers → exports
+- Arrow functions (`const foo = () => ...`) over `function` declarations — enforces top-to-bottom declaration order
+- Module declaration order: logger → types → constants → helpers → exports
 - Dependency injection via function parameters (not classes), except where the plan explicitly uses classes (e.g., `Session`)
 - Async functions return typed `Promise<T>`, no bare `any`
 - More than 3 domain params → group them into a typed object. Infrastructure dependencies (e.g., an API client) and identifiers stay positional — they are not counted
@@ -35,7 +35,7 @@
   - `BadRequestError` (400)
   - `NotFoundError` (404)
   - `TooManyRequestsError` (429)
-- No class per feature — use the right HTTP error with a descriptive message
+- No HTTP error class per feature — use the right HTTP error with a descriptive message
 - External service failures (API errors, non-completed responses) → `ServiceUnavailableError`; internal failures (unexpected state after a successful call) → `InternalError`
 - OpenAI-specific: `APIError` or non-completed status → `ServiceUnavailableError` with a generic constant message (prevents token/response leakage to clients), real error details logged at `error` level. Missing `output_parsed` after a successful call → `InternalError`. Non-API errors rethrow unchanged
 - All error classes live in `src/server/errors/index.ts`
@@ -49,7 +49,7 @@
 
 ## Types
 
-- Zod schemas as source of truth at stage boundaries; define in `[domain].schemas.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts`. Schema is the single source of truth — types are derived, never hand-written duplicates
+- Zod schemas as source of truth at stage boundaries; define in `[domain].schemas.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts` — never hand-write type duplicates
 - No `any` — use `unknown` when type is uncertain
 
 ## Comments
@@ -72,8 +72,9 @@ The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict 
 - Order: Node built-ins, then external packages, then internal (blank line between groups)
 - No `.js` or `.ts` extensions in imports — `moduleResolution: "bundler"` resolves `.ts` files directly
 - All internal imports use path aliases — no relative paths (`./`, `../`) anywhere
-- Each subdirectory of `src/server/` has its own alias defined in `package.json` `imports` and `tsconfig.json` `paths`:
+- Each subdirectory of `src/server/` has its own alias; the canonical list lives in `package.json` `imports` (mirrored in `tsconfig.json` `paths`). For reference:
   - `#config` → `src/server/config.ts`
+  - `#constants/*` → `src/server/constants/*`
   - `#errors` → `src/server/errors/`
   - `#clients/*` → `src/server/clients/*`
   - `#lib/*` → `src/server/lib/*`
