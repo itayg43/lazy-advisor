@@ -37,7 +37,7 @@ type EquityPhaseOutput = {
 
 Zod: `allocations.length >= 1`, each `percentage` integer in [0, 100], sum === 100.
 
-Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to `clarify/shared/clarify.schemas.ts`. Add `equity: EquityAllocation[]` to `UserProfileSchema`.
+Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to a new `clarify/equity/clarify.equity.schemas.ts` (per-phase file, per the T7 split). Add `equity: EquityAllocation[]` to `UserProfileSchema`.
 
 #### Anchor instruments — five canonical options
 
@@ -99,7 +99,8 @@ Plans to contribute periodically: yes | no (lump-sum investment)
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.rules.md` — behavior rules (cold-open, tilt offer, sanity-check, hard-fail, four-factor warning, pension caveat, tool-call budget)
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.knowledge.md` — educational reference content (✅ created as prep work)
 - `src/server/pipeline/stages/clarify/equity/clarify.equity.eval.ts`
-- `src/server/pipeline/stages/clarify/shared/clarify.schemas.ts` — add `EquityAllocationSchema`, `EquityPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.schemas.ts` — new file: `EquityAllocationSchema`, `EquityPhaseOutputSchema`
+- `src/server/pipeline/stages/clarify/equity/clarify.equity.types.ts` — new file: `EquityAllocation`, `EquityPhaseOutput` (inferred from schemas, per CONVENTIONS.md § Types)
 - `src/server/schemas/pipeline.schemas.ts` — add `equity` field
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.equity.eval.ts`

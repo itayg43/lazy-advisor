@@ -10,9 +10,9 @@ import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.a
 import type {
   AllocationPhaseOutput,
   AllocationPhaseResult,
-  ParametersPhaseOutput,
-  RiskPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
+import type { RiskPhaseOutput } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;

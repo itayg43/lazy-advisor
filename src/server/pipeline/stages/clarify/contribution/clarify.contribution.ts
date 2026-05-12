@@ -1,16 +1,14 @@
 import { z } from "zod";
 
 import { createLogger } from "#lib/logger";
+import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { ContributionPhaseResult } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
+import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import {
   AskWithClassifyBaseSchema,
   askWithClassify,
   isClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
-import type {
-  AllocationPhaseOutput,
-  ContributionPhaseResult,
-  ParametersPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 

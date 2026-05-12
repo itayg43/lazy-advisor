@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
+import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import {
   collectContribution,
   type ContributionClassify,
 } from "#pipeline/stages/clarify/contribution/clarify.contribution";
-import type {
-  AllocationPhaseOutput,
-  ParametersPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
+import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 

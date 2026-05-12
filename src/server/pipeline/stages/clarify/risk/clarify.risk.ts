@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { createLogger } from "#lib/logger";
+import type { RiskPhaseResult } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   AskWithClassifyBaseSchema,
   askWithClassify,
@@ -8,7 +9,6 @@ import {
   mapClassifyErrorToUnresolved,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type { RiskPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 

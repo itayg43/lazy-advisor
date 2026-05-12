@@ -6,12 +6,10 @@ import {
   initLastRun,
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
+import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
-import type {
-  AllocationPhaseOutput,
-  ContributionPhaseResult,
-  ParametersPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
+import type { ContributionPhaseResult } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
+import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.contribution.last-run.md", import.meta.url)

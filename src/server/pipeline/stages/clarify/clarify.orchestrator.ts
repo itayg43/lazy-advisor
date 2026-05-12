@@ -1,10 +1,10 @@
 import { createLogger } from "#lib/logger";
 import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
 import { runClarifyStage } from "#pipeline/stages/clarify/clarify.stage";
+import { INTAKE_REDIRECT_REJECTION_MESSAGES } from "#pipeline/stages/clarify/intake/clarify.intake.constants";
 import {
   CLARIFY_HALT_MESSAGES,
   CLARIFY_UNRESOLVED_MESSAGES,
-  INTAKE_REDIRECT_REJECTION_MESSAGES,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { ClarifyHaltReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {

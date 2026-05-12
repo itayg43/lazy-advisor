@@ -4,22 +4,20 @@ import {
   ALLOCATION_TIMELINE_BUCKETS,
   MAX_ALLOCATION_TOOL_CALLS,
   RISK_LEVELS,
-} from "#pipeline/stages/clarify/shared/clarify.constants";
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
+import type {
+  AllocationPhaseOutput,
+  AllocationPhaseResult,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
+import type { RiskPhaseOutput } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   PhaseLoopToolCallsExhaustedError,
   runPhaseExtraction,
   runPhaseLoop,
 } from "#pipeline/stages/clarify/shared/clarify.phase";
-import {
-  AllocationPhaseOutputSchema,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type {
-  AllocationPhaseOutput,
-  AllocationPhaseResult,
-  ParametersPhaseOutput,
-  RiskPhaseOutput,
-} from "#pipeline/stages/clarify/shared/clarify.types";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 

@@ -6,12 +6,16 @@ import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
+import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { runClarify } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
   EmergencyFundClassify,
   DebtClassify,
 } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
+import { INTAKE_REDIRECT_REJECTION_MESSAGES } from "#pipeline/stages/clarify/intake/clarify.intake.constants";
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
 import type {
   AmountClassify,
   TimelineClassify,
@@ -20,17 +24,14 @@ import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   ALLOCATION_EXIT_MESSAGE,
   AMOUNT_EXIT_MESSAGE,
-  INTAKE_REDIRECT_REJECTION_MESSAGES,
-  MAX_ALLOCATION_TOOL_CALLS,
   PROFILE_TRANSITION_MESSAGE,
   RISK_EXIT_MESSAGE,
+  SHORT_TIMELINE_BUCKET,
   SHORT_TIMELINE_EXIT_MESSAGE,
   TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
-import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import {
   PipelineStatusEnum,
   RiskToleranceEnum,
@@ -322,7 +323,7 @@ describe("runClarify", () => {
           createParsedResponse<TimelineClassify>({
             clarificationNeeded: false,
             clarificationMessage: null,
-            timeline: TimelineBucketEnum.enum["under 3 years"],
+            timeline: SHORT_TIMELINE_BUCKET,
           }),
         );
 

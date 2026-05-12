@@ -1,5 +1,5 @@
 import { runIntakePhase } from "#pipeline/stages/clarify/intake/clarify.intake.lib";
-import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
+import type { IntakePhaseOutput } from "#pipeline/stages/clarify/intake/clarify.intake.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const CONTRADICTORY_PROMPT = `# Role and Objective

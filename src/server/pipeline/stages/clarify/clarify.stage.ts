@@ -3,21 +3,18 @@ import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.a
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
 import { INTAKE_HANDLERS } from "#pipeline/stages/clarify/intake/clarify.intake.handlers";
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
-import { PROFILE_TRANSITION_MESSAGE } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
-  ClarifyHaltReasonEnum,
-  GoalClassificationEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+  PROFILE_TRANSITION_MESSAGE,
+  SHORT_TIMELINE_BUCKET,
+} from "#pipeline/stages/clarify/shared/clarify.constants";
+import { ClarifyHaltReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { ClarifyStageResult } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
-import {
-  PipelineStatusEnum,
-  TimelineBucketEnum,
-  UserProfileSchema,
-} from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, UserProfileSchema } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyStage");
 
@@ -53,7 +50,7 @@ export const runClarifyStage = async (
   }
   const { parameters } = parametersResult;
 
-  if (parameters.timeline === TimelineBucketEnum.enum["under 3 years"]) {
+  if (parameters.timeline === SHORT_TIMELINE_BUCKET) {
     logger.info("Short timeline — halting pipeline", { timeline: parameters.timeline });
 
     return {

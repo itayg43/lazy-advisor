@@ -1,12 +1,12 @@
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { createLogger } from "#lib/logger";
-import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/intake/clarify.intake.constants";
 import {
   GoalClassificationEnum,
   GoalClassificationSchema,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type { GoalClassificationOutput } from "#pipeline/stages/clarify/shared/clarify.types";
+} from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
+import type { GoalClassificationOutput } from "#pipeline/stages/clarify/intake/clarify.intake.types";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyClassify");

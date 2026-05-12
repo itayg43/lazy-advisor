@@ -1,11 +1,11 @@
 import { createLogger } from "#lib/logger";
-import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/shared/clarify.constants";
+import { MAX_INTAKE_TOOL_CALLS } from "#pipeline/stages/clarify/intake/clarify.intake.constants";
+import { IntakePhaseOutputSchema } from "#pipeline/stages/clarify/intake/clarify.intake.schemas";
+import type { IntakePhaseOutput } from "#pipeline/stages/clarify/intake/clarify.intake.types";
 import {
   runPhaseExtraction,
   runPhaseLoop,
 } from "#pipeline/stages/clarify/shared/clarify.phase";
-import { IntakePhaseOutputSchema } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type { IntakePhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyIntake");

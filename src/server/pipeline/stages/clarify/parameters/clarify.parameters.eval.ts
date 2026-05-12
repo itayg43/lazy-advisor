@@ -7,7 +7,7 @@ import {
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
-import type { ParametersPhaseResult } from "#pipeline/stages/clarify/shared/clarify.types";
+import type { ParametersPhaseResult } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.parameters.last-run.md", import.meta.url).pathname;
