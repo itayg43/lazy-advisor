@@ -34,8 +34,8 @@ flowchart TD
     Allocation -->|allocation unresolved| ExitAllocation([exit: allocation unresolved message])
     Allocation --> Contribution[contribution]
     Contribution --> Profile([UserProfile])
-    Contribution -.->|T5 planned| Equity[equity]
-    Equity -.->|T6 planned| Buffer[buffer]
+    Contribution -.->|planned| Equity[equity]
+    Equity -.->|planned| Buffer[buffer]
     Buffer -.-> Profile
 ```
 
@@ -48,8 +48,8 @@ flowchart TD
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | amount, timeline, riskTolerance → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | amount, equityPercentage → `ContributionPhaseResult` |
-| equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskTolerance, equityPercentage, plansToContribute → `EquityPhaseOutput` |
-| buffer | *(T6 — planned)* Resolve which buffer instrument fills the buffer bucket | amount, timeline, riskTolerance, bufferPercentage, equity allocations → `BufferPhaseOutput` |
+| equity | *(planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskTolerance, equityPercentage, plansToContribute → `EquityPhaseOutput` |
+| buffer | *(planned)* Resolve which buffer instrument fills the buffer bucket | amount, timeline, riskTolerance, bufferPercentage, equity allocations → `BufferPhaseOutput` |
 
 Phases use one of two conversation patterns depending on whether the LLM needs to drive the conversation or just classify a fixed question — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Per-phase schemas, types, and constants are co-located with each phase (e.g., `allocation/clarify.allocation.schemas.ts`). Cross-phase shared primitives (goal classification, halt/unresolved enums, `ClarifyStageResult`, shared phase helpers) live under `clarify/shared/`.
 
@@ -88,7 +88,7 @@ Used when questions are fixed and answers need structured extraction: ef-debt, p
 
 Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
 
-**Why in-band results at the phase boundary.** The stage needs to branch on the result's status and reason — an `amount` unresolved produces a different exit message than a `timeline` unresolved. If phases threw instead, the stage would need a try-catch per phase call plus re-throw discipline for unexpected errors. Result types make the branching explicit and flat at each call site; thrown errors are reserved for genuinely unexpected failures that the stage has no specific response to.
+**Why in-band results at the phase boundary.** This is the "errors as values" pattern (Rust/Go heritage, idiomatic in modern TypeScript) — expected outcomes are values you branch on; exceptions are reserved for genuinely unexpected failures. The stage needs to branch on the result's status and reason — an `amount` unresolved produces a different exit message than a `timeline` unresolved. If phases threw instead, the stage would need a try-catch per phase call plus re-throw discipline for unexpected errors. Result types make the branching explicit and flat at each call site.
 
 **Status taxonomy (`PipelineStatusEnum`).** Every phase and stage reports one of four statuses:
 
@@ -111,6 +111,10 @@ The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassify
 
 Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarify`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
+#### Next-tier — error contract
+
+**Reasons as both domain and presentation keys.** `ClarifyUnresolvedReason` (`amount | timeline | ...`) currently doubles as a domain concept *and* a UI dispatch key. A more decoupled design would keep the domain reason pure ("amount_unresolved") and add a separate presentation layer mapping domain reasons to user-facing strings — enabling i18n, per-tier copy, and A/B test instrumentation without phase refactors. Defer until a real requirement forces it.
+
 ### Stage vs. orchestrator split
 
 `runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarify` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
@@ -121,6 +125,22 @@ Uncaught exceptions from either primitive — unexpected errors, OpenAI failures
 `ClarifyResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
 
 `runPipeline` is the thin top-level wrapper that runs all stages inside `runWithSession`, switches on each stage's result status, and delivers any terminal message via `responder.sendToUser`. It holds no error-handling logic of its own.
+
+#### Next-tier — orchestrator
+
+**Inline effects vs. effect lists.** Orchestrators currently perform `logger.error` and `sendToUser` calls inline. A more rigorous design would have dispatch functions *return* a list of effects (`[{ type: "log", level, payload }, { type: "send", message }]`) and a thin runner execute them at the top — trivially testable, enables middleware (telemetry, analytics, rate limiting). The pattern Redux-saga / Effect.ts encode. Overkill for current scope; worth knowing as the next level of abstraction if orchestration logic grows.
+
+**Generic stage termination resolver.** If/when a second stage lands, the per-stage `resolveTerminationMessage` shape will repeat. The right moment to extract a `resolveTermination<TResult>(result, messages)` helper is when there are 2–3 real call sites — not before.
+
+### Architectural alternatives surveyed
+
+The pipeline uses discriminated-union result types and an in-process orchestrator. Alternatives considered for the error-handling and orchestration shape:
+
+- **Throw + catch everywhere (traditional OOP / older Node).** Loses type-safety on what errors can occur; every layer needs try/catch discipline. Rejected.
+- **Effect.ts / fp-ts.** Encodes errors, dependencies, and async in the type — fully composable, fully type-safe. Real cost: heavy learning curve, young ecosystem, ties the team to a paradigm. Deferred; reconsider only if orchestration logic grows substantially.
+- **State machines (XState).** Visualizable transitions, every state explicit. Heavyweight for current scope (linear conversation, no complex branching). Deferred.
+- **Durable execution (Temporal, AWS Step Functions, custom workflow engines).** The production-scale pattern Stripe / DoorDash / Uber use for multi-step user flows: each step persists, survives restarts, has built-in retries and observability. It is an *infrastructure choice that sits underneath this code*, not an alternative to it. Worth knowing as the next-tier evolution at production scale.
+- **Event-driven / pub-sub.** Used for cross-service coordination, not in-process pipelines. Wrong tool for the current shape.
 
 ### Multi-phase split
 
@@ -173,7 +193,7 @@ The risk phase asks one question: a 1–5 self-rating of comfort with seeing inv
 
 ### Allocation phase — 2-axis anchor (risk tolerance × timeline)
 
-The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to T5 (equity) and T6 (buffer).
+The allocation phase resolves the total-portfolio split between equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. Instrument selection belongs to the planned equity and buffer phases.
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
