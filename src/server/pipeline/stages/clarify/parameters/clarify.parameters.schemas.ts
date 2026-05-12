@@ -8,12 +8,14 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
+const AmountSchema = z.number().int().positive().max(MAX_AMOUNT);
+
 export const AmountClassifySchema = AskWithClassifyBaseSchema.extend({
-  amount: z.number().int().positive().max(MAX_AMOUNT).nullable(),
+  amount: AmountSchema.nullable(),
 });
 
 export const AmountClassifyResolvedSchema = AmountClassifySchema.extend({
-  amount: z.number().int().positive().max(MAX_AMOUNT),
+  amount: AmountSchema,
 });
 
 export const TimelineClassifySchema = AskWithClassifyBaseSchema.extend({
@@ -25,7 +27,7 @@ export const TimelineClassifyResolvedSchema = TimelineClassifySchema.extend({
 });
 
 export const ParametersPhaseOutputSchema = z.object({
-  amount: z.number().int().positive().max(MAX_AMOUNT),
+  amount: AmountSchema,
   timeline: TimelineBucketEnum,
 });
 
