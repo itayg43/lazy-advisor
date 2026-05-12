@@ -39,16 +39,27 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 
 ## How to Work
 
+### Task discipline
+
 Work one task at a time. Each task must be fully closed before moving to the next. New sessions are a natural boundary — start each session by confirming which single task to work on.
 
 If a refactor or design question surfaces mid-task, note it in `TASKS.md` and do not act on it until the current task is closed.
 
-**Task tool usage:** Use `TaskCreate` whenever a request has more than one sub-step, or when new asks stack on top of unfinished ones in the same session. This applies to conversational back-and-forth, not just written plans. Single small edits don't need a list.
+### Task tool usage
 
-Before writing code:
+Use `TaskCreate` whenever a request has more than one sub-step, or when new asks stack on top of unfinished ones in the same session. This applies to conversational back-and-forth, not just written plans. Single small edits don't need a list.
+
+### Before writing code
+
 - For tasks touching multiple files or areas: spawn an Explore subagent with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
 - Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
+
+## Pull Requests
+
+Default to **sequential PR workflow**: open one PR → merge to main → branch the next change from updated main → repeat. Only stack PRs (open multiple at once, each based on an unmerged parent branch) when the next change has a real code dependency that genuinely cannot wait for the parent to merge — not when changes merely *feel* related or share a theme.
+
+If stacking is genuinely unavoidable: never use `--delete-branch` on a PR that has dependent PRs below it. Only the topmost (last) PR may safely use `--delete-branch`. Otherwise the dependent PR auto-closes when its base branch is deleted on merge.
 
 ## npm Scripts
 
