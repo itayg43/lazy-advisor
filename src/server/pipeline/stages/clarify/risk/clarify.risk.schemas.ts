@@ -1,10 +1,19 @@
 import { z } from "zod";
 
+import { AskWithClassifyBaseSchema } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
   ClarifyErroredReasonEnum,
   ClarifyUnresolvedReasonEnum,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
+
+export const RiskClassifySchema = AskWithClassifyBaseSchema.extend({
+  selfRatingScore: z.number().int().min(1).max(5).nullable(),
+});
+
+export const RiskClassifyResolvedSchema = RiskClassifySchema.extend({
+  selfRatingScore: z.number().int().min(1).max(5),
+});
 
 // riskTolerance is derived from selfRatingScore in TypeScript, not by the model.
 export const RiskPhaseOutputSchema = z.object({

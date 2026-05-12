@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
-import {
-  collectRisk,
-  type RiskClassify,
-} from "#pipeline/stages/clarify/risk/clarify.risk";
+import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
+import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   ClarifyErroredReasonEnum,
   ClarifyUnresolvedReasonEnum,
