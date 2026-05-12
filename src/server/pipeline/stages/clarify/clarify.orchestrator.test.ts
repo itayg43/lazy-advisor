@@ -5,7 +5,7 @@
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
+import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
 import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { runClarify } from "#pipeline/stages/clarify/clarify.orchestrator";
