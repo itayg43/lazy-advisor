@@ -9,7 +9,7 @@ import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
 import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { runClarify } from "#pipeline/stages/clarify/clarify.orchestrator";
-import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution";
+import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
 import type {
   EmergencyFundClassify,
   DebtClassify,

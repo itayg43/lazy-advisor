@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
-import {
-  collectContribution,
-  type ContributionClassify,
-} from "#pipeline/stages/clarify/contribution/clarify.contribution";
+import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
+import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
