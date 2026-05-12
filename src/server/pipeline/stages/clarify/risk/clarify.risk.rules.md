@@ -1,20 +1,10 @@
 # Clarify Risk Phase — Behavior Rules
 
-Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The numeric score is mapped deterministically to one of three internal labels (`conservative`, `moderate`, `aggressive`) — these labels are **never shown to the user**.
+Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The numeric score is mapped deterministically to one of three internal labels (`conservative`, `moderate`, `aggressive`) — these labels are **never shown to the user**. Score → bucket mapping (1–2 → conservative, 3 → moderate, 4–5 → aggressive) is applied in code, not by the LLM; see `clarify.risk.ts` and `clarify.risk.test.ts`.
 
 The phase is willingness-only. Age and investment timeline are not passed as context and do not affect the question asked or the score mapping.
 
-## Score → bucket mapping
-
-Mapping is deterministic and lives in code, not in prompts:
-
-- 1–2 → `conservative`
-- 3 → `moderate`
-- 4–5 → `aggressive`
-
-One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval tests need one representative digit per bucket — not all five — to confirm LLM extraction wires through to the correct bucket.
-
-## Neutrality requirements
+## Neutrality (applies to all clarificationMessage responses)
 
 - Do **not** suggest a "typical" answer or imply a socially-desired response.
 - Do **not** add historical reassurance ("markets have recovered from 2008 and 2020"). Historical-recovery framing is a documented priming bias on risk-tolerance questionnaires and is the specific bias this design avoids.
@@ -36,21 +26,13 @@ One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval test
 - `"three"` → selfRatingScore: 3 → riskTolerance: moderate (word-form acceptance)
 - `"I'd say 4"` → selfRatingScore: 4 → riskTolerance: aggressive (digit embedded in surrounding text)
 
----
-
-## 2. User asks a clarifying question before answering → answer briefly, then re-present the scale
-
-**Rule:** If the user asks for clarification (what the scale means, why we're asking, what "drop temporarily" means), answer briefly and honestly, then re-present the same 1–5 question with all three anchors in the same `ask_user` call. Do not skip the re-presentation.
-
-**Scenario:** "What do you mean by drop temporarily?"
-
-**Agent response:** brief explanation, then re-present the scale.
+No budget impact — this terminates the phase successfully.
 
 ---
 
-## 3. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask within remaining budget, then hard-fail
+## 2. Anything else (non-numeric, out-of-range, decimal, vague) → re-ask within remaining budget, then hard-fail
 
-**Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask with the full scale (anchors included). For range or decimal inputs, briefly acknowledge that the scale needs a single whole number before re-presenting. Re-asking continues for as long as the tool-call budget allows; see the budget section for hard-fail behavior. This covers:
+**Rule:** If the user's reply is not a 1–5 integer (digit or English word), re-ask with the full scale (anchors included). For range or decimal inputs, briefly acknowledge that the scale needs a single whole number before re-presenting. After re-asking, if the user's next reply still doesn't yield a valid 1–5 integer, the budget is exhausted and the phase ends `unresolved`. This covers:
 
 - Numbers outside 1–5 (`"7"`, `"0"`)
 - Decimals or ranges (`"3.5"`, `"2-3"`) — acknowledge "single whole number needed" before re-presenting
@@ -66,19 +48,27 @@ One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval test
 
 ---
 
-## 4. Capacity questions (age/timeline) → clarify willingness vs capacity, re-present scale
+## 3. User asks a clarifying question → answer briefly, then re-present the scale
 
-**Rule:** If the user asks whether their age or investment timeline should affect their score, briefly clarify that the scale measures willingness (comfort with drops), not capacity (ability to recover over time). Do not use timeline or age to suggest or frame a score. Then re-present the 1–5 question with all three anchors.
+**Rule:** If the user asks for clarification before giving a score, answer briefly and honestly, then re-present the same 1–5 question with all three anchors in the same `ask_user` call. Do not skip the re-presentation. Both sub-cases below count toward the two-try budget.
 
-**Scenario:** "Does my age or investment timeline change what score I should give?"
+**Sub-case (a) — General clarifying questions** (what the scale means, why we're asking, what "drop temporarily" means).
 
-**Agent response:** brief clarification that the scale is about willingness, not capacity, then re-present the scale. Must NOT say things like "with your 10-year timeline you can afford a higher score."
+Answer in 1–2 sentences using the facts, then re-present the scale verbatim.
+
+Scenario: `"What do you mean by drop temporarily?"` → brief explanation, then re-present the scale.
+
+**Sub-case (b) — Capacity-framing questions** (age, investment timeline, "should my age affect this?").
+
+Clarify in one sentence that the scale measures **willingness** (comfort with drops), not **capacity** (ability to recover over time). Re-present the scale. Must NOT use capacity-framed language — e.g., "with your 10-year timeline you can afford a higher score" is prohibited.
+
+Scenario: `"Does my age or investment timeline change what score I should give?"` → brief willingness-vs-capacity clarification, then re-present the scale.
 
 ---
 
 ## Tool-call budget
 
-`followUps: 2` → 3 total turns. Worst case: clarifying question (T1 initial ask + T2 re-presentation after Q) followed by an invalid answer (T3 Step 3 re-ask) = 3 turns. The budget covers:
+`followUps: 2` → 3 total turns. The budget covers:
 
 - Initial ask + invalid answer + Step 3 re-ask = 3
 - Initial ask + clarifying Q re-presentation + Step 3 re-ask = 3
@@ -86,14 +76,8 @@ One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval test
 
 If all 3 turns are consumed and no valid score is given, `askWithClassify` throws `ClassifyFollowUpsExhaustedError`. `askRisk` catches it via `mapClassifyError` and returns `{ status: "unresolved", reason: "risk_tolerance" }` silently.
 
-**Scenarios:**
-
-- `"What does drop temporarily mean?"` → re-present → `"2-3"` → Step 3 re-ask → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
-- `"What does drop temporarily mean?"` → re-present → `"I still can't decide"` → Step 3 re-ask → `"Honestly I still can't say"` → budget exhausted → `{ status: "unresolved", reason: "risk_tolerance" }`
-- `"I don't know"` → re-ask → `"still not sure"` → re-ask → `"I really can't"` → budget exhausted → `{ status: "unresolved", reason: "risk_tolerance" }`
-
 ---
 
 ## Last-run review
 
-After every eval run, open `clarify.risk.last-run.md` and verify the capacity deflection test (Rule 4) passed. The automated assertion checks for capacity-framing phrases — a pass does not guarantee natural tone, so spot-check the transcript when the test is borderline.
+After every eval run, open `clarify.risk.last-run.md` and verify the capacity sub-case test (Rule 3 sub-case b) passed. The automated assertion checks for capacity-framing phrases — a pass does not guarantee natural tone, so spot-check the transcript when the test is borderline.

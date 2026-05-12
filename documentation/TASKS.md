@@ -1,13 +1,12 @@
 # Tasks
 
-**Current task:** T7
-**Next task:** T8
+**Current task:** T8
+**Next task:** T9
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T7 | Apply parameters-phase improvements to risk |
 | T8 | Apply parameters-phase improvements to contribution |
 | T9 | Apply parameters-phase improvements to ef-debt |
 | T5 | Equity |
@@ -15,11 +14,11 @@
 
 ## Task Notes
 
-### T7 — Apply parameters-phase improvements to risk
+### T8 — Apply parameters-phase improvements to contribution
 
-Replicate the parameters-phase refactor on the risk phase. First of three similar tasks (T7/T8/T9) — start with risk because it uses the same `askWithClassify` mechanism as parameters, so the playbook should transfer most directly. Use this task to validate the playbook before applying to T8/T9.
+Apply the playbook from T7 to the contribution phase.
 
-#### Playbook (referenced by T8 and T9)
+#### Playbook (referenced by T9)
 
 1. **Slim prompts.** Remove the `# Examples` section where inline `(e.g., ...)` snippets in `# Output Rules` cover the same cases. Add inline tone anchors only for branches that lose coverage. Verify with eval; inspect `*.last-run.md` for tone regressions.
 2. **Restructure rules.md.** Delete structural-only rules (code-enforced, not LLM behavior). Merge related concerns into symmetric rule shapes. Add rules for any prompted behavior not yet documented.
@@ -27,25 +26,10 @@ Replicate the parameters-phase refactor on the risk phase. First of three simila
 
 #### Phase-specific notes
 
-- Risk uses `askWithClassify` — same mechanism as parameters; playbook should transfer cleanly.
-- Inspect `clarify.risk.prompts.ts` for `# Examples` block redundancy against inline `# Output Rules` snippets.
-- Check `clarify.risk.rules.md` for structural-only rules, asymmetries between sub-classifications, and undocumented prompt behavior.
-- Verify `clarify.risk.eval.ts` ordering and rule mapping.
-
-**Verify:** baseline eval before changes (`npm run test:evals -- clarify.risk.eval.ts`); re-run after each change set; spot-check `clarify.risk.last-run.md` for tone. Track input-token deltas as a secondary metric.
-
-**Blocked on:** PR `refactor/clarify-parameters-prompts-and-rules` merging.
-
----
-
-### T8 — Apply parameters-phase improvements to contribution
-
-Apply the playbook from T7 to the contribution phase.
-
-#### Phase-specific notes
-
 - Contribution uses `askWithClassify` — same mechanism as parameters and risk.
-- Playbook adjustments discovered during T7 may inform decisions here.
+- **Playbook adaptation from T7 (single-parameter phases):** parameters' "symmetric pair" rule structure (Rule 1=amount, Rule 2=timeline) doesn't transfer to phases that collect a single value. Risk used a 3-rule shape instead — acceptance / invalid-input / clarifying-question — with related sub-behaviors as **named sub-cases** under a parent rule (e.g., "Sub-case (a) — general clarifying" and "Sub-case (b) — capacity-framing" both under one clarifying-question rule). Default to that shape unless contribution has a natural symmetric pair.
+- **Cross-cutting constraints (T7):** if the phase has tone/neutrality requirements that apply across all clarification responses (risk had a "Neutrality" section), keep them as a standalone named section *above* Rule 1, not as a numbered rule — they don't fit the "user-input shape → expected behavior" pattern and create rule-citation ambiguity in eval comments.
+- **Budget mechanics (T7):** keep the `## Tool-call budget` section for structural facts (`followUps`, error chain) but fold the LLM-visible behavior (re-ask, hard-fail on exhaustion) inline into the rule it triggers from. Budget tests get multi-rule citation comments per TESTING.md line 102.
 
 **Verify:** same as T7 but on `clarify.contribution.eval.ts`.
 
@@ -65,7 +49,7 @@ Apply the playbook from T7 to the ef-debt phase. Expect this one to require play
 
 **Verify:** same as T7 but on `clarify.ef-debt.eval.ts`.
 
-**Blocked on:** T8 complete (let playbook settle through risk + contribution first).
+**Blocked on:** T8 complete (let playbook settle through contribution first).
 
 ---
 

@@ -1,12 +1,12 @@
 # Eval Last Run
-Timestamp: 2026-05-09T06:38:50.978Z | Commit: 1a2aba7
+Timestamp: 2026-05-12T09:24:33.805Z | Commit: 687bb19
 
 ---
 
-## ✓ should map digit 1 to conservative
+## ✓ should map digit '1' to 'conservative'
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -14,15 +14,15 @@ Timestamp: 2026-05-09T06:38:50.978Z | Commit: 1a2aba7
 **User:** 1
 
 **Output:**
-status: success | selfRatingScore: 1 | riskTolerance: conservative
+status: completed | selfRatingScore: 1 | riskTolerance: conservative
 
 
 ---
 
-## ✓ should map digit 3 to moderate
+## ✓ should map digit '3' to 'moderate'
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -30,15 +30,15 @@ status: success | selfRatingScore: 1 | riskTolerance: conservative
 **User:** 3
 
 **Output:**
-status: success | selfRatingScore: 3 | riskTolerance: moderate
+status: completed | selfRatingScore: 3 | riskTolerance: moderate
 
 
 ---
 
-## ✓ should map digit 5 to aggressive
+## ✓ should map digit '5' to 'aggressive'
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -46,15 +46,15 @@ status: success | selfRatingScore: 3 | riskTolerance: moderate
 **User:** 5
 
 **Output:**
-status: success | selfRatingScore: 5 | riskTolerance: aggressive
+status: completed | selfRatingScore: 5 | riskTolerance: aggressive
 
 
 ---
 
 ## ✓ should accept spelled-out 'three' as score 3 (moderate)
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -62,15 +62,15 @@ status: success | selfRatingScore: 5 | riskTolerance: aggressive
 **User:** three
 
 **Output:**
-status: success | selfRatingScore: 3 | riskTolerance: moderate
+status: completed | selfRatingScore: 3 | riskTolerance: moderate
 
 
 ---
 
 ## ✓ should accept a number embedded in surrounding text
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -78,15 +78,15 @@ status: success | selfRatingScore: 3 | riskTolerance: moderate
 **User:** I'd say 4
 
 **Output:**
-status: success | selfRatingScore: 4 | riskTolerance: aggressive
+status: completed | selfRatingScore: 4 | riskTolerance: aggressive
 
 
 ---
 
-## ✓ should answer a clarifying question then return the user's score
+## ✓ should answer a clarifying question, re-present the scale, then return the user's score
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -94,7 +94,6 @@ status: success | selfRatingScore: 4 | riskTolerance: aggressive
 **User:** What do you mean by drop temporarily?
 
 **Agent:** “Drop temporarily” means a period where the value of your investments falls from a recent level — it describes the fall itself, not what follows. The scale measures willingness only; age and timeline are not factors for the score.
-
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -102,15 +101,15 @@ status: success | selfRatingScore: 4 | riskTolerance: aggressive
 **User:** 3
 
 **Output:**
-status: success | selfRatingScore: 3 | riskTolerance: moderate
+status: completed | selfRatingScore: 3 | riskTolerance: moderate
 
 
 ---
 
 ## ✓ should re-ask when user gives a number outside 1-5 then accept the corrected answer
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -125,22 +124,22 @@ status: success | selfRatingScore: 3 | riskTolerance: moderate
 **User:** 4
 
 **Output:**
-status: success | selfRatingScore: 4 | riskTolerance: aggressive
+status: completed | selfRatingScore: 4 | riskTolerance: aggressive
 
 
 ---
 
 ## ✓ should re-ask when user answers with non-numeric wording then accept the numeric answer
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
 
 **User:** I'd panic and want to sell
 
-**Agent:** That’s a valid reaction — please pick the number that fits best.
+**Agent:** That sounds like a very strong reaction — please pick the number that fits best.
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -148,15 +147,15 @@ status: success | selfRatingScore: 4 | riskTolerance: aggressive
 **User:** 1
 
 **Output:**
-status: success | selfRatingScore: 1 | riskTolerance: conservative
+status: completed | selfRatingScore: 1 | riskTolerance: conservative
 
 
 ---
 
 ## ✓ should re-ask on a decimal input then accept the corrected answer
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -171,15 +170,15 @@ status: success | selfRatingScore: 1 | riskTolerance: conservative
 **User:** 3
 
 **Output:**
-status: success | selfRatingScore: 3 | riskTolerance: moderate
+status: completed | selfRatingScore: 3 | riskTolerance: moderate
 
 
 ---
 
 ## ✓ should re-ask on a range input then accept the corrected answer
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -194,22 +193,23 @@ status: success | selfRatingScore: 3 | riskTolerance: moderate
 **User:** 2
 
 **Output:**
-status: success | selfRatingScore: 2 | riskTolerance: conservative
+status: completed | selfRatingScore: 2 | riskTolerance: conservative
 
 
 ---
 
 ## ✓ should deflect age/timeline capacity question and re-present the scale
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
 
 **User:** Does my age or investment timeline change what score I should give?
 
-**Agent:** No—your age and investment timeline don’t affect how you should score this. “Drop temporarily” means a period where the value of your investments falls from a recent level — it describes the fall itself. The scale measures willingness only.
+**Agent:** No—your age or investment timeline doesn’t change the score. “Drop temporarily” means a period where the value of your investments falls from a recent level; it describes the fall itself, not what follows. The scale measures willingness only, not capacity; age and timeline are not factors for the score.
+
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -217,22 +217,22 @@ status: success | selfRatingScore: 2 | riskTolerance: conservative
 **User:** 3
 
 **Output:**
-status: success | selfRatingScore: 3 | riskTolerance: moderate
+status: completed | selfRatingScore: 3 | riskTolerance: moderate
 
 
 ---
 
 ## ✓ should accept a valid answer after clarifying question followed by a range input
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
 
 **User:** What does drop temporarily mean?
 
-**Agent:** “Drop temporarily” means a period where the value of your investments falls from a recent level — it describes the fall itself, not what follows. The scale measures willingness only; age and timeline are not factors for the score.
+**Agent:** Drop temporarily means a period where the value of your investments falls from a recent level — it describes the fall itself, not what follows. The scale measures willingness only; age and timeline are not factors for the score.
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -247,45 +247,42 @@ status: success | selfRatingScore: 3 | riskTolerance: moderate
 **User:** 2
 
 **Output:**
-status: success | selfRatingScore: 2 | riskTolerance: conservative
+status: completed | selfRatingScore: 2 | riskTolerance: conservative
 
 
 ---
 
 ## ✓ should hard-fail when a clarifying question exhausts the budget before a valid answer
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
 
 **User:** What does drop temporarily mean?
 
-**Agent:** “Drop temporarily” means a period where the value of your investments falls from a recent level—it describes the fall itself, not what follows. The scale measures willingness only; age and timeline are not factors for the score.
+**Agent:** “Drop temporarily” means a period where the value of your investments falls from a recent level — it describes the fall itself, not what follows. The scale measures willingness only, not capacity; age and timeline are not factors for the score.
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
 
 **User:** I still can't decide
 
-**Agent:** That’s a valid feeling—please pick the number that fits best.
-1 = very uncomfortable — I'd want to sell immediately
-3 = neutral — I'd be uneasy but try to hold
-5 = completely comfortable — I'd see it as a buying opportunity
+**Agent:** That’s a valid reaction—please pick the number that fits best.
 
 **User:** Honestly I still can't say
 
 **Output:**
-status: failure | reason: risk_missing
+status: unresolved | reason: risk_tolerance
 
 
 ---
 
 ## ✓ should hard-fail when user remains vague through the entire budget
 
-**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
+**Agent:** Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -299,7 +296,7 @@ status: failure | reason: risk_missing
 
 **User:** Honestly I still can't say
 
-**Agent:** That’s understandable—please pick the number that fits best from 1 to 5.
+**Agent:** That’s understandable — please pick the number that fits best for your comfort level.
 1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity
@@ -307,5 +304,5 @@ status: failure | reason: risk_missing
 **User:** I really just don't know
 
 **Output:**
-status: failure | reason: risk_missing
+status: unresolved | reason: risk_tolerance
 
