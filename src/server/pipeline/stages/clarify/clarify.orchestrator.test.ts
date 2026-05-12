@@ -17,7 +17,7 @@ import type {
 import type {
   AmountClassify,
   TimelineClassify,
-} from "#pipeline/stages/clarify/parameters/clarify.parameters";
+} from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk";
 import {
   ALLOCATION_EXIT_MESSAGE,
