@@ -47,7 +47,7 @@ flowchart TD
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseResult` |
-| contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseOutput` |
+| contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseResult` |
 | equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
 | buffer | *(T6 — planned)* Resolve which buffer instrument fills the buffer bucket | parameters, risk, allocation, equity → `BufferPhaseOutput` |
 
