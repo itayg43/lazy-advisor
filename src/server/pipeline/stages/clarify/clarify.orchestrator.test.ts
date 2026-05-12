@@ -6,7 +6,7 @@ import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SYSTEM_ERROR_EXIT_MESSAGE } from "#pipeline/pipeline.constants";
-import { runClarifyOrTerminate } from "#pipeline/stages/clarify/clarify.orchestrator";
+import { runClarify } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type {
   EmergencyFundClassify,
@@ -31,7 +31,11 @@ import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/shared/clarify.types";
-import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import {
+  PipelineStatusEnum,
+  RiskToleranceEnum,
+  TimelineBucketEnum,
+} from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -44,7 +48,7 @@ vi.mock("#services/openai", () => ({
   callOpenAIParsed: mockedCallOpenAIParsed,
 }));
 
-describe("runClarifyOrTerminate", () => {
+describe("runClarify", () => {
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
   const mockResponder = {
@@ -155,7 +159,7 @@ describe("runClarifyOrTerminate", () => {
   };
 
   describe("normal goal", () => {
-    it("should run all phases and return the assembled profile on the happy path", async () => {
+    it("should run all phases and return a completed result with the assembled profile on the happy path", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -165,12 +169,12 @@ describe("runClarifyOrTerminate", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪50,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
-      expect(profile).toEqual(expectedHappyPathProfile);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.completed,
+        profile: expectedHappyPathProfile,
+      });
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
     });
   });
@@ -189,7 +193,7 @@ describe("runClarifyOrTerminate", () => {
       goal: "I want max returns but can't lose money",
     },
   ])("$type intake", ({ type, goal }) => {
-    it("should return the assembled profile when accepted", async () => {
+    it("should return a completed result with the assembled profile when accepted", async () => {
       mockedCallOpenAIParsed
         .mockResolvedValueOnce(createParsedResponse({ type }))
         .mockResolvedValueOnce(createParsedResponse({ accepted: true }));
@@ -201,29 +205,32 @@ describe("runClarifyOrTerminate", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      const profile = await runClarifyOrTerminate(goal, mockResponder);
+      const result = await runClarify(goal, mockResponder);
 
-      expect(profile).toEqual(expectedHappyPathProfile);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.completed,
+        profile: expectedHappyPathProfile,
+      });
       expect(mockSendToUser).toHaveBeenNthCalledWith(1, PROFILE_TRANSITION_MESSAGE);
     });
 
-    it("should send rejection message and return null when rejected", async () => {
+    it("should return a halted result with the rejection message when rejected", async () => {
       mockedCallOpenAIParsed
         .mockResolvedValueOnce(createParsedResponse({ type }))
         .mockResolvedValueOnce(createParsedResponse({ accepted: false }));
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
 
-      const profile = await runClarifyOrTerminate(goal, mockResponder);
+      const result = await runClarify(goal, mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenCalledWith(
-        INTAKE_REDIRECT_REJECTION_MESSAGES[type],
-      );
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.halted,
+        message: INTAKE_REDIRECT_REJECTION_MESSAGES[type],
+      });
     });
   });
 
   describe("clarify terminations", () => {
-    it("should send AMOUNT_EXIT_MESSAGE and return null when amount is unresolved", async () => {
+    it("should return an unresolved result with AMOUNT_EXIT_MESSAGE when amount is unresolved", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -247,16 +254,15 @@ describe("runClarifyOrTerminate", () => {
           }),
         );
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest some money",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest some money", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(AMOUNT_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.unresolved,
+        message: AMOUNT_EXIT_MESSAGE,
+      });
     });
 
-    it("should send TIMELINE_EXIT_MESSAGE and return null when timeline is unresolved", async () => {
+    it("should return an unresolved result with TIMELINE_EXIT_MESSAGE when timeline is unresolved", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -288,16 +294,15 @@ describe("runClarifyOrTerminate", () => {
           }),
         );
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪50,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(TIMELINE_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.unresolved,
+        message: TIMELINE_EXIT_MESSAGE,
+      });
     });
 
-    it("should send SHORT_TIMELINE_EXIT_MESSAGE and return null when timeline is under 3 years", async () => {
+    it("should return a halted result with SHORT_TIMELINE_EXIT_MESSAGE when timeline is under 3 years", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -321,16 +326,15 @@ describe("runClarifyOrTerminate", () => {
           }),
         );
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪20,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪20,000", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(SHORT_TIMELINE_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.halted,
+        message: SHORT_TIMELINE_EXIT_MESSAGE,
+      });
     });
 
-    it("should send RISK_EXIT_MESSAGE and return null when risk follow-ups are exhausted", async () => {
+    it("should return an unresolved result with RISK_EXIT_MESSAGE when risk follow-ups are exhausted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -350,16 +354,15 @@ describe("runClarifyOrTerminate", () => {
         .mockResolvedValueOnce(needs)
         .mockResolvedValueOnce(needs);
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪50,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(RISK_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.unresolved,
+        message: RISK_EXIT_MESSAGE,
+      });
     });
 
-    it("should send ALLOCATION_EXIT_MESSAGE and return null when allocation tool calls are exhausted", async () => {
+    it("should return an unresolved result with ALLOCATION_EXIT_MESSAGE when allocation tool calls are exhausted", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -376,18 +379,17 @@ describe("runClarifyOrTerminate", () => {
         ),
       );
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪50,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(ALLOCATION_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.unresolved,
+        message: ALLOCATION_EXIT_MESSAGE,
+      });
     });
 
-    // System-error dispatch wiring — one canonical case (risk) is sufficient at the
+    // System-error resolution wiring — one canonical case (risk) is sufficient at the
     // orchestrator layer; per-phase errored-result coverage lives in phase tests.
-    it("should send SYSTEM_ERROR_EXIT_MESSAGE and return null when risk classify output is invalid", async () => {
+    it("should return an errored result with SYSTEM_ERROR_EXIT_MESSAGE when risk classify output is invalid", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -402,16 +404,15 @@ describe("runClarifyOrTerminate", () => {
         }),
       );
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪50,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(SYSTEM_ERROR_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.errored,
+        message: SYSTEM_ERROR_EXIT_MESSAGE,
+      });
     });
 
-    it("should send SYSTEM_ERROR_EXIT_MESSAGE and return null when risk classify message is missing mid-loop", async () => {
+    it("should return an errored result with SYSTEM_ERROR_EXIT_MESSAGE when risk classify message is missing mid-loop", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -426,13 +427,12 @@ describe("runClarifyOrTerminate", () => {
         }),
       );
 
-      const profile = await runClarifyOrTerminate(
-        "I want to invest ₪50,000",
-        mockResponder,
-      );
+      const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
-      expect(profile).toBeNull();
-      expect(mockSendToUser).toHaveBeenLastCalledWith(SYSTEM_ERROR_EXIT_MESSAGE);
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.errored,
+        message: SYSTEM_ERROR_EXIT_MESSAGE,
+      });
     });
   });
 });
