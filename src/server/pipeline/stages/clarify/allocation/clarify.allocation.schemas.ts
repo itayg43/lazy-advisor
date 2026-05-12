@@ -16,12 +16,17 @@ export const AllocationPhaseOutputSchema = AllocationPhaseOutputShape.refine(
   { message: "equityPercentage + bufferPercentage must equal 100" },
 );
 
-export const AllocationPhaseResultSchema = z.discriminatedUnion("status", [
-  z
-    .object({ status: PipelineStatusEnum.extract(["completed"]) })
-    .merge(AllocationPhaseOutputShape),
-  z.object({
-    status: PipelineStatusEnum.extract(["unresolved"]),
-    reason: ClarifyUnresolvedReasonEnum.extract(["allocation"]),
-  }),
-]);
+export const AllocationPhaseResultSchema = z
+  .discriminatedUnion("status", [
+    z
+      .object({ status: PipelineStatusEnum.extract(["completed"]) })
+      .merge(AllocationPhaseOutputShape),
+    z.object({
+      status: PipelineStatusEnum.extract(["unresolved"]),
+      reason: ClarifyUnresolvedReasonEnum.extract(["allocation"]),
+    }),
+  ])
+  .refine(
+    (v) => v.status !== "completed" || v.equityPercentage + v.bufferPercentage === 100,
+    { message: "equityPercentage + bufferPercentage must equal 100" },
+  );
