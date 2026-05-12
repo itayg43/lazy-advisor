@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
-import {
-  collectParameters,
-  type AmountClassify,
-  type TimelineClassify,
-} from "#pipeline/stages/clarify/parameters/clarify.parameters";
+import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
+import type {
+  AmountClassify,
+  TimelineClassify,
+} from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import {
   ClarifyErroredReasonEnum,
   ClarifyUnresolvedReasonEnum,
