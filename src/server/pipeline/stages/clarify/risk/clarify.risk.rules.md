@@ -84,7 +84,7 @@ One case per branch is covered by unit tests (`clarify.risk.test.ts`). Eval test
 - Initial ask + clarifying Q re-presentation + Step 3 re-ask = 3
 - Initial ask + clarifying Q re-presentation + valid answer = 2 (within budget)
 
-If all 3 turns are consumed and no valid score is given, the phase ends silently. The classify output returns null and the phase returns `{ status: "unresolved", reason: "risk_tolerance" }`.
+If all 3 turns are consumed and no valid score is given, `askWithClassify` throws `ClassifyFollowUpsExhaustedError`. `askRisk` catches it via `mapClassifyError` and returns `{ status: "unresolved", reason: "risk_tolerance" }` silently.
 
 **Scenarios:**
 

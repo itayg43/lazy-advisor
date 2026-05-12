@@ -105,6 +105,8 @@ Both conversation patterns share the same error contract: internal primitives th
   - `ClassifyOutputInvalidError` when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
   - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
 
+Non-collapsing phases (parameters, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.
+
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
 Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarify`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.

@@ -28,7 +28,7 @@ Behavioral rules for the parameters collection phase. Each entry: the rule, a on
 
 **Rule:** When asking for timeline, the agent always presents the four investment horizon buckets as options. Any stated timeframe is mapped to the nearest bucket at extraction time.
 
-**Boundary mapping:** When a stated number lands exactly on a bucket boundary, map to the shorter bucket. This aligns with the conservative bias that collapses all risk tolerances to 0–10% equity for short horizons — capital safety takes precedence over growth potential when the horizon is ambiguous.
+**Boundary mapping:** When a stated number lands exactly on a bucket boundary, map to the shorter bucket. This is the conservative direction: rounding `"3 years"` down to `"under 3 years"` triggers the short-horizon early halt (money market fund redirect) rather than the allocation table, and rounding other boundaries down lands the user in the lower-equity cell — capital safety takes precedence when the horizon is ambiguous.
 - `"3 years"` → `"under 3 years"`
 - `"5 years"` → `"3–5 years"`
 - `"10 years"` → `"5–10 years"`
