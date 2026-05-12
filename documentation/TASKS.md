@@ -14,7 +14,7 @@
 
 ### T5 — Equity
 
-Resolves which equity instruments fill the equity bucket and how they split within it. Does not negotiate the equity percentage — that is allocation's job. `allocation.equityPercentage` is passed as grounding context.
+Resolves which equity instruments fill the equity bucket and how they split within it. Does not negotiate the equity percentage — that is allocation's job. `equityPercentage` is passed as grounding context.
 
 #### Design pass — complete (preparatory; rules file + implementation still pending)
 
@@ -37,7 +37,7 @@ type EquityPhaseOutput = {
 
 Zod: `allocations.length >= 1`, each `percentage` integer in [0, 100], sum === 100.
 
-Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to a new `clarify/equity/clarify.equity.schemas.ts` (per-phase file, per the T7 split). Add `equity: EquityAllocation[]` to `UserProfileSchema`.
+Add `EquityAllocationSchema` + `EquityPhaseOutputSchema` to a new `clarify/equity/clarify.equity.schemas.ts` (per-phase file, following the per-phase split pattern established in PR #142). Add `equity: EquityAllocation[]` to `UserProfileSchema`.
 
 #### Anchor instruments — five canonical options
 
@@ -86,10 +86,10 @@ Educational Q&A is supported during the loop — the user may ask clarifying que
 #### Context string format
 
 ```
-Investment amount: ₪<parameters.amount>
-Investment timeline: <parameters.timeline>
-Risk tolerance: <risk.riskTolerance>
-Equity portion of portfolio: <allocation.equityPercentage>% (buffer is <allocation.bufferPercentage>%)
+Investment amount: ₪<amount>
+Investment timeline: <timeline>
+Risk tolerance: <riskTolerance>
+Equity portion of portfolio: <equityPercentage>% (buffer is <bufferPercentage>%)
 Plans to contribute periodically: yes | no (lump-sum investment)
 ```
 
@@ -161,11 +161,11 @@ Educational Q&A is supported during the loop — the user may ask clarifying que
 
 ```
 User goal: <goal>
-Investment amount: ₪<parameters.amount>
-Investment timeline: <parameters.timeline>
-Risk tolerance: <risk.riskTolerance>
-Buffer portion of portfolio: <allocation.bufferPercentage>% (₪<parameters.amount × allocation.bufferPercentage / 100>)
-Equity allocation (the other <allocation.equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
+Investment amount: ₪<amount>
+Investment timeline: <timeline>
+Risk tolerance: <riskTolerance>
+Buffer portion of portfolio: <bufferPercentage>% (₪<amount × bufferPercentage / 100>)
+Equity allocation (the other <equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
 ```
 
 #### Files
@@ -180,7 +180,7 @@ Equity allocation (the other <allocation.equityPercentage>%): <equity.allocation
 
 #### Design decisions
 
-1. **Skip T6 when `bufferPercentage === 0`.** The allocation anchor table caps at 90% equity, but allocation Rule 3 explicitly allows the user to override to 100/0 via counter-proposal (with a sanity-check turn) — the rules file even has a worked 100/0 example. When `allocation.bufferPercentage === 0`, T6 returns `{ buffer: { kind: "none", reason: "100% equity allocation" } }` directly with no LLM call. No anchor-table change needed.
+1. **Skip T6 when `bufferPercentage === 0`.** The allocation anchor table caps at 90% equity, but allocation Rule 3 explicitly allows the user to override to 100/0 via counter-proposal (with a sanity-check turn) — the rules file even has a worked 100/0 example. When `bufferPercentage === 0`, T6 returns `{ buffer: { kind: "none", reason: "100% equity allocation" } }` directly with no LLM call. No anchor-table change needed.
 2. **"No buffer" mid-phase opt-out — MVP default = Option A (external).** When the user opts out of all three instruments mid-phase ("I have an emergency fund elsewhere"), the buffer money stays outside the plan and the allocation is unchanged. Plan output documents this explicitly (e.g., "plan: ₪21,000 in stock ETFs; remaining ₪9,000 stays in your bank as your external emergency cushion"). MVP does not disambiguate between "external" and "roll into equity" — see Backlog item for the post-MVP disambiguation work. Why this default: silently giving the user *less* market exposure than expected is recoverable; silently giving them *more* is a behavioral failure mode. Adding disambiguation later is non-breaking (`BufferChoice` already supports both via the `reason` field).
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.buffer.eval.ts`

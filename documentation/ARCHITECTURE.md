@@ -46,12 +46,12 @@ flowchart TD
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
-| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | parameters, risk → `AllocationPhaseResult` |
-| contribution | Establish one-time vs. periodic intent | parameters, allocation → `ContributionPhaseResult` |
-| equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | parameters, risk, allocation, contribution → `EquityPhaseOutput` |
-| buffer | *(T6 — planned)* Resolve which buffer instrument fills the buffer bucket | parameters, risk, allocation, equity → `BufferPhaseOutput` |
+| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | amount, timeline, riskTolerance → `AllocationPhaseResult` |
+| contribution | Establish one-time vs. periodic intent | amount, equityPercentage → `ContributionPhaseResult` |
+| equity | *(T5 — planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskTolerance, equityPercentage, plansToContribute → `EquityPhaseOutput` |
+| buffer | *(T6 — planned)* Resolve which buffer instrument fills the buffer bucket | amount, timeline, riskTolerance, bufferPercentage, equity allocations → `BufferPhaseOutput` |
 
-Phases use one of two conversation patterns depending on whether the LLM needs to drive the conversation or just classify a fixed question — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Cross-phase primitives — schemas, constants, types, and shared helpers — live under `clarify/shared/`.
+Phases use one of two conversation patterns depending on whether the LLM needs to drive the conversation or just classify a fixed question — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Per-phase schemas, types, and constants are co-located with each phase (e.g., `allocation/clarify.allocation.schemas.ts`). Cross-phase shared primitives (goal classification, halt/unresolved enums, `ClarifyStageResult`, shared phase helpers) live under `clarify/shared/`.
 
 ---
 
@@ -136,7 +136,7 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
   → handleOutOfScopeRedirect   → IntakePhaseOutput { accepted: true }
   → collectEfDebt()
   → collectParameters()
-  → collectRisk() → collectAllocation(parameters, risk) → ... → UserProfile
+  → collectRisk() → collectAllocation(amount, timeline, riskTolerance) → ... → UserProfile
 ```
 
 Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakePhaseOutput`. Acceptance is determined by a post-loop structured LLM call:
@@ -155,7 +155,7 @@ An alternative considered: skip the classifier and expose handlers as LLM tools,
 
 ### Short-horizon early halt (timeline < 3 years)
 
-After parameters collection, the stage checks `parameters.timeline`. If it is `"under 3 years"`, the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
+After parameters collection, the stage compares the destructured `timeline` against `SHORT_TIMELINE_BUCKET`. If it matches (`"under 3 years"`), the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
 
 ### Risk phase — single 1–5 self-rating
 
@@ -175,7 +175,7 @@ The allocation phase resolves the total-portfolio split between equity (stocks /
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
-The model locates the user's cell from `risk.riskTolerance` × `parameters.timeline` and picks a specific integer inside the cell's range. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
+The model locates the user's cell from `riskTolerance` × `timeline` and picks a specific integer inside the cell's range. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
@@ -187,7 +187,7 @@ The model locates the user's cell from `risk.riskTolerance` × `parameters.timel
 
 Users contribute on irregular schedules, and a fixed monthly number creates false precision — hard to collect accurately and likely to mislead downstream projections. A boolean is sufficient for the downstream use case (adjusting plan examples for "contributes periodically" vs. "one-time investment").
 
-**Allocation context passed to contribution.** The contribution phase receives `parameters` and `allocation` so its prompt can reference the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The equity and buffer shekel amounts are pre-computed in TypeScript before being injected — the model is not asked to do the arithmetic. The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
+**Allocation context passed to contribution.** The contribution phase receives the investment `amount` and `equityPercentage` as primitives. Equity and buffer shekel amounts are pre-computed in TypeScript from those primitives before being injected into the prompt — the model is not asked to do the arithmetic. The prompt then references the user's settled equity and buffer amounts when explaining DCA mechanics and Israel-specific concerns (e.g., "With your ₪21,000 in equity and ₪9,000 in buffer..."). The opening question remains generic; the allocation context surfaces only in explanations that are materially improved by knowing the actual split.
 
 ---
 
@@ -203,7 +203,7 @@ The clarify stage output is validated with `UserProfileSchema` before returning.
 
 ### Inline assembly from typed outputs
 
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase outputs are mapped directly into the profile before a final `UserProfileSchema.parse()` boundary check. Most phase outputs are spread (`parameters`, `allocation`, `contribution`); risk is selectively extracted — only `riskTolerance` is taken because `selfRatingScore` is not a profile field (it remains on `RiskPhaseOutput` for use by the allocation phase). With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` and `timeline` from parameters; `riskTolerance` from risk; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `selfRatingScore` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ### Session correlation
 
