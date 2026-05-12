@@ -40,7 +40,10 @@ const validateResponseStatus = (status: ResponseStatus | undefined): void => {
 
 const handleOpenAIError = (error: unknown): never => {
   if (error instanceof APIError) {
-    logger.error("OpenAI API error", { status: error.status, message: error.message });
+    logger.error("OpenAI API error", error, {
+      status: error.status,
+      message: error.message,
+    });
 
     throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
   }
