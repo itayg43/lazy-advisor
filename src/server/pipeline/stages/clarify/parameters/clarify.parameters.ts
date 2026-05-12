@@ -18,8 +18,7 @@ import type {
 } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import {
   askWithClassify,
-  mapClassifyErrorToErrored,
-  mapClassifyErrorToUnresolved,
+  mapClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -49,15 +48,12 @@ const askAmount = async (responder: Responder): Promise<AskAmountResult> => {
 
     return result;
   } catch (error) {
-    const unresolved = mapClassifyErrorToUnresolved(
+    const mapped = mapClassifyError(
       error,
       "askAmount",
       ClarifyUnresolvedReasonEnum.enum.amount,
     );
-    if (unresolved) return unresolved;
-
-    const errored = mapClassifyErrorToErrored(error, "askAmount");
-    if (errored) return errored;
+    if (mapped) return mapped;
 
     throw error;
   }
@@ -85,15 +81,12 @@ const askTimeline = async (responder: Responder): Promise<AskTimelineResult> => 
 
     return result;
   } catch (error) {
-    const unresolved = mapClassifyErrorToUnresolved(
+    const mapped = mapClassifyError(
       error,
       "askTimeline",
       ClarifyUnresolvedReasonEnum.enum.timeline,
     );
-    if (unresolved) return unresolved;
-
-    const errored = mapClassifyErrorToErrored(error, "askTimeline");
-    if (errored) return errored;
+    if (mapped) return mapped;
 
     throw error;
   }
