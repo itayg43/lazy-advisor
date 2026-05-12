@@ -1,12 +1,10 @@
-export const RISK_QUESTION = `Before we design your allocation, I need to understand your comfort with market ups and downs. On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
-
-1 = very uncomfortable — I'd want to sell immediately
-3 = neutral — I'd be uneasy but try to hold
-5 = completely comfortable — I'd see it as a buying opportunity`;
-
 const SCALE_REPROMPT = `1 = very uncomfortable — I'd want to sell immediately
 3 = neutral — I'd be uneasy but try to hold
 5 = completely comfortable — I'd see it as a buying opportunity`;
+
+export const RISK_QUESTION = `Before we design your allocation, I need to understand your comfort with market ups and downs.
+On a scale of 1 to 5, how would you describe your comfort with seeing your investments drop temporarily?
+${SCALE_REPROMPT}`;
 
 export const RISK_CLASSIFY_INSTRUCTIONS = `# Role and Objective
 You are classifying a user's response to a 1–5 risk-tolerance self-rating question.
