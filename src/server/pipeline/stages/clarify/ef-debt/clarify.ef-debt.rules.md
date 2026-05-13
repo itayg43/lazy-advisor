@@ -28,11 +28,11 @@ Each entry: the rule, a one-line scenario, and the expected behavior for verifyi
 
 ## 3. Deflection or off-topic response → redirect back
 
-**Rule:** If the user deflects (e.g., "skip this", "I don't want to answer") or goes off-topic, the agent redirects them back to answer the current question. Applies to both the EF and debt questions.
+**Rule:** If the user deflects (e.g., "skip this", "I don't want to answer") or goes off-topic, the agent redirects them firmly — without negotiating or validating the deflection — back to answer the current question. Applies to both the EF and debt questions.
 
 **Scenario:** Agent has asked about emergency fund; user responds "skip this".
 
-**Expected behavior:** Agent sends a redirect message asking the user to answer.
+**Expected behavior:** Agent sends a firm redirect (e.g., "I need your answer to continue — do you have 3–6 months of expenses set aside?") and does not acknowledge or accommodate the deflection.
 
 ---
 
