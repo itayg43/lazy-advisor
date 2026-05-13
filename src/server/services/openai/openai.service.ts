@@ -1,4 +1,5 @@
-import { APIError } from "openai";
+import { StatusCodes } from "http-status-codes";
+import { APIConnectionError, APIError } from "openai";
 import type {
   ResponseCreateParamsNonStreaming,
   ResponseOutputItem,
@@ -9,7 +10,6 @@ import type {
 import { openaiClient } from "#clients/openai.client";
 import { InternalError, ServiceUnavailableError } from "#errors";
 import { createLogger } from "#lib/logger";
-import { withRetry } from "#lib/with-retry";
 
 const logger = createLogger("openaiService");
 
@@ -19,53 +19,79 @@ export type OpenAIResponse<T> = {
   usage: ResponseUsage | undefined;
 };
 
-const OPENAI_REQUEST_FAILED_MESSAGE = "OpenAI request failed";
+const RESPONSE_NOT_COMPLETED_ERROR_MESSAGE = "OpenAI response not completed";
+const MISSING_PARSED_OUTPUT_ERROR_MESSAGE = "OpenAI responded with missing parsed output";
+const REQUEST_FAILED_ERROR_MESSAGE = "OpenAI request failed";
 
-const logTokenUsage = (operation: string, usage: ResponseUsage | undefined): void => {
-  if (!usage) return;
-
-  logger.info(`${operation} token usage`, {
-    operation,
+const logUsage = (usage: ResponseUsage) => {
+  logger.debug("OpenAI usage", {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
-    totalTokens: usage.total_tokens,
   });
 };
 
-const validateResponseStatus = (status: ResponseStatus | undefined): void => {
-  if (status !== "completed") {
-    throw new ServiceUnavailableError(`OpenAI response not completed: status=${status}`);
-  }
+const handleNotCompletedResponseStatus = (
+  id: string,
+  status: Exclude<ResponseStatus, "completed"> | undefined,
+): never => {
+  logger.warn(RESPONSE_NOT_COMPLETED_ERROR_MESSAGE, {
+    responseId: id,
+    status,
+  });
+
+  throw new ServiceUnavailableError(RESPONSE_NOT_COMPLETED_ERROR_MESSAGE);
 };
 
-const handleOpenAIError = (error: unknown): never => {
-  if (error instanceof APIError) {
-    logger.error("OpenAI API error", error, {
-      status: error.status,
-      message: error.message,
-    });
+// OpenAI SDK error taxonomy (both handled below):
+// - APIError: HTTP response received with error status (has `status`). Bucketed by class —
+//   subclasses include BadRequestError (400), AuthenticationError (401), RateLimitError (429),
+//   InternalServerError (5xx), etc.
+// - APIConnectionError: no HTTP response — network failure, DNS, timeout, TCP error.
+//   Always a temporary failure by nature. **Extends APIError**, so catch sites must
+//   check `instanceof APIConnectionError` BEFORE `instanceof APIError`.
+//
+// Errors reaching the handlers below are post-retry — the SDK retries 408/409/429/5xx
+// and connection errors via `maxRetries` on openai.client.ts.
+const handleAPIError = (error: APIError): never => {
+  logger.error("OpenAI API error", error, {
+    status: error.status,
+    message: error.message,
+  });
 
-    throw new ServiceUnavailableError(OPENAI_REQUEST_FAILED_MESSAGE);
-  }
+  // 5xx + 429: temporary upstream failure → service unavailable.
+  // 4xx (non-429): our problem (bad key, missing model, malformed request) → internal.
+  const isTemporary =
+    error.status !== undefined &&
+    (error.status >= StatusCodes.INTERNAL_SERVER_ERROR ||
+      error.status === StatusCodes.TOO_MANY_REQUESTS);
 
-  throw error;
+  if (isTemporary) throw new ServiceUnavailableError(REQUEST_FAILED_ERROR_MESSAGE);
+
+  throw new InternalError(REQUEST_FAILED_ERROR_MESSAGE);
+};
+
+const handleAPIConnectionError = (error: APIConnectionError): never => {
+  logger.error("OpenAI connection error", error);
+
+  throw new ServiceUnavailableError(REQUEST_FAILED_ERROR_MESSAGE);
 };
 
 export const callOpenAI = async (
   params: ResponseCreateParamsNonStreaming,
 ): Promise<OpenAIResponse<ResponseOutputItem[]>> => {
   try {
-    const { status, usage, id, output } = await withRetry(
-      () => openaiClient.responses.create(params),
-      { operation: "callOpenAI" },
-    );
+    const { status, usage, id, output } = await openaiClient.responses.create(params);
 
-    logTokenUsage("callOpenAI", usage);
-    validateResponseStatus(status);
+    if (usage) logUsage(usage);
+    if (status !== "completed") handleNotCompletedResponseStatus(id, status);
 
     return { id, output, usage };
   } catch (error) {
-    return handleOpenAIError(error);
+    // APIConnectionError first — it extends APIError (see taxonomy comment above).
+    if (error instanceof APIConnectionError) handleAPIConnectionError(error);
+    if (error instanceof APIError) handleAPIError(error);
+
+    throw error;
   }
 };
 
@@ -77,21 +103,25 @@ export const callOpenAIParsed = async <T>(
       status,
       usage,
       id,
-      output_parsed: outputParsed,
-    } = await withRetry(
-      () => openaiClient.responses.parse<ResponseCreateParamsNonStreaming, T>(params),
-      { operation: "callOpenAIParsed" },
-    );
+      output_parsed: output,
+    } = await openaiClient.responses.parse<ResponseCreateParamsNonStreaming, T>(params);
 
-    logTokenUsage("callOpenAIParsed", usage);
-    validateResponseStatus(status);
+    if (usage) logUsage(usage);
+    if (status !== "completed") handleNotCompletedResponseStatus(id, status);
+    if (!output) {
+      logger.warn(MISSING_PARSED_OUTPUT_ERROR_MESSAGE, {
+        responseId: id,
+      });
 
-    if (!outputParsed) {
-      throw new InternalError("OpenAI responded with missing parsed output");
+      throw new InternalError(MISSING_PARSED_OUTPUT_ERROR_MESSAGE);
     }
 
-    return { id, output: outputParsed, usage };
+    return { id, output, usage };
   } catch (error) {
-    return handleOpenAIError(error);
+    // APIConnectionError first — it extends APIError (see taxonomy comment above).
+    if (error instanceof APIConnectionError) handleAPIConnectionError(error);
+    if (error instanceof APIError) handleAPIError(error);
+
+    throw error;
   }
 };

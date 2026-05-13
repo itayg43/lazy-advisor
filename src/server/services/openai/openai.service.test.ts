@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { APIError } from "openai";
+import { APIConnectionError, APIError } from "openai";
 import type {
   ParsedResponse,
   Response,
@@ -28,10 +28,6 @@ vi.mock("#clients/openai.client", () => ({
   },
 }));
 
-vi.mock("#lib/with-retry", () => ({
-  withRetry: vi.fn((fn: () => unknown) => fn()),
-}));
-
 describe("openaiService", () => {
   const mockTokenUsage: ResponseUsage = {
     input_tokens: 120,
@@ -46,6 +42,10 @@ describe("openaiService", () => {
     instructions: "You are a helpful investment advisor for beginner ETF investors.",
     input: "I want to start investing in ETFs with $500/month",
   };
+
+  const mockConnectionErrorMessage = "Connection refused";
+  const mockAuthErrorMessage = "Invalid API key";
+  const mockGenericErrorMessage = "network exploded";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,16 +89,43 @@ describe("openaiService", () => {
       await expect(callOpenAI(mockParams)).rejects.toThrow(ServiceUnavailableError);
     });
 
-    it("should throw ServiceUnavailableError when OpenAI returns an API error", async () => {
-      const apiError = new APIError(
-        StatusCodes.SERVICE_UNAVAILABLE,
-        undefined,
-        "Service overloaded",
-        undefined,
-      );
-      mockedCreate.mockRejectedValue(apiError);
+    it.each([
+      {
+        label: "5xx",
+        status: StatusCodes.SERVICE_UNAVAILABLE,
+        message: "Service overloaded",
+        expectedError: ServiceUnavailableError,
+      },
+      {
+        label: "4xx",
+        status: StatusCodes.UNAUTHORIZED,
+        message: mockAuthErrorMessage,
+        expectedError: InternalError,
+      },
+    ])(
+      "should throw $expectedError.name when OpenAI returns a $label APIError",
+      async ({ status, message, expectedError }) => {
+        const apiError = new APIError(status, undefined, message, undefined);
+        mockedCreate.mockRejectedValue(apiError);
+
+        await expect(callOpenAI(mockParams)).rejects.toThrow(expectedError);
+      },
+    );
+
+    it("should throw ServiceUnavailableError when OpenAI throws APIConnectionError", async () => {
+      const connectionError = new APIConnectionError({
+        message: mockConnectionErrorMessage,
+      });
+      mockedCreate.mockRejectedValue(connectionError);
 
       await expect(callOpenAI(mockParams)).rejects.toThrow(ServiceUnavailableError);
+    });
+
+    it("should rethrow non-APIError exceptions unchanged", async () => {
+      const genericError = new Error(mockGenericErrorMessage);
+      mockedCreate.mockRejectedValue(genericError);
+
+      await expect(callOpenAI(mockParams)).rejects.toBe(genericError);
     });
   });
 
@@ -156,18 +183,47 @@ describe("openaiService", () => {
       );
     });
 
-    it("should throw ServiceUnavailableError when OpenAI returns an API error", async () => {
-      const apiError = new APIError(
-        StatusCodes.TOO_MANY_REQUESTS,
-        undefined,
-        "Rate limit exceeded",
-        undefined,
-      );
-      mockedParse.mockRejectedValue(apiError);
+    it.each([
+      {
+        label: "429",
+        status: StatusCodes.TOO_MANY_REQUESTS,
+        message: "Rate limit exceeded",
+        expectedError: ServiceUnavailableError,
+      },
+      {
+        label: "4xx",
+        status: StatusCodes.UNAUTHORIZED,
+        message: mockAuthErrorMessage,
+        expectedError: InternalError,
+      },
+    ])(
+      "should throw $expectedError.name when OpenAI returns a $label APIError",
+      async ({ status, message, expectedError }) => {
+        const apiError = new APIError(status, undefined, message, undefined);
+        mockedParse.mockRejectedValue(apiError);
+
+        await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
+          expectedError,
+        );
+      },
+    );
+
+    it("should throw ServiceUnavailableError when OpenAI throws APIConnectionError", async () => {
+      const connectionError = new APIConnectionError({
+        message: mockConnectionErrorMessage,
+      });
+      mockedParse.mockRejectedValue(connectionError);
 
       await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
         ServiceUnavailableError,
       );
+    });
+
+    it("should rethrow non-APIError exceptions unchanged", async () => {
+      const genericError = new Error(mockGenericErrorMessage);
+      mockedParse.mockRejectedValue(genericError);
+
+      await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toBe(genericError);
     });
   });
 });
