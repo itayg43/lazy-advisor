@@ -33,74 +33,74 @@ describe("collectContribution", () => {
     lastTranscript = lastOutput = undefined;
   });
 
-  // clarify.contribution.rules.md rule 1: Israel-specific concern → address accurately → yes
-  it("should address fractional share concern and return true after user confirms", async () => {
-    const responder = createTrackedResponder([
-      "In Israel you can't buy partial ETF units so it's hard to invest small amounts",
-      "Ok, investing quarterly makes sense to me — yes I'd like to do that",
-    ]);
-    lastTranscript = responder.transcript;
+  // clarify.contribution.rules.md rule 1: Israel-specific concern → address accurately → yes/no
+  it.each([
+    {
+      initial:
+        "In Israel you can't buy partial ETF units so it's hard to invest small amounts",
+      final: "Ok, investing quarterly makes sense to me — yes I'd like to do that",
+      expectedPlans: true,
+    },
+    {
+      initial: "In Israel you can't buy partial ETF units so it seems impractical",
+      final: "I see, but I think I'll just invest a lump sum once",
+      expectedPlans: false,
+    },
+  ])(
+    "should address fractional share concern then return $expectedPlans",
+    async ({ initial, final, expectedPlans }) => {
+      const responder = createTrackedResponder([initial, final]);
+      lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
-    lastOutput = output;
-    if (output.status !== "completed") return;
+      const output = await collectContribution(
+        mockAmount,
+        mockEquityPercentage,
+        responder,
+      );
+      lastOutput = output;
+      if (output.status !== "completed") return;
 
-    expect(output.plansToContribute).toBe(true);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-    // Israel-specific response must reference actual equity amount (₪21,000)
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns.some((t) => /21[,.]?000|₪21/.test(t.content))).toBe(true);
-  });
+      expect(output.plansToContribute).toBe(expectedPlans);
+      const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+      expect(agentTurns).toHaveLength(2);
+      // clarification turn must reference actual equity amount (₪30,000 × 70% = ₪21,000)
+      expect(agentTurns[1].content).toMatch(/21[,.]?000|₪21/);
+    },
+  );
 
-  // clarify.contribution.rules.md rule 1: Israel-specific concern → address accurately → no
-  it("should address fractional share concern and return false after user declines", async () => {
-    const responder = createTrackedResponder([
-      "In Israel you can't buy partial ETF units so it seems impractical",
-      "I see, but I think I'll just invest a lump sum once",
-    ]);
-    lastTranscript = responder.transcript;
+  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → yes/no
+  it.each([
+    {
+      initial: "What does contributing periodically mean?",
+      final: "Oh that makes sense, yes I'd like to do that",
+      expectedPlans: true,
+    },
+    {
+      initial: "What's DCA?",
+      final: "I see, but no — I'll just do a one-time investment",
+      expectedPlans: false,
+    },
+  ])(
+    "should explain DCA when asked then return $expectedPlans",
+    async ({ initial, final, expectedPlans }) => {
+      const responder = createTrackedResponder([initial, final]);
+      lastTranscript = responder.transcript;
 
-    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
-    lastOutput = output;
-    if (output.status !== "completed") return;
+      const output = await collectContribution(
+        mockAmount,
+        mockEquityPercentage,
+        responder,
+      );
+      lastOutput = output;
+      if (output.status !== "completed") return;
 
-    expect(output.plansToContribute).toBe(false);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-  });
-
-  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → yes
-  it("should explain DCA when asked and return true after user confirms", async () => {
-    const responder = createTrackedResponder([
-      "What does contributing periodically mean?",
-      "Oh that makes sense, yes I'd like to do that",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
-    lastOutput = output;
-    if (output.status !== "completed") return;
-
-    expect(output.plansToContribute).toBe(true);
-    expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
-    // explanation turn must reference actual equity amount (₪30,000 × 70% = ₪21,000)
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    expect(agentTurns[1].content).toMatch(/21[,.]?000|₪21/);
-  });
-
-  // clarify.contribution.rules.md rule 2: user asks what DCA means → explanation → no
-  it("should explain DCA when asked and return false after user declines", async () => {
-    const responder = createTrackedResponder([
-      "What's DCA?",
-      "I see, but no — I'll just do a one-time investment",
-    ]);
-    lastTranscript = responder.transcript;
-
-    const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
-    lastOutput = output;
-    if (output.status !== "completed") return;
-
-    expect(output.plansToContribute).toBe(false);
-  });
+      expect(output.plansToContribute).toBe(expectedPlans);
+      const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+      expect(agentTurns).toHaveLength(2);
+      // explanation turn must reference actual equity amount (₪30,000 × 70% = ₪21,000)
+      expect(agentTurns[1].content).toMatch(/21[,.]?000|₪21/);
+    },
+  );
 
   // clarify.contribution.rules.md rule 3: explicit yes → plansToContribute: true
   it("should return true when user explicitly confirms periodic contributions", async () => {

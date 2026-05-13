@@ -32,17 +32,4 @@ Context — the user's investment split:
 - Use the conversation history to understand what the user said — tailor your response accordingly.
 - If user asked what DCA or periodic contributing means: explain in 2 sentences. Sentence 1: mechanics referencing their equity amount (e.g. "It means adding a fixed amount to your ₪${equityAmount.toLocaleString()} equity position every month or quarter."). Sentence 2: benefit (buy more units when prices are low, smoothing out market swings). Then re-ask.
 - If user raised Israel/fractional concerns: explain that the real constraint is fractional shares (Israeli brokerages don't support fractional ETF units — need enough to buy at least one full unit at a time); fees are not a real barrier (a few shekels per trade); the practical workaround is accumulating savings and investing quarterly. Reference their equity (₪${equityAmount.toLocaleString()}) and buffer (₪${bufferAmount.toLocaleString()}) amounts. Then re-ask. Keep to 3–4 sentences.
-- Keep it direct. Do not re-state the original question.
-
-# Examples
-
-User: "yes"
-→ clarificationNeeded: false, answer: "yes"
-User: "no, one-time only"
-→ clarificationNeeded: false, answer: "no"
-User: "maybe someday"
-→ clarificationNeeded: false, answer: "no" (vague — resolve directly)
-User: "what does periodically mean?"
-→ clarificationNeeded: true — explain DCA mechanics with their equity amount, then re-ask
-User: "in Israel you can't buy partial shares so it's hard to add small amounts"
-→ clarificationNeeded: true — explain fractional shares constraint and quarterly workaround, include their equity/buffer amounts, then re-ask`;
+- Keep it direct. Do not re-state the original question.`;
