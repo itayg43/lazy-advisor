@@ -1,55 +1,51 @@
 # Tasks
 
-**Current task:** T8
-**Next task:** T9
+**Current task:** T9
+**Next task:** T5
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T8 | Apply parameters-phase improvements to contribution |
-| T9 | Apply parameters-phase improvements to ef-debt |
+| T9 | Slim and align ef-debt phase |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
 
-### T8 — Apply parameters-phase improvements to contribution
+### T9 — Slim and align ef-debt phase
 
-Apply the playbook from T7 to the contribution phase.
+Quality pass on the ef-debt phase, in the same spirit as T7 (parameters) and T8 (contribution). The goal is to fix actual quality issues — redundant prompt content, misalignment between prompts/rules/evals — **not** to restructure ef-debt to match the shape of another phase.
 
-#### Playbook (referenced by T9)
+**Scope guard — read first.** This is a quality pass, not a restructure. ef-debt has its own shape: dual classify (`EmergencyFundClassify` + `DebtClassify`) in a single phase. Do **NOT** force it into the parameters/risk/contribution rule structure. Only change what is actually broken, redundant, or misaligned. If a section is fine, leave it alone — T8 ended up leaving `clarify.contribution.rules.md` untouched.
 
-1. **Slim prompts.** Remove the `# Examples` section where inline `(e.g., ...)` snippets in `# Output Rules` cover the same cases. Add inline tone anchors only for branches that lose coverage. Verify with eval; inspect `*.last-run.md` for tone regressions.
-2. **Restructure rules.md.** Delete structural-only rules (code-enforced, not LLM behavior). Merge related concerns into symmetric rule shapes. Add rules for any prompted behavior not yet documented.
-3. **Align eval with TESTING.md.** Reorder cases by ascending rule number (TESTING.md line 103). Collapse parameterized variants into `it.each` (line 9). Ensure every case maps to a rule (line 101). Rename tests whose names no longer match what they assert.
+#### What to check
 
-#### Phase-specific notes
+1. **Prompt slim.** Look for a `# Examples` section that duplicates branches already specified in `# Output Rules`. If every example is covered above, delete the section. Add inline tone anchors only for branches that lose coverage. Verify with eval; inspect `clarify.ef-debt.last-run.md` for tone regressions.
 
-- Contribution uses `askWithClassify` — same mechanism as parameters and risk.
-- **Playbook adaptation from T7 (single-parameter phases):** parameters' "symmetric pair" rule structure (Rule 1=amount, Rule 2=timeline) doesn't transfer to phases that collect a single value. Risk used a 3-rule shape instead — acceptance / invalid-input / clarifying-question — with related sub-behaviors as **named sub-cases** under a parent rule (e.g., "Sub-case (a) — general clarifying" and "Sub-case (b) — capacity-framing" both under one clarifying-question rule). Default to that shape unless contribution has a natural symmetric pair.
-- **Cross-cutting constraints (T7):** if the phase has tone/neutrality requirements that apply across all clarification responses (risk had a "Neutrality" section), keep them as a standalone named section *above* Rule 1, not as a numbered rule — they don't fit the "user-input shape → expected behavior" pattern and create rule-citation ambiguity in eval comments.
-- **Budget mechanics (T7):** keep the `## Tool-call budget` section for structural facts (`followUps`, error chain) but fold the LLM-visible behavior (re-ask, hard-fail on exhaustion) inline into the rule it triggers from. Budget tests get multi-rule citation comments per TESTING.md line 102.
+2. **Rules ↔ prompt alignment.** For each rule in `clarify.ef-debt.rules.md`, verify the prompt enforces it. For each prompted behavior, verify a rule documents it. Delete structural-only rules (code-enforced, no LLM judgment). Add missing rules. Do not merge or split rules for symmetry's sake — keep ef-debt's natural shape.
 
-**Verify:** same as T7 but on `clarify.contribution.eval.ts`.
-
-**Blocked on:** T7 complete (validate playbook before applying further).
-
----
-
-### T9 — Apply parameters-phase improvements to ef-debt
-
-Apply the playbook from T7 to the ef-debt phase. Expect this one to require playbook adaptation — ef-debt has dual classify (`EmergencyFundClassify` + `DebtClassify`) in a single phase, structurally different from single-parameter phases.
+3. **Eval ↔ TESTING.md alignment.**
+   - Test order matches ascending rule number (TESTING.md line 103).
+   - Symmetric pairs collapsed into `it.each` when they differ only by input (line 9).
+   - Every case has a rule-citation comment (line 101).
+   - Test names match what they assert.
+   - Coverage spans both `EmergencyFundClassify` and `DebtClassify` if rules are parallel.
 
 #### Phase-specific notes
 
-- Verify whether the two classifications share a single prompt or use separate prompts; slim each independently if separate.
-- Rules.md may need restructuring to handle two parallel classifications cleanly; treat the parameters-phase amount/timeline symmetry as a starting reference, not a template.
-- Eval cases likely span both sub-classifications — confirm rule mapping covers each independently.
+- ef-debt has two classifications in one phase. Verify whether they share a prompt or use separate prompts; slim each independently if separate.
+- Treat parameters' amount/timeline symmetry as a reference point only — ef-debt's emergency-fund/debt pair may or may not justify a similar shape.
 
-**Verify:** same as T7 but on `clarify.ef-debt.eval.ts`.
+#### Concrete precedent — what T8 did for contribution
 
-**Blocked on:** T8 complete (let playbook settle through contribution first).
+- Removed the `# Examples` section from the prompt (5 examples, all duplicating `# Output Rules` branches).
+- Collapsed two symmetric eval pairs (Israel yes/no, DCA yes/no) into `it.each`; normalized an equity-amount assertion that previously only applied to the `→ yes` branch in each pair.
+- Left `clarify.contribution.rules.md` untouched — no structural issues to fix.
+
+Expect a similar small-surface-area outcome for T9.
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.ef-debt.eval.ts`. Inspect `clarify.ef-debt.last-run.md` for tone regressions.
 
 ---
 
