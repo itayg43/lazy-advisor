@@ -4,4 +4,5 @@ import { config } from "#config";
 
 export const openaiClient = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
+  maxRetries: 3,
 });
