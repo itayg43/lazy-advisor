@@ -64,23 +64,10 @@ Populate the three output fields based on the rules below.
 - Use the conversation history to understand what the user said or asked — tailor your response accordingly.
 - If user asked a question: answer it directly using the key facts below
 - If user gave an ambiguous answer: ask them to clarify
-- If user deflected or went off-topic: redirect them back to the question
+- If user deflected or went off-topic: redirect firmly — do not negotiate or validate the deflection (e.g. "I need your answer to continue — do you have 3–6 months of expenses set aside?")
 - If user gave an answer but also asked a question: answer their question first, then ask them to confirm their answer
 - Key facts: An emergency fund is 3–6 months of living expenses in a liquid, accessible account (e.g. savings or checking). Retirement accounts, investments, or illiquid assets do not qualify.
-- Keep it to 1–2 sentences. Do not re-state the original question.
-
-# Examples
-
-User: "what counts as an emergency fund?"
-→ clarificationNeeded: true — answer using key facts (e.g. "An emergency fund is 3–6 months of expenses in a savings or checking account.")
-User: "I have some savings"
-→ clarificationNeeded: true — ask for specifics (e.g. "Do you have roughly 3–6 months of living expenses set aside in a liquid account?")
-User: "Yes, but does a savings account count?"
-→ clarificationNeeded: true — answer their question first, then confirm (e.g. "Yes, a savings account qualifies. Just to confirm — you have 3–6 months of expenses set aside?")
-User: "skip this"
-→ clarificationNeeded: true — redirect directly (e.g. "I need your answer to continue — do you have 3–6 months of expenses set aside in a liquid account?")
-User: "Yes"
-→ clarificationNeeded: false — clear answer, no clarification needed`;
+- Keep it to 1–2 sentences. Do not re-state the original question.`;
 
 const DEBT_CLASSIFY_INSTRUCTIONS = `# Role and Objective
 You are classifying a user's response to: "${DEBT_QUESTION}"
@@ -105,23 +92,10 @@ Populate the three output fields based on the rules below.
 - Use the conversation history to understand what the user said or asked — tailor your response accordingly.
 - If user asked a question: answer it directly using the key facts below
 - If user gave an ambiguous answer: ask them to clarify
-- If user deflected or went off-topic: redirect them back to the question
+- If user deflected or went off-topic: redirect firmly — do not negotiate or validate the deflection (e.g. "I need your answer to continue — do you have significant high-interest debt like credit card balances?")
 - If user gave an answer but also asked a question: answer their question first, then ask them to confirm their answer
 - Key facts: High-interest debt means credit card balances, personal loans, or similar at 15–25%+ APR. Mortgages do not count.
-- Keep it to 1–2 sentences. Do not re-state the original question.
-
-# Examples
-
-User: "does my mortgage count?"
-→ clarificationNeeded: true — answer using key facts (e.g. "Mortgages don't count here — I'm asking about high-interest debt like credit card balances or personal loans.")
-User: "I have some debt"
-→ clarificationNeeded: true — ask for specifics (e.g. "Do you have credit card balances or personal loans with high interest rates, like 15% APR or more?")
-User: "No, but does my car loan count?"
-→ clarificationNeeded: true — answer their question first, then confirm (e.g. "A car loan typically doesn't count unless the rate is very high. Just to confirm — no high-interest debt like credit cards?")
-User: "I don't want to answer that"
-→ clarificationNeeded: true — redirect directly (e.g. "I need your answer to continue — do you have significant high-interest debt like credit card balances?")
-User: "No"
-→ clarificationNeeded: false — clear answer, no clarification needed`;
+- Keep it to 1–2 sentences. Do not re-state the original question.`;
 
 // All three classify error classes default to the safe educational fallback —
 // "when in doubt, educate" extends to system errors. Phase stays non-blocking by design.

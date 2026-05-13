@@ -1,53 +1,16 @@
 # Tasks
 
-**Current task:** T9
-**Next task:** T5
+**Current task:** T5
+**Next task:** T6
 
 ## Task Queue
 
 | # | Task |
 |---|------|
-| T9 | Slim and align ef-debt phase |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
-
-### T9 — Slim and align ef-debt phase
-
-Quality pass on the ef-debt phase, in the same spirit as T7 (parameters) and T8 (contribution). The goal is to fix actual quality issues — redundant prompt content, misalignment between prompts/rules/evals — **not** to restructure ef-debt to match the shape of another phase.
-
-**Scope guard — read first.** This is a quality pass, not a restructure. ef-debt has its own shape: dual classify (`EmergencyFundClassify` + `DebtClassify`) in a single phase. Do **NOT** force it into the parameters/risk/contribution rule structure. Only change what is actually broken, redundant, or misaligned. If a section is fine, leave it alone — T8 ended up leaving `clarify.contribution.rules.md` untouched.
-
-#### What to check
-
-1. **Prompt slim.** Look for a `# Examples` section that duplicates branches already specified in `# Output Rules`. If every example is covered above, delete the section. Add inline tone anchors only for branches that lose coverage. Verify with eval; inspect `clarify.ef-debt.last-run.md` for tone regressions.
-
-2. **Rules ↔ prompt alignment.** For each rule in `clarify.ef-debt.rules.md`, verify the prompt enforces it. For each prompted behavior, verify a rule documents it. Delete structural-only rules (code-enforced, no LLM judgment). Add missing rules. Do not merge or split rules for symmetry's sake — keep ef-debt's natural shape.
-
-3. **Eval ↔ TESTING.md alignment.**
-   - Test order matches ascending rule number (TESTING.md line 103).
-   - Symmetric pairs collapsed into `it.each` when they differ only by input (line 9).
-   - Every case has a rule-citation comment (line 101).
-   - Test names match what they assert.
-   - Coverage spans both `EmergencyFundClassify` and `DebtClassify` if rules are parallel.
-
-#### Phase-specific notes
-
-- ef-debt has two classifications in one phase. Verify whether they share a prompt or use separate prompts; slim each independently if separate.
-- Treat parameters' amount/timeline symmetry as a reference point only — ef-debt's emergency-fund/debt pair may or may not justify a similar shape.
-
-#### Concrete precedent — what T8 did for contribution
-
-- Removed the `# Examples` section from the prompt (5 examples, all duplicating `# Output Rules` branches).
-- Collapsed two symmetric eval pairs (Israel yes/no, DCA yes/no) into `it.each`; normalized an equity-amount assertion that previously only applied to the `→ yes` branch in each pair.
-- Left `clarify.contribution.rules.md` untouched — no structural issues to fix.
-
-Expect a similar small-surface-area outcome for T9.
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.ef-debt.eval.ts`. Inspect `clarify.ef-debt.last-run.md` for tone regressions.
-
----
 
 ### T5 — Equity
 
