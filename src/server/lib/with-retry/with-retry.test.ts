@@ -1,6 +1,7 @@
+import { StatusCodes } from "http-status-codes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BadRequestError, ServiceUnavailableError, TooManyRequestsError } from "#errors";
+import { BaseError, ServiceUnavailableError } from "#errors";
 import {
   withRetry,
   type RetryContext,
@@ -51,7 +52,9 @@ describe("withRetry", () => {
   });
 
   it("should throw immediately on non-retryable 4xx error", async () => {
-    const fn = vi.fn().mockRejectedValue(new BadRequestError("bad request"));
+    const fn = vi
+      .fn()
+      .mockRejectedValue(new BaseError("bad request", StatusCodes.BAD_REQUEST));
     const options: RetryOptions = {
       attempts: 3,
       baseDelayMs: 0,
@@ -64,7 +67,7 @@ describe("withRetry", () => {
   it("should retry on 429 rate limit error", async () => {
     const fn = vi
       .fn()
-      .mockRejectedValueOnce(new TooManyRequestsError("rate limited"))
+      .mockRejectedValueOnce(new BaseError("rate limited", StatusCodes.TOO_MANY_REQUESTS))
       .mockResolvedValueOnce("ok");
     const options: RetryOptions = {
       baseDelayMs: 0,

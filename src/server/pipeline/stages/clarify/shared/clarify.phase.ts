@@ -18,9 +18,10 @@ import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/ope
 
 const logger = createLogger("clarifyPhase");
 
-export class PhaseLoopToolCallsExhaustedError extends Error {
+export class PhaseLoopToolCallsExhaustedError extends InternalError {
   constructor(phaseName: string, maxToolCalls: number) {
     super(`${phaseName} failed to converge within ${maxToolCalls} tool calls`);
+    this.name = "PhaseLoopToolCallsExhaustedError";
   }
 }
 
