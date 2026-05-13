@@ -237,4 +237,4 @@ Concurrent sessions on the same server instance are fully isolated: `AsyncLocalS
 
 ### OpenAI failure handling
 
-All OpenAI API calls use retry with exponential backoff (3 attempts). If all retries fail, the exception propagates to the orchestrator, which catches it, logs the failure, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. The user retries from scratch.
+The OpenAI client is configured with `maxRetries: 3` — the SDK retries connection failures, 408/409/429, and 5xx with exponential backoff. After retries exhaust (or on a non-retryable 4xx), `openaiService` classifies the error: 5xx/429/connection → `ServiceUnavailableError`; 4xx non-429 → `InternalError`. The exception propagates to the clarify orchestrator, which catches it, logs the failure, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. The user retries from scratch.
