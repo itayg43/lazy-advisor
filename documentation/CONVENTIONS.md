@@ -37,7 +37,7 @@
   - `TooManyRequestsError` (429)
 - No HTTP error class per feature — use the right HTTP error with a descriptive message
 - External service failures (API errors, non-completed responses) → `ServiceUnavailableError`; internal failures (unexpected state after a successful call) → `InternalError`
-- OpenAI-specific: `APIError` or non-completed status → `ServiceUnavailableError` with a generic constant message (prevents token/response leakage to clients), real error details logged at `error` level. Missing `output_parsed` after a successful call → `InternalError`. Non-API errors rethrow unchanged
+- OpenAI-specific error mapping (generic constant messages at the boundary to prevent token/response leakage; full details logged at `error` level): `APIError` 5xx or 429 → `ServiceUnavailableError`; `APIError` 4xx non-429 → `InternalError`; `APIConnectionError` → `ServiceUnavailableError`; non-completed response status → `ServiceUnavailableError`; missing `output_parsed` after a successful call → `InternalError`. Non-API errors rethrow unchanged. `APIConnectionError extends APIError`, so catch sites must check `APIConnectionError` before `APIError`
 - All error classes live in `src/server/errors/index.ts`
 
 ## File Organization
@@ -65,6 +65,7 @@ The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict 
 
 - `callOpenAI` — use for agentic loop turns: tool call responses and conversation continuation. Returns a raw `OpenAIResponse`.
 - `callOpenAIParsed<T>` — use for structured extraction: when the response must conform to a Zod schema passed via `zodTextFormat`. Returns `OpenAIResponse<T>` with `output_parsed` populated.
+- Retries: `openaiClient` is configured with `maxRetries: 3` (SDK-native exponential backoff over connection errors, 408/409/429, 5xx). Service functions do not wrap calls in a custom retry — errors reaching the handlers are post-retry
 - `previous_response_id` does **not** carry `instructions` forward — every chained call must re-pass `instructions` explicitly. Omitting them causes the model to run without the system prompt
 
 ## Imports

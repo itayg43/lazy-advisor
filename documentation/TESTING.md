@@ -4,7 +4,7 @@
 
 - Co-located test files (next to source files, not in a separate `tests/` directory)
 - Tests use `describe`/`it` blocks with clear descriptions — `it` block descriptions must start with `should`
-- Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `openaiService`, `collectParameters`, `withRetry`); place `beforeEach` first, then `afterEach`
+- Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `openaiService`, `collectParameters`, `runPhaseLoop`); place `beforeEach` first, then `afterEach`
 - `beforeEach` should call `vi.clearAllMocks()` (resets `vi.fn()` call history). Add `vi.restoreAllMocks()` only when the file uses `vi.spyOn` — it reverts spies to their original implementations and is unnecessary (noise) when no spies are present. When both are needed, call them in that order
 - Use `describe.each` / `it.each` to collapse multiple identical test cases that differ only by input — e.g., when the same flow runs for three goal classification types. Avoid it when the per-case setup differs significantly; flat describe blocks are clearer in that situation
 - Each `it` block creates its own context/options variables — no inline objects
@@ -20,7 +20,7 @@
 ## Mocking
 
 - **Mock at the external boundary**: prefer testing real implementations end-to-end. When mocking is unavoidable (e.g., to avoid real API calls), mock at the outermost external boundary — the OpenAI client/service — not at internal module boundaries. Mocking internal collaborators only tests that mocks are called in order, not that the real code works.
-- Use proper types for all mock data and options objects (e.g., `const options: RetryOptions = { ... }`, not untyped object literals)
+- Use proper types for all mock data and options objects (e.g., `const params: ResponseCreateParamsNonStreaming = { ... }`, not untyped object literals)
 - **Mock data placement**: shared fixtures and factories (used by multiple tests) → top-level `describe`; single-use fixtures or factories → inside the specific `describe` or `it` that uses them
 - Shared mocks are typed `const` prefixed with `mock`/`mocked` (e.g., `mockContext`, `mockedCallOpenAIParsed`). For plain function modules, use `vi.mocked()` wrappers. For object methods (e.g., `openaiClient.responses.create`), use `vi.hoisted` to declare `vi.fn()` references and inject them in the `vi.mock` factory
 - Use `vi.fn()` with mock methods (`.mockResolvedValue`, `.mockRejectedValue`, etc.) for all test functions — even when a plain arrow function would work
