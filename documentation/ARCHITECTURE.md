@@ -57,6 +57,10 @@ Phases use one of two conversation patterns depending on whether the LLM needs t
 
 ## Design Decisions
 
+### Multi-phase split
+
+Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
+
 ### Phase conversation patterns
 
 Two patterns are used depending on whether the LLM needs to drive the conversation or just classify a response to a fixed question.
@@ -88,7 +92,7 @@ Used when questions are fixed and answers need structured extraction: ef-debt, p
 
 Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
 
-**Why in-band results at the phase boundary.** This is the "errors as values" pattern (Rust/Go heritage, idiomatic in modern TypeScript) — expected outcomes are values you branch on; exceptions are reserved for genuinely unexpected failures. The stage needs to branch on the result's status and reason — an `amount` unresolved produces a different exit message than a `timeline` unresolved. If phases threw instead, the stage would need a try-catch per phase call plus re-throw discipline for unexpected errors. Result types make the branching explicit and flat at each call site.
+**Why in-band results at the phase boundary.** Errors-as-values pattern (Rust/Go heritage, idiomatic in modern TypeScript): expected outcomes are values you branch on, exceptions are reserved for genuinely unexpected failures. The stage branches on each result's status and reason (`amount` unresolved exits differently from `timeline` unresolved) — using exceptions would force try-catch-rethrow at every phase call.
 
 **Status taxonomy (`PipelineStatusEnum`).** Every phase and stage reports one of four statuses:
 
@@ -101,9 +105,9 @@ Both conversation patterns share the same error contract: internal primitives th
 
 - `runPhaseLoop` → throws `PhaseLoopToolCallsExhaustedError` when its tool-call budget is exhausted → phase catches, returns `{ status: "unresolved", reason: "..." }`
 - `askWithClassify` → throws one of three typed errors:
-  - `ClassifyFollowUpsExhaustedError` when follow-ups are exhausted → user-driven; phase returns `unresolved` (or, for ef-debt and contribution, defaults to the safe fallback)
-  - `ClassifyOutputInvalidError` when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
-  - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"` (or, for ef-debt and contribution, collapses to the safe fallback via `isClassifyError`)
+  - `ClassifyFollowUpsExhaustedError` when follow-ups are exhausted → user-driven; phase returns `unresolved`
+  - `ClassifyOutputInvalidError` (extends `SchemaValidationError`, carries `ZodError` cause) when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"`
+  - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"`
 
 Non-collapsing phases (parameters, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.
 
@@ -141,10 +145,6 @@ The pipeline uses discriminated-union result types and an in-process orchestrato
 - **State machines (XState).** Visualizable transitions, every state explicit. Heavyweight for current scope (linear conversation, no complex branching). Deferred.
 - **Durable execution (Temporal, AWS Step Functions, custom workflow engines).** The production-scale pattern Stripe / DoorDash / Uber use for multi-step user flows: each step persists, survives restarts, has built-in retries and observability. It is an *infrastructure choice that sits underneath this code*, not an alternative to it. Worth knowing as the next-tier evolution at production scale.
 - **Event-driven / pub-sub.** Used for cross-service coordination, not in-process pipelines. Wrong tool for the current shape.
-
-### Multi-phase split
-
-Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
 
 ### Classify + intake routing
 
@@ -219,6 +219,10 @@ Users contribute on irregular schedules, and a fixed monthly number creates fals
 
 `runPhaseLoop` enforces a max tool call count to guard against the model not converging — exceeding the cap throws `PhaseLoopToolCallsExhaustedError`. `collectToolOutputs` rejects any tool that isn't `ask_user` and throws `InternalError` (a real bug, not a UX outcome).
 
+### OpenAI failure handling
+
+SDK-native retries (`maxRetries: 3`) absorb transient connection / 408 / 409 / 429 / 5xx failures. Anything that survives retries is classified by `openaiService` via `mapOpenAIError` into `ServiceUnavailableError`, `InternalError`, or `SchemaValidationError` — full mapping table in [CONVENTIONS § Error Handling](CONVENTIONS.md#error-handling). Mapped exceptions propagate to the clarify orchestrator, which catches them at the stage boundary, logs the failure, and sends `SYSTEM_ERROR_EXIT_MESSAGE`. The user retries from scratch.
+
 ### Stage boundary validation
 
 The clarify stage output is validated with `UserProfileSchema` before returning. A validation failure throws, propagating to the clarify orchestrator's catch block, which logs the error and sends `SYSTEM_ERROR_EXIT_MESSAGE` — no retry. A malformed output means the LLM fundamentally misunderstood the task, and retrying the same prompt is unlikely to help.
@@ -235,6 +239,3 @@ Concurrent sessions on the same server instance are fully isolated: `AsyncLocalS
 
 `runWithSession` is established once in `runPipeline` (the orchestrator) so the context spans all stages. Stages take no `sessionId` parameter — they simply inherit the ambient context from the orchestrator's wrapper.
 
-### OpenAI failure handling
-
-The OpenAI client is configured with `maxRetries: 3` — the SDK retries connection failures, 408/409/429, and 5xx with exponential backoff. After retries exhaust (or on a non-retryable 4xx), `openaiService` classifies the error: 5xx/429/connection → `ServiceUnavailableError`; 4xx non-429 → `InternalError`. The exception propagates to the clarify orchestrator, which catches it, logs the failure, and sends `SYSTEM_ERROR_EXIT_MESSAGE` to the user. The user retries from scratch.
