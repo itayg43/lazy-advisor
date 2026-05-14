@@ -16,6 +16,9 @@ const logger = createLogger("openaiService");
 
 type OpenAIError = APIError | APIConnectionError;
 
+const isOpenAIError = (error: unknown): error is OpenAIError =>
+  error instanceof APIConnectionError || error instanceof APIError;
+
 export type OpenAIResponse<T> = {
   id: string;
   output: T;
@@ -97,8 +100,7 @@ export const callOpenAI = async (
 
     return { id, output, usage };
   } catch (error) {
-    if (error instanceof APIConnectionError || error instanceof APIError)
-      throw mapOpenAIError(error);
+    if (isOpenAIError(error)) throw mapOpenAIError(error);
 
     throw error;
   }
@@ -126,8 +128,7 @@ export const callOpenAIParsed = async <T>(
 
     return { id, output: result.data, usage };
   } catch (error) {
-    if (error instanceof APIConnectionError || error instanceof APIError)
-      throw mapOpenAIError(error);
+    if (isOpenAIError(error)) throw mapOpenAIError(error);
 
     throw error;
   }
