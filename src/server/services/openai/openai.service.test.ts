@@ -9,8 +9,12 @@ import type {
 } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InternalError, ServiceUnavailableError } from "#errors";
-import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import { InternalError, SchemaValidationError, ServiceUnavailableError } from "#errors";
+import {
+  RiskToleranceEnum,
+  TimelineBucketEnum,
+  UserProfileSchema,
+} from "#schemas/pipeline.schemas";
 import { callOpenAI, callOpenAIParsed } from "#services/openai/openai.service";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -155,7 +159,7 @@ describe("openaiService", () => {
       const mockResponse = createMockParsedResponse();
       mockedParse.mockResolvedValue(mockResponse);
 
-      const result = await callOpenAIParsed<UserProfile>(mockParams);
+      const result = await callOpenAIParsed(mockParams, UserProfileSchema);
 
       expect(mockedParse).toHaveBeenCalledWith(mockParams);
       expect(result).toStrictEqual({
@@ -169,17 +173,17 @@ describe("openaiService", () => {
       const mockResponse = createMockParsedResponse({ status: "failed" });
       mockedParse.mockResolvedValue(mockResponse);
 
-      await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
+      await expect(callOpenAIParsed(mockParams, UserProfileSchema)).rejects.toThrow(
         ServiceUnavailableError,
       );
     });
 
-    it("should throw InternalError when output_parsed is null", async () => {
+    it("should throw SchemaValidationError when output_parsed is null", async () => {
       const mockResponse = createMockParsedResponse({ output_parsed: null });
       mockedParse.mockResolvedValue(mockResponse);
 
-      await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
-        InternalError,
+      await expect(callOpenAIParsed(mockParams, UserProfileSchema)).rejects.toThrow(
+        SchemaValidationError,
       );
     });
 
@@ -202,7 +206,7 @@ describe("openaiService", () => {
         const apiError = new APIError(status, undefined, message, undefined);
         mockedParse.mockRejectedValue(apiError);
 
-        await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
+        await expect(callOpenAIParsed(mockParams, UserProfileSchema)).rejects.toThrow(
           expectedError,
         );
       },
@@ -214,7 +218,7 @@ describe("openaiService", () => {
       });
       mockedParse.mockRejectedValue(connectionError);
 
-      await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toThrow(
+      await expect(callOpenAIParsed(mockParams, UserProfileSchema)).rejects.toThrow(
         ServiceUnavailableError,
       );
     });
@@ -223,7 +227,9 @@ describe("openaiService", () => {
       const genericError = new Error(mockGenericErrorMessage);
       mockedParse.mockRejectedValue(genericError);
 
-      await expect(callOpenAIParsed<UserProfile>(mockParams)).rejects.toBe(genericError);
+      await expect(callOpenAIParsed(mockParams, UserProfileSchema)).rejects.toBe(
+        genericError,
+      );
     });
   });
 });

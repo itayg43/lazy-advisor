@@ -5,12 +5,10 @@ import type {
   ClarifyHaltReasonEnum,
   ClarifyUnresolvedReasonEnum,
   GoalClassificationEnum,
-  GoalClassificationSchema,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { PipelineStatus, UserProfile } from "#types/pipeline.types";
 
 export type GoalClassification = z.infer<typeof GoalClassificationEnum>;
-export type GoalClassificationOutput = z.infer<typeof GoalClassificationSchema>;
 export type RedirectingClassification = Exclude<GoalClassification, "normal">;
 
 export type ClarifyUnresolvedReason = z.infer<typeof ClarifyUnresolvedReasonEnum>;

@@ -155,12 +155,15 @@ export const runPhaseExtraction = async <T>({
   lastResponseId,
   schema,
 }: PhaseExtractionParams<T>): Promise<OpenAIResponse<T>> => {
-  return await callOpenAIParsed<T>({
-    model,
-    instructions,
-    input: [],
-    previous_response_id: lastResponseId,
-    text: { format: zodTextFormat(schema, "output") },
-    reasoning: { effort },
-  });
+  return await callOpenAIParsed(
+    {
+      model,
+      instructions,
+      input: [],
+      previous_response_id: lastResponseId,
+      text: { format: zodTextFormat(schema, "output") },
+      reasoning: { effort },
+    },
+    schema,
+  );
 };

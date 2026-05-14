@@ -3,7 +3,7 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 import { z, type ZodError } from "zod";
 
-import { InternalError } from "#errors";
+import { InternalError, SchemaValidationError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { ClarifyErroredReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
@@ -33,13 +33,10 @@ export class ClassifyMessageMissingError extends InternalError {
   }
 }
 
-export class ClassifyOutputInvalidError extends InternalError {
-  readonly cause: ZodError;
-
+export class ClassifyOutputInvalidError extends SchemaValidationError {
   constructor(cause: ZodError) {
-    super("askWithClassify: classify output failed resolved-schema validation");
+    super("askWithClassify: classify output failed resolved-schema validation", cause);
     this.name = "ClassifyOutputInvalidError";
-    this.cause = cause;
   }
 }
 
@@ -162,13 +159,16 @@ export const askWithClassify = async <
 
     logger.debug("User response", { userResponse });
 
-    const { id, output, usage } = await callOpenAIParsed<TOutput>({
-      model,
-      instructions: classifyInstructions,
-      input: history,
-      text: { format },
-      reasoning: { effort },
-    });
+    const { id, output, usage } = await callOpenAIParsed(
+      {
+        model,
+        instructions: classifyInstructions,
+        input: history,
+        text: { format },
+        reasoning: { effort },
+      },
+      schema,
+    );
 
     const { clarificationNeeded, clarificationMessage } = output;
 
@@ -203,13 +203,16 @@ export const askWithClassify = async <
 
   logger.debug("User response", { userResponse: finalResponse });
 
-  const { id, output, usage } = await callOpenAIParsed<TOutput>({
-    model,
-    instructions: classifyInstructions,
-    input: history,
-    text: { format },
-    reasoning: { effort },
-  });
+  const { id, output, usage } = await callOpenAIParsed(
+    {
+      model,
+      instructions: classifyInstructions,
+      input: history,
+      text: { format },
+      reasoning: { effort },
+    },
+    schema,
+  );
 
   logger.info("askWithClassify classification", {
     clarificationNeeded: output.clarificationNeeded,

@@ -2,7 +2,6 @@ import type { z } from "zod";
 
 import type {
   RiskClassifySchema,
-  RiskPhaseOutputSchema,
   RiskPhaseResultSchema,
 } from "#pipeline/stages/clarify/risk/clarify.risk.schemas";
 import type {
@@ -11,7 +10,6 @@ import type {
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { PipelineStatus } from "#types/pipeline.types";
 
-export type RiskPhaseOutput = z.infer<typeof RiskPhaseOutputSchema>;
 export type RiskPhaseResult = z.infer<typeof RiskPhaseResultSchema>;
 
 export type RiskClassify = z.infer<typeof RiskClassifySchema>;
