@@ -14,7 +14,7 @@
 ## Naming
 
 - Files: `kebab-case`, suffixed by role (e.g., `plan.service.ts`, `auth.middleware.ts`, `plan.repository.ts`, `openai.client.ts`, `clarify.stage.ts`, `ask-user.tool.ts`, `pipeline.schemas.ts`)
-- Types/interfaces: `PascalCase`, suffix with purpose (e.g., `UserProfile`, `BadRequestError`)
+- Types/interfaces: `PascalCase`, suffix with purpose (e.g., `UserProfile`, `SchemaValidationError`)
 - Functions: `camelCase`
 - Constants: `UPPER_SNAKE_CASE`
 
@@ -31,13 +31,25 @@
 - `BaseError` extends `Error`, adds `status`
 - HTTP-based error classes extend `BaseError`:
   - `InternalError` (500)
+  - `BadGatewayError` (502)
+  - `SchemaValidationError` (502, extends `BadGatewayError`, carries a `ZodError` cause)
   - `ServiceUnavailableError` (503)
-  - `BadRequestError` (400)
-  - `NotFoundError` (404)
-  - `TooManyRequestsError` (429)
 - No HTTP error class per feature — use the right HTTP error with a descriptive message
 - External service failures (API errors, non-completed responses) → `ServiceUnavailableError`; internal failures (unexpected state after a successful call) → `InternalError`
-- OpenAI-specific error mapping (generic constant messages at the boundary to prevent token/response leakage; full details logged at `error` level): `APIError` 5xx or 429 → `ServiceUnavailableError`; `APIError` 4xx non-429 → `InternalError`; `APIConnectionError` → `ServiceUnavailableError`; non-completed response status → `ServiceUnavailableError`; missing `output_parsed` after a successful call → `InternalError`. Non-API errors rethrow unchanged. `APIConnectionError extends APIError`, so catch sites must check `APIConnectionError` before `APIError`
+- For multi-class error families intended to be caught together, expose an `is*Error` type predicate (e.g., `isOpenAIError`, `isClassifyError`) so catch blocks read as a single intent
+- Error helper naming: `to*Error` for direct builders that return an `Error` (caller throws explicitly); `map*Error` for dispatchers that branch between builders
+- OpenAI error mapping. Use generic constant messages at the boundary (prevent token/response leakage); log full details at `error` level.
+
+  | Source                                     | Mapped to                                   |
+  | ------------------------------------------ | ------------------------------------------- |
+  | `APIError` 5xx or 429                      | `ServiceUnavailableError`                   |
+  | `APIError` 4xx non-429                     | `InternalError`                             |
+  | `APIConnectionError`                       | `ServiceUnavailableError`                   |
+  | Non-completed response status              | `ServiceUnavailableError`                   |
+  | Schema validation failure on parsed output | `SchemaValidationError` (cause: `ZodError`) |
+  | Non-API error                              | rethrow unchanged                           |
+
+  `APIConnectionError extends APIError` — the ordering pitfall is encapsulated in `mapOpenAIError`, so catch sites use the `isOpenAIError` predicate
 - All error classes live in `src/server/errors/index.ts`
 
 ## File Organization
@@ -64,7 +76,7 @@ The project uses `tseslint.configs.strict` (not `strictTypeChecked`) — strict 
 ## OpenAI
 
 - `callOpenAI` — use for agentic loop turns: tool call responses and conversation continuation. Returns a raw `OpenAIResponse`.
-- `callOpenAIParsed<T>` — use for structured extraction: when the response must conform to a Zod schema passed via `zodTextFormat`. Returns `OpenAIResponse<T>` with `output_parsed` populated.
+- `callOpenAIParsed<T>` — use for structured extraction. Pass the Zod schema as the second argument; the schema is also passed to the SDK via `zodTextFormat`. We re-validate `output_parsed` ourselves as defense-in-depth against the third-party SDK — schema mismatch → `SchemaValidationError`. Returns `OpenAIResponse<T>`.
 - Retries: `openaiClient` is configured with `maxRetries: 3` (SDK-native exponential backoff over connection errors, 408/409/429, 5xx). Service functions do not wrap calls in a custom retry — errors reaching the handlers are post-retry
 - `previous_response_id` does **not** carry `instructions` forward — every chained call must re-pass `instructions` explicitly. Omitting them causes the model to run without the system prompt
 
