@@ -6,7 +6,7 @@ import {
   GoalClassificationEnum,
   GoalClassificationSchema,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import type { GoalClassificationOutput } from "#pipeline/stages/clarify/shared/clarify.types";
+import type { GoalClassification } from "#pipeline/stages/clarify/shared/clarify.types";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyClassify");
@@ -25,16 +25,19 @@ You are a goal classifier for an investment advisor pipeline. Your sole job is t
 
 When in doubt, classify as **${normal}**.`;
 
-export const classifyGoal = async (goal: string) => {
-  const { output, usage } = await callOpenAIParsed<GoalClassificationOutput>({
-    model: "gpt-5.4-nano",
-    instructions: CLASSIFY_SYSTEM_PROMPT,
-    input: goal,
-    text: {
-      format: zodTextFormat(GoalClassificationSchema, "GoalClassificationSchema"),
+export const classifyGoal = async (goal: string): Promise<GoalClassification> => {
+  const { output, usage } = await callOpenAIParsed(
+    {
+      model: "gpt-5.4-nano",
+      instructions: CLASSIFY_SYSTEM_PROMPT,
+      input: goal,
+      text: {
+        format: zodTextFormat(GoalClassificationSchema, "GoalClassificationSchema"),
+      },
+      reasoning: { effort: "low" },
     },
-    reasoning: { effort: "low" },
-  });
+    GoalClassificationSchema,
+  );
 
   logger.info("Classification complete", { type: output.type, usage });
 
