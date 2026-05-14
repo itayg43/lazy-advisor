@@ -25,6 +25,11 @@ export class PhaseLoopToolCallsExhaustedError extends InternalError {
   }
 }
 
+export const isPhaseLoopExhaustedError = (
+  error: unknown,
+): error is PhaseLoopToolCallsExhaustedError =>
+  error instanceof PhaseLoopToolCallsExhaustedError;
+
 type PhaseLoopParams = {
   model: ResponsesModel;
   effort: ReasoningEffort;

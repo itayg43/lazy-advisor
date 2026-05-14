@@ -11,7 +11,7 @@ import type {
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import {
-  PhaseLoopToolCallsExhaustedError,
+  isPhaseLoopExhaustedError,
   runPhaseExtraction,
   runPhaseLoop,
 } from "#pipeline/stages/clarify/shared/clarify.phase";
@@ -125,8 +125,8 @@ export const collectAllocation = async (
       phaseName: "Allocation phase",
       responder,
     }));
-  } catch (err) {
-    if (err instanceof PhaseLoopToolCallsExhaustedError) {
+  } catch (error) {
+    if (isPhaseLoopExhaustedError(error)) {
       logger.info("Allocation phase unresolved — tool calls exhausted");
 
       return {
@@ -135,7 +135,7 @@ export const collectAllocation = async (
       };
     }
 
-    throw err;
+    throw error;
   }
 
   const { id, usage, output } = await runPhaseExtraction<AllocationPhaseOutput>({
