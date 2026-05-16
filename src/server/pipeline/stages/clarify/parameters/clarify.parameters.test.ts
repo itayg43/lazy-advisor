@@ -1,15 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ClassifyErroredReasonEnum } from "#pipeline/ask-with-classify";
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectParameters } from "#pipeline/stages/clarify/parameters/clarify.parameters";
 import type {
   AmountClassify,
   TimelineClassify,
 } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
-import {
-  ClarifyErroredReasonEnum,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
@@ -73,7 +71,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_output_invalid);
+      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_output_invalid);
     }
   });
 
@@ -91,7 +89,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_message_missing);
+      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_message_missing);
     }
   });
 
@@ -135,7 +133,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_output_invalid);
+      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_output_invalid);
     }
   });
 
@@ -153,7 +151,7 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_message_missing);
+      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_message_missing);
     }
   });
 });

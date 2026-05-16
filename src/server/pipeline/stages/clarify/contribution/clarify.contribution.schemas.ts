@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AskWithClassifyBaseSchema } from "#pipeline/stages/clarify/shared/clarify.ask";
+import { AskWithClassifyBaseSchema } from "#pipeline/ask-with-classify";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const AnswerSchema = z.enum(["yes", "no"]);

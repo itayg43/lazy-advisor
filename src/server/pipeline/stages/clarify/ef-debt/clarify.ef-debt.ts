@@ -5,7 +5,7 @@ import {
   AskWithClassifyBaseSchema,
   askWithClassify,
   isClassifyError,
-} from "#pipeline/stages/clarify/shared/clarify.ask";
+} from "#pipeline/ask-with-classify";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyEfDebt");

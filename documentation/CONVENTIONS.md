@@ -53,7 +53,7 @@
   - Literal narrowing: `if (status !== "completed") throw toNotCompletedError(id, status)` — helper param: `Exclude<ResponseStatus, "completed">`
   - Success check: `if (!result.success) throw toSchemaValidationError(id, result.error)`
   - Existence check: `if (usage) logUsage(usage)` — helper param: `ResponseUsage` (not `| undefined`)
-- When a helper's param is a closed union (e.g., `ClassifyError`, narrowed at the call site by an `is*` type-predicate), branch on each member and end the body with `const _exhaustive: never = value` plus a throw. Adding a new union member without a handler fails type-check there. Example: `mapClassifyError` in `clarify.ask.ts`
+- When a helper's param is a closed union (e.g., `ClassifyError`, narrowed at the call site by an `is*` type-predicate), branch on each member and end the body with `const _exhaustive: never = value` plus a throw. Adding a new union member without a handler fails type-check there. Example: `mapClassifyError` in `ask-with-classify.errors.ts`
 
 ## Types
 
@@ -70,12 +70,12 @@
   - `SchemaValidationError` (502, extends `BadGatewayError`, carries a `ZodError` cause)
   - `ServiceUnavailableError` (503)
 - Don't introduce new HTTP-based error classes per feature — reuse the base classes above with descriptive messages. A new HTTP status should be a deliberate, cross-cutting decision, not a per-feature convenience
-- Domain error subclasses (e.g., `ClassifyFollowUpsExhaustedError extends InternalError`) are allowed _only_ to support an `is*Error`/`map*Error` family — when the dispatcher needs to discriminate between failure modes that share an HTTP class. Colocate these subclasses with the family's predicate and dispatcher; they must extend an existing HTTP base class and never introduce a new HTTP status
 - Pick the error class by what the failure indicates about _cause_: upstream-temporary (5xx, connection failure, rate-limit, non-completed response) → `ServiceUnavailableError`; our-fault (4xx malformed request, unexpected post-success state, missing config) → `InternalError`. The OpenAI mapping table below is the canonical example
 - For multi-class error families intended to be caught together, expose an `is*Error` type predicate (e.g., `isOpenAIError`, `isClassifyError`) so catch blocks read as a single intent
 - Error helper naming and shape:
   - `to*Error` — direct builder, returns an `Error`. The caller throws explicitly (`throw toFooError(...)`). Returning rather than throwing keeps the `throw` keyword visible at the call site and lets the helper compose (e.g., be logged or returned from another function)
   - `map*Error` — dispatcher that branches between `to*Error` builders. Also returns an `Error`; caller throws
+- Domain error subclasses (e.g., `ClassifyFollowUpsExhaustedError extends InternalError`) are allowed _only_ to support an `is*Error`/`map*Error` family — when the dispatcher needs to discriminate between failure modes that share an HTTP class. They must extend an existing HTTP base class and never introduce a new HTTP status. Colocate these subclasses with the family's predicate and dispatcher; if the dispatcher serves multiple consumers with different result shapes, parameterize it generically over consumer-specific bits (e.g., `mapClassifyError<TReason extends string>` over the unresolved-reason value) rather than splitting per consumer — keeps the whole family in one place
 - OpenAI error mapping. Use generic constant messages at the boundary (prevent token/response leakage); log full details at `error` level.
 
   | Source                                     | Mapped to                                   |

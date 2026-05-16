@@ -1,4 +1,5 @@
 import { createLogger } from "#lib/logger";
+import { askWithClassify, isClassifyError } from "#pipeline/ask-with-classify";
 import {
   CONTRIBUTION_QUESTION,
   buildClassifyInstructions,
@@ -8,10 +9,6 @@ import {
   ContributionClassifySchema,
 } from "#pipeline/stages/clarify/contribution/clarify.contribution.schemas";
 import type { ContributionPhaseResult } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
-import {
-  askWithClassify,
-  isClassifyError,
-} from "#pipeline/stages/clarify/shared/clarify.ask";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
