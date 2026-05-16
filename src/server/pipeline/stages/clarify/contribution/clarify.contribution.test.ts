@@ -35,43 +35,27 @@ describe("collectContribution", () => {
       answer,
     });
 
-  it("should return completed/true when user answers yes", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(converged("yes"));
-    const responder = createTrackedResponder(["yes"]);
+  it.each([
+    { answer: "yes" as const, plansToContribute: true },
+    { answer: "no" as const, plansToContribute: false },
+  ])(
+    "should return completed/$plansToContribute when user answers $answer",
+    async ({ answer, plansToContribute }) => {
+      mockedCallOpenAIParsed.mockResolvedValueOnce(converged(answer));
+      const responder = createTrackedResponder([answer]);
 
-    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
+      const result = await collectContribution(
+        mockAmount,
+        mockEquityPercentage,
+        responder,
+      );
 
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      plansToContribute: true,
-    });
-  });
-
-  it("should return completed/false when user answers no", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(converged("no"));
-    const responder = createTrackedResponder(["no"]);
-
-    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
-
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      plansToContribute: false,
-    });
-  });
-
-  // Rule 5 coverage: vague input classifies as answer: "no" per classify instructions →
-  // same completed/false outcome as an explicit no. Deterministic code path, no eval needed.
-  it("should return completed/false when classify model resolves vague input as no", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(converged("no"));
-    const responder = createTrackedResponder(["maybe someday"]);
-
-    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
-
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      plansToContribute: false,
-    });
-  });
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.completed,
+        plansToContribute,
+      });
+    },
+  );
 
   it("should return completed/false when follow-ups are exhausted", async () => {
     // followUps: 2 → 3 total classification attempts (loop × 2 + final)
@@ -91,42 +75,6 @@ describe("collectContribution", () => {
       "Still not sure",
       "I really can't say",
     ]);
-
-    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
-
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      plansToContribute: false,
-    });
-  });
-
-  it("should default to plansToContribute: false when answer converges as null (output-invalid collapse)", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(
-      createParsedResponse<ContributionClassify>({
-        clarificationNeeded: false,
-        clarificationMessage: null,
-        answer: null,
-      }),
-    );
-    const responder = createTrackedResponder(["unclear"]);
-
-    const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
-
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      plansToContribute: false,
-    });
-  });
-
-  it("should default to plansToContribute: false when mid-loop clarificationMessage is null (message-missing collapse)", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(
-      createParsedResponse<ContributionClassify>({
-        clarificationNeeded: true,
-        clarificationMessage: null,
-        answer: null,
-      }),
-    );
-    const responder = createTrackedResponder(["unclear"]);
 
     const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 

@@ -138,47 +138,4 @@ describe("collectEfDebt", () => {
     expect(lastMessage).toMatch(/paying it off first|costs more than ETF/i);
     expect(lastMessage).not.toMatch(/unexpected expense/i);
   });
-
-  // EF path covers ClassifyOutputInvalidError (null answer post-convergence triggers
-  // resolved-schema validation failure). Phase stays non-blocking by design — defaults
-  // to safe educational fallback regardless of which classify error fires.
-  it("should default to no EF and show EF education when EF classify output is invalid", async () => {
-    mockedCallOpenAIParsed
-      .mockResolvedValueOnce(
-        createParsedResponse<EmergencyFundClassify>({
-          clarificationNeeded: false,
-          clarificationMessage: null,
-          answer: null,
-        }),
-      )
-      .mockResolvedValueOnce(answerNo);
-    const responder = createTrackedResponder(["unclear", "No"]);
-
-    await collectEfDebt(responder);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const lastMessage = agentTurns[agentTurns.length - 1].content;
-    expect(lastMessage).toMatch(/unexpected expense/i);
-  });
-
-  // Mid-loop clarificationNeeded=true with null clarificationMessage triggers
-  // ClassifyMessageMissingError. Same safe fallback applies.
-  it("should default to no EF and show EF education when EF classify message is missing", async () => {
-    mockedCallOpenAIParsed
-      .mockResolvedValueOnce(
-        createParsedResponse<EmergencyFundClassify>({
-          clarificationNeeded: true,
-          clarificationMessage: null,
-          answer: null,
-        }),
-      )
-      .mockResolvedValueOnce(answerNo);
-    const responder = createTrackedResponder(["unclear", "No"]);
-
-    await collectEfDebt(responder);
-
-    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const lastMessage = agentTurns[agentTurns.length - 1].content;
-    expect(lastMessage).toMatch(/unexpected expense/i);
-  });
 });

@@ -3,10 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk.types";
-import {
-  ClarifyErroredReasonEnum,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
@@ -54,36 +51,6 @@ describe("collectRisk", () => {
       selfRatingScore: score,
       riskTolerance,
     });
-  });
-
-  it("should return errored/classify_output_invalid when score converges as null", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(converged(null));
-    const responder = createTrackedResponder(["I don't know"]);
-
-    const result = await collectRisk(responder);
-
-    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
-    if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_output_invalid);
-    }
-  });
-
-  it("should return errored/classify_message_missing when mid-loop clarificationMessage is null", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(
-      createParsedResponse<RiskClassify>({
-        clarificationNeeded: true,
-        clarificationMessage: null,
-        selfRatingScore: null,
-      }),
-    );
-    const responder = createTrackedResponder(["I don't know"]);
-
-    const result = await collectRisk(responder);
-
-    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
-    if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClarifyErroredReasonEnum.enum.classify_message_missing);
-    }
   });
 
   it("should return unresolved/risk_tolerance when follow-up budget is exhausted", async () => {

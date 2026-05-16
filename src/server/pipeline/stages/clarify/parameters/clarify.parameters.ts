@@ -1,5 +1,10 @@
 import { createLogger } from "#lib/logger";
 import {
+  askWithClassify,
+  isClassifyError,
+  mapClassifyError,
+} from "#pipeline/ask-with-classify";
+import {
   AMOUNT_CLASSIFY_INSTRUCTIONS,
   AMOUNT_QUESTION,
   TIMELINE_CLASSIFY_INSTRUCTIONS,
@@ -16,10 +21,6 @@ import type {
   AskTimelineResult,
   ParametersPhaseResult,
 } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
-import {
-  askWithClassify,
-  mapClassifyError,
-} from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
@@ -48,12 +49,13 @@ const askAmount = async (responder: Responder): Promise<AskAmountResult> => {
 
     return result;
   } catch (error) {
-    const mapped = mapClassifyError(
-      error,
-      "askAmount",
-      ClarifyUnresolvedReasonEnum.enum.amount,
-    );
-    if (mapped) return mapped;
+    if (isClassifyError(error)) {
+      return mapClassifyError(
+        error,
+        "askAmount",
+        ClarifyUnresolvedReasonEnum.enum.amount,
+      );
+    }
 
     throw error;
   }
@@ -81,12 +83,13 @@ const askTimeline = async (responder: Responder): Promise<AskTimelineResult> => 
 
     return result;
   } catch (error) {
-    const mapped = mapClassifyError(
-      error,
-      "askTimeline",
-      ClarifyUnresolvedReasonEnum.enum.timeline,
-    );
-    if (mapped) return mapped;
+    if (isClassifyError(error)) {
+      return mapClassifyError(
+        error,
+        "askTimeline",
+        ClarifyUnresolvedReasonEnum.enum.timeline,
+      );
+    }
 
     throw error;
   }

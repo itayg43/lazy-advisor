@@ -1,5 +1,10 @@
 import { createLogger } from "#lib/logger";
 import {
+  askWithClassify,
+  isClassifyError,
+  mapClassifyError,
+} from "#pipeline/ask-with-classify";
+import {
   RISK_CLASSIFY_INSTRUCTIONS,
   RISK_QUESTION,
 } from "#pipeline/stages/clarify/risk/clarify.risk.prompts";
@@ -11,10 +16,6 @@ import type {
   AskRiskResult,
   RiskPhaseResult,
 } from "#pipeline/stages/clarify/risk/clarify.risk.types";
-import {
-  askWithClassify,
-  mapClassifyError,
-} from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
@@ -52,12 +53,13 @@ const askRisk = async (responder: Responder): Promise<AskRiskResult> => {
 
     return result;
   } catch (error) {
-    const mapped = mapClassifyError(
-      error,
-      "askRisk",
-      ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
-    );
-    if (mapped) return mapped;
+    if (isClassifyError(error)) {
+      return mapClassifyError(
+        error,
+        "askRisk",
+        ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
+      );
+    }
 
     throw error;
   }

@@ -1,7 +1,7 @@
 import type { z } from "zod";
 
+import type { ClassifyErroredReason } from "#pipeline/ask-with-classify";
 import type {
-  ClarifyErroredReasonEnum,
   ClarifyHaltReasonEnum,
   ClarifyUnresolvedReasonEnum,
   GoalClassificationEnum,
@@ -13,7 +13,6 @@ export type RedirectingClassification = Exclude<GoalClassification, "normal">;
 
 export type ClarifyUnresolvedReason = z.infer<typeof ClarifyUnresolvedReasonEnum>;
 export type ClarifyHaltReason = z.infer<typeof ClarifyHaltReasonEnum>;
-export type ClarifyErroredReason = z.infer<typeof ClarifyErroredReasonEnum>;
 
 export type ClarifyStageResult =
   | { status: Extract<PipelineStatus, "completed">; profile: UserProfile }
@@ -27,7 +26,7 @@ export type ClarifyStageResult =
       classification: RedirectingClassification;
     }
   | { status: Extract<PipelineStatus, "unresolved">; reason: ClarifyUnresolvedReason }
-  | { status: Extract<PipelineStatus, "errored">; reason: ClarifyErroredReason };
+  | { status: Extract<PipelineStatus, "errored">; reason: ClassifyErroredReason };
 
 export type ClarifyStageTermination = Exclude<
   ClarifyStageResult,

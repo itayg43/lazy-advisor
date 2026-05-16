@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 import { MAX_AMOUNT } from "#constants/validation.constants";
-import { AskWithClassifyBaseSchema } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
-  ClarifyErroredReasonEnum,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+  AskWithClassifyBaseSchema,
+  ClassifyErroredReasonEnum,
+} from "#pipeline/ask-with-classify";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const AmountSchema = z.number().int().positive().max(MAX_AMOUNT);
@@ -41,8 +41,8 @@ export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
   }),
   z.object({
     status: PipelineStatusEnum.extract(["errored"]),
-    reason: ClarifyErroredReasonEnum.extract([
-      "classify_output_invalid",
+    reason: ClassifyErroredReasonEnum.extract([
+      "classify_resolved_output_invalid",
       "classify_message_missing",
     ]),
   }),

@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { AskWithClassifyBaseSchema } from "#pipeline/stages/clarify/shared/clarify.ask";
 import {
-  ClarifyErroredReasonEnum,
-  ClarifyUnresolvedReasonEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+  AskWithClassifyBaseSchema,
+  ClassifyErroredReasonEnum,
+} from "#pipeline/ask-with-classify";
+import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
 const SelfRatingScoreSchema = z.number().int().min(1).max(5);
@@ -33,8 +33,8 @@ export const RiskPhaseResultSchema = z.discriminatedUnion("status", [
   }),
   z.object({
     status: PipelineStatusEnum.extract(["errored"]),
-    reason: ClarifyErroredReasonEnum.extract([
-      "classify_output_invalid",
+    reason: ClassifyErroredReasonEnum.extract([
+      "classify_resolved_output_invalid",
       "classify_message_missing",
     ]),
   }),
