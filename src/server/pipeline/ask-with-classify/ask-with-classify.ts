@@ -45,7 +45,6 @@ export const askWithClassify = async <
   } = params;
 
   logger.info("Asking question", { question });
-
   responder.sendToUser(question);
 
   const history: EasyInputMessage[] = [{ role: "assistant", content: question }];

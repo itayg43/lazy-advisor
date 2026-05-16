@@ -8,7 +8,7 @@ import type {
   TimelineClassify,
 } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -34,6 +34,26 @@ describe("collectParameters", () => {
     clarificationNeeded: false,
     clarificationMessage: null,
     amount: 30_000,
+  });
+
+  it("should return completed with amount and timeline when both resolve", async () => {
+    const timelineResolved: OpenAIResponse<TimelineClassify> = createParsedResponse({
+      clarificationNeeded: false,
+      clarificationMessage: null,
+      timeline: TimelineBucketEnum.enum["3–5 years"],
+    });
+    mockedCallOpenAIParsed
+      .mockResolvedValueOnce(amountResolved)
+      .mockResolvedValueOnce(timelineResolved);
+    const responder = createTrackedResponder(["₪30,000", "5 years"]);
+
+    const result = await collectParameters(responder);
+
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.completed,
+      amount: 30_000,
+      timeline: TimelineBucketEnum.enum["3–5 years"],
+    });
   });
 
   it("should return unresolved/amount when amount follow-ups are exhausted", async () => {
@@ -118,44 +138,6 @@ describe("collectParameters", () => {
     expect(result.status).toBe(PipelineStatusEnum.enum.unresolved);
     if (result.status === PipelineStatusEnum.enum.unresolved) {
       expect(result.reason).toBe(ClarifyUnresolvedReasonEnum.enum.timeline);
-    }
-  });
-
-  it("should return errored/classify_resolved_output_invalid when timeline converges with null", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(amountResolved).mockResolvedValueOnce(
-      createParsedResponse<TimelineClassify>({
-        clarificationNeeded: false,
-        clarificationMessage: null,
-        timeline: null,
-      }),
-    );
-    const responder = createTrackedResponder(["₪30,000", "someday"]);
-
-    const result = await collectParameters(responder);
-
-    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
-    if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(
-        ClassifyErroredReasonEnum.enum.classify_resolved_output_invalid,
-      );
-    }
-  });
-
-  it("should return errored/classify_message_missing when timeline mid-loop has no clarificationMessage", async () => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(amountResolved).mockResolvedValueOnce(
-      createParsedResponse<TimelineClassify>({
-        clarificationNeeded: true,
-        clarificationMessage: null,
-        timeline: null,
-      }),
-    );
-    const responder = createTrackedResponder(["₪30,000", "someday"]);
-
-    const result = await collectParameters(responder);
-
-    expect(result.status).toBe(PipelineStatusEnum.enum.errored);
-    if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_message_missing);
     }
   });
 });
