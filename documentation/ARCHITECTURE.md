@@ -106,7 +106,7 @@ Both conversation patterns share the same error contract: internal primitives th
 - `runPhaseLoop` → throws `PhaseLoopToolCallsExhaustedError` when its tool-call budget is exhausted → phase catches, returns `{ status: "unresolved", reason: "..." }`
 - `askWithClassify` → throws one of three typed errors:
   - `ClassifyFollowUpsExhaustedError` when follow-ups are exhausted → user-driven; phase returns `unresolved`
-  - `ClassifyOutputInvalidError` (extends `SchemaValidationError`, carries `ZodError` cause) when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_output_invalid"`
+  - `ClassifyResolvedOutputInvalidError` (extends `SchemaValidationError`, carries `ZodError` cause) when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_resolved_output_invalid"`
   - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"`
 
 Non-collapsing phases (parameters, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.

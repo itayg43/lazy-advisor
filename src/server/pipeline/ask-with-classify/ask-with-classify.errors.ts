@@ -27,22 +27,22 @@ export class ClassifyMessageMissingError extends InternalError {
   }
 }
 
-export class ClassifyOutputInvalidError extends SchemaValidationError {
+export class ClassifyResolvedOutputInvalidError extends SchemaValidationError {
   constructor(cause: ZodError) {
     super("askWithClassify: classify output failed resolved-schema validation", cause);
-    this.name = "ClassifyOutputInvalidError";
+    this.name = "ClassifyResolvedOutputInvalidError";
   }
 }
 
 export type ClassifyError =
   | ClassifyFollowUpsExhaustedError
   | ClassifyMessageMissingError
-  | ClassifyOutputInvalidError;
+  | ClassifyResolvedOutputInvalidError;
 
 export const isClassifyError = (error: unknown): error is ClassifyError =>
   error instanceof ClassifyFollowUpsExhaustedError ||
   error instanceof ClassifyMessageMissingError ||
-  error instanceof ClassifyOutputInvalidError;
+  error instanceof ClassifyResolvedOutputInvalidError;
 
 // Maps any ClassifyError to its phase-result counterpart and emits the log.
 // Caller gates with isClassifyError; non-classify errors never reach here.
@@ -56,12 +56,12 @@ export const mapClassifyError = <TReason extends string>(
 
     return { status: PipelineStatusEnum.enum.unresolved, reason: unresolvedReason };
   }
-  if (error instanceof ClassifyOutputInvalidError) {
+  if (error instanceof ClassifyResolvedOutputInvalidError) {
     logger.error(`${caller} — classify output invalid`, error, { cause: error.cause });
 
     return {
       status: PipelineStatusEnum.enum.errored,
-      reason: ClassifyErroredReasonEnum.enum.classify_output_invalid,
+      reason: ClassifyErroredReasonEnum.enum.classify_resolved_output_invalid,
     };
   }
   if (error instanceof ClassifyMessageMissingError) {

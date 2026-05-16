@@ -57,7 +57,7 @@ describe("collectParameters", () => {
     }
   });
 
-  it("should return errored/classify_output_invalid when amount converges with null", async () => {
+  it("should return errored/classify_resolved_output_invalid when amount converges with null", async () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(
       createParsedResponse<AmountClassify>({
         clarificationNeeded: false,
@@ -71,7 +71,9 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_output_invalid);
+      expect(result.reason).toBe(
+        ClassifyErroredReasonEnum.enum.classify_resolved_output_invalid,
+      );
     }
   });
 
@@ -119,7 +121,7 @@ describe("collectParameters", () => {
     }
   });
 
-  it("should return errored/classify_output_invalid when timeline converges with null", async () => {
+  it("should return errored/classify_resolved_output_invalid when timeline converges with null", async () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(amountResolved).mockResolvedValueOnce(
       createParsedResponse<TimelineClassify>({
         clarificationNeeded: false,
@@ -133,7 +135,9 @@ describe("collectParameters", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_output_invalid);
+      expect(result.reason).toBe(
+        ClassifyErroredReasonEnum.enum.classify_resolved_output_invalid,
+      );
     }
   });
 

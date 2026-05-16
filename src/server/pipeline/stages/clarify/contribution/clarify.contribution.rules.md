@@ -70,7 +70,7 @@ Note: this behavior is deterministic code once the classify model returns `answe
 - **Israel/DCA clarification:** initial ask → clarification exchange → answer = 2 turns.
 - **Worst case:** two clarification exchanges (e.g., Israel concern + follow-up question) → final attempt = 3 turns.
 
-Contribution is non-blocking by design — every classify-error mode collapses to the same safe default: `{ status: "completed", plansToContribute: false }`. `ClassifyFollowUpsExhaustedError`, `ClassifyOutputInvalidError`, and `ClassifyMessageMissingError` all resolve via the `isClassifyError(error)` collapse, mirroring ef-debt's pattern: when in doubt, the safe assumption is better than killing the flow at the last phase. The underlying classify failure is still recorded at the `askWithClassify` layer; the phase emits a single `warn` noting the collapse and `error.name` for traceability.
+Contribution is non-blocking by design — every classify-error mode collapses to the same safe default: `{ status: "completed", plansToContribute: false }`. `ClassifyFollowUpsExhaustedError`, `ClassifyResolvedOutputInvalidError`, and `ClassifyMessageMissingError` all resolve via the `isClassifyError(error)` collapse, mirroring ef-debt's pattern: when in doubt, the safe assumption is better than killing the flow at the last phase. The underlying classify failure is still recorded at the `askWithClassify` layer; the phase emits a single `warn` noting the collapse and `error.name` for traceability.
 
 ---
 

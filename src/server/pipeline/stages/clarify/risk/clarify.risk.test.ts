@@ -54,7 +54,7 @@ describe("collectRisk", () => {
     });
   });
 
-  it("should return errored/classify_output_invalid when score converges as null", async () => {
+  it("should return errored/classify_resolved_output_invalid when score converges as null", async () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(converged(null));
     const responder = createTrackedResponder(["I don't know"]);
 
@@ -62,7 +62,9 @@ describe("collectRisk", () => {
 
     expect(result.status).toBe(PipelineStatusEnum.enum.errored);
     if (result.status === PipelineStatusEnum.enum.errored) {
-      expect(result.reason).toBe(ClassifyErroredReasonEnum.enum.classify_output_invalid);
+      expect(result.reason).toBe(
+        ClassifyErroredReasonEnum.enum.classify_resolved_output_invalid,
+      );
     }
   });
 

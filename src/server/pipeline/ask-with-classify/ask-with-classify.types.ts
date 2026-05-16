@@ -14,7 +14,7 @@ export type AskWithClassifyBase = z.infer<typeof AskWithClassifyBaseSchema>;
 // (no discriminated unions), so the model is given the loose `schema` with nullable
 // domain fields. After convergence we re-validate against `resolvedSchema` (typically
 // the loose one with only the post-convergence-required fields tightened to non-null)
-// — failures surface as ClassifyOutputInvalidError instead of leaking a null downstream.
+// — failures surface as ClassifyResolvedOutputInvalidError instead of leaking a null downstream.
 export type AskWithClassifyParams<
   TOutput extends AskWithClassifyBase,
   TResolved extends TOutput,

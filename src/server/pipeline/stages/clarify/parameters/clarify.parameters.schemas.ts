@@ -42,7 +42,7 @@ export const ParametersPhaseResultSchema = z.discriminatedUnion("status", [
   z.object({
     status: PipelineStatusEnum.extract(["errored"]),
     reason: ClassifyErroredReasonEnum.extract([
-      "classify_output_invalid",
+      "classify_resolved_output_invalid",
       "classify_message_missing",
     ]),
   }),

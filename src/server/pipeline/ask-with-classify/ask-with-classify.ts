@@ -1,12 +1,13 @@
 import { zodTextFormat } from "openai/helpers/zod";
 import type { EasyInputMessage } from "openai/resources/responses/responses";
+import type { z } from "zod";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
 import {
   ClassifyFollowUpsExhaustedError,
   ClassifyMessageMissingError,
-  ClassifyOutputInvalidError,
+  ClassifyResolvedOutputInvalidError,
 } from "#pipeline/ask-with-classify/ask-with-classify.errors";
 import type {
   AskWithClassifyBase,
@@ -15,6 +16,16 @@ import type {
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("askWithClassify");
+
+const resolveOutput = <TResolved>(
+  output: unknown,
+  resolvedSchema: z.ZodType<TResolved>,
+): TResolved => {
+  const parsed = resolvedSchema.safeParse(output);
+  if (!parsed.success) throw new ClassifyResolvedOutputInvalidError(parsed.error);
+
+  return parsed.data;
+};
 
 export const askWithClassify = async <
   TOutput extends AskWithClassifyBase,
@@ -33,23 +44,22 @@ export const askWithClassify = async <
     followUps,
   } = params;
 
-  logger.info("askWithClassify asking", { question });
+  logger.info("Asking question", { question });
 
   responder.sendToUser(question);
 
   const history: EasyInputMessage[] = [{ role: "assistant", content: question }];
-
   const format = zodTextFormat(schema, "output");
 
   const totalAttempts = followUps + 1;
-
   for (let attempt = 0; attempt < totalAttempts; attempt++) {
+    logger.info("Attempt", { attempt, totalAttempts });
+
     const userResponse = await responder.waitForResponse();
     history.push({ role: "user", content: userResponse });
-
     logger.debug("User response", { userResponse });
 
-    const { id, output, usage } = await callOpenAIParsed(
+    const { id, output } = await callOpenAIParsed(
       {
         model,
         instructions: classifyInstructions,
@@ -59,44 +69,37 @@ export const askWithClassify = async <
       },
       schema,
     );
-
     const { clarificationNeeded, clarificationMessage } = output;
 
-    logger.info("askWithClassify classification", {
-      clarificationNeeded,
-      attempt,
+    logger.info("Classification", {
       responseId: id,
-      question,
-      usage,
+      clarificationNeeded,
     });
 
     if (!clarificationNeeded) {
-      logger.info("askWithClassify complete", { attempt, question });
+      logger.info("Complete");
 
-      const parsed = resolvedSchema.safeParse(output);
-      if (!parsed.success) throw new ClassifyOutputInvalidError(parsed.error);
-
-      return parsed.data;
+      return resolveOutput(output, resolvedSchema);
     }
-
-    // No follow-ups left — surface exhaustion instead of validating/sending a message we'd never use.
-    if (attempt === totalAttempts - 1) {
-      logger.warn("askWithClassify follow-ups exhausted", { question });
+    // Final attempt — exhaust before processing a clarification we wouldn't send.
+    if (attempt === followUps) {
+      logger.warn("Follow-ups exhausted", { followUps });
 
       throw new ClassifyFollowUpsExhaustedError(question, followUps);
     }
-
     if (!clarificationMessage) {
+      logger.warn("Classify message missing");
+
       throw new ClassifyMessageMissingError();
     }
 
     history.push({ role: "assistant", content: clarificationMessage });
-
-    logger.debug("askWithClassify sending clarification", { clarificationMessage });
-
+    logger.debug("Clarification", { clarificationMessage });
     responder.sendToUser(clarificationMessage);
   }
 
   // Loop always returns or throws — TS requires this for inference.
-  throw new InternalError("askWithClassify exited loop unexpectedly");
+  throw new InternalError(
+    `Exited loop unexpectedly for "${question}" with followUps=${followUps}`,
+  );
 };

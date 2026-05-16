@@ -8,6 +8,6 @@ export const AskWithClassifyBaseSchema = z.object({
 });
 
 export const ClassifyErroredReasonEnum = z.enum([
-  "classify_output_invalid",
+  "classify_resolved_output_invalid",
   "classify_message_missing",
 ]);

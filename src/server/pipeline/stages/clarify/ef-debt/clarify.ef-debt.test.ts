@@ -139,7 +139,7 @@ describe("collectEfDebt", () => {
     expect(lastMessage).not.toMatch(/unexpected expense/i);
   });
 
-  // EF path covers ClassifyOutputInvalidError (null answer post-convergence triggers
+  // EF path covers ClassifyResolvedOutputInvalidError (null answer post-convergence triggers
   // resolved-schema validation failure). Phase stays non-blocking by design — defaults
   // to safe educational fallback regardless of which classify error fires.
   it("should default to no EF and show EF education when EF classify output is invalid", async () => {
