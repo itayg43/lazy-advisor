@@ -13,6 +13,7 @@ import type {
 } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   askWithClassify,
+  isClassifyError,
   mapClassifyError,
 } from "#pipeline/stages/clarify/shared/clarify.ask";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
@@ -52,12 +53,12 @@ const askRisk = async (responder: Responder): Promise<AskRiskResult> => {
 
     return result;
   } catch (error) {
-    const mapped = mapClassifyError(
-      error,
-      "askRisk",
-      ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
-    );
-    if (mapped) return mapped;
+    if (isClassifyError(error))
+      return mapClassifyError(
+        error,
+        "askRisk",
+        ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
+      );
 
     throw error;
   }

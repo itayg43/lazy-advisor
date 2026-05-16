@@ -53,6 +53,7 @@
   - Literal narrowing: `if (status !== "completed") throw toNotCompletedError(id, status)` — helper param: `Exclude<ResponseStatus, "completed">`
   - Success check: `if (!result.success) throw toSchemaValidationError(id, result.error)`
   - Existence check: `if (usage) logUsage(usage)` — helper param: `ResponseUsage` (not `| undefined`)
+- When a helper's param is a closed union (e.g., `ClassifyError`, narrowed at the call site by an `is*` type-predicate), branch on each member and end the body with `const _exhaustive: never = value` plus a throw. Adding a new union member without a handler fails type-check there. Example: `mapClassifyError` in `clarify.ask.ts`
 
 ## Types
 

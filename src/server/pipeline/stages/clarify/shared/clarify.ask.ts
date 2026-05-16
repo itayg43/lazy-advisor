@@ -64,19 +64,19 @@ export type ClassifyErroredResult = {
 };
 
 // Maps any ClassifyError to its phase-result counterpart and emits the log.
-// Returns null for non-classify errors so the caller can rethrow.
+// Caller gates with isClassifyError; non-classify errors never reach here.
 export const mapClassifyError = <TReason extends ClarifyUnresolvedReason>(
-  error: unknown,
-  label: string,
+  error: ClassifyError,
+  caller: string,
   unresolvedReason: TReason,
-): ClassifyUnresolvedResult<TReason> | ClassifyErroredResult | null => {
+): ClassifyUnresolvedResult<TReason> | ClassifyErroredResult => {
   if (error instanceof ClassifyFollowUpsExhaustedError) {
-    logger.info(`${label} — follow-ups exhausted`);
+    logger.info(`${caller} — follow-ups exhausted`);
 
     return { status: PipelineStatusEnum.enum.unresolved, reason: unresolvedReason };
   }
   if (error instanceof ClassifyOutputInvalidError) {
-    logger.error(`${label} — classify output invalid`, error, { cause: error.cause });
+    logger.error(`${caller} — classify output invalid`, error, { cause: error.cause });
 
     return {
       status: PipelineStatusEnum.enum.errored,
@@ -84,7 +84,7 @@ export const mapClassifyError = <TReason extends ClarifyUnresolvedReason>(
     };
   }
   if (error instanceof ClassifyMessageMissingError) {
-    logger.error(`${label} — classify message missing`, error);
+    logger.error(`${caller} — classify message missing`, error);
 
     return {
       status: PipelineStatusEnum.enum.errored,
@@ -92,7 +92,11 @@ export const mapClassifyError = <TReason extends ClarifyUnresolvedReason>(
     };
   }
 
-  return null;
+  // Compile-time exhaustiveness: adding a new ClassifyError member without a
+  // handler above narrows `error` to a non-never type and fails this assignment.
+  const _exhaustive: never = error;
+
+  throw new InternalError(`Unhandled ClassifyError: ${String(_exhaustive)}`);
 };
 
 export const AskWithClassifyBaseSchema = z.object({
