@@ -81,16 +81,14 @@ export const askWithClassify = async <
       return resolveOutput(output, resolvedSchema);
     }
     // Final attempt — exhaust before processing a clarification we wouldn't send.
-    if (attempt === followUps) {
-      logger.warn("Follow-ups exhausted", { followUps });
-
+    // Consequence: a final attempt with clarificationNeeded=true AND clarificationMessage=null
+    // yields ClassifyFollowUpsExhaustedError, not ClassifyMessageMissingError — the
+    // user-driven outcome takes precedence over the model-bug outcome.
+    // Throw silently: the consumer logs (mapClassifyError or the phase's own
+    // catch-site warn for collapsing phases) own the log line for this error.
+    if (attempt === followUps)
       throw new ClassifyFollowUpsExhaustedError(question, followUps);
-    }
-    if (!clarificationMessage) {
-      logger.warn("Classify message missing");
-
-      throw new ClassifyMessageMissingError();
-    }
+    if (!clarificationMessage) throw new ClassifyMessageMissingError();
 
     history.push({ role: "assistant", content: clarificationMessage });
     logger.debug("Clarification", { clarificationMessage });

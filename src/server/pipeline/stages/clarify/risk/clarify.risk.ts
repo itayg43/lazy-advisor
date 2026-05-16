@@ -53,12 +53,13 @@ const askRisk = async (responder: Responder): Promise<AskRiskResult> => {
 
     return result;
   } catch (error) {
-    if (isClassifyError(error))
+    if (isClassifyError(error)) {
       return mapClassifyError(
         error,
         "askRisk",
         ClarifyUnresolvedReasonEnum.enum.risk_tolerance,
       );
+    }
 
     throw error;
   }

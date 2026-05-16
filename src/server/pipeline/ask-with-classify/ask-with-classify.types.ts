@@ -33,6 +33,10 @@ export type AskWithClassifyParams<
 
 export type ClassifyErroredReason = z.infer<typeof ClassifyErroredReasonEnum>;
 
+// TReason is intentionally unconstrained — constraining it to a consumer-specific
+// enum (e.g., ClarifyUnresolvedReason) would re-couple this module to its consumers.
+// Call-site safety comes from the consumer's typed return arm (e.g., AskAmountResult's
+// `reason: Extract<ClarifyUnresolvedReason, "amount">`): a typo'd reason fails to assign.
 export type ClassifyUnresolvedResult<TReason extends string> = {
   status: Extract<PipelineStatus, "unresolved">;
   reason: TReason;

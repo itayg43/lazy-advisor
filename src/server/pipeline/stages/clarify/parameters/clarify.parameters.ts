@@ -49,12 +49,13 @@ const askAmount = async (responder: Responder): Promise<AskAmountResult> => {
 
     return result;
   } catch (error) {
-    if (isClassifyError(error))
+    if (isClassifyError(error)) {
       return mapClassifyError(
         error,
         "askAmount",
         ClarifyUnresolvedReasonEnum.enum.amount,
       );
+    }
 
     throw error;
   }
@@ -82,12 +83,13 @@ const askTimeline = async (responder: Responder): Promise<AskTimelineResult> => 
 
     return result;
   } catch (error) {
-    if (isClassifyError(error))
+    if (isClassifyError(error)) {
       return mapClassifyError(
         error,
         "askTimeline",
         ClarifyUnresolvedReasonEnum.enum.timeline,
       );
+    }
 
     throw error;
   }
