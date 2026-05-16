@@ -154,10 +154,9 @@ export const askWithClassify = async <
 
   const format = zodTextFormat(schema, "output");
 
-  // Each iteration classifies the user's response and, if clarification is needed,
-  // sends a follow-up and loops. The final attempt is handled separately below
-  // because there is no next turn — we classify but never send after it.
-  for (let attempt = 0; attempt < followUps; attempt++) {
+  const totalAttempts = followUps + 1;
+
+  for (let attempt = 0; attempt < totalAttempts; attempt++) {
     const userResponse = await responder.waitForResponse();
     history.push({ role: "user", content: userResponse });
 
@@ -187,7 +186,17 @@ export const askWithClassify = async <
     if (!clarificationNeeded) {
       logger.info("askWithClassify complete", { attempt, question });
 
-      return validateResolved(output, resolvedSchema);
+      const parsed = resolvedSchema.safeParse(output);
+      if (!parsed.success) throw new ClassifyOutputInvalidError(parsed.error);
+
+      return parsed.data;
+    }
+
+    // No follow-ups left — surface exhaustion instead of validating/sending a message we'd never use.
+    if (attempt === totalAttempts - 1) {
+      logger.warn("askWithClassify follow-ups exhausted", { question });
+
+      throw new ClassifyFollowUpsExhaustedError(question, followUps);
     }
 
     if (!clarificationMessage) {
@@ -201,50 +210,6 @@ export const askWithClassify = async <
     responder.sendToUser(clarificationMessage);
   }
 
-  // Final attempt — classify the last response but do not send a follow-up.
-  const finalResponse = await responder.waitForResponse();
-  history.push({ role: "user", content: finalResponse });
-
-  logger.debug("User response", { userResponse: finalResponse });
-
-  const { id, output, usage } = await callOpenAIParsed(
-    {
-      model,
-      instructions: classifyInstructions,
-      input: history,
-      text: { format },
-      reasoning: { effort },
-    },
-    schema,
-  );
-
-  logger.info("askWithClassify classification", {
-    clarificationNeeded: output.clarificationNeeded,
-    attempt: followUps,
-    responseId: id,
-    question,
-    usage,
-  });
-
-  if (!output.clarificationNeeded) {
-    logger.info("askWithClassify complete", { attempt: followUps, question });
-
-    return validateResolved(output, resolvedSchema);
-  }
-
-  logger.warn("askWithClassify follow-ups exhausted", { question });
-
-  throw new ClassifyFollowUpsExhaustedError(question, followUps);
-};
-
-const validateResolved = <TOutput, TResolved extends TOutput>(
-  output: TOutput,
-  resolvedSchema: z.ZodType<TResolved>,
-): TResolved => {
-  const parsed = resolvedSchema.safeParse(output);
-  if (!parsed.success) {
-    throw new ClassifyOutputInvalidError(parsed.error);
-  }
-
-  return parsed.data;
+  // Loop always returns or throws — TS requires this for inference.
+  throw new InternalError("askWithClassify exited loop unexpectedly");
 };
