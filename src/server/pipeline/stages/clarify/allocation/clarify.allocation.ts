@@ -4,7 +4,10 @@ import {
   ALLOCATION_ANCHOR_DATA,
   MAX_ALLOCATION_TOOL_CALLS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
-import { ALLOCATION_PROMPT } from "#pipeline/stages/clarify/allocation/clarify.allocation.prompts";
+import {
+  ALLOCATION_EXTRACTION_INSTRUCTIONS,
+  ALLOCATION_PROMPT,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.prompts";
 import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationPhaseInput,
@@ -45,15 +48,6 @@ export const pickEquityPercentage = (
 };
 
 const formatShekels = (n: number): string => `₪${n.toLocaleString("en-US")}`;
-
-const ALLOCATION_EXTRACTION_INSTRUCTIONS = `Extract the final agreed allocation from the preceding investment advisor conversation.
-
-- equityPercentage: integer in [0, 100] — the portion of the total portfolio allocated to equity (stocks / stock ETFs), as agreed with the user at the end of the conversation.
-- bufferPercentage: integer in [0, 100] — the portion allocated to the buffer (cash, money-market funds, short-term bonds).
-
-The two integers **must sum to exactly 100**. If the user agreed to 70% stocks, set equityPercentage=70 and bufferPercentage=30.
-
-Extract only the final agreed split — not an intermediate proposal. Use the user's exact number (e.g., 77, not snapped to a round value).`;
 
 export const collectAllocation = async (
   { amount, timeline, riskTolerance, selfRatingScore }: AllocationPhaseInput,

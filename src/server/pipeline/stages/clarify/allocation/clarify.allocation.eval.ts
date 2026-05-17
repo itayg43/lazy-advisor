@@ -75,6 +75,16 @@ describe("collectAllocation", () => {
     }
   };
 
+  // rule 3 (Option-A): counter-proposal confirmation must reference the user's
+  // timeline via compound-impact framing. Loose regex — the LLM phrases this
+  // many ways, but a regression where timeline isn't mentioned at all should fail.
+  const expectCounterTurnReferencesTimeline = (transcript: TranscriptEntry[]) => {
+    const counterTurn = transcript
+      .filter((t) => t.role === "agent")[1]
+      .content.toLowerCase();
+    expect(counterTurn).toMatch(/10\+|long.?(term|run|horizon)/);
+  };
+
   // Narrows an AllocationPhaseResult to its success branch so the rest of the
   // test can assert on the equity/buffer fields directly.
   const expectSuccess = (result: AllocationPhaseResult): AllocationPhaseOutput => {
@@ -153,44 +163,38 @@ describe("collectAllocation", () => {
   });
 
   // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
-  // verifies the LLM uses the precomputed proposal — score 4 (shallow end of
-  // aggressive bucket) lands on min+2 = 82 for the 80–90 cell, not somewhere else.
-  it("should propose 82% equity for aggressive 10+ year with selfRatingScore=4", async () => {
-    const responder = createTrackedResponder(["Sounds good"]);
-    lastTranscript = responder.transcript;
+  // verifies the LLM uses the precomputed proposal exactly across different cells.
+  it.each([
+    {
+      fixture: longHorizonAggressiveInput,
+      score: 4,
+      equity: 82,
+      buffer: 18,
+      label: "aggressive 10+ year",
+    },
+    {
+      fixture: longHorizonConservativeInput,
+      score: 1,
+      equity: 42,
+      buffer: 58,
+      label: "conservative 10+ year",
+    },
+  ])(
+    "should propose $equity% equity for $label with selfRatingScore=$score",
+    async ({ fixture, score, equity, buffer }) => {
+      const responder = createTrackedResponder(["Sounds good"]);
+      lastTranscript = responder.transcript;
 
-    const input: AllocationPhaseInput = {
-      ...longHorizonAggressiveInput,
-      selfRatingScore: 4,
-    };
-    const result = await collectAllocation(input, responder);
-    lastOutput = result;
-    const output = expectSuccess(result);
+      const input: AllocationPhaseInput = { ...fixture, selfRatingScore: score };
+      const result = await collectAllocation(input, responder);
+      lastOutput = result;
+      const output = expectSuccess(result);
 
-    expect(output.equityPercentage).toBe(82);
-    expect(output.bufferPercentage).toBe(18);
-    expectShekelMathConsistent(responder.transcript, input.amount, output);
-  });
-
-  // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
-  // verifies the LLM uses the precomputed proposal — score 1 (deep end of
-  // conservative bucket) lands on min+2 = 42 for the 40–50 cell.
-  it("should propose 42% equity for conservative 10+ year with selfRatingScore=1", async () => {
-    const responder = createTrackedResponder(["Sounds good"]);
-    lastTranscript = responder.transcript;
-
-    const input: AllocationPhaseInput = {
-      ...longHorizonConservativeInput,
-      selfRatingScore: 1,
-    };
-    const result = await collectAllocation(input, responder);
-    lastOutput = result;
-    const output = expectSuccess(result);
-
-    expect(output.equityPercentage).toBe(42);
-    expect(output.bufferPercentage).toBe(58);
-    expectShekelMathConsistent(responder.transcript, input.amount, output);
-  });
+      expect(output.equityPercentage).toBe(equity);
+      expect(output.bufferPercentage).toBe(buffer);
+      expectShekelMathConsistent(responder.transcript, input.amount, output);
+    },
+  );
 
   // clarify.allocation.rules.md rule 1: conservative 3–5yr lands in the 10–20% cell
   it("should land in the 10–20% cell for conservative risk + 3–5 year timeline", async () => {
@@ -227,6 +231,7 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+    expectCounterTurnReferencesTimeline(responder.transcript);
   });
 
   // clarify.allocation.rules.md rule 3: mid-size counter-proposal still honored (not extreme for profile)
@@ -245,9 +250,10 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+    expectCounterTurnReferencesTimeline(responder.transcript);
   });
 
-  // clarify.allocation.rules.md rule 3 exception: conservative user asks for 100% → sanity check fires, accept
+  // clarify.allocation.rules.md rule 3 Branch 1 too-high: conservative user asks for 100% → sanity check fires with drawdown framing, accept
   it("should surface a sanity check when a conservative user asks for 100% stocks", async () => {
     const responder = createTrackedResponder([
       "Actually I want 100% stocks",
@@ -265,6 +271,16 @@ describe("collectAllocation", () => {
     expect(
       responder.transcript.filter((t) => t.role === "agent").length,
     ).toBeGreaterThanOrEqual(2);
+    // regression guard for Rule 3 Branch 1 (too-high direction): sanity check must use
+    // concrete drawdown framing (e.g., "30–50% disappear in a bad year") — the whole
+    // point of the too-high sanity check is to convey seriousness via specific numbers.
+    // Symmetric to Test 9's negative guard for the too-low direction.
+    const sanityTurn = responder.transcript
+      .filter((t) => t.role === "agent")[1]
+      .content.toLowerCase();
+    expect(sanityTurn).toMatch(
+      /\d+(?:\s*[-–]\s*\d+)?\s*%[^.]{0,40}(?:decline|drop|disappear|drawdown|fall|loss|lose|bear)/,
+    );
     expectShekelMathConsistent(
       responder.transcript,
       longHorizonConservativeInput.amount,
@@ -272,7 +288,7 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md rule 3 exception: aggressive 10+ yr user asks for 0% equity → sanity check fires, accept
+  // clarify.allocation.rules.md rule 3 Branch 1 too-low: aggressive 10+ yr user asks for 0% equity → sanity check fires with opportunity-cost framing (no drawdown %), accept
   it("should surface a sanity check when a long-horizon aggressive user asks for 0% equity", async () => {
     const responder = createTrackedResponder(["I want 0% stocks", "Yes, I'm sure"]);
     lastTranscript = responder.transcript;
@@ -286,6 +302,46 @@ describe("collectAllocation", () => {
     expect(
       responder.transcript.filter((t) => t.role === "agent").length,
     ).toBeGreaterThanOrEqual(2);
+    // regression guard for Rule 3 exception (too-low direction): sanity check should use
+    // opportunity-cost framing, not drawdown percentages. Drawdown framing belongs to the
+    // too-high direction (Test 8). Cell-range mentions like "80–90% equity" stay allowed —
+    // what's forbidden is a percentage paired with loss/drop/decline wording.
+    const sanityTurn = responder.transcript
+      .filter((t) => t.role === "agent")[1]
+      .content.toLowerCase();
+    expect(sanityTurn).not.toMatch(
+      /\d+(?:\s*[-–]\s*\d+)?\s*%[^.]{0,40}(?:decline|drop|disappear|drawdown|fall|loss|lose|bear)/,
+    );
+    expectShekelMathConsistent(
+      responder.transcript,
+      longHorizonAggressiveInput.amount,
+      output,
+    );
+  });
+
+  // clarify.allocation.rules.md rule 3 Branch 3 (repeated counter-proposals):
+  // compound-impact framing lands once per conversation. The first counter
+  // confirmation must reference the user's timeline (Branch 2); the second
+  // counter confirmation must omit the framing and just confirm the new split
+  // (Branch 3). Tight regex on "over your … (year|horizon|timeline)" — looser
+  // matches like "long-run growth" appear in many turns as filler and would
+  // over-trigger.
+  it("should omit compound-impact framing on a repeated counter-proposal", async () => {
+    const responder = createTrackedResponder(["Make it 60%", "Actually 55%", "Yes"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBe(55);
+    expect(output.bufferPercentage).toBe(45);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const compoundImpactPattern = /over your[^.]{0,40}(?:year|horizon|timeline)/i;
+    expect(agentTurns[1].content).toMatch(compoundImpactPattern);
+    expect(agentTurns[2].content).not.toMatch(compoundImpactPattern);
+
     expectShekelMathConsistent(
       responder.transcript,
       longHorizonAggressiveInput.amount,
@@ -390,6 +446,15 @@ describe("collectAllocation", () => {
     expect(
       responder.transcript.filter((t) => t.role === "agent").length,
     ).toBeGreaterThanOrEqual(3);
+    // rule 3 Branch 2 (or borderline Branch 1) on the counter turn (index [2] —
+    // [0]=initial proposal, [1]=clarifying answer + re-ask). The counter must
+    // engage with the user's timeline; a bare confirmation with no framing is
+    // a regression. Loose regex matches both Branch 2's "over your X horizon"
+    // and Branch 1 too-low's "long-run growth … over many years" patterns.
+    const counterTurn = responder.transcript
+      .filter((t) => t.role === "agent")[2]
+      .content.toLowerCase();
+    expect(counterTurn).toMatch(/10\+|long.?(term|run|horizon)/);
     expectShekelMathConsistent(
       responder.transcript,
       longHorizonAggressiveInput.amount,
@@ -397,10 +462,10 @@ describe("collectAllocation", () => {
     );
   });
 
-  // T3.9: PhaseBudgetExhaustedError → { status: "failure", reason: "split_unresolved" }.
-  // A chain of counter-proposals forces one confirmation tool call each; once toolCallCount
-  // exceeds MAX_ALLOCATION_TOOL_CALLS (5) the phase loop throws and collectAllocation
-  // returns the failure variant.
+  // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals forces
+  // one confirmation tool call each; once tool calls exceed MAX_ALLOCATION_TOOL_CALLS (5),
+  // runPhaseLoop throws PhaseLoopToolCallsExhaustedError and collectAllocation returns
+  // { status: "unresolved", reason: "allocation" }.
   it("should return failure when the user keeps counter-proposing past the tool-call budget", async () => {
     const responder = createTrackedResponder([
       "Actually I want 60% stocks",
