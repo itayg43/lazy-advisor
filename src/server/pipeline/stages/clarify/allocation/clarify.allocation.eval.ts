@@ -12,6 +12,7 @@ import type {
   AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
@@ -25,28 +26,28 @@ describe("collectAllocation", () => {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
     riskTolerance: aggressive,
-    selfRatingScore: 5,
+    riskSelfRatingScore: 5,
   };
 
   const midHorizonModerateInput: AllocationPhaseInput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
     riskTolerance: moderate,
-    selfRatingScore: 3,
+    riskSelfRatingScore: 3,
   };
 
   const longHorizonConservativeInput: AllocationPhaseInput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
     riskTolerance: conservative,
-    selfRatingScore: 2,
+    riskSelfRatingScore: 2,
   };
 
   const shortMidHorizonConservativeInput: AllocationPhaseInput = {
     amount: 30_000,
     timeline: TimelineBucketEnum.enum["3–5 years"],
     riskTolerance: conservative,
-    selfRatingScore: 2,
+    riskSelfRatingScore: 2,
   };
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
@@ -164,7 +165,13 @@ describe("collectAllocation", () => {
 
   // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
   // verifies the LLM uses the precomputed proposal exactly across different cells.
-  it.each([
+  it.each<{
+    fixture: AllocationPhaseInput;
+    score: RiskSelfRatingScore;
+    equity: number;
+    buffer: number;
+    label: string;
+  }>([
     {
       fixture: longHorizonAggressiveInput,
       score: 4,
@@ -180,12 +187,12 @@ describe("collectAllocation", () => {
       label: "conservative 10+ year",
     },
   ])(
-    "should propose $equity% equity for $label with selfRatingScore=$score",
+    "should propose $equity% equity for $label with riskSelfRatingScore=$score",
     async ({ fixture, score, equity, buffer }) => {
       const responder = createTrackedResponder(["Sounds good"]);
       lastTranscript = responder.transcript;
 
-      const input: AllocationPhaseInput = { ...fixture, selfRatingScore: score };
+      const input: AllocationPhaseInput = { ...fixture, riskSelfRatingScore: score };
       const result = await collectAllocation(input, responder);
       lastOutput = result;
       const output = expectSuccess(result);

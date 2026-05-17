@@ -64,7 +64,7 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 
 ## Trade-offs
 
-1. **3-bucket willingness input.** Industry norm is 7–9 anchors. A `selfRatingScore=5` and a `selfRatingScore=4` both map to `aggressive` with the same anchor. `selfRatingScore` is available to refine without changing Phase 4 if evals show discrimination problems.
+1. **3-bucket willingness input.** Industry norm is 7–9 anchors. A `riskSelfRatingScore=5` and a `riskSelfRatingScore=4` both map to `aggressive` with the same anchor. `riskSelfRatingScore` is available to refine without changing Phase 4 if evals show discrimination problems.
 2. **Point-estimate, not distribution.** Single integer (e.g., 70%), not a range. Acceptable for a behavioral anchor; not appropriate as portfolio-optimization output.
 3. **No composure probe.** A well-sized user may still panic-sell if risk perception changes during a drawdown. Rules file frames sizing as reducing — not preventing — panic-selling.
 4. **No household balance sheet.** We have `amount`, `age`, `timeline`, `hasEmergencyFund`, `hasDebt`. No income, other assets, liquidity needs beyond EF, or spouse's situation.
@@ -75,6 +75,6 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 
 - **Five-factor anchor.** Age redundant with timeline; EF/debt not treated as continuous inputs anywhere in the literature.
 - **Continuous formula for equity%.** Harder to prompt and eval; invites false-precision critiques.
-- **Finer-grained table (7–9 anchors).** Requires richer willingness input than Phase 4's 3-bucket output. Deferred — can be refined using `selfRatingScore` if evals show the need.
+- **Finer-grained table (7–9 anchors).** Requires richer willingness input than Phase 4's 3-bucket output. Deferred — can be refined using `riskSelfRatingScore` if evals show the need.
 - **Hard block on pre-stated splits.** Inconsistent with "user has final say" philosophy.
 - **Composure probe.** No primary-source evidence that a short-form composure probe works for beginners.

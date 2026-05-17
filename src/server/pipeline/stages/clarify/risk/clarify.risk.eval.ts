@@ -61,7 +61,7 @@ describe("collectRisk", () => {
       lastOutput = output;
       if (output.status !== "completed") return;
 
-      expect(output.selfRatingScore).toBe(expectedScore);
+      expect(output.riskSelfRatingScore).toBe(expectedScore);
       expect(output.riskTolerance).toBe(expectedBucket);
       expectNoNeutralityViolation(responder.transcript);
     },
@@ -76,7 +76,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskSelfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
     expectNoNeutralityViolation(responder.transcript);
@@ -91,7 +91,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(4);
+    expect(output.riskSelfRatingScore).toBe(4);
     expect(output.riskTolerance).toBe(aggressive);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
@@ -108,7 +108,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskSelfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
@@ -125,7 +125,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(4);
+    expect(output.riskSelfRatingScore).toBe(4);
     expect(output.riskTolerance).toBe(aggressive);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
@@ -144,7 +144,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(1);
+    expect(output.riskSelfRatingScore).toBe(1);
     expect(output.riskTolerance).toBe(conservative);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
@@ -162,7 +162,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskSelfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
@@ -176,7 +176,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskSelfRatingScore).toBe(2);
     expect(output.riskTolerance).toBe(conservative);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
@@ -196,7 +196,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(3);
+    expect(output.riskSelfRatingScore).toBe(3);
     expect(output.riskTolerance).toBe(moderate);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
@@ -221,7 +221,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.selfRatingScore).toBe(2);
+    expect(output.riskSelfRatingScore).toBe(2);
     expect(output.riskTolerance).toBe(conservative);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });

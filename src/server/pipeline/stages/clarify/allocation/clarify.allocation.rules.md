@@ -12,7 +12,7 @@ This phase does **not** pick instruments. Ticker selection belongs to T5 (equity
 | `moderate`             | 20–30%    | 50–60%     | 60–70%    |
 | `aggressive`           | 30–40%    | 60–70%     | 80–90%    |
 
-All cells are **ranges**, not points. The specific equity percentage inside a cell is **precomputed in code** based on the user's `selfRatingScore` (see Rule 1 → Within-bucket discrimination). Buffer percentage is always `100 - equity`.
+All cells are **ranges**, not points. The specific equity percentage inside a cell is **precomputed in code** based on the user's `riskSelfRatingScore` (see Rule 1 → Within-bucket discrimination). Buffer percentage is always `100 - equity`.
 
 Users with an `under 3 years` timeline never reach this phase — the orchestrator exits early after parameters collection and redirects them to a money market fund. This phase only receives timelines of `3–5 years`, `5–10 years`, or `10+ years`.
 
@@ -22,7 +22,7 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 
 - **Point-estimate, not distribution.** Output is a single integer (e.g., 70), not a range. Acceptable for a behavioral anchor; not acceptable as portfolio-optimization output.
 - **"Sizing tends to reduce panic-selling" — directional, not absolute.** Use "tends to reduce"; never "prevents" or "eliminates". Aligned with Kitces's composure-vs-tolerance distinction.
-- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. Our 3-bucket output from the risk phase compresses into a 3×4 table, with `RiskPhaseOutput.selfRatingScore` providing within-bucket discrimination so each score lands at a distinct point inside its cell (see Rule 1).
+- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. Our 3-bucket output from the risk phase compresses into a 3×4 table, with `RiskPhaseOutput.riskSelfRatingScore` providing within-bucket discrimination so each score lands at a distinct point inside its cell (see Rule 1).
 
 ---
 
@@ -37,13 +37,13 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 
 ### Within-bucket discrimination
 
-The equity percentage inside a cell is selected by `pickEquityPercentage(cell, selfRatingScore)`:
+The equity percentage inside a cell is selected by `pickEquityPercentage(cell, riskSelfRatingScore)`:
 
-| `selfRatingScore` | Position in cell | Formula                     |
-| ----------------- | ---------------- | --------------------------- |
-| 1, 4              | Low end          | `cell.min + 2`              |
-| 2, 5              | High end         | `cell.max - 2`              |
-| 3                 | Midpoint         | `(cell.min + cell.max) / 2` |
+| `riskSelfRatingScore` | Position in cell | Formula                     |
+| --------------------- | ---------------- | --------------------------- |
+| 1, 4                  | Low end          | `cell.min + 2`              |
+| 2, 5                  | High end         | `cell.max - 2`              |
+| 3                     | Midpoint         | `(cell.min + cell.max) / 2` |
 
 The +2/-2 insets keep proposals off cell boundaries. Score 3 hits the midpoint because it's the only score in the moderate risk-tolerance bucket — no within-bucket discrimination is needed.
 
