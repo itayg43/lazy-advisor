@@ -8,10 +8,11 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import type {
+  AllocationPhaseInput,
   AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
+import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
@@ -19,24 +20,34 @@ const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url)
 const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 describe("collectAllocation", () => {
-  const longHorizonAggressiveParameters: ParametersPhaseOutput = {
+  // Default scores hit the deep end of each bucket; within-bucket discrimination
+  // cases below override the score to verify the LLM honors the precomputed value.
+  const longHorizonAggressiveInput: AllocationPhaseInput = {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
+    riskTolerance: aggressive,
+    riskSelfRatingScore: 5,
   };
 
-  const midHorizonModerateParameters: ParametersPhaseOutput = {
+  const midHorizonModerateInput: AllocationPhaseInput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
+    riskTolerance: moderate,
+    riskSelfRatingScore: 3,
   };
 
-  const longHorizonConservativeParameters: ParametersPhaseOutput = {
+  const longHorizonConservativeInput: AllocationPhaseInput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
+    riskTolerance: conservative,
+    riskSelfRatingScore: 2,
   };
 
-  const shortMidHorizonConservativeParameters: ParametersPhaseOutput = {
+  const shortMidHorizonConservativeInput: AllocationPhaseInput = {
     amount: 30_000,
     timeline: TimelineBucketEnum.enum["3–5 years"],
+    riskTolerance: conservative,
+    riskSelfRatingScore: 2,
   };
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
@@ -63,6 +74,16 @@ describe("collectAllocation", () => {
     if (output.bufferPercentage > 0) {
       expect(agentText).toContain(`₪${expectedBufferShekels.toLocaleString("en-US")}`);
     }
+  };
+
+  // rule 3 (Option-A): counter-proposal confirmation must reference the user's
+  // timeline via compound-impact framing. Loose regex — the LLM phrases this
+  // many ways, but a regression where timeline isn't mentioned at all should fail.
+  const expectCounterTurnReferencesTimeline = (transcript: TranscriptEntry[]) => {
+    const counterTurn = transcript
+      .filter((t) => t.role === "agent")[1]
+      .content.toLowerCase();
+    expect(counterTurn).toMatch(/10\+|long.?(term|run|horizon)/);
   };
 
   // Narrows an AllocationPhaseResult to its success branch so the rest of the
@@ -98,12 +119,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Sounds good"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -114,7 +130,7 @@ describe("collectAllocation", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
 
@@ -133,12 +149,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      midHorizonModerateParameters.amount,
-      midHorizonModerateParameters.timeline,
-      moderate,
-      responder,
-    );
+    const result = await collectAllocation(midHorizonModerateInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -147,22 +158,57 @@ describe("collectAllocation", () => {
     expect(output.equityPercentage + output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
-      midHorizonModerateParameters.amount,
+      midHorizonModerateInput.amount,
       output,
     );
   });
+
+  // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
+  // verifies the LLM uses the precomputed proposal exactly across different cells.
+  it.each<{
+    fixture: AllocationPhaseInput;
+    score: RiskSelfRatingScore;
+    equity: number;
+    buffer: number;
+    label: string;
+  }>([
+    {
+      fixture: longHorizonAggressiveInput,
+      score: 4,
+      equity: 82,
+      buffer: 18,
+      label: "aggressive 10+ year",
+    },
+    {
+      fixture: longHorizonConservativeInput,
+      score: 1,
+      equity: 42,
+      buffer: 58,
+      label: "conservative 10+ year",
+    },
+  ])(
+    "should propose $equity% equity for $label with riskSelfRatingScore=$score",
+    async ({ fixture, score, equity, buffer }) => {
+      const responder = createTrackedResponder(["Sounds good"]);
+      lastTranscript = responder.transcript;
+
+      const input: AllocationPhaseInput = { ...fixture, riskSelfRatingScore: score };
+      const result = await collectAllocation(input, responder);
+      lastOutput = result;
+      const output = expectSuccess(result);
+
+      expect(output.equityPercentage).toBe(equity);
+      expect(output.bufferPercentage).toBe(buffer);
+      expectShekelMathConsistent(responder.transcript, input.amount, output);
+    },
+  );
 
   // clarify.allocation.rules.md rule 1: conservative 3–5yr lands in the 10–20% cell
   it("should land in the 10–20% cell for conservative risk + 3–5 year timeline", async () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      shortMidHorizonConservativeParameters.amount,
-      shortMidHorizonConservativeParameters.timeline,
-      conservative,
-      responder,
-    );
+    const result = await collectAllocation(shortMidHorizonConservativeInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -171,7 +217,7 @@ describe("collectAllocation", () => {
     expect(output.equityPercentage + output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
-      shortMidHorizonConservativeParameters.amount,
+      shortMidHorizonConservativeInput.amount,
       output,
     );
   });
@@ -181,12 +227,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["77%", "yes"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -194,9 +235,10 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(23);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
+    expectCounterTurnReferencesTimeline(responder.transcript);
   });
 
   // clarify.allocation.rules.md rule 3: mid-size counter-proposal still honored (not extreme for profile)
@@ -204,12 +246,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Let's do 50/50", "yes"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -217,12 +254,13 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(50);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
+    expectCounterTurnReferencesTimeline(responder.transcript);
   });
 
-  // clarify.allocation.rules.md rule 3 exception: conservative user asks for 100% → sanity check fires, accept
+  // clarify.allocation.rules.md rule 3 Branch 1 too-high: conservative user asks for 100% → sanity check fires with drawdown framing, accept
   it("should surface a sanity check when a conservative user asks for 100% stocks", async () => {
     const responder = createTrackedResponder([
       "Actually I want 100% stocks",
@@ -230,12 +268,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonConservativeParameters.amount,
-      longHorizonConservativeParameters.timeline,
-      conservative,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonConservativeInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -245,24 +278,29 @@ describe("collectAllocation", () => {
     expect(
       responder.transcript.filter((t) => t.role === "agent").length,
     ).toBeGreaterThanOrEqual(2);
+    // regression guard for Rule 3 Branch 1 (too-high direction): sanity check must use
+    // concrete drawdown framing (e.g., "30–50% disappear in a bad year") — the whole
+    // point of the too-high sanity check is to convey seriousness via specific numbers.
+    // Symmetric to Test 9's negative guard for the too-low direction.
+    const sanityTurn = responder.transcript
+      .filter((t) => t.role === "agent")[1]
+      .content.toLowerCase();
+    expect(sanityTurn).toMatch(
+      /\d+(?:\s*[-–]\s*\d+)?\s*%[^.]{0,40}(?:decline|drop|disappear|drawdown|fall|loss|lose|bear)/,
+    );
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonConservativeParameters.amount,
+      longHorizonConservativeInput.amount,
       output,
     );
   });
 
-  // clarify.allocation.rules.md rule 3 exception: aggressive 10+ yr user asks for 0% equity → sanity check fires, accept
+  // clarify.allocation.rules.md rule 3 Branch 1 too-low: aggressive 10+ yr user asks for 0% equity → sanity check fires with opportunity-cost framing (no drawdown %), accept
   it("should surface a sanity check when a long-horizon aggressive user asks for 0% equity", async () => {
     const responder = createTrackedResponder(["I want 0% stocks", "Yes, I'm sure"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -271,9 +309,49 @@ describe("collectAllocation", () => {
     expect(
       responder.transcript.filter((t) => t.role === "agent").length,
     ).toBeGreaterThanOrEqual(2);
+    // regression guard for Rule 3 exception (too-low direction): sanity check should use
+    // opportunity-cost framing, not drawdown percentages. Drawdown framing belongs to the
+    // too-high direction (Test 8). Cell-range mentions like "80–90% equity" stay allowed —
+    // what's forbidden is a percentage paired with loss/drop/decline wording.
+    const sanityTurn = responder.transcript
+      .filter((t) => t.role === "agent")[1]
+      .content.toLowerCase();
+    expect(sanityTurn).not.toMatch(
+      /\d+(?:\s*[-–]\s*\d+)?\s*%[^.]{0,40}(?:decline|drop|disappear|drawdown|fall|loss|lose|bear)/,
+    );
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
+      output,
+    );
+  });
+
+  // clarify.allocation.rules.md rule 3 Branch 3 (repeated counter-proposals):
+  // compound-impact framing lands once per conversation. The first counter
+  // confirmation must reference the user's timeline (Branch 2); the second
+  // counter confirmation must omit the framing and just confirm the new split
+  // (Branch 3). Tight regex on "over your … (year|horizon|timeline)" — looser
+  // matches like "long-run growth" appear in many turns as filler and would
+  // over-trigger.
+  it("should omit compound-impact framing on a repeated counter-proposal", async () => {
+    const responder = createTrackedResponder(["Make it 60%", "Actually 55%", "Yes"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBe(55);
+    expect(output.bufferPercentage).toBe(45);
+
+    const agentTurns = responder.transcript.filter((t) => t.role === "agent");
+    const compoundImpactPattern = /over your[^.]{0,40}(?:year|horizon|timeline)/i;
+    expect(agentTurns[1].content).toMatch(compoundImpactPattern);
+    expect(agentTurns[2].content).not.toMatch(compoundImpactPattern);
+
+    expectShekelMathConsistent(
+      responder.transcript,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -283,12 +361,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["What's a buffer?", "Got it, sounds good"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -300,7 +373,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -313,12 +386,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -339,7 +407,7 @@ describe("collectAllocation", () => {
     expect(agentText).not.toContain("moderate");
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -349,12 +417,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Which ETF should I buy?", "Sounds good"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -366,7 +429,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -380,12 +443,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -395,17 +453,26 @@ describe("collectAllocation", () => {
     expect(
       responder.transcript.filter((t) => t.role === "agent").length,
     ).toBeGreaterThanOrEqual(3);
+    // rule 3 Branch 2 (or borderline Branch 1) on the counter turn (index [2] —
+    // [0]=initial proposal, [1]=clarifying answer + re-ask). The counter must
+    // engage with the user's timeline; a bare confirmation with no framing is
+    // a regression. Loose regex matches both Branch 2's "over your X horizon"
+    // and Branch 1 too-low's "long-run growth … over many years" patterns.
+    const counterTurn = responder.transcript
+      .filter((t) => t.role === "agent")[2]
+      .content.toLowerCase();
+    expect(counterTurn).toMatch(/10\+|long.?(term|run|horizon)/);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
 
-  // T3.9: PhaseBudgetExhaustedError → { status: "failure", reason: "split_unresolved" }.
-  // A chain of counter-proposals forces one confirmation tool call each; once toolCallCount
-  // exceeds MAX_ALLOCATION_TOOL_CALLS (5) the phase loop throws and collectAllocation
-  // returns the failure variant.
+  // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals forces
+  // one confirmation tool call each; once tool calls exceed MAX_ALLOCATION_TOOL_CALLS (5),
+  // runPhaseLoop throws PhaseLoopToolCallsExhaustedError and collectAllocation returns
+  // { status: "unresolved", reason: "allocation" }.
   it("should return failure when the user keeps counter-proposing past the tool-call budget", async () => {
     const responder = createTrackedResponder([
       "Actually I want 60% stocks",
@@ -418,12 +485,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
 
     expect(result.status).toBe("unresolved");

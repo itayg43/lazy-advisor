@@ -14,7 +14,7 @@ Phase 4 uses a **single 1–5 self-rating** to measure risk willingness. Determi
 ```ts
 type RiskPhaseOutput = {
   riskTolerance: 'conservative' | 'moderate' | 'aggressive';
-  selfRatingScore: 1 | 2 | 3 | 4 | 5; // preserved for Phase 4b calibration
+  riskSelfRatingScore: 1 | 2 | 3 | 4 | 5; // preserved for Phase 4b calibration
 };
 ```
 
@@ -50,7 +50,7 @@ The 2025 Dalbar QAIB gap was 0.72% (vs. materially larger historical gaps). "Peo
 
 1. **Still self-report, not past behavior.** Gold standard is behavioral observation; unavailable for true beginners. We're accepting the best available self-report format.
 2. **No visceral scenario reflection.** Some users benefit pedagogically from "what would a 20% drop feel like?" The research says it doesn't improve predictive validity — but it's an educational loss worth naming.
-3. **3-bucket floor flattens users.** A user at 5 and a user at 4 both map to `aggressive` with the same anchor. If evals surface discrimination problems, `selfRatingScore` is available to refine the mapping without changing Phase 4.
+3. **3-bucket floor flattens users.** A user at 5 and a user at 4 both map to `aggressive` with the same anchor. If evals surface discrimination problems, `riskSelfRatingScore` is available to refine the mapping without changing Phase 4.
 4. **Anchor wording matters.** A 1–5 scale is only as good as its behavioral anchors. No priming language ("most beginners pick 3"), no social-desirability cues.
 
 ## Rejected: Pension Past-Behavior Probe

@@ -8,16 +8,17 @@
 Phase 4b uses a **two-axis anchor table: risk tolerance × timeline**.
 
 | Willingness \ Timeline | 3–5 yr | 5–10 yr | 10+ yr |
-|---|---|---|---|
-| Conservative | 10–20% | 30–40% | 40–50% |
-| Moderate | 20–30% | 50–60% | 60–70% |
-| Aggressive | 30–40% | 60–70% | 80–90% |
+| ---------------------- | ------ | ------- | ------ |
+| Conservative           | 10–20% | 30–40%  | 40–50% |
+| Moderate               | 20–30% | 50–60%  | 60–70% |
+| Aggressive             | 30–40% | 60–70%  | 80–90% |
 
 Key rules:
+
 - **Short-horizon exit:** Users with <3yr timeline never reach this phase. The orchestrator exits after parameters collection and redirects them to a money market fund — risk tolerance is not a meaningful dial below ~3 years, and proposing an ETF allocation for money needed soon would be a disservice.
 - **EF and debt are suitability gates, not anchor inputs.** If the user lacks an EF or carries high-interest debt, the agent surfaces the concern and asks how they want to proceed — the anchor percentage does not shift.
 - **Pre-stated split:** accept by default. Exception: if the split is extreme relative to capacity (e.g., 100% equity with <3yr horizon, or 0% equity with 20+yr horizon + aggressive risk), surface the mismatch in one turn, then accept the user's final answer.
-- **Behavioral framing:** "sizing to tolerance *tends to* reduce panic-selling" — not "prevents".
+- **Behavioral framing:** "sizing to tolerance _tends to_ reduce panic-selling" — not "prevents".
 
 Replaces a five-factor anchor (risk + timeline + age + EF + debt) from the original `PHASE_4B_PLAN.md`.
 
@@ -30,15 +31,17 @@ Kitces explicitly advocates separating risk tolerance from risk capacity and com
 Vanguard LifeStrategy (4 funds), iShares Core Allocation ETFs (4), Fidelity Asset Manager (7-fund ladder), Vanguard questionnaire (9 portfolios). Our 3-bucket table is a conscious behavioral simplification relative to industry practice.
 
 **3. "Sizing reduces panic-selling" is directional, not causal — [verified]**
-Dalbar QAIB is correlational, not a controlled study. Kitces argues panic-selling stems from *risk composure* instability (risk perception changing during drawdowns), not miscalibrated tolerance — even the mechanism is contested.
+Dalbar QAIB is correlational, not a controlled study. Kitces argues panic-selling stems from _risk composure_ instability (risk perception changing during drawdowns), not miscalibrated tolerance — even the mechanism is contested.
 
 **4. Timeline dominates; age is a proxy; EF/debt are gates — [verified] (LOAD-BEARING)**
+
 - TDF glidepaths are functions of years-to-retirement, not age. Age is just a proxy for timeline.
 - EF is treated by Vanguard and Bogleheads as a prerequisite before investing, not a continuous allocation input.
 - High-interest debt is treated by Bogleheads as a top-priority payoff before taxable investing.
 - No primary source treats EF or debt as continuous anchor inputs to the equity/bond split.
 
 **5. Short-horizon anchors are much tighter than intuition suggests — [verified, corrected from pass 1]**
+
 - <1yr: 0% equity — cash, MMF, high-yield savings.
 - 1–3yr: dominated by short-term bonds/CDs; at most a token equity slice.
 - 3–5yr: 20–40% equity, graded by tolerance.
@@ -52,16 +55,16 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 
 ## Why 2-Axis Replaced the 5-Factor Design
 
-| Issue with 5-factor spec | How 2-axis resolves it |
-|---|---|
-| Age redundant with timeline | Dropped — TDF glidepaths use years-to-retirement, not age |
-| EF/debt treated as continuous anchor inputs | Moved to conversational suitability qualifiers |
-| Short-horizon at 20–60% equity | Orchestrator exits early for <3yr; phase never sees this timeline |
-| 5-factor interaction hard to prompt/eval | 3×4 table maps 1:1 to eval cases |
+| Issue with 5-factor spec                    | How 2-axis resolves it                                            |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| Age redundant with timeline                 | Dropped — TDF glidepaths use years-to-retirement, not age         |
+| EF/debt treated as continuous anchor inputs | Moved to conversational suitability qualifiers                    |
+| Short-horizon at 20–60% equity              | Orchestrator exits early for <3yr; phase never sees this timeline |
+| 5-factor interaction hard to prompt/eval    | 3×4 table maps 1:1 to eval cases                                  |
 
 ## Trade-offs
 
-1. **3-bucket willingness input.** Industry norm is 7–9 anchors. A `selfRatingScore=5` and a `selfRatingScore=4` both map to `aggressive` with the same anchor. `selfRatingScore` is available to refine without changing Phase 4 if evals show discrimination problems.
+1. **3-bucket willingness input.** Industry norm is 7–9 anchors. A `riskSelfRatingScore=5` and a `riskSelfRatingScore=4` both map to `aggressive` with the same anchor. `riskSelfRatingScore` is available to refine without changing Phase 4 if evals show discrimination problems.
 2. **Point-estimate, not distribution.** Single integer (e.g., 70%), not a range. Acceptable for a behavioral anchor; not appropriate as portfolio-optimization output.
 3. **No composure probe.** A well-sized user may still panic-sell if risk perception changes during a drawdown. Rules file frames sizing as reducing — not preventing — panic-selling.
 4. **No household balance sheet.** We have `amount`, `age`, `timeline`, `hasEmergencyFund`, `hasDebt`. No income, other assets, liquidity needs beyond EF, or spouse's situation.
@@ -72,6 +75,6 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 
 - **Five-factor anchor.** Age redundant with timeline; EF/debt not treated as continuous inputs anywhere in the literature.
 - **Continuous formula for equity%.** Harder to prompt and eval; invites false-precision critiques.
-- **Finer-grained table (7–9 anchors).** Requires richer willingness input than Phase 4's 3-bucket output. Deferred — can be refined using `selfRatingScore` if evals show the need.
+- **Finer-grained table (7–9 anchors).** Requires richer willingness input than Phase 4's 3-bucket output. Deferred — can be refined using `riskSelfRatingScore` if evals show the need.
 - **Hard block on pre-stated splits.** Inconsistent with "user has final say" philosophy.
 - **Composure probe.** No primary-source evidence that a short-form composure probe works for beginners.

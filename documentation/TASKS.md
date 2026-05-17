@@ -1,16 +1,49 @@
 # Tasks
 
-**Current task:** T5
-**Next task:** T6
+**Current task:** T4
+**Next task:** T5
 
 ## Task Queue
 
 | # | Task |
 |---|------|
+| T4 | Allocation refactor — move state from prompt to code |
 | T5 | Equity |
 | T6 | Buffer |
 
 ## Task Notes
+
+### T4 — Allocation refactor: move state from prompt to code
+
+Move the allocation phase's branching state-tracking (1st vs Nth counter, 40-pp extreme threshold, framing-delivery flag) from the LLM prompt to deterministic code. Current implementation uses a single `runPhaseLoop` with one large prompt; the model handles the state-tracking unreliably at `effort: "low"`, producing CX inconsistencies (Branch 1 firing on non-extreme counters, framing repeating on subsequent counters, drawdown numbers omitted, etc.).
+
+#### Why
+
+After the prompt restructure in `refactor/allocation-precomputed-proposal` (Rule 3 decision tree, Branches 1/2/3, restored CX wins on Tests 8/9/14), residual inconsistencies all trace to the same root: the model is being asked to track state it can't reliably hold at low effort. Bumping effort to medium would help but is paying compute to compensate for a structural issue. The right fix is code-owned state.
+
+Aligned with notebook guidance from Research-Plan-Implement: "use control flow for control flow"; classifier-as-router pattern; micro-prompts per branch; vertical-slice refactoring.
+
+#### Methodology — Research → Design → Vertical slices
+
+Per Research-Plan-Implement notebook:
+
+1. **Research first (no opinions, no refactor framing).** Spawn an Explore agent to map current code mechanics — how `runPhaseLoop` works, how `askWithClassify` is structured (schemas, classify-then-act pattern, error model), how the allocation phase wires together today. **Do NOT brief the agent on the refactor goal** — biased research produces biased plans. Output: objective facts about current implementation.
+2. **Discuss the research findings together** before any design is committed. Specifically assess whether `askWithClassify` can be adapted/reused as-is, extended, or whether allocation needs a different shape.
+3. **Design discussion artifact** — produced jointly after research review. Maps intent buckets, per-branch flow, state structure, error/budget handling. Reviewed before code lands.
+4. **Vertical slices** — implement and ship one branch end-to-end at a time, not layer-by-layer. Slice order decided during design discussion. Eval after each slice; don't move to next until current passes.
+
+#### Sequencing
+
+Starts **after** the current `refactor/allocation-precomputed-proposal` branch (decision-tree restructure + alignment fixes + new positive guards on Tests 8 and 13) merges to main. T4 lands as its own branch (name when scoped).
+
+#### Out of scope (carry-overs to verify, not to touch in T4)
+
+- Allocation's precomputed-proposal architecture (`pickEquityPercentage`, shekel math in code) — just landed, stable, don't touch.
+- Other phases that use `runPhaseLoop` — verify scope during research; do not retire the helper as part of T4.
+
+**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.allocation.eval.ts`
+
+---
 
 ### T5 — Equity
 
