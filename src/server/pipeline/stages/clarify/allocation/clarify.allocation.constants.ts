@@ -1,4 +1,3 @@
-import { SHORT_TIMELINE_BUCKET } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { RiskTolerance, TimelineBucket } from "#types/pipeline.types";
 
@@ -12,9 +11,11 @@ export const ALLOCATION_RISK_LEVELS = RiskToleranceEnum.options
   .map((o) => `\`${o}\``)
   .join(", ");
 
-type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
+export type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
 
-const ALLOCATION_ANCHOR_DATA = {
+export type AllocationCell = { min: number; max: number };
+
+export const ALLOCATION_ANCHOR_DATA = {
   conservative: {
     [t3to5]: { min: 10, max: 20 },
     [t5to10]: { min: 30, max: 40 },
@@ -30,34 +31,6 @@ const ALLOCATION_ANCHOR_DATA = {
     [t5to10]: { min: 60, max: 70 },
     [t10plus]: { min: 80, max: 90 },
   },
-} satisfies Record<
-  RiskTolerance,
-  Record<AllocationTimeline, { min: number; max: number }>
->;
-
-const buildAnchorTable = (): string => {
-  const timelines = TimelineBucketEnum.options.filter(
-    (o): o is AllocationTimeline => o !== SHORT_TIMELINE_BUCKET,
-  );
-  const header = `| Willingness \\ Timeline | ${timelines.join(" | ")} |`;
-  const separator = `|${"---|".repeat(timelines.length + 1)}`;
-  const rows = RiskToleranceEnum.options.map((risk) => {
-    const cells = timelines.map((t) => {
-      const { min, max } = ALLOCATION_ANCHOR_DATA[risk][t];
-
-      return min === max ? `${min}%` : `${min}–${max}%`;
-    });
-
-    return `| ${risk} | ${cells.join(" | ")} |`;
-  });
-
-  return [header, separator, ...rows].join("\n");
-};
-
-export const ALLOCATION_ANCHOR_TABLE = buildAnchorTable();
-export const ALLOCATION_TIMELINE_BUCKETS = TimelineBucketEnum.options
-  .filter((o) => o !== SHORT_TIMELINE_BUCKET)
-  .map((o) => `\`${o}\``)
-  .join(", ");
+} satisfies Record<RiskTolerance, Record<AllocationTimeline, AllocationCell>>;
 
 export const MAX_ALLOCATION_TOOL_CALLS = 5;

@@ -16,7 +16,7 @@ All cells are **ranges**, not points. The agent picks a specific integer inside 
 
 Users with an `under 3 years` timeline never reach this phase — the orchestrator exits early after parameters collection and redirects them to a money market fund. This phase only receives timelines of `3–5 years`, `5–10 years`, or `10+ years`.
 
-The words `conservative`, `moderate`, and `aggressive` are **never used when speaking to the user** — not even as general adjectives.
+The words `conservative`, `moderate`, and `aggressive` are **never used when speaking to the user** — not even as general adjectives. Internal "cell" terminology is also never exposed to the user; the cell range is referred to as the "recommended range" in user-facing text.
 
 ## Design constraints
 

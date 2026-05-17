@@ -8,10 +8,10 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import type {
+  AllocationPhaseInput,
   AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { ParametersPhaseOutput } from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
@@ -19,24 +19,34 @@ const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url)
 const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 describe("collectAllocation", () => {
-  const longHorizonAggressiveParameters: ParametersPhaseOutput = {
+  // Default scores hit the deep end of each bucket; within-bucket discrimination
+  // cases below override the score to verify the LLM honors the precomputed value.
+  const longHorizonAggressiveInput: AllocationPhaseInput = {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
+    riskTolerance: aggressive,
+    selfRatingScore: 5,
   };
 
-  const midHorizonModerateParameters: ParametersPhaseOutput = {
+  const midHorizonModerateInput: AllocationPhaseInput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
+    riskTolerance: moderate,
+    selfRatingScore: 3,
   };
 
-  const longHorizonConservativeParameters: ParametersPhaseOutput = {
+  const longHorizonConservativeInput: AllocationPhaseInput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
+    riskTolerance: conservative,
+    selfRatingScore: 2,
   };
 
-  const shortMidHorizonConservativeParameters: ParametersPhaseOutput = {
+  const shortMidHorizonConservativeInput: AllocationPhaseInput = {
     amount: 30_000,
     timeline: TimelineBucketEnum.enum["3–5 years"],
+    riskTolerance: conservative,
+    selfRatingScore: 2,
   };
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
@@ -98,12 +108,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Sounds good"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -114,7 +119,7 @@ describe("collectAllocation", () => {
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
 
@@ -133,12 +138,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      midHorizonModerateParameters.amount,
-      midHorizonModerateParameters.timeline,
-      moderate,
-      responder,
-    );
+    const result = await collectAllocation(midHorizonModerateInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -147,9 +147,49 @@ describe("collectAllocation", () => {
     expect(output.equityPercentage + output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
-      midHorizonModerateParameters.amount,
+      midHorizonModerateInput.amount,
       output,
     );
+  });
+
+  // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
+  // verifies the LLM uses the precomputed proposal — score 4 (shallow end of
+  // aggressive bucket) lands on min+2 = 82 for the 80–90 cell, not somewhere else.
+  it("should propose 82% equity for aggressive 10+ year with selfRatingScore=4", async () => {
+    const responder = createTrackedResponder(["Sounds good"]);
+    lastTranscript = responder.transcript;
+
+    const input: AllocationPhaseInput = {
+      ...longHorizonAggressiveInput,
+      selfRatingScore: 4,
+    };
+    const result = await collectAllocation(input, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBe(82);
+    expect(output.bufferPercentage).toBe(18);
+    expectShekelMathConsistent(responder.transcript, input.amount, output);
+  });
+
+  // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
+  // verifies the LLM uses the precomputed proposal — score 1 (deep end of
+  // conservative bucket) lands on min+2 = 42 for the 40–50 cell.
+  it("should propose 42% equity for conservative 10+ year with selfRatingScore=1", async () => {
+    const responder = createTrackedResponder(["Sounds good"]);
+    lastTranscript = responder.transcript;
+
+    const input: AllocationPhaseInput = {
+      ...longHorizonConservativeInput,
+      selfRatingScore: 1,
+    };
+    const result = await collectAllocation(input, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBe(42);
+    expect(output.bufferPercentage).toBe(58);
+    expectShekelMathConsistent(responder.transcript, input.amount, output);
   });
 
   // clarify.allocation.rules.md rule 1: conservative 3–5yr lands in the 10–20% cell
@@ -157,12 +197,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["ok"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      shortMidHorizonConservativeParameters.amount,
-      shortMidHorizonConservativeParameters.timeline,
-      conservative,
-      responder,
-    );
+    const result = await collectAllocation(shortMidHorizonConservativeInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -171,7 +206,7 @@ describe("collectAllocation", () => {
     expect(output.equityPercentage + output.bufferPercentage).toBe(100);
     expectShekelMathConsistent(
       responder.transcript,
-      shortMidHorizonConservativeParameters.amount,
+      shortMidHorizonConservativeInput.amount,
       output,
     );
   });
@@ -181,12 +216,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["77%", "yes"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -194,7 +224,7 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(23);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -204,12 +234,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Let's do 50/50", "yes"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -217,7 +242,7 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(50);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -230,12 +255,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonConservativeParameters.amount,
-      longHorizonConservativeParameters.timeline,
-      conservative,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonConservativeInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -247,7 +267,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonConservativeParameters.amount,
+      longHorizonConservativeInput.amount,
       output,
     );
   });
@@ -257,12 +277,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["I want 0% stocks", "Yes, I'm sure"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -273,7 +288,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -283,12 +298,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["What's a buffer?", "Got it, sounds good"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -300,7 +310,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -313,12 +323,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -339,7 +344,7 @@ describe("collectAllocation", () => {
     expect(agentText).not.toContain("moderate");
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -349,12 +354,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(["Which ETF should I buy?", "Sounds good"]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -366,7 +366,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(2);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -380,12 +380,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
     const output = expectSuccess(result);
 
@@ -397,7 +392,7 @@ describe("collectAllocation", () => {
     ).toBeGreaterThanOrEqual(3);
     expectShekelMathConsistent(
       responder.transcript,
-      longHorizonAggressiveParameters.amount,
+      longHorizonAggressiveInput.amount,
       output,
     );
   });
@@ -418,12 +413,7 @@ describe("collectAllocation", () => {
     ]);
     lastTranscript = responder.transcript;
 
-    const result = await collectAllocation(
-      longHorizonAggressiveParameters.amount,
-      longHorizonAggressiveParameters.timeline,
-      aggressive,
-      responder,
-    );
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
     lastOutput = result;
 
     expect(result.status).toBe("unresolved");

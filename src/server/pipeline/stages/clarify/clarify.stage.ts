@@ -67,12 +67,10 @@ export const runClarifyStage = async (
     return riskResult;
   }
 
-  const { riskTolerance } = riskResult;
+  const { riskTolerance, selfRatingScore } = riskResult;
 
   const allocationResult = await collectAllocation(
-    amount,
-    timeline,
-    riskTolerance,
+    { amount, timeline, riskTolerance, selfRatingScore },
     responder,
   );
   if (allocationResult.status !== PipelineStatusEnum.enum.completed) {

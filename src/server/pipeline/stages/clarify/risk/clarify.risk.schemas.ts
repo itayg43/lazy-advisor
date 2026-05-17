@@ -7,7 +7,7 @@ import {
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
-const SelfRatingScoreSchema = z.number().int().min(1).max(5);
+export const SelfRatingScoreSchema = z.number().int().min(1).max(5);
 
 export const RiskClassifySchema = AskWithClassifyBaseSchema.extend({
   selfRatingScore: SelfRatingScoreSchema.nullable(),
