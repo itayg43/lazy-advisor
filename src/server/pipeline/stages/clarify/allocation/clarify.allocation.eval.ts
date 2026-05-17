@@ -25,28 +25,28 @@ describe("collectAllocation", () => {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
     riskTolerance: aggressive,
-    selfRatingScore: 5,
+    riskSelfRatingScore: 5,
   };
 
   const midHorizonModerateInput: AllocationPhaseInput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
     riskTolerance: moderate,
-    selfRatingScore: 3,
+    riskSelfRatingScore: 3,
   };
 
   const longHorizonConservativeInput: AllocationPhaseInput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
     riskTolerance: conservative,
-    selfRatingScore: 2,
+    riskSelfRatingScore: 2,
   };
 
   const shortMidHorizonConservativeInput: AllocationPhaseInput = {
     amount: 30_000,
     timeline: TimelineBucketEnum.enum["3–5 years"],
     riskTolerance: conservative,
-    selfRatingScore: 2,
+    riskSelfRatingScore: 2,
   };
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
@@ -155,13 +155,13 @@ describe("collectAllocation", () => {
   // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
   // verifies the LLM uses the precomputed proposal — score 4 (shallow end of
   // aggressive bucket) lands on min+2 = 82 for the 80–90 cell, not somewhere else.
-  it("should propose 82% equity for aggressive 10+ year with selfRatingScore=4", async () => {
+  it("should propose 82% equity for aggressive 10+ year with riskSelfRatingScore=4", async () => {
     const responder = createTrackedResponder(["Sounds good"]);
     lastTranscript = responder.transcript;
 
     const input: AllocationPhaseInput = {
       ...longHorizonAggressiveInput,
-      selfRatingScore: 4,
+      riskSelfRatingScore: 4,
     };
     const result = await collectAllocation(input, responder);
     lastOutput = result;
@@ -175,13 +175,13 @@ describe("collectAllocation", () => {
   // clarify.allocation.rules.md rule 1 (within-bucket discrimination):
   // verifies the LLM uses the precomputed proposal — score 1 (deep end of
   // conservative bucket) lands on min+2 = 42 for the 40–50 cell.
-  it("should propose 42% equity for conservative 10+ year with selfRatingScore=1", async () => {
+  it("should propose 42% equity for conservative 10+ year with riskSelfRatingScore=1", async () => {
     const responder = createTrackedResponder(["Sounds good"]);
     lastTranscript = responder.transcript;
 
     const input: AllocationPhaseInput = {
       ...longHorizonConservativeInput,
-      selfRatingScore: 1,
+      riskSelfRatingScore: 1,
     };
     const result = await collectAllocation(input, responder);
     lastOutput = result;

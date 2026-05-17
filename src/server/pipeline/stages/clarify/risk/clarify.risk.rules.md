@@ -20,11 +20,11 @@ The phase is willingness-only. Age and investment timeline are not passed as con
 
 **Scenarios** (one per bucket + extraction variants; all-digit and all-word coverage is owned by unit tests):
 
-- `"1"` → selfRatingScore: 1 → riskTolerance: conservative
-- `"3"` → selfRatingScore: 3 → riskTolerance: moderate
-- `"5"` → selfRatingScore: 5 → riskTolerance: aggressive
-- `"three"` → selfRatingScore: 3 → riskTolerance: moderate (word-form acceptance)
-- `"I'd say 4"` → selfRatingScore: 4 → riskTolerance: aggressive (digit embedded in surrounding text)
+- `"1"` → riskSelfRatingScore: 1 → riskTolerance: conservative
+- `"3"` → riskSelfRatingScore: 3 → riskTolerance: moderate
+- `"5"` → riskSelfRatingScore: 5 → riskTolerance: aggressive
+- `"three"` → riskSelfRatingScore: 3 → riskTolerance: moderate (word-form acceptance)
+- `"I'd say 4"` → riskSelfRatingScore: 4 → riskTolerance: aggressive (digit embedded in surrounding text)
 
 No budget impact — this terminates the phase successfully.
 
@@ -41,10 +41,10 @@ No budget impact — this terminates the phase successfully.
 
 **Scenarios:**
 
-- `"7"` → re-ask → `"4"` → selfRatingScore: 4 → riskTolerance: aggressive
-- `"I'd panic"` → re-ask → `"1"` → selfRatingScore: 1 → riskTolerance: conservative
-- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → selfRatingScore: 3 → riskTolerance: moderate
-- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → selfRatingScore: 2 → riskTolerance: conservative
+- `"7"` → re-ask → `"4"` → riskSelfRatingScore: 4 → riskTolerance: aggressive
+- `"I'd panic"` → re-ask → `"1"` → riskSelfRatingScore: 1 → riskTolerance: conservative
+- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → riskSelfRatingScore: 3 → riskTolerance: moderate
+- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → riskSelfRatingScore: 2 → riskTolerance: conservative
 
 ---
 

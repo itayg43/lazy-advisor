@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
-import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk.types";
+import type {
+  RiskClassify,
+  RiskSelfRatingScore,
+} from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
+import type { RiskTolerance } from "#types/pipeline.types";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
   mockedCallOpenAIParsed: vi.fn(),
@@ -28,15 +32,17 @@ describe("collectRisk", () => {
     output,
   });
 
-  const converged = (selfRatingScore: number | null): OpenAIResponse<RiskClassify> =>
+  const converged = (
+    riskSelfRatingScore: RiskSelfRatingScore | null,
+  ): OpenAIResponse<RiskClassify> =>
     createParsedResponse({
       clarificationNeeded: false,
       clarificationMessage: null,
-      selfRatingScore,
+      riskSelfRatingScore,
     });
 
   // One case per mapScoreToBucket branch: ≤2 → conservative, =3 → moderate, >3 → aggressive
-  it.each([
+  it.each<{ score: RiskSelfRatingScore; riskTolerance: RiskTolerance }>([
     { score: 2, riskTolerance: conservative },
     { score: 3, riskTolerance: moderate },
     { score: 4, riskTolerance: aggressive },
@@ -48,7 +54,7 @@ describe("collectRisk", () => {
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
-      selfRatingScore: score,
+      riskSelfRatingScore: score,
       riskTolerance,
     });
   });
@@ -58,7 +64,7 @@ describe("collectRisk", () => {
     const needsClarification: OpenAIResponse<RiskClassify> = createParsedResponse({
       clarificationNeeded: true,
       clarificationMessage: "Please pick a whole number between 1 and 5.",
-      selfRatingScore: null,
+      riskSelfRatingScore: null,
     });
     mockedCallOpenAIParsed
       .mockResolvedValueOnce(needsClarification)

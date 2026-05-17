@@ -15,6 +15,7 @@ import {
 import type {
   AskRiskResult,
   RiskPhaseResult,
+  RiskSelfRatingScore,
 } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -24,7 +25,7 @@ const logger = createLogger("clarifyRisk");
 
 const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
-const mapScoreToBucket = (score: number) => {
+const mapScoreToBucket = (score: RiskSelfRatingScore) => {
   if (score <= 2) return conservative;
   if (score === 3) return moderate;
 
@@ -46,7 +47,7 @@ const askRisk = async (responder: Responder): Promise<AskRiskResult> => {
 
     const result = {
       status: PipelineStatusEnum.enum.completed,
-      selfRatingScore: output.selfRatingScore,
+      riskSelfRatingScore: output.riskSelfRatingScore,
     } as const;
 
     logger.debug("askRisk output", { output: result });
@@ -73,8 +74,8 @@ export const collectRisk = async (responder: Responder): Promise<RiskPhaseResult
 
   const result = {
     status: PipelineStatusEnum.enum.completed,
-    selfRatingScore: riskResult.selfRatingScore,
-    riskTolerance: mapScoreToBucket(riskResult.selfRatingScore),
+    riskSelfRatingScore: riskResult.riskSelfRatingScore,
+    riskTolerance: mapScoreToBucket(riskResult.riskSelfRatingScore),
   } as const;
 
   logger.debug("Risk output", { output: result });

@@ -22,7 +22,7 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 
 - **Point-estimate, not distribution.** Output is a single integer (e.g., 70), not a range. Acceptable for a behavioral anchor; not acceptable as portfolio-optimization output.
 - **"Sizing tends to reduce panic-selling" — directional, not absolute.** Use "tends to reduce"; never "prevents" or "eliminates". Aligned with Kitces's composure-vs-tolerance distinction.
-- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. Our 3-bucket output from the risk phase compresses into a 3×4 table. If evals surface discrimination problems, `RiskPhaseOutput.selfRatingScore` is available to refine without changing the risk phase.
+- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. Our 3-bucket output from the risk phase compresses into a 3×4 table. If evals surface discrimination problems, `RiskPhaseOutput.riskSelfRatingScore` is available to refine without changing the risk phase.
 
 ---
 

@@ -11,7 +11,7 @@ import type {
   AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { SelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
+import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   isPhaseLoopExhaustedError,
   runPhaseExtraction,
@@ -27,7 +27,7 @@ const logger = createLogger("clarifyAllocation");
 // because it's the only score in the moderate bucket.
 export const pickEquityPercentage = (
   cell: AllocationCell,
-  score: SelfRatingScore,
+  score: RiskSelfRatingScore,
 ): number => {
   switch (score) {
     case 1:
@@ -38,10 +38,13 @@ export const pickEquityPercentage = (
       return cell.max - 2;
     case 3:
       return (cell.min + cell.max) / 2;
-    default:
-      // SelfRatingScore is inferred as number — Zod validates 1–5 at runtime only.
-      throw new Error(`pickEquityPercentage: invalid selfRatingScore ${score}`);
   }
+
+  const _exhaustive: never = score;
+
+  throw new Error(
+    `pickEquityPercentage: invalid riskSelfRatingScore ${String(_exhaustive)}`,
+  );
 };
 
 const formatShekels = (n: number): string => `₪${n.toLocaleString("en-US")}`;
@@ -56,18 +59,18 @@ The two integers **must sum to exactly 100**. If the user agreed to 70% stocks, 
 Extract only the final agreed split — not an intermediate proposal. Use the user's exact number (e.g., 77, not snapped to a round value).`;
 
 export const collectAllocation = async (
-  { amount, timeline, riskTolerance, selfRatingScore }: AllocationPhaseInput,
+  { amount, timeline, riskTolerance, riskSelfRatingScore }: AllocationPhaseInput,
   responder: Responder,
 ): Promise<AllocationPhaseResult> => {
   logger.info("Starting allocation phase", {
     amount,
     timeline,
     riskTolerance,
-    selfRatingScore,
+    riskSelfRatingScore,
   });
 
   const cell = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
-  const equityPercentage = pickEquityPercentage(cell, selfRatingScore);
+  const equityPercentage = pickEquityPercentage(cell, riskSelfRatingScore);
   const bufferPercentage = 100 - equityPercentage;
   const equityShekels = (amount * equityPercentage) / 100;
   const bufferShekels = amount - equityShekels;

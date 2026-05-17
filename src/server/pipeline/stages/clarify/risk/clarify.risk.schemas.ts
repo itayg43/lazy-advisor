@@ -7,19 +7,25 @@ import {
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
-export const SelfRatingScoreSchema = z.number().int().min(1).max(5);
+export const RiskSelfRatingScoreSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+]);
 
 export const RiskClassifySchema = AskWithClassifyBaseSchema.extend({
-  selfRatingScore: SelfRatingScoreSchema.nullable(),
+  riskSelfRatingScore: RiskSelfRatingScoreSchema.nullable(),
 });
 
 export const RiskClassifyResolvedSchema = RiskClassifySchema.extend({
-  selfRatingScore: SelfRatingScoreSchema,
+  riskSelfRatingScore: RiskSelfRatingScoreSchema,
 });
 
-// riskTolerance is derived from selfRatingScore in TypeScript, not by the model.
+// riskTolerance is derived from riskSelfRatingScore in TypeScript, not by the model.
 export const RiskPhaseOutputSchema = z.object({
-  selfRatingScore: SelfRatingScoreSchema,
+  riskSelfRatingScore: RiskSelfRatingScoreSchema,
   riskTolerance: RiskToleranceEnum,
 });
 

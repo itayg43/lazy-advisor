@@ -122,7 +122,7 @@ describe("runClarify", () => {
     const mockRiskClassify: RiskClassify = {
       clarificationNeeded: false,
       clarificationMessage: null,
-      selfRatingScore: 3,
+      riskSelfRatingScore: 3,
     };
     mockWaitForResponse.mockResolvedValueOnce("3");
     mockedCallOpenAIParsed.mockResolvedValueOnce(createParsedResponse(mockRiskClassify));
@@ -344,7 +344,7 @@ describe("runClarify", () => {
       const needs: OpenAIResponse<RiskClassify> = createParsedResponse({
         clarificationNeeded: true,
         clarificationMessage: "Please pick a whole number between 1 and 5.",
-        selfRatingScore: null,
+        riskSelfRatingScore: null,
       });
       mockWaitForResponse
         .mockResolvedValueOnce("hmm")
@@ -401,7 +401,7 @@ describe("runClarify", () => {
         createParsedResponse<RiskClassify>({
           clarificationNeeded: false,
           clarificationMessage: null,
-          selfRatingScore: null,
+          riskSelfRatingScore: null,
         }),
       );
 
@@ -424,7 +424,7 @@ describe("runClarify", () => {
         createParsedResponse<RiskClassify>({
           clarificationNeeded: true,
           clarificationMessage: null,
-          selfRatingScore: null,
+          riskSelfRatingScore: null,
         }),
       );
 
