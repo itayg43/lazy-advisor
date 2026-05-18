@@ -32,9 +32,16 @@ Per Research-Plan-Implement notebook:
 3. **Design discussion artifact** — produced jointly after research review. Maps intent buckets, per-branch flow, state structure, error/budget handling. Reviewed before code lands.
 4. **Vertical slices** — implement and ship one branch end-to-end at a time, not layer-by-layer. Slice order decided during design discussion. Eval after each slice; don't move to next until current passes.
 
+#### Additional prompt simplifications
+
+Fold these into T4 alongside the state-from-prompt-to-code move — both reduce prompt complexity and overlap with the same files.
+
+1. **Drop shekel formatting/refs from prompt context.** Every user is Israeli, so explicit `₪` symbols and shekel framing in system prompt and grounding context strings are token noise without comprehension benefit. Scope is **prompt context only** — the LLM continues to emit `₪` in user-facing replies (Hebrew/Israeli framing remains in the system prompt). Do not change user-facing output format.
+2. **Round equity percentages to anchor values.** `pickEquityPercentage` currently produces non-anchor outputs (e.g., 72/28, 65/35) that are harder to mentally rebalance and don't match how lazy-portfolio guidance is conventionally framed. Snap to round anchors (70/30, 80/20, 90/10, etc.). Reduces prompt-side complexity for Rule 3 counter-proposal math. Verify current `pickEquityPercentage` output during the research step — if it already snaps to round numbers, this item folds away.
+
 #### Sequencing
 
-Starts **after** the current `refactor/allocation-precomputed-proposal` branch (decision-tree restructure + alignment fixes + new positive guards on Tests 8 and 13) merges to main. T4 lands as its own branch (name when scoped).
+Unblocked: `refactor/allocation-precomputed-proposal` merged to main. T4 lands as its own branch (name when scoped).
 
 #### Out of scope (carry-overs to verify, not to touch in T4)
 

@@ -2,15 +2,9 @@
 
 An agentic investment planning CLI for beginner ETF investors — current scope is the clarify stage, which builds a structured investment profile through adaptive multi-turn conversation.
 
-## Agent Usage
-
-- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas), and code review
-- Keep inline: looking up a specific file or function, implementation, small edits, git operations
-- When multiple independent tasks exist, run subagents in parallel
-- Code review subagents should evaluate against the perspectives and standards defined in Feedback Style
-
 ## General Behavior
 
+- **Summary first:** At decision points with multiple sub-questions, branches, or findings, lead with a 3–5 bullet summary (one line each, the *what* only — no rationale, edge cases, or tables). Wait for the user to pick one before drilling down. Single small edits and narrow lookups don't need a summary.
 - **Uncertainty:** Say "I don't know" or "I'm not sure" explicitly rather than giving a confident but unreliable answer. Admitting uncertainty is preferred over a bad answer.
 
 ## Feedback Style
@@ -22,9 +16,9 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 
 ### Behavior
 - Default to critical, not agreeable — say what's wrong or risky before saying what's fine
-- When multiple valid approaches exist, present pros/cons and ask before implementing — don't silently pick one
-- Push back honestly when a request conflicts with project conventions, introduces unnecessary complexity, or has a better alternative — explain why with concrete reasoning
-- **`wdyt?` signal:** Treat as a request for decision support — evaluate critically, surface trade-offs and alternatives the user may not have considered, and commit to a recommendation. Ask for missing context first if it would materially change the answer.
+- When multiple valid approaches exist, name the options and ask before implementing — don't silently pick one
+- Push back honestly when a request conflicts with project conventions, introduces unnecessary complexity, or has a better alternative — explain why
+- **`wdyt?` signal:** Treat as a request for decision support — evaluate critically, commit to a recommendation, and name the alternatives the user may not have considered. Ask for missing context first if it would materially change the answer.
 
 ## References
 
@@ -35,6 +29,14 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 | [Conventions](documentation/CONVENTIONS.md) | Before writing any new code |
 | [Testing](documentation/TESTING.md) | Before writing or modifying tests |
 | [Stage Rules](src/server/pipeline/stages/clarify/) | When implementing clarify stage behavior, prompts, or evals — rules files (`*.rules.md`) are co-located with each phase |
+
+## Agent Usage
+
+- Use subagents for: broad code exploration and pre-implementation area mapping (multiple files or areas), and code review
+- When spawning an Explore subagent for area mapping, give no task framing — ask "what exists, what patterns are used" — and compare findings against the plan before designing
+- Keep inline: looking up a specific file or function, implementation, small edits, git operations
+- When multiple independent tasks exist, run subagents in parallel
+- Code review subagents should evaluate against the perspectives and standards defined in Feedback Style
 
 ## How to Work
 
@@ -50,7 +52,6 @@ Use `TaskCreate` whenever a request has more than one sub-step, or when new asks
 
 ### Before writing code
 
-- For tasks touching multiple files or areas: spawn an Explore subagent with no task framing ("what exists, what patterns are used"), then compare findings against the plan before designing
 - Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it
 - Design the API surface (input types, return types, error strategy) before implementing — see [Conventions § Development Process](documentation/CONVENTIONS.md)
 
@@ -62,7 +63,9 @@ If stacking is genuinely unavoidable: never use `--delete-branch` on a PR that h
 
 ## npm Scripts
 
-Always use these exact commands — do not construct alternative invocations. The `commit` skill runs `format`, `lint`, `type-check`, and `test` — no need to run them manually before invoking it.
+Use these exact commands as written — adding flags, params, or otherwise modifying them requires explicit user approval. The `commit` skill runs `format`, `lint`, `type-check`, and `test` — no need to run them manually before invoking it.
+
+**Evals:** run in foreground only — never with `run_in_background`. For per-case results, read the phase's `*.last-run.md` file.
 
 | Command | Description |
 |---------|-------------|
@@ -72,5 +75,4 @@ Always use these exact commands — do not construct alternative invocations. Th
 | `npm test` | Run unit tests |
 | `npm run test:evals` | Run all eval tests |
 | `npm run test:evals -- <file>` | Run a single eval file (e.g. `npm run test:evals -- src/server/pipeline/stages/clarify/parameters/clarify.parameters.eval.ts` or `…/clarify/intake/classify/clarify.classify.eval.ts`) |
-| `npm run test:evals -- <file> -t "<pattern>"` | Run specific cases within an eval file — `-t` matches against `it()` descriptions as a substring/regex |
 | `npm run dev:server` | Start the server in dev/watch mode |
