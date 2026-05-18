@@ -42,12 +42,6 @@ export const pickEquityPercentage = (
     case 3:
       return (cell.min + cell.max) / 2;
   }
-
-  const _exhaustive: never = score;
-
-  throw new Error(
-    `pickEquityPercentage: invalid riskSelfRatingScore ${String(_exhaustive)}`,
-  );
 };
 
 const formatShekels = (n: number): string => `₪${n.toLocaleString("en-US")}`;
