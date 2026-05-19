@@ -22,29 +22,41 @@ export const runConversation = async <TResult>({
   let turnsUsed = 0;
   let directive = await initHandler();
   while (true) {
-    if (directive.kind === DirectiveKind.Done) {
-      logger.info("Conversation complete");
+    switch (directive.kind) {
+      case DirectiveKind.Done: {
+        logger.info("Conversation complete");
 
-      return directive.result;
-    }
-    if (directive.kind === DirectiveKind.Ask) {
-      history.push({ role: "assistant", content: directive.message });
-      responder.sendToUser(directive.message);
-      logger.info("Asked user", { message: directive.message });
+        return directive.result;
+      }
+      case DirectiveKind.Ask: {
+        history.push({ role: "assistant", content: directive.message });
+        responder.sendToUser(directive.message);
+        logger.info("Asked user", { message: directive.message });
 
-      const userResponse = await responder.waitForResponse();
-      history.push({ role: "user", content: userResponse });
-      logger.info("Turn complete", { userResponse });
+        const userResponse = await responder.waitForResponse();
+        history.push({ role: "user", content: userResponse });
+        logger.info("Turn complete", { userResponse });
 
-      turnsUsed++;
-      if (turnsUsed > budget) {
-        logger.warn("Budget exhausted", { budget });
+        turnsUsed++;
+        if (turnsUsed > budget) {
+          logger.warn("Budget exhausted", { budget });
 
-        throw new ConversationBudgetExhaustedError(budget);
+          throw new ConversationBudgetExhaustedError(budget);
+        }
+
+        directive = await turnHandler(history, userResponse, turnsUsed);
+        logger.info("Turn handler returned", { kind: directive.kind });
+
+        break;
       }
 
-      directive = await turnHandler(history, userResponse, turnsUsed);
-      logger.info("Turn handler returned", { kind: directive.kind });
+      default: {
+        const _exhaustive: never = directive;
+
+        throw new Error(
+          `runConversation: unhandled directive ${JSON.stringify(_exhaustive)}`,
+        );
+      }
     }
   }
 };

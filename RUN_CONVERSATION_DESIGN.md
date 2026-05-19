@@ -112,6 +112,15 @@ export type TurnHandler<TResult> = (
 export type RunConversationParams<TResult> = {
   initHandler: InitHandler<TResult>;
   turnHandler: TurnHandler<TResult>;
+  /**
+   * Maximum number of `turnHandler` invocations before the conversation is
+   * declared exhausted. The handler may be called at most `budget` times;
+   * the (budget+1)-th user reply causes `ConversationBudgetExhaustedError`
+   * to be thrown before that reply is processed by the handler.
+   *
+   * Note: the (budget+1)-th reply is still consumed (pushed to history) before
+   * the throw — phases should not rely on `history.length` to detect exhaustion.
+   */
   budget: number;
   responder: Responder;
 };
@@ -143,30 +152,41 @@ export const runConversation = async <TResult>({
   let directive = await initHandler();
 
   while (true) {
-    if (directive.kind === DirectiveKind.Done) {
-      logger.info("Conversation complete");
+    switch (directive.kind) {
+      case DirectiveKind.Done: {
+        logger.info("Conversation complete");
 
-      return directive.result;
-    }
-
-    if (directive.kind === DirectiveKind.Ask) {
-      history.push({ role: "assistant", content: directive.message });
-      responder.sendToUser(directive.message);
-      logger.info("Asked user", { message: directive.message });
-
-      const userReply = await responder.waitForResponse();
-      history.push({ role: "user", content: userReply });
-      turnsUsed++;
-      logger.info("Turn complete", { userReply });
-
-      if (turnsUsed > budget) {
-        logger.warn("Budget exhausted", { budget });
-
-        throw new ConversationBudgetExhaustedError(budget);
+        return directive.result;
       }
 
-      directive = await turnHandler(history, userReply, turnsUsed);
-      logger.info("Turn handler returned", { kind: directive.kind });
+      case DirectiveKind.Ask: {
+        history.push({ role: "assistant", content: directive.message });
+        responder.sendToUser(directive.message);
+        logger.info("Asked user", { message: directive.message });
+
+        const userReply = await responder.waitForResponse();
+        history.push({ role: "user", content: userReply });
+        turnsUsed++;
+        logger.info("Turn complete", { userReply });
+
+        if (turnsUsed > budget) {
+          logger.warn("Budget exhausted", { budget });
+
+          throw new ConversationBudgetExhaustedError(budget);
+        }
+
+        directive = await turnHandler(history, userReply, turnsUsed);
+        logger.info("Turn handler returned", { kind: directive.kind });
+
+        break;
+      }
+
+      default: {
+        const _exhaustive: never = directive;
+        throw new Error(
+          `runConversation: unhandled directive ${JSON.stringify(_exhaustive)}`,
+        );
+      }
     }
   }
 };
@@ -175,7 +195,7 @@ export const runConversation = async <TResult>({
 What the primitive does:
 - Owns `history`, `turnsUsed`, and the I/O round-trip with the user.
 - Calls into the phase via `initHandler` once at the start, then `turnHandler` after each user reply.
-- Dispatches on `directive.kind` in **explicit if-branches** — `Done` returns, `Ask` does the I/O round-trip and advances. Future `Notify` slots in as a parallel branch; no fallthrough logic to untangle.
+- Dispatches on `directive.kind` via a `switch` with a `default` arm whose `const _: never = directive` assignment enforces compile-time exhaustiveness — adding a future `Notify` variant without handling it will fail type-check rather than silently spin the loop.
 - Has zero visibility into phase state.
 - Generic only over `TResult` (the phase's final output type).
 
@@ -266,6 +286,8 @@ User says `"what about 80/20?"` then `"yes I'm sure"`.
 ## T5/T6 knowledge access — agentic RAG
 
 Design for how equity (T5) and buffer (T6) phases will answer in-conversation user questions (e.g. *"what's NASDAQ-100?"*, *"why Irish-listed?"*) using their `*.knowledge.md` files. The `runConversation` primitive itself does **not** change — this is entirely a handler-internal concern.
+
+> **Subject to refinement during T5 implementation.** The decisions below (intent enum shape, two-tool surface, citation contract, classifier-first routing) are committed at the design-doc level but may be revised once the first phase is actually built and evaluated. The "Out of scope (still open)" subsection lists what is explicitly not yet decided.
 
 ### Problem
 
@@ -365,4 +387,3 @@ If duplication materializes once allocation + equity + buffer are all implemente
 
 - The handler is implicitly stateful — calling it twice with the same `(history, userReply, turnsUsed)` may not return the same thing because closure state has mutated between calls. Worth a one-line comment to set that contract for readers.
 - `turnsUsed` is exposed to the turn handler but most phases will ignore it. YAGNI-flag candidate; defensible because it's cheap.
-- Exhaustiveness on `directive.kind` is not enforced at compile time today (two explicit `if`s, no `else { const _: never = directive }`). Acceptable for two variants; revisit when adding `Notify`.
