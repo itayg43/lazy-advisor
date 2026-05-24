@@ -1,6 +1,6 @@
 import type { ZodError } from "zod";
 
-import { InternalError, SchemaValidationError } from "#errors";
+import { InternalError, PipelineControlFlowError, SchemaValidationError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { ClassifyErroredReasonEnum } from "#pipeline/ask-with-classify/ask-with-classify.schemas";
 import type {
@@ -11,7 +11,7 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("askWithClassify");
 
-export class ClassifyFollowUpsExhaustedError extends InternalError {
+export class ClassifyFollowUpsExhaustedError extends PipelineControlFlowError {
   constructor(question: string, followUps: number) {
     super(
       `askWithClassify failed to converge after ${followUps + 1} attempts for: "${question}"`,

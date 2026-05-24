@@ -92,10 +92,20 @@ export type DirectiveKind = (typeof DirectiveKind)[keyof typeof DirectiveKind];
 
 // What a handler tells the primitive to do next.
 // - Ask: send `message`, await user reply, then call `turnHandler` again.
-// - Done: stop the loop and return `result` from runConversation.
+// - Done: optionally send `message`, then stop the loop and return `result`.
 export type Directive<TResult> =
   | { kind: typeof DirectiveKind.Ask; message: string }
-  | { kind: typeof DirectiveKind.Done; result: TResult };
+  | {
+      kind: typeof DirectiveKind.Done;
+      /**
+       * Optional closing message. When set, the primitive sends it to the user
+       * (and pushes it onto history) before returning `result`. Omit when the
+       * phase resolves without user-visible output — e.g., early skip from
+       * `initHandler` (T6's `bufferPercentage === 0` case).
+       */
+      message?: string;
+      result: TResult;
+    };
 
 // Called once before any user input. Produces the conversation's first directive.
 // Split from TurnHandler so the turn signature doesn't have to model "no reply yet".
@@ -103,10 +113,11 @@ export type InitHandler<TResult> = () => Promise<Directive<TResult>>;
 
 // Called after each user reply. `history` is read-only on purpose: handler-owned
 // state (counters, flags, etc.) belongs in the handler's closure, not in history.
+// The primitive deep-clones `history` before each call, so mutations don't leak
+// back — the `ReadonlyArray` type is enforced at runtime too.
 export type TurnHandler<TResult> = (
   history: ReadonlyArray<EasyInputMessage>,
-  userReply: string,
-  turnsUsed: number,
+  userResponse: string,
 ) => Promise<Directive<TResult>>;
 
 export type RunConversationParams<TResult> = {
@@ -131,8 +142,8 @@ Why `typeof DirectiveKind.Ask` instead of inline `"ask"` literals: keeps `Direct
 ### Naming notes
 
 - **Discriminant `kind`** (not `status` or `type`) — avoids overload with the phase-result `status` field.
-- **Variant fields: `message` for `Ask`, `result` for `Done`.** `message` is neutral so it transfers cleanly to a future `Notify` variant without renaming.
-- **`initHandler` / `turnHandler`** — fields and types share roots. **`userReply`** disambiguates from `Directive.message`. Local **`directive`** (not `next`) names the value by what it is, not by control-flow position.
+- **Variant fields: `message` (required on `Ask`, optional on `Done`), `result` on `Done`.** `Done.message` is the final acknowledgment a phase sends as it resolves; it is optional so an early-skip `initHandler` can return `Done` with no user-visible output. `message` is neutral so it transfers cleanly to a future `Notify` variant without renaming.
+- **`initHandler` / `turnHandler`** — fields and types share roots. **`userResponse`** disambiguates from `Directive.message`. Local **`directive`** (not `next`) names the value by what it is, not by control-flow position.
 
 ---
 
@@ -148,34 +159,38 @@ export const runConversation = async <TResult>({
   logger.info("Starting conversation", { budget });
 
   const history: EasyInputMessage[] = [];
+
   let turnsUsed = 0;
   let directive = await initHandler();
-
   while (true) {
     switch (directive.kind) {
       case DirectiveKind.Done: {
+        if (directive.message) {
+          history.push({ role: "assistant", content: directive.message });
+          responder.sendToUser(directive.message);
+          logger.info("Sent closing message", { message: directive.message });
+        }
         logger.info("Conversation complete");
 
         return directive.result;
       }
-
       case DirectiveKind.Ask: {
         history.push({ role: "assistant", content: directive.message });
         responder.sendToUser(directive.message);
         logger.info("Asked user", { message: directive.message });
 
-        const userReply = await responder.waitForResponse();
-        history.push({ role: "user", content: userReply });
-        turnsUsed++;
-        logger.info("Turn complete", { userReply });
+        const userResponse = await responder.waitForResponse();
+        history.push({ role: "user", content: userResponse });
+        logger.info("Turn complete", { userResponse });
 
+        turnsUsed++;
         if (turnsUsed > budget) {
           logger.warn("Budget exhausted", { budget });
 
           throw new ConversationBudgetExhaustedError(budget);
         }
 
-        directive = await turnHandler(history, userReply, turnsUsed);
+        directive = await turnHandler(structuredClone(history), userResponse);
         logger.info("Turn handler returned", { kind: directive.kind });
 
         break;
@@ -183,6 +198,7 @@ export const runConversation = async <TResult>({
 
       default: {
         const _exhaustive: never = directive;
+
         throw new Error(
           `runConversation: unhandled directive ${JSON.stringify(_exhaustive)}`,
         );
@@ -193,13 +209,14 @@ export const runConversation = async <TResult>({
 ```
 
 What the primitive does:
-- Owns `history`, `turnsUsed`, and the I/O round-trip with the user.
-- Calls into the phase via `initHandler` once at the start, then `turnHandler` after each user reply.
+- Owns `history`, the turn counter, and the I/O round-trip with the user.
+- Calls into the phase via `initHandler` once at the start, then `turnHandler` after each user reply. Each call to `turnHandler` receives a `structuredClone` of `history` so handler mutations cannot leak back into the primitive's view.
+- On `Done`, optionally sends `directive.message` (pushing it to history first) before returning `directive.result`.
 - Dispatches on `directive.kind` via a `switch` with a `default` arm whose `const _: never = directive` assignment enforces compile-time exhaustiveness — adding a future `Notify` variant without handling it will fail type-check rather than silently spin the loop.
 - Has zero visibility into phase state.
 - Generic only over `TResult` (the phase's final output type).
 
-On logging: every assistant message and every user reply gets an `info` line. `turnsUsed` is **not** included in the log payloads — callers wire a session ID at a higher level, so turn position is recoverable from log sequence within a session. `budget` appears in `Budget exhausted` (warn) because it's the config value the caller picked, not derivable from the stream.
+On logging: every assistant message (Ask or Done.message) and every user reply gets an `info` line. The turn counter is **not** included in the log payloads — callers wire a session ID at a higher level, so turn position is recoverable from log sequence within a session. `budget` appears in `Budget exhausted` (warn) because it's the config value the caller picked, not derivable from the stream.
 
 ---
 
@@ -220,12 +237,13 @@ const collectAllocation = async (params): Promise<AllocationResult> => {
   });
 
   // ── 3. Turn handler: closure references the locals above ──────────
-  const turnHandler: TurnHandler<AllocationResult> = async (history, userReply, _turnsUsed) => {
-    const intent = await classifyIntent(history, userReply);
+  const turnHandler: TurnHandler<AllocationResult> = async (history, userResponse) => {
+    const intent = await classifyIntent(history, userResponse);
 
     if (intent.kind === "accept") {
       return {
         kind: DirectiveKind.Done,
+        message: `Locked in ${proposedEquity}/${proposedBuffer}.`,
         result: { equity: proposedEquity, buffer: proposedBuffer },
       };
     }
@@ -265,7 +283,7 @@ User says `"what about 80/20?"` then `"yes I'm sure"`.
 
 | Where | Action | Closure state | Primitive state |
 |---|---|---|---|
-| `turnHandler(history=[A,U], userReply="what about 80/20?", turnsUsed=1)` | classify → `{kind:"counter", proposedEquity:80}` | counters=[], framing=false | — |
+| `turnHandler(structuredClone(history)=[A,U], userResponse="what about 80/20?")` | classify → `{kind:"counter", proposedEquity:80}` | counters=[], framing=false | — |
 | Inside turn: `counters.push(80)`, `hasShownDrawdownFraming = true` | mutates closure locals | **counters=[80], framing=true** | — |
 | Turn composes reply (LLM call), returns `{kind: Ask, message: "..."}` | — | unchanged | — |
 | Primitive: `kind === Ask` → push, send, await | — | unchanged | history=[A,U,A:"More aggressive..."], turns=1 |
@@ -275,11 +293,11 @@ User says `"what about 80/20?"` then `"yes I'm sure"`.
 
 | Where | Action | Closure state | Primitive state |
 |---|---|---|---|
-| `turnHandler(history=[A,U,A,U], userReply="yes I'm sure", turnsUsed=2)` | classify → `{kind:"accept"}` | counters=[80], framing=true | — |
-| Turn returns `{kind: Done, result:{equity:70, buffer:30}}` | — | unchanged | — |
-| Primitive: `kind === Done` → return `directive.result` | done | — | — |
+| `turnHandler(structuredClone(history)=[A,U,A,U], userResponse="yes I'm sure")` | classify → `{kind:"accept"}` | counters=[80], framing=true | — |
+| Turn returns `{kind: Done, message: "Locked in 70/30.", result:{equity:70, buffer:30}}` | — | unchanged | — |
+| Primitive: `kind === Done` → push closing message, send, return `directive.result` | done | unchanged | history=[A,U,A,U,A:"Locked in 70/30."], turns=2 |
 
-`collectAllocation` returns `{ equity: 70, buffer: 30 }`.
+`collectAllocation` returns `{ equity: 70, buffer: 30 }`; the user has seen the closing acknowledgment.
 
 ---
 
@@ -385,5 +403,13 @@ If duplication materializes once allocation + equity + buffer are all implemente
 
 ## Known caveats
 
-- The handler is implicitly stateful — calling it twice with the same `(history, userReply, turnsUsed)` may not return the same thing because closure state has mutated between calls. Worth a one-line comment to set that contract for readers.
-- `turnsUsed` is exposed to the turn handler but most phases will ignore it. YAGNI-flag candidate; defensible because it's cheap.
+- The handler is implicitly stateful — calling it twice with the same `(history, userResponse)` may not return the same thing because closure state has mutated between calls. Worth a one-line comment to set that contract for readers.
+- `responder.waitForResponse()` is not cancellable — no timeout, no abort signal. If the user disconnects mid-conversation, the loop wedges. Same gap exists in `runPhaseLoop` and `askWithClassify`. Tracked as backlog; not a regression introduced by `runConversation`.
+
+---
+
+## Error base — `PipelineControlFlowError`
+
+`ConversationBudgetExhaustedError` extends `PipelineControlFlowError` (sibling to `BaseError`), not `InternalError`. The semantic: this is an expected, user-driven UX outcome thrown by a pipeline primitive, caught by the phase, and translated to an in-band `unresolved` result (or a phase-specific `completed` default, as T6 buffer plans for its soft default to קרן כספית). It is not a system bug and never reaches the HTTP layer, so it carries no `status` code.
+
+The new base is shared with `PhaseLoopToolCallsExhaustedError` (thrown by `runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (thrown by `askWithClassify`) — the three pipeline primitives now use one consistent base class for graceful-halt errors. `ClassifyMessageMissingError` and `ClassifyResolvedOutputInvalidError` remain on `InternalError` / `SchemaValidationError` respectively — those are genuine system / model failures, not control flow.

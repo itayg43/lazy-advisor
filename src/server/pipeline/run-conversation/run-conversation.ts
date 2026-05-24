@@ -24,6 +24,11 @@ export const runConversation = async <TResult>({
   while (true) {
     switch (directive.kind) {
       case DirectiveKind.Done: {
+        if (directive.message) {
+          history.push({ role: "assistant", content: directive.message });
+          responder.sendToUser(directive.message);
+          logger.info("Sent closing message", { message: directive.message });
+        }
         logger.info("Conversation complete");
 
         return directive.result;
@@ -44,7 +49,7 @@ export const runConversation = async <TResult>({
           throw new ConversationBudgetExhaustedError(budget);
         }
 
-        directive = await turnHandler(history, userResponse, turnsUsed);
+        directive = await turnHandler(structuredClone(history), userResponse);
         logger.info("Turn handler returned", { kind: directive.kind });
 
         break;

@@ -1,6 +1,6 @@
-import { InternalError } from "#errors";
+import { PipelineControlFlowError } from "#errors";
 
-export class ConversationBudgetExhaustedError extends InternalError {
+export class ConversationBudgetExhaustedError extends PipelineControlFlowError {
   constructor(budget: number) {
     super(`runConversation: budget of ${budget} turns exhausted without resolution`);
     this.name = "ConversationBudgetExhaustedError";

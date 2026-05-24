@@ -101,8 +101,8 @@ export const collectAllocation = async (
     message: `I propose ${proposedEquity}% equity / ${proposedBuffer}% buffer.`,
   });
 
-  const turnHandler: TurnHandler<AllocationPhaseOutput> = async (history, userReply, _turnsUsed) => {
-    const intent = await classifyIntent(history, userReply);
+  const turnHandler: TurnHandler<AllocationPhaseOutput> = async (history, userResponse) => {
+    const intent = await classifyIntent(history, userResponse);
 
     if (intent.kind === "accept") {
       return {
