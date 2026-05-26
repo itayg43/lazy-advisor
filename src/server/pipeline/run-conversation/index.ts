@@ -1,8 +1,4 @@
 export { runConversation } from "#pipeline/run-conversation/run-conversation";
-export {
-  ConversationBudgetExhaustedError,
-  isConversationBudgetExhaustedError,
-} from "#pipeline/run-conversation/run-conversation.errors";
 export { DirectiveKind } from "#pipeline/run-conversation/run-conversation.types";
 export type {
   Directive,

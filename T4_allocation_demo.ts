@@ -10,7 +10,6 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import {
   DirectiveKind,
-  isConversationBudgetExhaustedError,
   runConversation,
   type InitHandler,
   type TurnHandler,
@@ -21,7 +20,6 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationPhaseInput,
-  AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
@@ -29,7 +27,7 @@ import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/cla
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
-const BUDGET = 5;
+const MAX_TURNS = 5;
 
 // Duplicated locally to keep the demo self-contained and avoid pulling in the
 // legacy runPhaseLoop-based module.
@@ -95,21 +93,34 @@ export const collectAllocation = async (
 
   const counters: number[] = [];
   let hasShownDrawdownFraming = false;
+  let turnCount = 0;
 
-  const initHandler: InitHandler<AllocationPhaseOutput> = async () => ({
+  const initHandler: InitHandler<AllocationPhaseResult> = async () => ({
     kind: DirectiveKind.Ask,
     message: `I propose ${proposedEquity}% equity / ${proposedBuffer}% buffer.`,
   });
 
-  const turnHandler: TurnHandler<AllocationPhaseOutput> = async (history, userResponse) => {
+  const turnHandler: TurnHandler<AllocationPhaseResult> = async (history, userResponse) => {
+    turnCount++;
     const intent = await classifyIntent(history, userResponse);
 
     if (intent.kind === "accept") {
       return {
         kind: DirectiveKind.Done,
         result: {
+          status: PipelineStatusEnum.enum.completed,
           equityPercentage: proposedEquity,
           bufferPercentage: proposedBuffer,
+        },
+      };
+    }
+
+    if (turnCount >= MAX_TURNS) {
+      return {
+        kind: DirectiveKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
         },
       };
     }
@@ -132,22 +143,5 @@ export const collectAllocation = async (
     };
   };
 
-  try {
-    const output = await runConversation({
-      initHandler,
-      turnHandler,
-      budget: BUDGET,
-      responder,
-    });
-
-    return { status: PipelineStatusEnum.enum.completed, ...output };
-  } catch (error) {
-    if (isConversationBudgetExhaustedError(error)) {
-      return {
-        status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-      };
-    }
-    throw error;
-  }
+  return runConversation({ initHandler, turnHandler, responder });
 };

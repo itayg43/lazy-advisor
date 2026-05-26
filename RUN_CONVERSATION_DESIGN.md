@@ -58,9 +58,14 @@ Three approaches considered for "how does the phase know it's the first call (no
 
 ### Result shape — `TResult` generic, phase handles `unresolved`
 
-`runConversation` is generic only over `TResult` (the phase's payload on success). It throws `ConversationBudgetExhaustedError` if the turn budget is hit; the phase catches it and maps to its own `completed | unresolved` shape.
+`runConversation` is generic only over `TResult`. The primitive does **not** enforce a turn budget; convergence (including the "user can't decide after N turns" fallback) is the handler's responsibility. Handlers self-limit via a closure-owned counter and return `Done` with whichever `TResult` variant fits — typically the phase's full `completed | unresolved` union, so the same call site can produce either outcome without the primitive needing to know.
 
-**Alternative considered:** the primitive itself returns a discriminated `{ status: "completed", ... } | { status: "exhausted" }`. **Rejected** — the per-phase boilerplate (one try/catch) is small, and pushing the discrimination into the primitive would force every consumer to handle exhaustion at the same level even when the right mapping is phase-specific.
+**Why no budget in the primitive.** Considered a primitive-level hard cap that throws on exhaustion (mirroring `runPhaseLoop`'s `maxToolCalls`). Rejected on two grounds:
+
+1. **Separation.** Budget is an operational concern; convergence is semantic. Mixing them either leaks budget state into the handler (passing `turnsRemaining` or `isLastTurn`) or wastes an LLM call on the (budget+1)-th turn that the primitive then discards — the handler reasoned about the user's reply, produced an `Ask`, and we throw it away.
+2. **Shape mismatch with `runPhaseLoop`.** `runPhaseLoop`'s cap protects against an LLM-driven tool loop with no user gate; without it the loop can spin freely. `runConversation`'s iterations are gated by `responder.waitForResponse()` — the user is the natural rate limiter. The "primitives enforce hard caps" pattern that applies to `runPhaseLoop` doesn't carry over.
+
+**Alternative considered:** the primitive itself returns a discriminated `{ status: "completed", ... } | { status: "exhausted" }`. **Rejected** for the same separation reason — pushing the discrimination into the primitive forces every consumer to model exhaustion at the same level even when the right mapping is phase-specific.
 
 ### `ask_user` is no longer an LLM tool
 
@@ -123,16 +128,6 @@ export type TurnHandler<TResult> = (
 export type RunConversationParams<TResult> = {
   initHandler: InitHandler<TResult>;
   turnHandler: TurnHandler<TResult>;
-  /**
-   * Maximum number of `turnHandler` invocations before the conversation is
-   * declared exhausted. The handler may be called at most `budget` times;
-   * the (budget+1)-th user reply causes `ConversationBudgetExhaustedError`
-   * to be thrown before that reply is processed by the handler.
-   *
-   * Note: the (budget+1)-th reply is still consumed (pushed to history) before
-   * the throw — phases should not rely on `history.length` to detect exhaustion.
-   */
-  budget: number;
   responder: Responder;
 };
 ```
@@ -153,14 +148,12 @@ Why `typeof DirectiveKind.Ask` instead of inline `"ask"` literals: keeps `Direct
 export const runConversation = async <TResult>({
   initHandler,
   turnHandler,
-  budget,
   responder,
 }: RunConversationParams<TResult>): Promise<TResult> => {
-  logger.info("Starting conversation", { budget });
+  logger.info("Starting conversation");
 
   const history: EasyInputMessage[] = [];
 
-  let turnsUsed = 0;
   let directive = await initHandler();
   while (true) {
     switch (directive.kind) {
@@ -183,13 +176,6 @@ export const runConversation = async <TResult>({
         history.push({ role: "user", content: userResponse });
         logger.info("Turn complete", { userResponse });
 
-        turnsUsed++;
-        if (turnsUsed > budget) {
-          logger.warn("Budget exhausted", { budget });
-
-          throw new ConversationBudgetExhaustedError(budget);
-        }
-
         directive = await turnHandler(structuredClone(history), userResponse);
         logger.info("Turn handler returned", { kind: directive.kind });
 
@@ -209,14 +195,14 @@ export const runConversation = async <TResult>({
 ```
 
 What the primitive does:
-- Owns `history`, the turn counter, and the I/O round-trip with the user.
+- Owns `history` and the I/O round-trip with the user.
 - Calls into the phase via `initHandler` once at the start, then `turnHandler` after each user reply. Each call to `turnHandler` receives a `structuredClone` of `history` so handler mutations cannot leak back into the primitive's view.
 - On `Done`, optionally sends `directive.message` (pushing it to history first) before returning `directive.result`.
 - Dispatches on `directive.kind` via a `switch` with a `default` arm whose `const _: never = directive` assignment enforces compile-time exhaustiveness — adding a future `Notify` variant without handling it will fail type-check rather than silently spin the loop.
-- Has zero visibility into phase state.
+- Has zero visibility into phase state and no notion of a turn budget — convergence is the handler's responsibility (see § *Result shape* above).
 - Generic only over `TResult` (the phase's final output type).
 
-On logging: every assistant message (Ask or Done.message) and every user reply gets an `info` line. The turn counter is **not** included in the log payloads — callers wire a session ID at a higher level, so turn position is recoverable from log sequence within a session. `budget` appears in `Budget exhausted` (warn) because it's the config value the caller picked, not derivable from the stream.
+On logging: every assistant message (Ask or Done.message) and every user reply gets an `info` line. No turn counter is logged from the primitive — callers wire a session ID at a higher level, so turn position is recoverable from log sequence within a session.
 
 ---
 
@@ -259,7 +245,7 @@ const collectAllocation = async (params): Promise<AllocationResult> => {
   };
 
   // ── 4. Hand off to runConversation ────────────────────────────────
-  return runConversation({ initHandler, turnHandler, budget: 5, responder });
+  return runConversation({ initHandler, turnHandler, responder });
 };
 ```
 
@@ -410,6 +396,6 @@ If duplication materializes once allocation + equity + buffer are all implemente
 
 ## Error base — `PipelineControlFlowError`
 
-`ConversationBudgetExhaustedError` extends `PipelineControlFlowError` (sibling to `BaseError`), not `InternalError`. The semantic: this is an expected, user-driven UX outcome thrown by a pipeline primitive, caught by the phase, and translated to an in-band `unresolved` result (or a phase-specific `completed` default, as T6 buffer plans for its soft default to קרן כספית). It is not a system bug and never reaches the HTTP layer, so it carries no `status` code.
+`runConversation` does not throw its own control-flow error. Convergence is the handler's responsibility: handlers self-limit and return `Done` with either a `completed` or `unresolved` variant of the phase's result type. There is no exhaustion path at the primitive level to wrap in an error.
 
-The new base is shared with `PhaseLoopToolCallsExhaustedError` (thrown by `runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (thrown by `askWithClassify`) — the three pipeline primitives now use one consistent base class for graceful-halt errors. `ClassifyMessageMissingError` and `ClassifyResolvedOutputInvalidError` remain on `InternalError` / `SchemaValidationError` respectively — those are genuine system / model failures, not control flow.
+`PipelineControlFlowError` continues to be the shared base for the two primitives that *do* enforce hard caps — `PhaseLoopToolCallsExhaustedError` (thrown by `runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (thrown by `askWithClassify`). The base captures the semantic distinction from genuine system failures (`InternalError`, `SchemaValidationError`) — exhaustion is an expected, user-driven UX outcome caught at the phase boundary; system failures continue to propagate. `ClassifyMessageMissingError` and `ClassifyResolvedOutputInvalidError` remain on `InternalError` / `SchemaValidationError` respectively — those are genuine system / model failures, not control flow.

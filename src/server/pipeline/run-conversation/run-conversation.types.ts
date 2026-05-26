@@ -42,15 +42,5 @@ export type TurnHandler<TResult> = (
 export type RunConversationParams<TResult> = {
   initHandler: InitHandler<TResult>;
   turnHandler: TurnHandler<TResult>;
-  /**
-   * Maximum number of `turnHandler` invocations before the conversation is
-   * declared exhausted. The handler may be called at most `budget` times;
-   * the (budget+1)-th user reply causes `ConversationBudgetExhaustedError`
-   * to be thrown before that reply is processed by the handler.
-   *
-   * Note: the (budget+1)-th reply is still consumed (pushed to history) before
-   * the throw — phases should not rely on `history.length` to detect exhaustion.
-   */
-  budget: number;
   responder: Responder;
 };

@@ -3,9 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import {
-  ConversationBudgetExhaustedError,
   DirectiveKind,
-  isConversationBudgetExhaustedError,
   runConversation,
   type InitHandler,
   type TurnHandler,
@@ -28,7 +26,6 @@ describe("runConversation", () => {
     const result = await runConversation({
       initHandler,
       turnHandler,
-      budget: 3,
       responder,
     });
 
@@ -52,7 +49,6 @@ describe("runConversation", () => {
     const result = await runConversation({
       initHandler,
       turnHandler,
-      budget: 3,
       responder,
     });
 
@@ -84,7 +80,7 @@ describe("runConversation", () => {
         : { kind: DirectiveKind.Done, result: "ok" };
     };
 
-    await runConversation({ initHandler, turnHandler, budget: 5, responder });
+    await runConversation({ initHandler, turnHandler, responder });
 
     expect(calls).toHaveLength(2);
     expect(calls[0]).toEqual({
@@ -105,49 +101,6 @@ describe("runConversation", () => {
     });
   });
 
-  it("should invoke turnHandler exactly `budget` times before throwing on the (budget+1)-th reply", async () => {
-    const budget = 2;
-    const responder = createTrackedResponder(["r1", "r2", "r3"]);
-
-    const initHandler: InitHandler<never> = async () => ({
-      kind: DirectiveKind.Ask,
-      message: "first?",
-    });
-    const turnHandler = vi.fn<TurnHandler<never>>(async () => ({
-      kind: DirectiveKind.Ask,
-      message: "next?",
-    }));
-
-    await expect(
-      runConversation({ initHandler, turnHandler, budget, responder }),
-    ).rejects.toBeInstanceOf(ConversationBudgetExhaustedError);
-
-    expect(turnHandler).toHaveBeenCalledTimes(budget);
-  });
-
-  it("should narrow the thrown error via the isConversationBudgetExhaustedError type guard", async () => {
-    const responder = createTrackedResponder(["r1"]);
-
-    const initHandler: InitHandler<never> = async () => ({
-      kind: DirectiveKind.Ask,
-      message: "go?",
-    });
-    const turnHandler: TurnHandler<never> = async () => ({
-      kind: DirectiveKind.Ask,
-      message: "again?",
-    });
-
-    let caught: unknown;
-    try {
-      await runConversation({ initHandler, turnHandler, budget: 0, responder });
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(isConversationBudgetExhaustedError(caught)).toBe(true);
-    expect(isConversationBudgetExhaustedError(new Error("other"))).toBe(false);
-  });
-
   it("should send Done.message to the user before returning", async () => {
     const responder = createTrackedResponder(["ok"]);
 
@@ -164,7 +117,6 @@ describe("runConversation", () => {
     const result = await runConversation({
       initHandler,
       turnHandler,
-      budget: 3,
       responder,
     });
 
@@ -189,7 +141,6 @@ describe("runConversation", () => {
     const result = await runConversation({
       initHandler,
       turnHandler,
-      budget: 3,
       responder,
     });
 
@@ -221,7 +172,7 @@ describe("runConversation", () => {
         : { kind: DirectiveKind.Done, result: "ok" };
     };
 
-    await runConversation({ initHandler, turnHandler, budget: 5, responder });
+    await runConversation({ initHandler, turnHandler, responder });
 
     expect(snapshotsOnEntry[1]).not.toContainEqual({
       role: "assistant",
