@@ -1,30 +1,50 @@
+import { zodTextFormat } from "openai/helpers/zod";
+import type { EasyInputMessage } from "openai/resources/responses/responses";
+
 import { createLogger } from "#lib/logger";
+import {
+  DirectiveKind,
+  runConversation,
+  type Directive,
+  type InitHandler,
+  type TurnHandler,
+} from "#pipeline/run-conversation";
 import {
   type AllocationCell,
   ALLOCATION_ANCHOR_DATA,
-  MAX_ALLOCATION_TOOL_CALLS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
-  ALLOCATION_EXTRACTION_INSTRUCTIONS,
-  ALLOCATION_PROMPT,
+  ALLOCATION_CLASSIFIER_PROMPT,
+  ALLOCATION_COUNTER_COMPOSER_PROMPT,
+  ALLOCATION_QUESTION_COMPOSER_PROMPT,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.prompts";
-import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
+import {
+  AllocationClassifierOutputSchema,
+  AllocationComposerOutputSchema,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
+  AllocationClassifierOutput,
   AllocationPhaseInput,
-  AllocationPhaseOutput,
   AllocationPhaseResult,
+  CounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
-import {
-  isPhaseLoopExhaustedError,
-  runPhaseExtraction,
-  runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.phase";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
+import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAllocation");
+
+const MODEL = "gpt-5.4-nano";
+const EFFORT = "low";
+// Per-conversation soft cap. The primitive enforces no budget — convergence is
+// the handler's job. Counts user replies; on the MAX_TURNSth turn the handler
+// returns `Done` with `unresolved` regardless of intent. Original phase used a
+// 5-tool-call budget; same magnitude, different unit.
+const MAX_TURNS = 5;
+
+const EXTREME_THRESHOLD_PP = 40;
 
 // +2/-2 insets keep proposals off the cell boundary; score 3 hits the midpoint
 // because it's the only score in the moderate bucket.
@@ -46,6 +66,162 @@ export const pickEquityPercentage = (
 
 const formatShekels = (n: number): string => `₪${n.toLocaleString("en-US")}`;
 
+const ppOutsideRange = (proposedEquity: number, cell: AllocationCell): number => {
+  if (proposedEquity > cell.max) return proposedEquity - cell.max;
+  if (proposedEquity < cell.min) return cell.min - proposedEquity;
+
+  return 0;
+};
+
+const selectCounterBranch = (
+  proposedEquity: number,
+  cell: AllocationCell,
+  hasShownExtreme: boolean,
+  hasShownCompoundImpact: boolean,
+): CounterBranch => {
+  const distance = ppOutsideRange(proposedEquity, cell);
+  if (distance >= EXTREME_THRESHOLD_PP && !hasShownExtreme) {
+    return {
+      kind: "extreme",
+      direction: proposedEquity > cell.max ? "too-high" : "too-low",
+    };
+  }
+  if (!hasShownCompoundImpact) return { kind: "compound-impact" };
+
+  return { kind: "bare" };
+};
+
+const buildInitialProposal = (
+  amount: number,
+  equityPercentage: number,
+  bufferPercentage: number,
+): string => {
+  const equityShekels = (amount * equityPercentage) / 100;
+  const bufferShekels = amount - equityShekels;
+
+  // Templated to lock in the Rule 1 contract: shekels + percent, relative
+  // trade-off (no specific drawdown %), and the "tends to reduce" framing.
+  return [
+    `Based on your timeline and comfort with drops, I'd propose ${formatShekels(equityShekels)} in stock ETFs and ${formatShekels(bufferShekels)} in a buffer — roughly ${equityPercentage}/${bufferPercentage}.`,
+    `More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.`,
+    `Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen.`,
+    `Want that split, more in stocks, or more in buffer?`,
+  ].join(" ");
+};
+
+const classifyTurn = async (
+  history: ReadonlyArray<EasyInputMessage>,
+): Promise<AllocationClassifierOutput> => {
+  const { id, output, usage } = await callOpenAIParsed(
+    {
+      model: MODEL,
+      instructions: ALLOCATION_CLASSIFIER_PROMPT,
+      input: [...history],
+      text: {
+        format: zodTextFormat(
+          AllocationClassifierOutputSchema,
+          "AllocationClassifierOutput",
+        ),
+      },
+      reasoning: { effort: EFFORT },
+    },
+    AllocationClassifierOutputSchema,
+  );
+
+  logger.info("Classified turn", {
+    responseId: id,
+    kind: output.kind,
+    proposedEquity: output.proposedEquity,
+    usage,
+  });
+
+  return output;
+};
+
+type ProposalContext = {
+  amount: number;
+  timeline: string;
+  cell: AllocationCell;
+  equityPercentage: number;
+};
+
+const composeCounterReply = async (
+  branch: CounterBranch,
+  proposedEquity: number,
+  ctx: ProposalContext,
+): Promise<string> => {
+  const proposedBuffer = 100 - proposedEquity;
+  const equityShekels = (ctx.amount * proposedEquity) / 100;
+  const bufferShekels = ctx.amount - equityShekels;
+
+  const branchTag =
+    branch.kind === "extreme"
+      ? branch.direction === "too-high"
+        ? "extreme-too-high"
+        : "extreme-too-low"
+      : branch.kind;
+
+  const input = [
+    `Branch to render: ${branchTag}`,
+    `User's exact equity proposal: ${proposedEquity}% (buffer ${proposedBuffer}%)`,
+    `Investment amount: ${formatShekels(ctx.amount)}`,
+    `New split in shekels: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in buffer`,
+    `Investment timeline: ${ctx.timeline}`,
+    `Recommended range: ${ctx.cell.min}–${ctx.cell.max}% equity`,
+  ].join("\n");
+
+  const { output, usage } = await callOpenAIParsed(
+    {
+      model: MODEL,
+      instructions: ALLOCATION_COUNTER_COMPOSER_PROMPT,
+      input,
+      text: {
+        format: zodTextFormat(AllocationComposerOutputSchema, "AllocationCounterReply"),
+      },
+      reasoning: { effort: EFFORT },
+    },
+    AllocationComposerOutputSchema,
+  );
+
+  logger.info("Composed counter reply", { branch: branchTag, usage });
+
+  return output.reply;
+};
+
+const composeQuestionReply = async (
+  question: string,
+  ctx: ProposalContext,
+): Promise<string> => {
+  const bufferPercentage = 100 - ctx.equityPercentage;
+  const equityShekels = (ctx.amount * ctx.equityPercentage) / 100;
+  const bufferShekels = ctx.amount - equityShekels;
+
+  const input = [
+    `Current proposal: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in buffer (${ctx.equityPercentage}/${bufferPercentage})`,
+    `Investment amount: ${formatShekels(ctx.amount)}`,
+    `Investment timeline: ${ctx.timeline}`,
+    `Recommended range: ${ctx.cell.min}–${ctx.cell.max}% equity`,
+    `User's question: ${question}`,
+  ].join("\n");
+
+  const { output, usage } = await callOpenAIParsed(
+    {
+      model: MODEL,
+      instructions: ALLOCATION_QUESTION_COMPOSER_PROMPT,
+      input,
+      text: {
+        format: zodTextFormat(AllocationComposerOutputSchema, "AllocationQuestionReply"),
+      },
+      reasoning: { effort: EFFORT },
+    },
+    AllocationComposerOutputSchema,
+  );
+
+  logger.info("Composed question reply", { usage });
+
+  return output.reply;
+};
+
 export const collectAllocation = async (
   { amount, timeline, riskTolerance, riskSelfRatingScore }: AllocationPhaseInput,
   responder: Responder,
@@ -60,50 +236,91 @@ export const collectAllocation = async (
   const cell = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
   const equityPercentage = pickEquityPercentage(cell, riskSelfRatingScore);
   const bufferPercentage = 100 - equityPercentage;
-  const equityShekels = (amount * equityPercentage) / 100;
-  const bufferShekels = amount - equityShekels;
+  const ctx: ProposalContext = { amount, timeline, cell, equityPercentage };
 
-  const context = [
-    `Investment amount: ${formatShekels(amount)}`,
-    `Investment timeline: ${timeline}`,
-    `Recommended range: ${cell.min}–${cell.max}% equity`,
-    `Proposed split: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in a buffer (${equityPercentage}% / ${bufferPercentage}%)`,
-  ].join("\n");
+  // ── Closure-owned state. The runConversation primitive does not see it. ──
+  const counters: number[] = [];
+  let hasShownExtremeFraming = false;
+  let hasShownCompoundImpactFraming = false;
+  let turnCount = 0;
 
-  let responseId: string;
-  try {
-    ({ responseId } = await runPhaseLoop({
-      model: "gpt-5.4-nano",
-      effort: "low",
-      instructions: ALLOCATION_PROMPT,
-      input: context,
-      maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
-      phaseName: "Allocation phase",
-      responder,
-    }));
-  } catch (error) {
-    if (isPhaseLoopExhaustedError(error)) {
-      logger.info("Allocation phase unresolved — tool calls exhausted");
+  const initHandler: InitHandler<AllocationPhaseResult> = async () => ({
+    kind: DirectiveKind.Ask,
+    message: buildInitialProposal(amount, equityPercentage, bufferPercentage),
+  });
 
+  const unresolved = (): Directive<AllocationPhaseResult> => ({
+    kind: DirectiveKind.Done,
+    result: {
+      status: PipelineStatusEnum.enum.unresolved,
+      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+    },
+  });
+
+  const turnHandler: TurnHandler<AllocationPhaseResult> = async (history) => {
+    turnCount++;
+    const intent = await classifyTurn(history);
+
+    if (intent.kind === "accept") {
+      // No closing message — eval expects exactly 1 agent message on happy path.
       return {
-        status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+        kind: DirectiveKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.completed,
+          equityPercentage: counters.at(-1) ?? equityPercentage,
+          bufferPercentage: 100 - (counters.at(-1) ?? equityPercentage),
+        },
       };
     }
 
-    throw error;
-  }
+    if (turnCount >= MAX_TURNS) {
+      logger.info("Allocation phase unresolved — turn budget exhausted");
 
-  const { id, usage, output } = await runPhaseExtraction<AllocationPhaseOutput>({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: ALLOCATION_EXTRACTION_INSTRUCTIONS,
-    lastResponseId: responseId,
-    schema: AllocationPhaseOutputSchema,
-  });
+      return unresolved();
+    }
 
-  logger.info("Allocation extraction complete", { responseId: id, usage });
-  logger.debug("Allocation output", { output });
+    if (intent.kind === "counter") {
+      if (intent.proposedEquity === null) {
+        logger.warn("Counter intent without proposedEquity — treating as unknown");
 
-  return { status: PipelineStatusEnum.enum.completed, ...output };
+        return {
+          kind: DirectiveKind.Ask,
+          message:
+            "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?",
+        };
+      }
+
+      counters.push(intent.proposedEquity);
+      const branch = selectCounterBranch(
+        intent.proposedEquity,
+        cell,
+        hasShownExtremeFraming,
+        hasShownCompoundImpactFraming,
+      );
+      if (branch.kind === "extreme") hasShownExtremeFraming = true;
+      if (branch.kind === "compound-impact") hasShownCompoundImpactFraming = true;
+
+      const reply = await composeCounterReply(branch, intent.proposedEquity, ctx);
+
+      return { kind: DirectiveKind.Ask, message: reply };
+    }
+
+    if (intent.kind === "question") {
+      // Use the last user message in history as the question text.
+      const lastUser = [...history].reverse().find((m) => m.role === "user");
+      const questionText = typeof lastUser?.content === "string" ? lastUser.content : "";
+      const reply = await composeQuestionReply(questionText, ctx);
+
+      return { kind: DirectiveKind.Ask, message: reply };
+    }
+
+    // unknown — re-prompt without mutating state.
+    return {
+      kind: DirectiveKind.Ask,
+      message:
+        "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?",
+    };
+  };
+
+  return runConversation({ initHandler, turnHandler, responder });
 };

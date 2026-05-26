@@ -2,6 +2,8 @@ import type { z } from "zod";
 
 import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
+  AllocationClassifierOutputSchema,
+  AllocationIntentKindEnum,
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
@@ -17,3 +19,13 @@ export type AllocationPhaseInput = {
 
 export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
 export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
+
+export type AllocationIntentKind = z.infer<typeof AllocationIntentKindEnum>;
+export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutputSchema>;
+
+// Counter-proposal branch — Rule 3 in clarify.allocation.rules.md. Selected in
+// code from {counters, hasShownCompoundImpactFraming, isExtreme(proposed, cell)}.
+export type CounterBranch =
+  | { kind: "extreme"; direction: "too-high" | "too-low" }
+  | { kind: "compound-impact" }
+  | { kind: "bare" };

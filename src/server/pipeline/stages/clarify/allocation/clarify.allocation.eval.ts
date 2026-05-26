@@ -469,11 +469,11 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals forces
-  // one confirmation tool call each; once tool calls exceed MAX_ALLOCATION_TOOL_CALLS (5),
-  // runPhaseLoop throws PhaseLoopToolCallsExhaustedError and collectAllocation returns
-  // { status: "unresolved", reason: "allocation" }.
-  it("should return failure when the user keeps counter-proposing past the tool-call budget", async () => {
+  // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals
+  // exhausts the closure-owned turn budget (MAX_TURNS = 5 in clarify.allocation.ts).
+  // On the budget-th turn, the handler returns `Done` with
+  // { status: "unresolved", reason: "allocation" } before composing another reply.
+  it("should return failure when the user keeps counter-proposing past the turn budget", async () => {
     const responder = createTrackedResponder([
       "Actually I want 60% stocks",
       "Wait, let's do 55%",

@@ -28,7 +28,7 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 
 ## 1. Propose the cell-appropriate anchor
 
-**Rule:** On entry, the equity percentage and shekel amounts are **precomputed in code** (`collectAllocation` in `clarify.allocation.ts`) and passed to the prompt as context. The model sends one `ask_user` call that relays the proposal verbatim — it must not recompute or adjust the numbers. The proposal must include:
+**Rule:** On entry, the equity percentage and shekel amounts are **precomputed in code** (`collectAllocation` in `clarify.allocation.ts`). The initial proposal message is also rendered **in code** (`buildInitialProposal`) — no LLM call — so the Rule 1 contract is enforced deterministically. The proposal must include:
 
 - The split in **shekels** against the user's investment amount (e.g., "₪35,000 in stock ETFs and ₪15,000 in a buffer — roughly 70/30"). Not percentage-only.
 - One honest trade-off sentence **in relative terms**: more equity → bigger drops in bad years + higher long-run growth; less equity → smaller drops + lower growth. **No specific drawdown percentages in this turn** — they age badly and invite false precision.
@@ -58,7 +58,7 @@ The +2/-2 insets keep proposals off cell boundaries. Score 3 hits the midpoint b
 
 ## 2. User accepts → end the phase
 
-**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, stop calling tools. No wrap-up message, no re-confirmation.
+**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, the phase resolves immediately. No wrap-up message, no re-confirmation. The classifier returns `kind: "accept"` and the turn handler returns `Done` with no closing message.
 
 **Disambiguation:** A response that names a specific percentage or ratio different from the current proposal — even if phrased as acceptance (e.g., "let's do 50/50", "I want 60%") — is a counter-proposal. Apply Rule 3 instead.
 
@@ -66,7 +66,7 @@ The +2/-2 insets keep proposals off cell boundaries. Score 3 hits the midpoint b
 
 ## 3. User proposes a different split → honor the exact number (decision tree)
 
-**Prelude (every counter-proposal):** Honor the user's **exact number** — no snap-to-cell. Confirm the updated split in shekels and percent in the same `ask_user` call. Then add **exactly one** of Branches 1–3 below.
+**Prelude (every counter-proposal):** Honor the user's **exact number** — no snap-to-cell. The classifier extracts the user's `proposedEquity`; code selects the branch (extreme / compound-impact / bare) deterministically from `{counters, hasShownExtremeFraming, hasShownCompoundImpactFraming}`; the counter composer renders the reply with the new split in shekels and percent plus the branch-specific framing.
 
 **Branch 1 — Extreme mismatch (40+ pp outside the recommended range).** Add a directional sanity check using the matching pattern, then accept the user's final answer. Surface the mismatch **once** per conversation; do not re-challenge.
 
@@ -94,7 +94,7 @@ The +2/-2 insets keep proposals off cell boundaries. Score 3 hits the midpoint b
 
 ## 4. User asks a clarifying question → explain briefly, then re-ask
 
-**Rule:** If the user replies to the Rule 1 proposal with a question instead of an answer, answer briefly and honestly, then re-present the same anchor question in the same `ask_user` call.
+**Rule:** If the user replies to the Rule 1 proposal with a question instead of an answer, answer briefly and honestly, then re-present the current proposal. The classifier returns `kind: "question"` and dispatches to the question composer.
 
 **Explanation scope:**
 
@@ -110,19 +110,19 @@ The +2/-2 insets keep proposals off cell boundaries. Score 3 hits the midpoint b
 
 ---
 
-## Tool-call budget
+## Turn budget
 
-`MAX_ALLOCATION_TOOL_CALLS = 5`. Typical path:
+`MAX_TURNS = 5` in `clarify.allocation.ts`. Counts user replies (each call to `turnHandler`). Typical paths:
 
-- **Happy path:** 1 proposal + user accepts = 1 tool call.
-- **Counter-proposal path:** 1 proposal + 1 counter-proposal confirm = 2 tool calls.
-- **Clarifying question path:** 1 proposal + 1 explanation + re-ask + 1 final confirm = 3 tool calls.
-- **Sanity-check path:** 1 proposal + 1 extreme counter-proposal sanity check + 1 final confirm = 3 tool calls.
-- **Worst case** (clarifying question followed by extreme counter-proposal) = 4 tool calls, still within budget.
+- **Happy path:** initial proposal + user accepts on turn 1 = 1 turn used.
+- **Counter-proposal path:** initial proposal + counter on turn 1 + accept on turn 2 = 2 turns used.
+- **Clarifying question path:** initial proposal + question on turn 1 + accept on turn 2 = 2 turns used.
+- **Sanity-check path:** initial proposal + extreme counter on turn 1 (with sanity check) + accept on turn 2 = 2 turns used.
+- **Worst case in evals** (question + counter + accept) = 3 turns used, well within budget.
 
 ## Budget exhaustion
 
-If the phase loop exhausts `MAX_ALLOCATION_TOOL_CALLS`, `runPhaseLoop()` throws `PhaseLoopToolCallsExhaustedError`. `collectAllocation` catches it and returns `{ status: "unresolved", reason: "allocation" }`; the orchestrator sends a closing message and the pipeline exits.
+The `runConversation` primitive enforces no budget — convergence is the handler's responsibility. The handler increments a closure-owned `turnCount` per turn; on the MAX_TURNSth turn it returns `Done` with `{ status: "unresolved", reason: "allocation" }` regardless of intent. The orchestrator maps that result to `ALLOCATION_EXIT_MESSAGE` and the pipeline exits.
 
 ## Out of scope
 

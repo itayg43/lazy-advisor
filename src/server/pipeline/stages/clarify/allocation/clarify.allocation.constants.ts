@@ -32,5 +32,3 @@ export const ALLOCATION_ANCHOR_DATA = {
     [t10plus]: { min: 80, max: 90 },
   },
 } satisfies Record<RiskTolerance, Record<AllocationTimeline, AllocationCell>>;
-
-export const MAX_ALLOCATION_TOOL_CALLS = 5;

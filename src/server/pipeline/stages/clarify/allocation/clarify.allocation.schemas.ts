@@ -36,3 +36,25 @@ export const AllocationPhaseResultSchema = z
     }),
   ])
   .refine((v) => v.status !== "completed" || equityBufferSumsTo100(v), SUM_TO_100_ERROR);
+
+// Classifier output. Flat shape (not a discriminated union) because OpenAI
+// structured outputs don't accept z.discriminatedUnion — same pattern as the
+// askWithClassify two-schema setup. `proposedEquity` is meaningful only when
+// `kind === "counter"`; nullable otherwise.
+export const AllocationIntentKindEnum = z.enum([
+  "accept",
+  "counter",
+  "question",
+  "unknown",
+]);
+
+export const AllocationClassifierOutputSchema = z.object({
+  kind: AllocationIntentKindEnum,
+  proposedEquity: z.number().int().min(0).max(100).nullable(),
+});
+
+// Composer schemas — wrap free-text replies in a single `reply` field so we
+// can keep using callOpenAIParsed (consistent with the rest of the codebase).
+export const AllocationComposerOutputSchema = z.object({
+  reply: z.string().min(1),
+});

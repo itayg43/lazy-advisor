@@ -6,8 +6,8 @@ import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
-import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
-import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import * as allocationModule from "#pipeline/stages/clarify/allocation/clarify.allocation";
+import type { AllocationClassifierOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { runClarify } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
 import type {
@@ -29,9 +29,10 @@ import {
   SHORT_TIMELINE_EXIT_MESSAGE,
   TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
-import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
-import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import {
+  ClarifyUnresolvedReasonEnum,
+  GoalClassificationEnum,
+} from "#pipeline/stages/clarify/shared/clarify.schemas";
 import {
   PipelineStatusEnum,
   RiskToleranceEnum,
@@ -128,14 +129,17 @@ describe("runClarify", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(createParsedResponse(mockRiskClassify));
   };
 
+  // Allocation now uses runConversation: one classifier LLM call per user turn,
+  // no extraction call. Happy-path = single "accept" classification on the
+  // first user reply. equityPercentage is computed in code (moderate + 10+yr +
+  // score 3 → midpoint 65), not returned by the LLM.
   const setupAllocationMocks = () => {
-    const mockAllocationOutput: AllocationPhaseOutput = {
-      equityPercentage: 60,
-      bufferPercentage: 40,
-    };
-    mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
+    mockWaitForResponse.mockResolvedValueOnce("ok");
     mockedCallOpenAIParsed.mockResolvedValueOnce(
-      createParsedResponse(mockAllocationOutput),
+      createParsedResponse<AllocationClassifierOutput>({
+        kind: "accept",
+        proposedEquity: null,
+      }),
     );
   };
 
@@ -154,8 +158,8 @@ describe("runClarify", () => {
     amount: 50000,
     timeline: TimelineBucketEnum.enum["10+ years"],
     riskTolerance: RiskToleranceEnum.enum.moderate,
-    equityPercentage: 60,
-    bufferPercentage: 40,
+    equityPercentage: 65,
+    bufferPercentage: 35,
     plansToContribute: true,
   };
 
@@ -363,7 +367,7 @@ describe("runClarify", () => {
       });
     });
 
-    it("should return an unresolved result with ALLOCATION_EXIT_MESSAGE when allocation tool calls are exhausted", async () => {
+    it("should return an unresolved result with ALLOCATION_EXIT_MESSAGE when allocation is unresolved", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -371,14 +375,14 @@ describe("runClarify", () => {
       setupParametersMocks();
       setupRiskMocks();
 
-      // Spy on runPhaseLoop so allocation throws PhaseLoopToolCallsExhaustedError,
-      // which collectAllocation converts to { status: "unresolved", reason: "allocation" }.
-      vi.spyOn(clarifyPhase, "runPhaseLoop").mockRejectedValueOnce(
-        new PhaseLoopToolCallsExhaustedError(
-          "Allocation phase",
-          MAX_ALLOCATION_TOOL_CALLS,
-        ),
-      );
+      // Spy on collectAllocation directly — the orchestrator's job here is to
+      // map `{ status: "unresolved", reason: "allocation" }` to
+      // ALLOCATION_EXIT_MESSAGE; the inner exhaustion mechanism (turn budget)
+      // is covered by the allocation evals.
+      vi.spyOn(allocationModule, "collectAllocation").mockResolvedValueOnce({
+        status: PipelineStatusEnum.enum.unresolved,
+        reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+      });
 
       const result = await runClarify("I want to invest ₪50,000", mockResponder);
 
