@@ -6,7 +6,7 @@ import type {
 import type { ReasoningEffort, ResponsesModel } from "openai/resources/shared";
 import type { ZodType } from "zod";
 
-import { InternalError } from "#errors";
+import { InternalError, PipelineControlFlowError } from "#errors";
 import { createLogger } from "#lib/logger";
 import { getStageTools } from "#pipeline/tools";
 import {
@@ -18,7 +18,7 @@ import { callOpenAI, callOpenAIParsed, type OpenAIResponse } from "#services/ope
 
 const logger = createLogger("clarifyPhase");
 
-export class PhaseLoopToolCallsExhaustedError extends InternalError {
+export class PhaseLoopToolCallsExhaustedError extends PipelineControlFlowError {
   constructor(phaseName: string, maxToolCalls: number) {
     super(`${phaseName} failed to converge within ${maxToolCalls} tool calls`);
     this.name = "PhaseLoopToolCallsExhaustedError";

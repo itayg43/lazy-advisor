@@ -41,3 +41,16 @@ export class ServiceUnavailableError extends BaseError {
     this.name = "ServiceUnavailableError";
   }
 }
+
+/**
+ * Expected, user-driven flow outcomes thrown by pipeline primitives — caught
+ * at the phase boundary and translated to in-band results (`unresolved`, or a
+ * phase-specific `completed` default). Sibling to `BaseError`: never reaches
+ * HTTP, so no `status` code.
+ */
+export class PipelineControlFlowError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PipelineControlFlowError";
+  }
+}
