@@ -46,8 +46,10 @@ const MAX_TURNS = 5;
 
 const EXTREME_THRESHOLD_PP = 40;
 
-// +2/-2 insets keep proposals off the cell boundary; score 3 hits the midpoint
-// because it's the only score in the moderate bucket.
+// Pairing is bucket-relative position (see mapScoreToBucket in clarify.risk.ts):
+// (1, 4) = cautious end of their bucket; (2, 5) = comfortable end; 3 = midpoint
+// (moderate is a single-score bucket). Landing on cell edges keeps proposals
+// round (80/20, 90/10) instead of awkward insets (82/18, 88/12).
 export const pickEquityPercentage = (
   cell: AllocationCell,
   score: RiskSelfRatingScore,
@@ -55,10 +57,10 @@ export const pickEquityPercentage = (
   switch (score) {
     case 1:
     case 4:
-      return cell.min + 2;
+      return cell.min;
     case 2:
     case 5:
-      return cell.max - 2;
+      return cell.max;
     case 3:
       return (cell.min + cell.max) / 2;
   }

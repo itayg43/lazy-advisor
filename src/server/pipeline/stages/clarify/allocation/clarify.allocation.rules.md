@@ -41,18 +41,18 @@ The equity percentage inside a cell is selected by `pickEquityPercentage(cell, r
 
 | `riskSelfRatingScore` | Position in cell | Formula                     |
 | --------------------- | ---------------- | --------------------------- |
-| 1, 4                  | Low end          | `cell.min + 2`              |
-| 2, 5                  | High end         | `cell.max - 2`              |
+| 1, 4                  | Low end          | `cell.min`                  |
+| 2, 5                  | High end         | `cell.max`                  |
 | 3                     | Midpoint         | `(cell.min + cell.max) / 2` |
 
-The +2/-2 insets keep proposals off cell boundaries. Score 3 hits the midpoint because it's the only score in the moderate risk-tolerance bucket — no within-bucket discrimination is needed.
+Score 3 hits the midpoint because it's the only score in the moderate risk-tolerance bucket — no within-bucket discrimination is needed. Landing on the cell edges keeps proposals round (80/20, 90/10) rather than awkward insets like 82/18 or 88/12.
 
 **Scenarios:**
 
-- Aggressive, 10+ years, ₪50,000, score 5 → 88% equity (cell.max − 2) → propose ₪44,000 / ₪6,000.
+- Aggressive, 10+ years, ₪50,000, score 5 → 90% equity (cell.max) → propose ₪45,000 / ₪5,000.
 - Moderate, 5–10 years, ₪80,000, score 3 → 55% equity (midpoint) → propose ₪44,000 / ₪36,000.
-- Conservative, 3–5 years, ₪30,000, score 2 → 18% equity (cell.max − 2) → propose ₪5,400 / ₪24,600.
-- Same cell, different score: aggressive 10+ yr, score 4 → 82% equity (cell.min + 2), not 88% (score 5). Score discriminates within the bucket.
+- Conservative, 3–5 years, ₪30,000, score 2 → 20% equity (cell.max) → propose ₪6,000 / ₪24,000.
+- Same cell, different score: aggressive 10+ yr, score 4 → 80% equity (cell.min), not 90% (score 5). Score discriminates within the bucket.
 
 ---
 

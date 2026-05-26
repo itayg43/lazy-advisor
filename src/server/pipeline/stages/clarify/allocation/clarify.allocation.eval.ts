@@ -175,15 +175,15 @@ describe("collectAllocation", () => {
     {
       fixture: longHorizonAggressiveInput,
       score: 4,
-      equity: 82,
-      buffer: 18,
+      equity: 80,
+      buffer: 20,
       label: "aggressive 10+ year",
     },
     {
       fixture: longHorizonConservativeInput,
       score: 1,
-      equity: 42,
-      buffer: 58,
+      equity: 40,
+      buffer: 60,
       label: "conservative 10+ year",
     },
   ])(
