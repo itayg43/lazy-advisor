@@ -7,7 +7,7 @@ description: Run all checks, draft a commit message, commit, and push to the cur
 
 ### 1. Run checks
 
-Run in sequence — stop immediately and report if any fail:
+Run these four commands, each as its own separate tool call, in this order:
 
 ```
 npm run format
@@ -16,7 +16,10 @@ npm run type-check
 npm test
 ```
 
-If any check fails, report which one and the full error output. Do not proceed to commit.
+Hard rules:
+- **Sequential only.** One command per Bash call. Do not run them in parallel and do not chain them with `&&`, `;`, or `|`.
+- **Verbatim.** No appended flags, no `2>&1`, no `| tail`, no redirection. Run each command exactly as written above.
+- **Stop on failure.** If a command fails, stop immediately, report which one and the full error output, and do not proceed to commit.
 
 ### 2. Review changes
 
