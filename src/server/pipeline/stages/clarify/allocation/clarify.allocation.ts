@@ -144,7 +144,6 @@ type ProposalContext = {
   amount: number;
   timeline: string;
   cell: AllocationCell;
-  equityPercentage: number;
 };
 
 const composeCounterReply = async (
@@ -192,14 +191,15 @@ const composeCounterReply = async (
 
 const composeQuestionReply = async (
   question: string,
+  currentEquity: number,
   ctx: ProposalContext,
 ): Promise<string> => {
-  const bufferPercentage = 100 - ctx.equityPercentage;
-  const equityShekels = (ctx.amount * ctx.equityPercentage) / 100;
+  const bufferPercentage = 100 - currentEquity;
+  const equityShekels = (ctx.amount * currentEquity) / 100;
   const bufferShekels = ctx.amount - equityShekels;
 
   const input = [
-    `Current proposal: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in buffer (${ctx.equityPercentage}/${bufferPercentage})`,
+    `Current proposal: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in buffer (${currentEquity}/${bufferPercentage})`,
     `Investment amount: ${formatShekels(ctx.amount)}`,
     `Investment timeline: ${ctx.timeline}`,
     `Recommended range: ${ctx.cell.min}–${ctx.cell.max}% equity`,
@@ -236,19 +236,19 @@ export const collectAllocation = async (
   });
 
   const cell = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
-  const equityPercentage = pickEquityPercentage(cell, riskSelfRatingScore);
-  const bufferPercentage = 100 - equityPercentage;
-  const ctx: ProposalContext = { amount, timeline, cell, equityPercentage };
+  const anchorEquity = pickEquityPercentage(cell, riskSelfRatingScore);
+  const ctx: ProposalContext = { amount, timeline, cell };
 
-  // ── Closure-owned state. The runConversation primitive does not see it. ──
-  const counters: number[] = [];
-  let hasShownExtremeFraming = false;
-  let hasShownCompoundImpactFraming = false;
-  let turnCount = 0;
+  const conversationState = {
+    currentEquity: anchorEquity,
+    extremeFramingShown: false,
+    compoundImpactFramingShown: false,
+    turnsTaken: 0,
+  };
 
   const initHandler: InitHandler<AllocationPhaseResult> = async () => ({
     kind: DirectiveKind.Ask,
-    message: buildInitialProposal(amount, equityPercentage, bufferPercentage),
+    message: buildInitialProposal(amount, anchorEquity, 100 - anchorEquity),
   });
 
   const unresolved = (): Directive<AllocationPhaseResult> => ({
@@ -260,7 +260,7 @@ export const collectAllocation = async (
   });
 
   const turnHandler: TurnHandler<AllocationPhaseResult> = async (history) => {
-    turnCount++;
+    conversationState.turnsTaken++;
     const intent = await classifyTurn(history);
 
     if (intent.kind === "accept") {
@@ -269,13 +269,13 @@ export const collectAllocation = async (
         kind: DirectiveKind.Done,
         result: {
           status: PipelineStatusEnum.enum.completed,
-          equityPercentage: counters.at(-1) ?? equityPercentage,
-          bufferPercentage: 100 - (counters.at(-1) ?? equityPercentage),
+          equityPercentage: conversationState.currentEquity,
+          bufferPercentage: 100 - conversationState.currentEquity,
         },
       };
     }
 
-    if (turnCount >= MAX_TURNS) {
+    if (conversationState.turnsTaken >= MAX_TURNS) {
       logger.info("Allocation phase unresolved — turn budget exhausted");
 
       return unresolved();
@@ -292,15 +292,16 @@ export const collectAllocation = async (
         };
       }
 
-      counters.push(intent.proposedEquity);
+      conversationState.currentEquity = intent.proposedEquity;
       const branch = selectCounterBranch(
         intent.proposedEquity,
         cell,
-        hasShownExtremeFraming,
-        hasShownCompoundImpactFraming,
+        conversationState.extremeFramingShown,
+        conversationState.compoundImpactFramingShown,
       );
-      if (branch.kind === "extreme") hasShownExtremeFraming = true;
-      if (branch.kind === "compound-impact") hasShownCompoundImpactFraming = true;
+      if (branch.kind === "extreme") conversationState.extremeFramingShown = true;
+      if (branch.kind === "compound-impact")
+        conversationState.compoundImpactFramingShown = true;
 
       const reply = await composeCounterReply(branch, intent.proposedEquity, ctx);
 
@@ -311,7 +312,11 @@ export const collectAllocation = async (
       // Use the last user message in history as the question text.
       const lastUser = [...history].reverse().find((m) => m.role === "user");
       const questionText = typeof lastUser?.content === "string" ? lastUser.content : "";
-      const reply = await composeQuestionReply(questionText, ctx);
+      const reply = await composeQuestionReply(
+        questionText,
+        conversationState.currentEquity,
+        ctx,
+      );
 
       return { kind: DirectiveKind.Ask, message: reply };
     }

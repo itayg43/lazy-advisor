@@ -345,7 +345,8 @@ describe("collectAllocation", () => {
     expect(output.bufferPercentage).toBe(45);
 
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
-    const compoundImpactPattern = /over your[^.]{0,40}(?:year|horizon|timeline)/i;
+    const compoundImpactPattern =
+      /(?:over|with|across) your[^.]{0,40}(?:year|horizon|timeline)/i;
     expect(agentTurns[1].content).toMatch(compoundImpactPattern);
     expect(agentTurns[2].content).not.toMatch(compoundImpactPattern);
 
