@@ -41,9 +41,12 @@ describe("runConversation", () => {
       kind: DirectiveKind.Ask,
       message: "ready?",
     });
-    const turnHandler: TurnHandler<{ ok: boolean }> = async (_history, userResponse) => ({
+    const turnHandler: TurnHandler<{ ok: boolean }> = async (
+      _history,
+      lastUserResponse,
+    ) => ({
       kind: DirectiveKind.Done,
-      result: { ok: userResponse === "yes" },
+      result: { ok: lastUserResponse === "yes" },
     });
 
     const result = await runConversation({
@@ -59,11 +62,11 @@ describe("runConversation", () => {
     ]);
   });
 
-  it("should pass history and userResponse to turnHandler in order", async () => {
+  it("should pass history and lastUserResponse to turnHandler in order", async () => {
     const responder = createTrackedResponder(["reply-1", "reply-2"]);
     const calls: Array<{
       history: ReadonlyArray<EasyInputMessage>;
-      userResponse: string;
+      lastUserResponse: string;
     }> = [];
 
     const initHandler: InitHandler<string> = async () => ({
@@ -71,9 +74,9 @@ describe("runConversation", () => {
       message: "q1",
     });
     let callIndex = 0;
-    const turnHandler: TurnHandler<string> = async (history, userResponse) => {
+    const turnHandler: TurnHandler<string> = async (history, lastUserResponse) => {
       callIndex++;
-      calls.push({ history: [...history], userResponse });
+      calls.push({ history: [...history], lastUserResponse });
 
       return callIndex === 1
         ? { kind: DirectiveKind.Ask, message: "q2" }
@@ -88,7 +91,7 @@ describe("runConversation", () => {
         { role: "assistant", content: "q1" },
         { role: "user", content: "reply-1" },
       ],
-      userResponse: "reply-1",
+      lastUserResponse: "reply-1",
     });
     expect(calls[1]).toEqual({
       history: [
@@ -97,7 +100,7 @@ describe("runConversation", () => {
         { role: "assistant", content: "q2" },
         { role: "user", content: "reply-2" },
       ],
-      userResponse: "reply-2",
+      lastUserResponse: "reply-2",
     });
   });
 

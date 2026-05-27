@@ -36,7 +36,7 @@ export type InitHandler<TResult> = () => Promise<Directive<TResult>>;
 // back — the `ReadonlyArray` type is enforced at runtime too.
 export type TurnHandler<TResult> = (
   history: ReadonlyArray<EasyInputMessage>,
-  userResponse: string,
+  lastUserResponse: string,
 ) => Promise<Directive<TResult>>;
 
 export type RunConversationParams<TResult> = {

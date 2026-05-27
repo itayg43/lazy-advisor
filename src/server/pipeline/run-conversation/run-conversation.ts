@@ -36,11 +36,11 @@ export const runConversation = async <TResult>({
         responder.sendToUser(directive.message);
         logger.info("Asked user", { message: directive.message });
 
-        const userResponse = await responder.waitForResponse();
-        history.push({ role: "user", content: userResponse });
-        logger.info("Turn complete", { userResponse });
+        const lastUserResponse = await responder.waitForResponse();
+        history.push({ role: "user", content: lastUserResponse });
+        logger.info("Turn complete", { lastUserResponse });
 
-        directive = await turnHandler(structuredClone(history), userResponse);
+        directive = await turnHandler(structuredClone(history), lastUserResponse);
         logger.info("Turn handler returned", { kind: directive.kind });
 
         break;

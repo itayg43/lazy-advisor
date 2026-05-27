@@ -259,7 +259,10 @@ export const collectAllocation = async (
     },
   });
 
-  const turnHandler: TurnHandler<AllocationPhaseResult> = async (history) => {
+  const turnHandler: TurnHandler<AllocationPhaseResult> = async (
+    history,
+    lastUserResponse,
+  ) => {
     conversationState.turnsTaken++;
     const intent = await classifyTurn(history);
 
@@ -309,11 +312,8 @@ export const collectAllocation = async (
     }
 
     if (intent.kind === "question") {
-      // Use the last user message in history as the question text.
-      const lastUser = [...history].reverse().find((m) => m.role === "user");
-      const questionText = typeof lastUser?.content === "string" ? lastUser.content : "";
       const reply = await composeQuestionReply(
-        questionText,
+        lastUserResponse,
         conversationState.currentEquity,
         ctx,
       );
