@@ -37,18 +37,14 @@ const logger = createLogger("clarifyAllocation");
 
 const MODEL = "gpt-5.4-nano";
 const EFFORT = "low";
-// Per-conversation soft cap. The primitive enforces no budget — convergence is
-// the handler's job. Counts user replies; on the MAX_TURNSth turn the handler
-// returns `Done` with `unresolved` regardless of intent. Original phase used a
-// 5-tool-call budget; same magnitude, different unit.
+// Per-conversation cap, counted in user replies. The primitive does not
+// enforce a budget — convergence is each phase's responsibility.
 const MAX_TURNS = 5;
-
 const EXTREME_THRESHOLD_PP = 40;
 
 // Pairing is bucket-relative position (see mapScoreToBucket in clarify.risk.ts):
 // (1, 4) = cautious end of their bucket; (2, 5) = comfortable end; 3 = midpoint
-// (moderate is a single-score bucket). Landing on cell edges keeps proposals
-// round (80/20, 90/10) instead of awkward insets (82/18, 88/12).
+// (moderate is a single-score bucket).
 export const pickEquityPercentage = (
   cell: AllocationCell,
   score: RiskSelfRatingScore,
@@ -100,8 +96,6 @@ const buildInitialProposal = (
   const equityShekels = (amount * equityPercentage) / 100;
   const bufferShekels = amount - equityShekels;
 
-  // Templated to lock in the Rule 1 contract: shekels + percent, relative
-  // trade-off (no specific drawdown %), and the "tends to reduce" framing.
   return [
     `Based on your timeline and comfort with drops, I'd propose ${formatShekels(equityShekels)} in stock ETFs and ${formatShekels(bufferShekels)} in a buffer — roughly ${equityPercentage}/${bufferPercentage}.`,
     `More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.`,
@@ -155,11 +149,7 @@ const composeCounterReply = async (
   const bufferShekels = ctx.amount - equityShekels;
 
   const branchTag =
-    branch.kind === "extreme"
-      ? branch.direction === "too-high"
-        ? "extreme-too-high"
-        : "extreme-too-low"
-      : branch.kind;
+    branch.kind === "extreme" ? `extreme-${branch.direction}` : branch.kind;
 
   const input = [
     `Branch to render: ${branchTag}`,
@@ -323,7 +313,6 @@ export const collectAllocation = async (
       return { kind: DirectiveKind.Ask, message: reply };
     }
 
-    // unknown — re-prompt without mutating state.
     return {
       kind: DirectiveKind.Ask,
       message:
