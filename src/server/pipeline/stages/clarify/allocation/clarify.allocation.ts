@@ -5,13 +5,12 @@ import { createLogger } from "#lib/logger";
 import {
   DirectiveKind,
   runConversation,
-  type Directive,
   type InitHandler,
   type TurnHandler,
 } from "#pipeline/run-conversation";
 import {
-  type AllocationCell,
   ALLOCATION_ANCHOR_DATA,
+  type AllocationCell,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   ALLOCATION_CLASSIFIER_PROMPT,
@@ -171,7 +170,9 @@ const composeCounterReply = async (
     `Recommended range: ${ctx.cell.min}–${ctx.cell.max}% equity`,
   ].join("\n");
 
-  const { output, usage } = await callOpenAIParsed(
+  const {
+    output: { reply },
+  } = await callOpenAIParsed(
     {
       model: MODEL,
       instructions: ALLOCATION_COUNTER_COMPOSER_PROMPT,
@@ -184,9 +185,9 @@ const composeCounterReply = async (
     AllocationComposerOutputSchema,
   );
 
-  logger.info("Composed counter reply", { branch: branchTag, usage });
+  logger.info("Composed counter reply", { reply });
 
-  return output.reply;
+  return reply;
 };
 
 const composeQuestionReply = async (
@@ -206,7 +207,9 @@ const composeQuestionReply = async (
     `User's question: ${question}`,
   ].join("\n");
 
-  const { output, usage } = await callOpenAIParsed(
+  const {
+    output: { reply },
+  } = await callOpenAIParsed(
     {
       model: MODEL,
       instructions: ALLOCATION_QUESTION_COMPOSER_PROMPT,
@@ -219,9 +222,9 @@ const composeQuestionReply = async (
     AllocationComposerOutputSchema,
   );
 
-  logger.info("Composed question reply", { usage });
+  logger.info("Composed question reply", { reply });
 
-  return output.reply;
+  return reply;
 };
 
 export const collectAllocation = async (
@@ -251,23 +254,15 @@ export const collectAllocation = async (
     message: buildInitialProposal(amount, anchorEquity, 100 - anchorEquity),
   });
 
-  const unresolved = (): Directive<AllocationPhaseResult> => ({
-    kind: DirectiveKind.Done,
-    result: {
-      status: PipelineStatusEnum.enum.unresolved,
-      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-    },
-  });
-
   const turnHandler: TurnHandler<AllocationPhaseResult> = async (
     history,
     lastUserResponse,
   ) => {
     conversationState.turnsTaken++;
+
     const intent = await classifyTurn(history);
 
     if (intent.kind === "accept") {
-      // No closing message — eval expects exactly 1 agent message on happy path.
       return {
         kind: DirectiveKind.Done,
         result: {
@@ -279,9 +274,15 @@ export const collectAllocation = async (
     }
 
     if (conversationState.turnsTaken >= MAX_TURNS) {
-      logger.info("Allocation phase unresolved — turn budget exhausted");
+      logger.warn("Allocation phase unresolved — turn budget exhausted");
 
-      return unresolved();
+      return {
+        kind: DirectiveKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+        },
+      };
     }
 
     if (intent.kind === "counter") {
@@ -296,6 +297,7 @@ export const collectAllocation = async (
       }
 
       conversationState.currentEquity = intent.proposedEquity;
+
       const branch = selectCounterBranch(
         intent.proposedEquity,
         cell,
