@@ -4,52 +4,58 @@ import { createLogger } from "#lib/logger";
 import {
   DirectiveKind,
   type RunConversationParams,
+  type TurnHandlerOutput,
 } from "#pipeline/run-conversation/run-conversation.types";
 
 const logger = createLogger("runConversation");
 
-export const runConversation = async <TResult>({
+export const runConversation = async <TState, TResult>({
   initHandler,
   turnHandler,
   responder,
-}: RunConversationParams<TResult>): Promise<TResult> => {
+}: RunConversationParams<TState, TResult>): Promise<TResult> => {
   logger.info("Starting conversation");
 
   const history: EasyInputMessage[] = [];
 
-  let directive = await initHandler();
+  let next: TurnHandlerOutput<TState, TResult> = await initHandler();
+
   while (true) {
-    switch (directive.kind) {
+    switch (next.kind) {
       case DirectiveKind.Done: {
-        if (directive.message) {
-          history.push({ role: "assistant", content: directive.message });
-          responder.sendToUser(directive.message);
-          logger.info("Sent closing message", { message: directive.message });
+        if (next.message) {
+          history.push({ role: "assistant", content: next.message });
+          responder.sendToUser(next.message);
+          logger.info("Sent closing message", { message: next.message });
         }
 
         logger.info("Conversation complete");
 
-        return directive.result;
+        return next.result;
       }
       case DirectiveKind.Ask: {
-        history.push({ role: "assistant", content: directive.message });
-        responder.sendToUser(directive.message);
-        logger.info("Asked user", { message: directive.message });
+        history.push({ role: "assistant", content: next.message });
+        responder.sendToUser(next.message);
+        logger.info("Asked user", { message: next.message });
 
         const lastUserResponse = await responder.waitForResponse();
         history.push({ role: "user", content: lastUserResponse });
         logger.info("Turn complete", { lastUserResponse });
 
-        directive = await turnHandler(structuredClone(history), lastUserResponse);
-        logger.info("Turn handler returned", { kind: directive.kind });
+        // `next` is overwritten atomically here. If the next iteration's
+        // `sendToUser` throws, the runner unwinds and the closure dies — the
+        // freshly-returned state and directive are discarded together, so
+        // there is no halfway-committed phase state to recover from.
+        next = await turnHandler(next.state, structuredClone(history), lastUserResponse);
+        logger.info("Turn handler returned", { kind: next.kind });
 
         break;
       }
       default: {
-        const _exhaustive: never = directive;
+        const _exhaustive: never = next;
 
         throw new Error(
-          `runConversation: unhandled directive ${JSON.stringify(_exhaustive)}`,
+          `runConversation: unhandled output ${JSON.stringify(_exhaustive)}`,
         );
       }
     }

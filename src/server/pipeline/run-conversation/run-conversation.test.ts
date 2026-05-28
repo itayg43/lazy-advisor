@@ -17,11 +17,11 @@ describe("runConversation", () => {
   it("should return init's Done result without invoking turnHandler", async () => {
     const responder = createTrackedResponder([]);
 
-    const initHandler: InitHandler<string> = async () => ({
+    const initHandler: InitHandler<void, string> = async () => ({
       kind: DirectiveKind.Done,
       result: "early-done",
     });
-    const turnHandler = vi.fn<TurnHandler<string>>();
+    const turnHandler = vi.fn<TurnHandler<void, string>>();
 
     const result = await runConversation({
       initHandler,
@@ -37,11 +37,13 @@ describe("runConversation", () => {
   it("should complete a single-turn conversation and return the handler's result", async () => {
     const responder = createTrackedResponder(["yes"]);
 
-    const initHandler: InitHandler<{ ok: boolean }> = async () => ({
+    const initHandler: InitHandler<void, { ok: boolean }> = async () => ({
       kind: DirectiveKind.Ask,
+      state: undefined,
       message: "ready?",
     });
-    const turnHandler: TurnHandler<{ ok: boolean }> = async (
+    const turnHandler: TurnHandler<void, { ok: boolean }> = async (
+      _state,
       _history,
       lastUserResponse,
     ) => ({
@@ -69,17 +71,22 @@ describe("runConversation", () => {
       lastUserResponse: string;
     }> = [];
 
-    const initHandler: InitHandler<string> = async () => ({
+    const initHandler: InitHandler<void, string> = async () => ({
       kind: DirectiveKind.Ask,
+      state: undefined,
       message: "q1",
     });
     let callIndex = 0;
-    const turnHandler: TurnHandler<string> = async (history, lastUserResponse) => {
+    const turnHandler: TurnHandler<void, string> = async (
+      _state,
+      history,
+      lastUserResponse,
+    ) => {
       callIndex++;
       calls.push({ history: [...history], lastUserResponse });
 
       return callIndex === 1
-        ? { kind: DirectiveKind.Ask, message: "q2" }
+        ? { kind: DirectiveKind.Ask, state: undefined, message: "q2" }
         : { kind: DirectiveKind.Done, result: "ok" };
     };
 
@@ -107,11 +114,12 @@ describe("runConversation", () => {
   it("should send Done.message to the user before returning", async () => {
     const responder = createTrackedResponder(["ok"]);
 
-    const initHandler: InitHandler<string> = async () => ({
+    const initHandler: InitHandler<void, string> = async () => ({
       kind: DirectiveKind.Ask,
+      state: undefined,
       message: "ready?",
     });
-    const turnHandler: TurnHandler<string> = async () => ({
+    const turnHandler: TurnHandler<void, string> = async () => ({
       kind: DirectiveKind.Done,
       message: "Locked in 70/30.",
       result: "done",
@@ -134,12 +142,12 @@ describe("runConversation", () => {
   it("should send Done.message from initHandler (early-resolve with acknowledgment)", async () => {
     const responder = createTrackedResponder([]);
 
-    const initHandler: InitHandler<string> = async () => ({
+    const initHandler: InitHandler<void, string> = async () => ({
       kind: DirectiveKind.Done,
       message: "Nothing to do here.",
       result: "skipped",
     });
-    const turnHandler = vi.fn<TurnHandler<string>>();
+    const turnHandler = vi.fn<TurnHandler<void, string>>();
 
     const result = await runConversation({
       initHandler,
@@ -159,11 +167,12 @@ describe("runConversation", () => {
     // Snapshot before mutating, otherwise the recorded array IS the mutated one.
     const snapshotsOnEntry: EasyInputMessage[][] = [];
 
-    const initHandler: InitHandler<string> = async () => ({
+    const initHandler: InitHandler<void, string> = async () => ({
       kind: DirectiveKind.Ask,
+      state: undefined,
       message: "q1",
     });
-    const turnHandler: TurnHandler<string> = async (history) => {
+    const turnHandler: TurnHandler<void, string> = async (_state, history) => {
       snapshotsOnEntry.push([...history]);
       (history as EasyInputMessage[]).push({
         role: "assistant",
@@ -171,7 +180,7 @@ describe("runConversation", () => {
       });
 
       return snapshotsOnEntry.length === 1
-        ? { kind: DirectiveKind.Ask, message: "q2" }
+        ? { kind: DirectiveKind.Ask, state: undefined, message: "q2" }
         : { kind: DirectiveKind.Done, result: "ok" };
     };
 
@@ -187,5 +196,37 @@ describe("runConversation", () => {
       { role: "assistant", content: "q2" },
       { role: "user", content: "r2" },
     ]);
+  });
+
+  it("should thread state across turn handler invocations", async () => {
+    const responder = createTrackedResponder(["r1", "r2"]);
+    type State = { counter: number };
+    const statesSeen: State[] = [];
+
+    const initHandler: InitHandler<State, string> = async () => ({
+      kind: DirectiveKind.Ask,
+      state: { counter: 0 },
+      message: "q1",
+    });
+    const turnHandler: TurnHandler<State, string> = async (state) => {
+      statesSeen.push({ ...state });
+
+      return statesSeen.length === 1
+        ? {
+            kind: DirectiveKind.Ask,
+            state: { counter: state.counter + 1 },
+            message: "q2",
+          }
+        : { kind: DirectiveKind.Done, result: `final-counter:${state.counter}` };
+    };
+
+    const result = await runConversation({
+      initHandler,
+      turnHandler,
+      responder,
+    });
+
+    expect(statesSeen).toEqual([{ counter: 0 }, { counter: 1 }]);
+    expect(result).toBe("final-counter:1");
   });
 });
