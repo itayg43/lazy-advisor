@@ -14,6 +14,7 @@ import {
   type AllocationSuggestedEquityRange,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
+  calculateBufferPercentage,
   computeSplit,
   formatCurrency,
   pickEquityPercentage,
@@ -63,6 +64,7 @@ const classifyTurn = async (
     {
       model: "gpt-5.4-nano",
       instructions: ALLOCATION_CLASSIFIER_PROMPT,
+      // Spread to strip readonly — SDK's input field expects a mutable array.
       input: [...history],
       text: {
         format: zodTextFormat(
@@ -96,7 +98,7 @@ const composeCounterReply = async (
   previousEquityPercentage: number,
   ctx: ProposalContext,
 ): Promise<string> => {
-  const proposedBufferPercentage = 100 - proposedEquityPercentage;
+  const proposedBufferPercentage = calculateBufferPercentage(proposedEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
     ctx.amount,
     proposedEquityPercentage,
@@ -140,7 +142,7 @@ const composeQuestionReply = async (
   currentEquityPercentage: number,
   ctx: ProposalContext,
 ): Promise<string> => {
-  const bufferPercentage = 100 - currentEquityPercentage;
+  const bufferPercentage = calculateBufferPercentage(currentEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
     ctx.amount,
     currentEquityPercentage,
@@ -202,7 +204,7 @@ export const collectAllocation = async (
     message: buildInitialProposal(
       amount,
       anchorEquityPercentage,
-      100 - anchorEquityPercentage,
+      calculateBufferPercentage(anchorEquityPercentage),
     ),
   });
 
@@ -228,7 +230,7 @@ export const collectAllocation = async (
         result: {
           status: PipelineStatusEnum.enum.completed,
           equityPercentage: finalEquityPercentage,
-          bufferPercentage: 100 - finalEquityPercentage,
+          bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
         },
       };
     }

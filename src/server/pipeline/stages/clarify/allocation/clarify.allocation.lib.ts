@@ -11,6 +11,9 @@ import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.
 
 export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-US")}`;
 
+export const calculateBufferPercentage = (equityPercentage: number): number =>
+  100 - equityPercentage;
+
 export const pickEquityPercentage = (
   range: AllocationSuggestedEquityRange,
   score: RiskSelfRatingScore,
