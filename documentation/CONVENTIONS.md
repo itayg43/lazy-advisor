@@ -34,6 +34,7 @@
 - Types/interfaces: `PascalCase`, suffix with purpose (e.g., `UserProfile`, `SchemaValidationError`)
 - Functions: `camelCase`
 - Constants: `UPPER_SNAKE_CASE`
+- Spell out units and domain terms in constant names — no jargon abbreviations. `EXTREME_DEVIATION_PERCENTAGE_POINTS`, not `EXTREME_THRESHOLD_PP`; `MAX_NEGOTIATION_TURNS`, not `MAX_TURNS`. The name should be readable without a glossary
 
 ## File Organization
 
@@ -60,6 +61,7 @@
 - Zod schemas as source of truth at stage boundaries; define in `[domain].schemas.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts` — never hand-write type duplicates
 - No `any` — use `unknown` when type is uncertain
 - Use `Exclude<T, U>` to remove cases from a union type and `Extract<T, U>` to keep specific cases — both for parameter types (encoding preconditions) and for domain-type definitions (e.g., discriminated arm shapes like `status: Extract<PipelineStatus, "completed">`). The source union stays the single source of truth: when it grows or shrinks, derived subset types update automatically. Don't redeclare the subset as a new string-literal union
+- Discriminator tags come from Zod enums, not bare string literals. For any discriminated union (a `kind`/`status`/`direction`-style tag), define the tag values as a Zod enum in `[domain].schemas.ts`, infer the type in `[domain].types.ts`, and reference the values at call sites via `Enum.enum.x` (not `"x"`). For each variant's tag, narrow with `Extract<EnumType, "literal">` so the variant shape stays derived from the enum. Example: `AllocationCounterBranchKindEnum` + `type CounterBranch = { kind: Extract<AllocationCounterBranchKind, "extreme">; direction: AllocationCounterDirection } | ...`. Same precedent as `DirectiveKind` and `PipelineStatusEnum.enum`
 
 ## Error Handling
 

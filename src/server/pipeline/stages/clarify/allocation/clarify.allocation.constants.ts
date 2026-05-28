@@ -13,7 +13,7 @@ export const ALLOCATION_RISK_LEVELS = RiskToleranceEnum.options
 
 export type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
 
-export type AllocationCell = { min: number; max: number };
+export type AllocationSuggestedEquityRange = { min: number; max: number };
 
 export const ALLOCATION_ANCHOR_DATA = {
   conservative: {
@@ -31,4 +31,7 @@ export const ALLOCATION_ANCHOR_DATA = {
     [t5to10]: { min: 60, max: 70 },
     [t10plus]: { min: 80, max: 90 },
   },
-} satisfies Record<RiskTolerance, Record<AllocationTimeline, AllocationCell>>;
+} satisfies Record<
+  RiskTolerance,
+  Record<AllocationTimeline, AllocationSuggestedEquityRange>
+>;

@@ -3,6 +3,8 @@ import type { z } from "zod";
 import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationClassifierOutputSchema,
+  AllocationCounterBranchKindEnum,
+  AllocationCounterDirectionEnum,
   AllocationIntentKindEnum,
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
@@ -23,9 +25,15 @@ export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
 export type AllocationIntentKind = z.infer<typeof AllocationIntentKindEnum>;
 export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutputSchema>;
 
+export type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
+export type AllocationCounterDirection = z.infer<typeof AllocationCounterDirectionEnum>;
+
 // Counter-proposal branch — Rule 3 in clarify.allocation.rules.md. Selected in
-// code from {counters, hasShownCompoundImpactFraming, isExtreme(proposed, cell)}.
+// code from {counters, hasShownCompoundImpactFraming, isExtreme(proposed, range)}.
 export type CounterBranch =
-  | { kind: "extreme"; direction: "too-high" | "too-low" }
-  | { kind: "compound-impact" }
-  | { kind: "bare" };
+  | {
+      kind: Extract<AllocationCounterBranchKind, "extreme">;
+      direction: AllocationCounterDirection;
+    }
+  | { kind: Extract<AllocationCounterBranchKind, "compound-impact"> }
+  | { kind: Extract<AllocationCounterBranchKind, "bare"> };

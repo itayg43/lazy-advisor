@@ -54,6 +54,14 @@ export const AllocationIntentKindEnum = z.enum([
   "unknown",
 ]);
 
+export const AllocationCounterBranchKindEnum = z.enum([
+  "extreme",
+  "compound-impact",
+  "bare",
+]);
+
+export const AllocationCounterDirectionEnum = z.enum(["too-high", "too-low"]);
+
 export const AllocationClassifierOutputSchema = z.object({
   kind: AllocationIntentKindEnum,
   proposedEquity: z.number().int().min(0).max(100).nullable(),
