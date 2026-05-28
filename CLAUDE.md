@@ -5,7 +5,7 @@ An agentic investment planning CLI for beginner ETF investors — current scope 
 ## Hard rules
 
 - **npm scripts run verbatim.** No appended flags, redirection, or piping. Modifying a command requires explicit user approval.
-- **Read before designing.** Read any existing file in the affected area in full before designing — if the structure exposes an issue, propose a restructure rather than working around it.
+- **Read before designing or extending.** Read any existing file in the affected area in full before designing or adding to it — code, docs, prompts, tests. Before inserting a new helper, type, rule, section, or bullet, evaluate whether it fits the current structure or whether the structure needs to change first; if there's overlap with existing items, name the overlap and propose merging or restructuring before adding. Working around a known-bad structure compounds the problem.
 
 ## General Behavior
 
