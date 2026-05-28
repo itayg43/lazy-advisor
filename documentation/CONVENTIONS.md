@@ -55,7 +55,7 @@
 
 - **Zod as source of truth** at stage boundaries. Define in `[domain].schemas.ts`, infer types via `z.infer<typeof Schema>` and export from `[domain].types.ts` — never hand-write type duplicates
 - **No `any`** — use `unknown` when type is uncertain
-- **Subsets via `Exclude` / `Extract`.** Use `Exclude<T, U>` to remove cases from a union type and `Extract<T, U>` to keep specific cases — both for parameter types (encoding preconditions) and for domain-type definitions (e.g., discriminated arm shapes like `status: Extract<PipelineStatus, "completed">`). The source union stays the single source of truth: when it grows or shrinks, derived subset types update automatically. Don't redeclare the subset as a new string-literal union
+- **Subsets via `Exclude` / `Extract`.** Use `Exclude<T, U>` to remove cases from a union type and `Extract<T, U>` to keep specific cases — for parameter types (encoding preconditions), domain-type definitions (e.g., discriminated arm shapes like `status: Extract<PipelineStatus, "completed">`), and helper return types when a helper only produces one arm of a union contract (e.g., a turn handler that only ever returns `Ask` → `Promise<Extract<Directive<R>, { kind: typeof DirectiveKind.Ask }>>`; name the alias in the phase's `.types.ts` when it's referenced more than once). The source union stays the single source of truth: when it grows or shrinks, derived subset types update automatically. Don't redeclare the subset as a new string-literal union
 - **Discriminator tags come from Zod enums, not bare string literals.** For any discriminated union (a `kind` / `status` / `direction`-style tag), define the tag values as a Zod enum in `[domain].schemas.ts`, infer the type in `[domain].types.ts`, and reference the values at call sites via `Enum.enum.x` (not `"x"`). For each variant's tag, narrow with `Extract<EnumType, "literal">` so the variant shape stays derived from the enum. Example: `AllocationCounterBranchKindEnum` + `type CounterBranch = { kind: Extract<AllocationCounterBranchKind, "extreme">; direction: AllocationCounterDirection } | ...`. Same precedent as `DirectiveKind` and `PipelineStatusEnum.enum`
 
 ## Functions
@@ -65,6 +65,7 @@
 - **Dependency injection via params,** not classes — except where the plan explicitly uses classes (e.g., `Session`)
 - **Typed `Promise<T>` returns** on async functions, no bare `any`
 - **More than 3 domain params → group them into a typed object.** Infrastructure dependencies (e.g., an API client) and identifiers stay positional — they are not counted
+- **Annotate contract role and narrowed return together when both apply.** When a function implements a named contract type (e.g., `InitHandler<R>`, `TurnHandler<R>`) but its body only produces a narrower arm of that contract's return union, annotate both at the declaration site: `const initHandler: InitHandler<R> = async (): Promise<AskDirective> => ({...})`. The contract annotation documents the function's role for the reader; the narrowed return documents the actual behavior. Omit the contract annotation only when the function is built by a factory whose return type already encodes the contract (e.g., `createTurnHandler` returns `TurnHandler<R>`)
 
 ## Helpers
 

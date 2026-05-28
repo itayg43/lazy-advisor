@@ -5,7 +5,6 @@ import { createLogger } from "#lib/logger";
 import {
   DirectiveKind,
   runConversation,
-  type Directive,
   type InitHandler,
   type TurnHandler,
 } from "#pipeline/run-conversation";
@@ -33,8 +32,10 @@ import {
   AllocationIntentKindEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
+  AllocationAcceptIntentKind,
+  AllocationAskDirective,
   AllocationClassifierOutput,
-  AllocationIntentKind,
+  AllocationDoneDirective,
   AllocationPhaseInput,
   AllocationPhaseResult,
   CounterBranch,
@@ -183,11 +184,11 @@ User's question: ${question}`;
   return reply;
 };
 
-const handleAccept = (
-  intentKind: Extract<AllocationIntentKind, "accept" | "accept-original">,
+const handleAcceptTurn = (
+  intentKind: AllocationAcceptIntentKind,
   state: ConversationState,
   anchorEquityPercentage: number,
-): Directive<AllocationPhaseResult> => {
+): AllocationDoneDirective => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
@@ -203,11 +204,11 @@ const handleAccept = (
   };
 };
 
-const handleCounter = async (
+const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
   state: ConversationState,
   ctx: ProposalContext,
-): Promise<Directive<AllocationPhaseResult>> => {
+): Promise<AllocationAskDirective> => {
   if (proposedEquityPercentage === null) {
     logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
 
@@ -244,11 +245,11 @@ const handleCounter = async (
   return { kind: DirectiveKind.Ask, message: reply };
 };
 
-const handleQuestion = async (
+const handleQuestionTurn = async (
   lastUserResponse: string,
   state: ConversationState,
   ctx: ProposalContext,
-): Promise<Directive<AllocationPhaseResult>> => {
+): Promise<AllocationAskDirective> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
     state.currentEquityPercentage,
@@ -273,7 +274,7 @@ const createTurnHandler =
       intent.kind === AllocationIntentKindEnum.enum.accept ||
       intent.kind === AllocationIntentKindEnum.enum["accept-original"]
     ) {
-      return handleAccept(intent.kind, state, anchorEquityPercentage);
+      return handleAcceptTurn(intent.kind, state, anchorEquityPercentage);
     }
 
     if (state.turnsTaken >= MAX_NEGOTIATION_TURNS) {
@@ -289,11 +290,11 @@ const createTurnHandler =
     }
 
     if (intent.kind === AllocationIntentKindEnum.enum.counter) {
-      return handleCounter(intent.proposedEquityPercentage, state, ctx);
+      return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
     }
 
     if (intent.kind === AllocationIntentKindEnum.enum.question) {
-      return handleQuestion(lastUserResponse, state, ctx);
+      return handleQuestionTurn(lastUserResponse, state, ctx);
     }
 
     return {
@@ -304,9 +305,11 @@ const createTurnHandler =
   };
 
 export const collectAllocation = async (
-  { amount, timeline, riskTolerance, riskSelfRatingScore }: AllocationPhaseInput,
+  input: AllocationPhaseInput,
   responder: Responder,
 ): Promise<AllocationPhaseResult> => {
+  const { amount, timeline, riskTolerance, riskSelfRatingScore } = input;
+
   logger.info("Starting allocation phase", {
     amount,
     timeline,
@@ -328,7 +331,9 @@ export const collectAllocation = async (
     turnsTaken: 0,
   };
 
-  const initHandler: InitHandler<AllocationPhaseResult> = async () => ({
+  const initHandler: InitHandler<
+    AllocationPhaseResult
+  > = async (): Promise<AllocationAskDirective> => ({
     kind: DirectiveKind.Ask,
     message: buildInitialProposal(
       amount,

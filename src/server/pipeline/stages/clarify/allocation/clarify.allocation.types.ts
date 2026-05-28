@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import { DirectiveKind, type Directive } from "#pipeline/run-conversation";
 import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationClassifierOutputSchema,
@@ -23,7 +24,20 @@ export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
 export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
 
 export type AllocationIntentKind = z.infer<typeof AllocationIntentKindEnum>;
+export type AllocationAcceptIntentKind = Extract<
+  AllocationIntentKind,
+  "accept" | "accept-original"
+>;
 export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutputSchema>;
+
+export type AllocationAskDirective = Extract<
+  Directive<AllocationPhaseResult>,
+  { kind: typeof DirectiveKind.Ask }
+>;
+export type AllocationDoneDirective = Extract<
+  Directive<AllocationPhaseResult>,
+  { kind: typeof DirectiveKind.Done }
+>;
 
 export type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
 export type AllocationCounterDirection = z.infer<typeof AllocationCounterDirectionEnum>;
