@@ -11,6 +11,10 @@ export const ALLOCATION_RISK_LEVELS = RiskToleranceEnum.options
   .map((o) => `\`${o}\``)
   .join(", ");
 
+export const MAX_NEGOTIATION_TURNS = 5;
+
+export const EXTREME_DEVIATION_PERCENTAGE_POINTS = 40;
+
 export type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
 
 export type AllocationSuggestedEquityRange = { min: number; max: number };

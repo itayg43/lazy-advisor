@@ -138,7 +138,7 @@ describe("runClarify", () => {
     mockedCallOpenAIParsed.mockResolvedValueOnce(
       createParsedResponse<AllocationClassifierOutput>({
         kind: "accept",
-        proposedEquity: null,
+        proposedEquityPercentage: null,
       }),
     );
   };

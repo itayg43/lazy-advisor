@@ -58,9 +58,9 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## 2. User accepts → end the phase
 
-**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, the phase resolves immediately. No wrap-up message, no re-confirmation. The classifier returns `kind: "accept"` and the turn handler returns `Done` at `conversationState.currentEquity` (anchor if untouched, latest counter otherwise) with no closing message.
+**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, the phase resolves immediately. No wrap-up message, no re-confirmation. The classifier returns `kind: "accept"` and the turn handler returns `Done` at `conversationState.currentEquityPercentage` (anchor if untouched, latest counter otherwise) with no closing message.
 
-**Retraction to the original anchor.** After one or more counters, a reply that signals acceptance but explicitly retracts to the *original* proposal — without naming a number (e.g., "actually, never mind — stick with your original suggestion", "let's go back to the first proposal", "I'll trust your original split") — is classified as `kind: "accept-original"`. The handler resolves to `anchorEquity` (the initial precomputed proposal), not `currentEquity`. This closes the gap where a verbal retraction would otherwise lock in the abandoned counter. If the retraction-shaped reply *names* a number ("actually, stick with the original 88"), it is a counter (Rule 3) — the named number takes precedence.
+**Retraction to the original anchor.** After one or more counters, a reply that signals acceptance but explicitly retracts to the *original* proposal — without naming a number (e.g., "actually, never mind — stick with your original suggestion", "let's go back to the first proposal", "I'll trust your original split") — is classified as `kind: "accept-original"`. The handler resolves to `anchorEquityPercentage` (the initial precomputed proposal), not `currentEquityPercentage`. This closes the gap where a verbal retraction would otherwise lock in the abandoned counter. If the retraction-shaped reply *names* a number ("actually, stick with the original 88"), it is a counter (Rule 3) — the named number takes precedence.
 
 **Last-turn behavior.** Both `accept` and `accept-original` win on the MAX_TURNSth turn — see Budget exhaustion. Returning `unresolved` after a clear acceptance would be a UX regression.
 
@@ -70,7 +70,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## 3. User proposes a different split → honor the exact number (decision tree)
 
-**Prelude (every counter-proposal):** Honor the user's **exact number** — no snap-to-cell. The classifier extracts the user's `proposedEquity`; code selects the branch (extreme / compound-impact / bare) deterministically from `{counters, hasShownExtremeFraming, hasShownCompoundImpactFraming}`; the counter composer renders the reply with the new split in shekels and percent plus the branch-specific framing.
+**Prelude (every counter-proposal):** Honor the user's **exact number** — no snap-to-cell. The classifier extracts the user's `proposedEquityPercentage`; code selects the branch (extreme / compound-impact / bare) deterministically from `{counters, hasShownExtremeFraming, hasShownCompoundImpactFraming}`; the counter composer renders the reply with the new split in shekels and percent plus the branch-specific framing.
 
 **Branch 1 — Extreme mismatch (40+ pp outside the recommended range).** Add a directional sanity check using the matching pattern, then accept the user's final answer. Surface the mismatch **once** per conversation; do not re-challenge.
 

@@ -10,8 +10,15 @@ import {
 } from "#pipeline/run-conversation";
 import {
   ALLOCATION_ANCHOR_DATA,
+  MAX_NEGOTIATION_TURNS,
   type AllocationSuggestedEquityRange,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import {
+  computeSplit,
+  formatCurrency,
+  pickEquityPercentage,
+  selectCounterBranch,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
   ALLOCATION_CLASSIFIER_PROMPT,
   ALLOCATION_COUNTER_COMPOSER_PROMPT,
@@ -21,7 +28,6 @@ import {
   AllocationClassifierOutputSchema,
   AllocationComposerOutputSchema,
   AllocationCounterBranchKindEnum,
-  AllocationCounterDirectionEnum,
   AllocationIntentKindEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
@@ -30,7 +36,6 @@ import type {
   AllocationPhaseResult,
   CounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
@@ -38,88 +43,23 @@ import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAllocation");
 
-const MAX_NEGOTIATION_TURNS = 5;
-const EXTREME_DEVIATION_PERCENTAGE_POINTS = 40;
-
-export const pickEquityPercentage = (
-  range: AllocationSuggestedEquityRange,
-  score: RiskSelfRatingScore,
-): number => {
-  switch (score) {
-    case 1:
-    case 4:
-      return range.min;
-    case 2:
-    case 5:
-      return range.max;
-    case 3:
-      return (range.min + range.max) / 2;
-  }
-};
-
-const formatShekels = (n: number): string => `₪${n.toLocaleString("en-US")}`;
-
-const computeSplit = (
-  amount: number,
-  equityPercentage: number,
-): { equity: number; buffer: number } => {
-  const equity = (amount * equityPercentage) / 100;
-
-  return { equity, buffer: amount - equity };
-};
-
-const equityDeviationPercentagePoints = (
-  proposedEquity: number,
-  suggestedEquityRange: AllocationSuggestedEquityRange,
-): number =>
-  Math.max(
-    0,
-    proposedEquity - suggestedEquityRange.max,
-    suggestedEquityRange.min - proposedEquity,
-  );
-
-const selectCounterBranch = (
-  proposedEquity: number,
-  suggestedEquityRange: AllocationSuggestedEquityRange,
-  hasShownExtreme: boolean,
-  hasShownCompoundImpact: boolean,
-): CounterBranch => {
-  const deviation = equityDeviationPercentagePoints(proposedEquity, suggestedEquityRange);
-  if (deviation >= EXTREME_DEVIATION_PERCENTAGE_POINTS && !hasShownExtreme) {
-    return {
-      kind: AllocationCounterBranchKindEnum.enum.extreme,
-      direction:
-        proposedEquity > suggestedEquityRange.max
-          ? AllocationCounterDirectionEnum.enum["too-high"]
-          : AllocationCounterDirectionEnum.enum["too-low"],
-    };
-  }
-  if (!hasShownCompoundImpact) {
-    return { kind: AllocationCounterBranchKindEnum.enum["compound-impact"] };
-  }
-
-  return { kind: AllocationCounterBranchKindEnum.enum.bare };
-};
-
 const buildInitialProposal = (
   amount: number,
   equityPercentage: number,
   bufferPercentage: number,
 ): string => {
-  const { equity, buffer } = computeSplit(amount, equityPercentage);
+  const { equityAmount, bufferAmount } = computeSplit(amount, equityPercentage);
 
-  return [
-    `Based on your timeline and comfort with drops, I'd propose ${formatShekels(equity)} in stock ETFs and ${formatShekels(buffer)} in a buffer — roughly ${equityPercentage}/${bufferPercentage}.`,
-    `More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.`,
-    `Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen.`,
-    `Want that split, more in stocks, or more in buffer?`,
-  ].join(" ");
+  return `Based on your timeline and comfort with drops, I'd propose ${formatCurrency(equityAmount)} in stock ETFs and ${formatCurrency(bufferAmount)} in a buffer — roughly ${equityPercentage}/${bufferPercentage}.
+More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.
+Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen.
+Want that split, more in stocks, or more in buffer?`;
 };
 
 const classifyTurn = async (
   history: ReadonlyArray<EasyInputMessage>,
 ): Promise<AllocationClassifierOutput> => {
-  const { id, output, usage } = await callOpenAIParsed(
+  const { id, output } = await callOpenAIParsed(
     {
       model: "gpt-5.4-nano",
       instructions: ALLOCATION_CLASSIFIER_PROMPT,
@@ -138,8 +78,7 @@ const classifyTurn = async (
   logger.info("Classified turn", {
     responseId: id,
     kind: output.kind,
-    proposedEquity: output.proposedEquity,
-    usage,
+    proposedEquityPercentage: output.proposedEquityPercentage,
   });
 
   return output;
@@ -153,27 +92,28 @@ type ProposalContext = {
 
 const composeCounterReply = async (
   branch: CounterBranch,
-  proposedEquity: number,
-  previousEquity: number,
+  proposedEquityPercentage: number,
+  previousEquityPercentage: number,
   ctx: ProposalContext,
 ): Promise<string> => {
-  const proposedBuffer = 100 - proposedEquity;
-  const { equity, buffer } = computeSplit(ctx.amount, proposedEquity);
+  const proposedBufferPercentage = 100 - proposedEquityPercentage;
+  const { equityAmount, bufferAmount } = computeSplit(
+    ctx.amount,
+    proposedEquityPercentage,
+  );
 
   const branchTag =
     branch.kind === AllocationCounterBranchKindEnum.enum.extreme
       ? `extreme-${branch.direction}`
       : branch.kind;
 
-  const input = [
-    `Branch to render: ${branchTag}`,
-    `User's exact equity proposal: ${proposedEquity}% (buffer ${proposedBuffer}%)`,
-    `Previous equity in conversation: ${previousEquity}%`,
-    `Investment amount: ${formatShekels(ctx.amount)}`,
-    `New split in shekels: ${formatShekels(equity)} in stock ETFs, ${formatShekels(buffer)} in buffer`,
-    `Investment timeline: ${ctx.timeline}`,
-    `Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity`,
-  ].join("\n");
+  const input = `Branch to render: ${branchTag}
+User's exact equity proposal: ${proposedEquityPercentage}% (buffer ${proposedBufferPercentage}%)
+Previous equity in conversation: ${previousEquityPercentage}%
+Investment amount: ${formatCurrency(ctx.amount)}
+New split in shekels: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCurrency(bufferAmount)} in buffer
+Investment timeline: ${ctx.timeline}
+Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity`;
 
   const {
     output: { reply },
@@ -197,19 +137,20 @@ const composeCounterReply = async (
 
 const composeQuestionReply = async (
   question: string,
-  currentEquity: number,
+  currentEquityPercentage: number,
   ctx: ProposalContext,
 ): Promise<string> => {
-  const bufferPercentage = 100 - currentEquity;
-  const { equity, buffer } = computeSplit(ctx.amount, currentEquity);
+  const bufferPercentage = 100 - currentEquityPercentage;
+  const { equityAmount, bufferAmount } = computeSplit(
+    ctx.amount,
+    currentEquityPercentage,
+  );
 
-  const input = [
-    `Current proposal: ${formatShekels(equity)} in stock ETFs, ${formatShekels(buffer)} in buffer (${currentEquity}/${bufferPercentage})`,
-    `Investment amount: ${formatShekels(ctx.amount)}`,
-    `Investment timeline: ${ctx.timeline}`,
-    `Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity`,
-    `User's question: ${question}`,
-  ].join("\n");
+  const input = `Current proposal: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCurrency(bufferAmount)} in buffer (${currentEquityPercentage}/${bufferPercentage})
+Investment amount: ${formatCurrency(ctx.amount)}
+Investment timeline: ${ctx.timeline}
+Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity
+User's question: ${question}`;
 
   const {
     output: { reply },
@@ -243,11 +184,14 @@ export const collectAllocation = async (
   });
 
   const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
-  const anchorEquity = pickEquityPercentage(suggestedEquityRange, riskSelfRatingScore);
+  const anchorEquityPercentage = pickEquityPercentage(
+    suggestedEquityRange,
+    riskSelfRatingScore,
+  );
   const ctx: ProposalContext = { amount, timeline, suggestedEquityRange };
 
   const conversationState = {
-    currentEquity: anchorEquity,
+    currentEquityPercentage: anchorEquityPercentage,
     extremeFramingShown: false,
     compoundImpactFramingShown: false,
     turnsTaken: 0,
@@ -255,7 +199,11 @@ export const collectAllocation = async (
 
   const initHandler: InitHandler<AllocationPhaseResult> = async () => ({
     kind: DirectiveKind.Ask,
-    message: buildInitialProposal(amount, anchorEquity, 100 - anchorEquity),
+    message: buildInitialProposal(
+      amount,
+      anchorEquityPercentage,
+      100 - anchorEquityPercentage,
+    ),
   });
 
   const turnHandler: TurnHandler<AllocationPhaseResult> = async (
@@ -270,17 +218,17 @@ export const collectAllocation = async (
       intent.kind === AllocationIntentKindEnum.enum.accept ||
       intent.kind === AllocationIntentKindEnum.enum["accept-original"]
     ) {
-      const finalEquity =
+      const finalEquityPercentage =
         intent.kind === AllocationIntentKindEnum.enum["accept-original"]
-          ? anchorEquity
-          : conversationState.currentEquity;
+          ? anchorEquityPercentage
+          : conversationState.currentEquityPercentage;
 
       return {
         kind: DirectiveKind.Done,
         result: {
           status: PipelineStatusEnum.enum.completed,
-          equityPercentage: finalEquity,
-          bufferPercentage: 100 - finalEquity,
+          equityPercentage: finalEquityPercentage,
+          bufferPercentage: 100 - finalEquityPercentage,
         },
       };
     }
@@ -298,8 +246,10 @@ export const collectAllocation = async (
     }
 
     if (intent.kind === AllocationIntentKindEnum.enum.counter) {
-      if (intent.proposedEquity === null) {
-        logger.warn("Counter intent without proposedEquity — treating as unknown");
+      if (intent.proposedEquityPercentage === null) {
+        logger.warn(
+          "Counter intent without proposedEquityPercentage — treating as unknown",
+        );
 
         return {
           kind: DirectiveKind.Ask,
@@ -308,11 +258,11 @@ export const collectAllocation = async (
         };
       }
 
-      const previousEquity = conversationState.currentEquity;
-      conversationState.currentEquity = intent.proposedEquity;
+      const previousEquityPercentage = conversationState.currentEquityPercentage;
+      conversationState.currentEquityPercentage = intent.proposedEquityPercentage;
 
       const branch = selectCounterBranch(
-        intent.proposedEquity,
+        intent.proposedEquityPercentage,
         suggestedEquityRange,
         conversationState.extremeFramingShown,
         conversationState.compoundImpactFramingShown,
@@ -326,8 +276,8 @@ export const collectAllocation = async (
 
       const reply = await composeCounterReply(
         branch,
-        intent.proposedEquity,
-        previousEquity,
+        intent.proposedEquityPercentage,
+        previousEquityPercentage,
         ctx,
       );
 
@@ -337,7 +287,7 @@ export const collectAllocation = async (
     if (intent.kind === AllocationIntentKindEnum.enum.question) {
       const reply = await composeQuestionReply(
         lastUserResponse,
-        conversationState.currentEquity,
+        conversationState.currentEquityPercentage,
         ctx,
       );
 

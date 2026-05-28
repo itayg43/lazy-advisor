@@ -39,8 +39,8 @@ export const AllocationPhaseResultSchema = z
 
 // Classifier output. Flat shape (not a discriminated union) because OpenAI
 // structured outputs don't accept z.discriminatedUnion — same pattern as the
-// askWithClassify two-schema setup. `proposedEquity` is meaningful only when
-// `kind === "counter"`; nullable otherwise.
+// askWithClassify two-schema setup. `proposedEquityPercentage` is meaningful
+// only when `kind === "counter"`; nullable otherwise.
 // `accept` resolves to the *current* proposal (anchor if untouched, latest
 // counter otherwise). `accept-original` is a retraction-shaped acceptance —
 // after one or more counters, the user signals they want to go back to the
@@ -64,7 +64,7 @@ export const AllocationCounterDirectionEnum = z.enum(["too-high", "too-low"]);
 
 export const AllocationClassifierOutputSchema = z.object({
   kind: AllocationIntentKindEnum,
-  proposedEquity: z.number().int().min(0).max(100).nullable(),
+  proposedEquityPercentage: z.number().int().min(0).max(100).nullable(),
 });
 
 // Composer schemas — wrap free-text replies in a single `reply` field so we

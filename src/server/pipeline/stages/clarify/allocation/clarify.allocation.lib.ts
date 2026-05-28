@@ -1,0 +1,73 @@
+import {
+  EXTREME_DEVIATION_PERCENTAGE_POINTS,
+  type AllocationSuggestedEquityRange,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import {
+  AllocationCounterBranchKindEnum,
+  AllocationCounterDirectionEnum,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
+import type { CounterBranch } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
+
+export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-US")}`;
+
+export const pickEquityPercentage = (
+  range: AllocationSuggestedEquityRange,
+  score: RiskSelfRatingScore,
+): number => {
+  switch (score) {
+    case 1:
+    case 4:
+      return range.min;
+    case 2:
+    case 5:
+      return range.max;
+    case 3:
+      return (range.min + range.max) / 2;
+  }
+};
+
+export const computeSplit = (
+  amount: number,
+  equityPercentage: number,
+): { equityAmount: number; bufferAmount: number } => {
+  const equityAmount = (amount * equityPercentage) / 100;
+
+  return { equityAmount, bufferAmount: amount - equityAmount };
+};
+
+export const equityDeviationPercentagePoints = (
+  proposedEquityPercentage: number,
+  suggestedEquityRange: AllocationSuggestedEquityRange,
+): number =>
+  Math.max(
+    0,
+    proposedEquityPercentage - suggestedEquityRange.max,
+    suggestedEquityRange.min - proposedEquityPercentage,
+  );
+
+export const selectCounterBranch = (
+  proposedEquityPercentage: number,
+  suggestedEquityRange: AllocationSuggestedEquityRange,
+  hasShownExtreme: boolean,
+  hasShownCompoundImpact: boolean,
+): CounterBranch => {
+  const deviation = equityDeviationPercentagePoints(
+    proposedEquityPercentage,
+    suggestedEquityRange,
+  );
+  if (deviation >= EXTREME_DEVIATION_PERCENTAGE_POINTS && !hasShownExtreme) {
+    return {
+      kind: AllocationCounterBranchKindEnum.enum.extreme,
+      direction:
+        proposedEquityPercentage > suggestedEquityRange.max
+          ? AllocationCounterDirectionEnum.enum["too-high"]
+          : AllocationCounterDirectionEnum.enum["too-low"],
+    };
+  }
+  if (!hasShownCompoundImpact) {
+    return { kind: AllocationCounterBranchKindEnum.enum["compound-impact"] };
+  }
+
+  return { kind: AllocationCounterBranchKindEnum.enum.bare };
+};

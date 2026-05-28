@@ -224,7 +224,7 @@ describe("collectAllocation", () => {
 
   // clarify.allocation.rules.md rule 2 (accept-original): after countering, the
   // user retracts to the original anchor without naming a number. Classifier
-  // returns `accept-original`; handler resolves to anchorEquity, not the latest
+  // returns `accept-original`; handler resolves to anchorEquityPercentage, not the latest
   // counter.
   it("should resolve to the anchor when the user retracts to the original proposal", async () => {
     const responder = createTrackedResponder([

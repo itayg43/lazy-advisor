@@ -3,7 +3,7 @@ import { ALLOCATION_RISK_LEVELS } from "#pipeline/stages/clarify/allocation/clar
 // Classifier — single-call intent extractor over the running conversation.
 // Output (see AllocationClassifierOutputSchema):
 //   kind: "accept" | "counter" | "question" | "unknown"
-//   proposedEquity: integer 0–100 when kind === "counter"; null otherwise.
+//   proposedEquityPercentage: integer 0–100 when kind === "counter"; null otherwise.
 export const ALLOCATION_CLASSIFIER_PROMPT = `# Role and Objective
 You classify the user's latest reply in an investment-advisor allocation
 conversation. The assistant has just proposed (or re-proposed) a split between
@@ -40,7 +40,7 @@ percentage when applicable.
 - **unknown**: The user's reply is ambiguous, off-topic, or otherwise
   unparseable.
 
-# Extracting proposedEquity (counter only)
+# Extracting proposedEquityPercentage (counter only)
 
 - Integer in [0, 100], the user's *equity* percentage. Buffer is implied as
   100 − equity.
@@ -48,7 +48,7 @@ percentage when applicable.
   70; "I want 0% stocks" → 0; "100% stocks" → 100.
 - If the user says only "more in stocks" with no number, label as
   **unknown** (not counter) — you cannot guess a number.
-- For non-counter intents, set proposedEquity to null.`;
+- For non-counter intents, set proposedEquityPercentage to null.`;
 
 // Counter composer — used after the classifier returns counter intent.
 // Code selects the branch (extreme / compound-impact / bare) and the composer
