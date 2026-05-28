@@ -16,45 +16,55 @@ export const runConversation = async <TState, TResult>({
 }: RunConversationParams<TState, TResult>): Promise<TResult> => {
   logger.info("Starting conversation");
 
-  let next: HandlerOutput<TState, TResult> = await initHandler();
+  let currentOutput: HandlerOutput<TState, TResult> = await initHandler();
   const history: EasyInputMessage[] = [];
 
   while (true) {
-    switch (next.kind) {
+    const { kind } = currentOutput;
+
+    switch (kind) {
       case HandlerOutputKind.Done: {
-        if (next.message) {
-          history.push({ role: "assistant", content: next.message });
-          responder.sendToUser(next.message);
-          logger.info("Sent closing message", { message: next.message });
+        const { message, result } = currentOutput;
+
+        if (message) {
+          history.push({ role: "assistant", content: message });
+          responder.sendToUser(message);
+          logger.info("Sent closing message", { message });
         }
 
         logger.info("Conversation complete");
 
-        return next.result;
+        return result;
       }
       case HandlerOutputKind.Ask: {
-        history.push({ role: "assistant", content: next.message });
-        responder.sendToUser(next.message);
-        logger.info("Asked user", { message: next.message });
+        history.push({ role: "assistant", content: currentOutput.message });
+        responder.sendToUser(currentOutput.message);
+        logger.info("Asked user", { message: currentOutput.message });
 
         const lastUserResponse = await responder.waitForResponse();
         history.push({ role: "user", content: lastUserResponse });
         logger.info("Turn complete", { lastUserResponse });
 
-        // `next` is overwritten atomically here. If the next iteration's
+        // `currentOutput` is overwritten atomically here. If the next iteration's
         // `sendToUser` throws, the runner unwinds and the closure dies — the
         // freshly-returned state and directive are discarded together, so
         // there is no halfway-committed phase state to recover from.
-        next = await turnHandler(next.state, structuredClone(history), lastUserResponse);
-        logger.info("Turn handler returned", { kind: next.kind });
+        currentOutput = await turnHandler(
+          currentOutput.state,
+          structuredClone(history),
+          lastUserResponse,
+        );
+        // Read `kind` off the freshly-assigned `currentOutput`, not the
+        // destructured `kind` above — that one still holds the pre-turn value.
+        logger.info("Turn handler returned", { kind: currentOutput.kind });
 
         break;
       }
       default: {
-        const _exhaustive: never = next;
+        const _exhaustive: never = currentOutput;
 
         throw new Error(
-          `runConversation: unhandled output ${JSON.stringify(_exhaustive)}`,
+          `runConversation: unhandled output kind: ${JSON.stringify(_exhaustive)}`,
         );
       }
     }
