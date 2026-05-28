@@ -58,7 +58,11 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## 2. User accepts → end the phase
 
-**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, the phase resolves immediately. No wrap-up message, no re-confirmation. The classifier returns `kind: "accept"` and the turn handler returns `Done` with no closing message.
+**Rule:** If the user replies with a clear yes (e.g., "sounds good", "ok", "yes", "let's do it") to the **currently proposed split**, the phase resolves immediately. No wrap-up message, no re-confirmation. The classifier returns `kind: "accept"` and the turn handler returns `Done` at `conversationState.currentEquity` (anchor if untouched, latest counter otherwise) with no closing message.
+
+**Retraction to the original anchor.** After one or more counters, a reply that signals acceptance but explicitly retracts to the *original* proposal — without naming a number (e.g., "actually, never mind — stick with your original suggestion", "let's go back to the first proposal", "I'll trust your original split") — is classified as `kind: "accept-original"`. The handler resolves to `anchorEquity` (the initial precomputed proposal), not `currentEquity`. This closes the gap where a verbal retraction would otherwise lock in the abandoned counter. If the retraction-shaped reply *names* a number ("actually, stick with the original 88"), it is a counter (Rule 3) — the named number takes precedence.
+
+**Last-turn behavior.** Both `accept` and `accept-original` win on the MAX_TURNSth turn — see Budget exhaustion. Returning `unresolved` after a clear acceptance would be a UX regression.
 
 **Disambiguation:** A response that names a specific percentage or ratio different from the current proposal — even if phrased as acceptance (e.g., "let's do 50/50", "I want 60%") — is a counter-proposal. Apply Rule 3 instead.
 
@@ -122,7 +126,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## Budget exhaustion
 
-The `runConversation` primitive enforces no budget — convergence is the handler's responsibility. The handler increments a closure-owned `turnCount` per turn; on the MAX_TURNSth turn it returns `Done` with `{ status: "unresolved", reason: "allocation" }` regardless of intent. The orchestrator maps that result to `ALLOCATION_EXIT_MESSAGE` and the pipeline exits.
+The `runConversation` primitive enforces no budget — convergence is the handler's responsibility. The handler increments a closure-owned `turnCount` per turn and classifies the user's reply first; if the intent is `accept`, the phase resolves to `completed` even on the MAX_TURNSth turn (closing on the user's "yes" is the right UX — returning `unresolved` after a clear acceptance would feel broken). For any non-accept intent on the MAX_TURNSth turn the handler returns `Done` with `{ status: "unresolved", reason: "allocation" }`, and the orchestrator maps that to `ALLOCATION_EXIT_MESSAGE`. The trade-off is one extra classifier call on the last turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
 
 ## Out of scope
 

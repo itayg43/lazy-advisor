@@ -142,6 +142,7 @@ type ProposalContext = {
 const composeCounterReply = async (
   branch: CounterBranch,
   proposedEquity: number,
+  previousEquity: number,
   ctx: ProposalContext,
 ): Promise<string> => {
   const proposedBuffer = 100 - proposedEquity;
@@ -154,6 +155,7 @@ const composeCounterReply = async (
   const input = [
     `Branch to render: ${branchTag}`,
     `User's exact equity proposal: ${proposedEquity}% (buffer ${proposedBuffer}%)`,
+    `Previous equity in conversation: ${previousEquity}%`,
     `Investment amount: ${formatShekels(ctx.amount)}`,
     `New split in shekels: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in buffer`,
     `Investment timeline: ${ctx.timeline}`,
@@ -252,13 +254,18 @@ export const collectAllocation = async (
 
     const intent = await classifyTurn(history);
 
-    if (intent.kind === "accept") {
+    if (intent.kind === "accept" || intent.kind === "accept-original") {
+      const finalEquity =
+        intent.kind === "accept-original"
+          ? anchorEquity
+          : conversationState.currentEquity;
+
       return {
         kind: DirectiveKind.Done,
         result: {
           status: PipelineStatusEnum.enum.completed,
-          equityPercentage: conversationState.currentEquity,
-          bufferPercentage: 100 - conversationState.currentEquity,
+          equityPercentage: finalEquity,
+          bufferPercentage: 100 - finalEquity,
         },
       };
     }
@@ -286,6 +293,7 @@ export const collectAllocation = async (
         };
       }
 
+      const previousEquity = conversationState.currentEquity;
       conversationState.currentEquity = intent.proposedEquity;
 
       const branch = selectCounterBranch(
@@ -298,7 +306,12 @@ export const collectAllocation = async (
       if (branch.kind === "compound-impact")
         conversationState.compoundImpactFramingShown = true;
 
-      const reply = await composeCounterReply(branch, intent.proposedEquity, ctx);
+      const reply = await composeCounterReply(
+        branch,
+        intent.proposedEquity,
+        previousEquity,
+        ctx,
+      );
 
       return { kind: DirectiveKind.Ask, message: reply };
     }

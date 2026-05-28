@@ -41,8 +41,14 @@ export const AllocationPhaseResultSchema = z
 // structured outputs don't accept z.discriminatedUnion — same pattern as the
 // askWithClassify two-schema setup. `proposedEquity` is meaningful only when
 // `kind === "counter"`; nullable otherwise.
+// `accept` resolves to the *current* proposal (anchor if untouched, latest
+// counter otherwise). `accept-original` is a retraction-shaped acceptance —
+// after one or more counters, the user signals they want to go back to the
+// initial anchor without naming a number (e.g., "stick with your original
+// suggestion"). Handler routes it to the anchor equity, not the latest counter.
 export const AllocationIntentKindEnum = z.enum([
   "accept",
+  "accept-original",
   "counter",
   "question",
   "unknown",

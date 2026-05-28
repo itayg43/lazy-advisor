@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-05-27T18:22:04.453Z | Commit: b54d530
+Timestamp: 2026-05-28T09:07:03.855Z | Commit: 2159df0
 
 ---
 
@@ -63,13 +63,29 @@ status: completed | equityPercentage: 20 | bufferPercentage: 80
 
 ---
 
+## ✓ should resolve to the anchor when the user retracts to the original proposal
+
+**Agent:** Based on your timeline and comfort with drops, I'd propose ₪45,000 in stock ETFs and ₪5,000 in a buffer — roughly 90/10. More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth. Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen. Want that split, more in stocks, or more in buffer?
+
+**User:** Make it 60%
+
+**Agent:** Under your new plan, you’d have 60% in stock ETFs (₪30,000) and 40% in buffer (₪20,000). Since you’re moving down from the prior 90% equity, over your 10+ year horizon you may see smaller drawdowns and meaningfully less long-run growth as forgone gains compound. Do you want to proceed with this 60% equity split?
+
+**User:** Actually, never mind — stick with your original suggestion
+
+**Output:**
+status: completed | equityPercentage: 90 | bufferPercentage: 10
+
+
+---
+
 ## ✓ should honor a non-round counter-proposal exactly (no snap-to-cell)
 
 **Agent:** Based on your timeline and comfort with drops, I'd propose ₪45,000 in stock ETFs and ₪5,000 in a buffer — roughly 90/10. More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth. Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen. Want that split, more in stocks, or more in buffer?
 
 **User:** 77%
 
-**Agent:** You’re proposing 77% in stock ETFs and 23% in buffer: ₪38,500 stocks ETFs and ₪11,500 buffer. Over your 10+ year horizon, moving more of your money into equity typically means bigger drawdowns—but also meaningfully more long-run growth because gains can compound year after year; with less equity, drawdowns are smaller and long-run growth is typically lower because the gains you’re giving up can’t compound. Do you want to proceed with 77% equity?
+**Agent:** Understood—you want to move to 77% in stock ETFs and 23% in buffer. That’s ₪38,500 in stocks and ₪11,500 in buffer. Over your 10+ year horizon, going from 90% down to 77% typically means smaller drawdowns and meaningfully less long-run growth as forgone gains compound. Do you want to proceed with this 77% equity split?
 
 **User:** yes
 
@@ -85,7 +101,7 @@ status: completed | equityPercentage: 77 | bufferPercentage: 23
 
 **User:** Let's do 50/50
 
-**Agent:** Got it — with your proposal, it’s ₪25,000 in stock ETFs (50% equity) and ₪25,000 in buffer (50%). Over your 10+ year horizon, moving to 50% equity typically means bigger drawdowns when markets fall, and also meaningfully more long-run growth because gains can compound year after year. Less equity would mean smaller drawdowns, but also meaningfully less long-run growth since you’re giving up some of the compounding potential. Do you want to proceed with 50% equity?
+**Agent:** Got it. You’re proposing 50% equity: ₪25,000 in stock ETFs and ₪25,000 in buffer. Since your previous equity was 90% and you’re moving down to 50%, over your 10+ year horizon this should mean smaller drawdowns and meaningfully less long-run growth as forgone gains compound. Do you want to proceed with this 50% equity split?
 
 **User:** yes
 
@@ -101,9 +117,7 @@ status: completed | equityPercentage: 50 | bufferPercentage: 50
 
 **User:** Actually I want 100% stocks
 
-**Agent:** You’re proposing 100% in stock ETFs (₪60,000), with 0% in buffer (₪0). Given the recommended range of 40–50% equity, that’s a very large step up in equity.
-
-Also, your earlier answers suggested you’re uncomfortable with big drops—going to 100% stocks could mean watching roughly 30–50% of your portfolio disappear in a bad year. Still want to proceed with 100% equity (₪60,000)?
+**Agent:** You’re asking for a split of 100% equity, meaning ₪60,000 in stock ETFs and ₪0 in buffer. Your earlier answers suggested you’re uncomfortable with big drops—going to 100% stocks could mean watching 30–50% of your portfolio disappear in a bad year. Still want to proceed with 100% equity?
 
 **User:** Yes, I'm sure
 
@@ -119,9 +133,7 @@ status: completed | equityPercentage: 100 | bufferPercentage: 0
 
 **User:** I want 0% stocks
 
-**Agent:** You’re proposing 0% in stock ETFs (₪0) and 100% in the buffer (₪50,000). Given that the recommended range is 80–90% equity, this would keep your ₪50,000 fully in the buffer.
-
-Your earlier answers indicated a long horizon and comfort with bigger swings (recommended range 80–90%) — going to 0% stocks means your money stays in buffer, giving up most of the long-run growth that stock allocations typically provide over many years. Still want to proceed with 0% equity?
+**Agent:** You’re proposing 0% in stock ETFs and ₪50,000 in buffer (100% buffer). Based on your earlier answers, you indicated a long horizon and comfort with bigger swings (recommended range 80–90%)—going to 0% stocks means your ₪50,000 stays mostly in the buffer, giving up most of the long-run growth that stocks typically provide over many years. Still want to proceed with 0% equity?
 
 **User:** Yes, I'm sure
 
@@ -137,11 +149,11 @@ status: completed | equityPercentage: 0 | bufferPercentage: 100
 
 **User:** Make it 60%
 
-**Agent:** You’re proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in buffer. Over your 10+ year horizon, going with more equity generally means bigger drawdowns, but also meaningfully more long-run growth as gains compound year after year; going with less equity means smaller drawdowns, but also meaningfully less long-run growth from the gains you’d otherwise compound. Do you want to proceed with the 60% equity split?
+**Agent:** You’re proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in the buffer (40%) over your 10+ year horizon. Since you’re moving from 90% down to 60%, you should expect smaller drawdowns and meaningfully less long-run growth as forgone gains compound over time. Do you want to proceed with this 60% equity split?
 
 **User:** Actually 55%
 
-**Agent:** Got it — your new split would be 55% equity: ₪27,500 in stock ETFs and ₪22,500 in the buffer (45%). Do you want to proceed with 55% equity?
+**Agent:** You’re proposing 55% in stock ETFs (₪27,500) and 45% in buffer (₪22,500). Do you want to proceed with this split?
 
 **User:** Yes
 
@@ -157,17 +169,9 @@ status: completed | equityPercentage: 55 | bufferPercentage: 45
 
 **User:** What's a buffer?
 
-**Agent:** A buffer is the portion you keep in a very low-volatility place (typically a money-market fund / קרן כספית or similar cash-like instrument). It’s there to reduce the need to sell stocks during market drops and to give you liquidity if an expense comes up or if you want to buy more when prices are lower.
+**Agent:** A buffer is the portion of your money kept in a more stable, lower-volatility place (often cash or a money-market style fund) so you’re less forced to sell stocks during market dips. It’s basically there to reduce drawdowns and give you flexibility while the stock portion has time to recover.
 
-Given your 10+ year timeline and your comfort with potential drops, that’s why the proposal sits within the recommended range (80–90%)—it balances staying invested for long-term growth with having some “dry powder” to manage volatility.
-
-Next step is choosing the exact instruments for the split (e.g., which stock ETFs and which cash-like קרן כספית), but first we should lock in the sizing.
-
-Current proposal (₪ and %):
-- Stock ETFs: ₪45,000 (90%)
-- Buffer: ₪5,000 (10%)
-
-Do you want to keep this 90/10 split, shift more into stocks (closer to 85–90%), or increase the buffer?
+Under the current proposal, you’d invest ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want that split, more in stocks, or more in buffer?
 
 **User:** Got it, sounds good
 
@@ -183,11 +187,9 @@ status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **User:** How did you come up with that split?
 
-**Agent:** The split is mainly determined by two inputs: your **investment timeline (10+ years)** and your **comfort with temporary drawdowns**—the more time you have and the more drops you can emotionally/financially tolerate, the higher the equity portion can be within the **recommended range**.
+**Agent:** It comes from two inputs: your 10+ year investment timeline and your comfort with short-term drops, and the split reflects both within the recommended range. If you want, we can adjust the stock/buffer balance.
 
-At a 90/10 split, the intent is to keep most of the portfolio in growth (equity ETFs) while still reserving a **buffer** that can help reduce the need to sell during market dips.
-
-Current proposal (₪ and %): **₪45,000 in stock ETFs (90%)** and **₪5,000 in buffer (10%)**. Do you want to keep this split, shift toward **more stocks**, or allocate **more to the buffer**?
+Current proposal is ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want the split as-is, more in stocks, or more in buffer?
 
 **User:** Got it, sounds good
 
@@ -203,15 +205,7 @@ status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **User:** Which ETF should I buy?
 
-**Agent:** Equity is the portion invested in stock ETFs (growth potential, but with ups and downs). The buffer is the cash-like part (often a money-market fund, e.g., קרן כספית) used to reduce the need to sell stocks during downturns.
-
-The ETF choice is the next step after we lock the overall split—right now the key question is sizing: you currently have 90% equity / 10% buffer, which fits the recommended range (80–90%) given your 10+ year timeline.
-
-Current proposal (₪ and %):
-- Stock ETFs: ₪45,000 (90%)
-- Buffer: ₪5,000 (10%)
-
-Do you want to keep this exact split, shift a bit more into stocks, or increase the buffer?
+**Agent:** That’s the next step after we settle on the overall 80–90% equity / 10–20% buffer split, since the ETFs depend on the exact sizing. Right now the proposal is ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want that split, more in stocks, or more in buffer?
 
 **User:** Sounds good
 
@@ -227,22 +221,44 @@ status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **User:** What's a buffer?
 
-**Agent:** A buffer is the cash-like portion of your portfolio kept in a low-volatility place (often a money-market fund, e.g., **קרן כספית**) to absorb unexpected dips, pay for upcoming needs, and reduce the risk that you’ll have to sell equity ETFs at a bad time. For someone with a 10+ year timeline, the buffer is relatively small because you generally don’t need to rely on selling stocks during short-term market drops.
-
-Your split (about **90/10**) is driven by two inputs: **your investment timeline (10+ years)** and **how comfortable you are with market declines**—the equity-heavy portion aims to capture long-term growth, while the buffer gives you flexibility when volatility hits.
-
-Next step (after we’re aligned on the split) is choosing the specific instrument for the buffer, and that determines the exact sizing—but we should confirm the overall allocation first.
-
-Current proposal: **90% equity / 10% buffer** = **₪45,000** in stock ETFs and **₪5,000** in buffer. Do you want to keep this split, move **more into stocks**, or move **more into buffer** (within the recommended range of **80–90% equity**)?
+**Agent:** A buffer is a portion of your money kept in a more stable place (rather than in stock ETFs) so you’re less forced to sell stocks during downturns. In your plan it’s there to smooth out volatility while your equity allocation has time to recover. Current proposal: ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want this split, more in stocks, or more in buffer?
 
 **User:** Let's do 60/40
 
-**Agent:** Got it — you want 60% equity: ₪30,000 in stock ETFs and ₪20,000 in the buffer. Over your 10+ year horizon, that higher equity allocation means you may see bigger drawdowns, but you also get meaningfully more long-run growth as gains compound year after year. Still want to proceed with the 60% equity split?
+**Agent:** You’re proposing 60% equity, which is ₪30,000 in stock ETFs and ₪20,000 in buffer. Compared to your previous 90% equity, over your 10+ year horizon this would mean smaller drawdowns and meaningfully less long-run growth as forgone gains compound. Do you want to proceed with the 60% equity split?
 
 **User:** yes
 
 **Output:**
 status: completed | equityPercentage: 60 | bufferPercentage: 40
+
+
+---
+
+## ✓ should accept on the MAX_TURNSth turn instead of returning unresolved
+
+**Agent:** Based on your timeline and comfort with drops, I'd propose ₪45,000 in stock ETFs and ₪5,000 in a buffer — roughly 90/10. More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth. Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen. Want that split, more in stocks, or more in buffer?
+
+**User:** Actually I want 60% stocks
+
+**Agent:** You’re now proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in the buffer. Since this is lower than your previous 90% equity, over your 10+ year horizon you should expect smaller drawdowns and meaningfully less long-run growth as forgone gains compound. Do you want to proceed with this 60% equity split?
+
+**User:** Wait, let's do 55%
+
+**Agent:** Thanks—so your new split would be 55% in stock ETFs (₪27,500) and 45% in the buffer (₪22,500). Do you want to proceed with this allocation?
+
+**User:** Sorry, change to 50%
+
+**Agent:** Got it. You’re proposing 50% equity: ₪25,000 in stock ETFs and ₪25,000 in the buffer. Do you want to proceed with this split?
+
+**User:** Actually 45%
+
+**Agent:** Okay—going with 45% in stock ETFs (₪22,500) and 55% in the buffer (₪27,500). Do you want to proceed with this split?
+
+**User:** Yes, lock it in
+
+**Output:**
+status: completed | equityPercentage: 45 | bufferPercentage: 55
 
 
 ---
@@ -253,21 +269,19 @@ status: completed | equityPercentage: 60 | bufferPercentage: 40
 
 **User:** Actually I want 60% stocks
 
-**Agent:** You’re proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in the buffer (40%). Over your 10+ year horizon, going with more equity typically means bigger drawdowns along the way, but also meaningfully more long-run growth as gains compound year after year; going with less equity generally means smaller drawdowns, but meaningfully less long-run growth because you’re giving up some of the compounding returns you might otherwise capture. Do you want to proceed with 60% equity?
+**Agent:** You’re proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in buffer. Compared to your previous 90% equity, this means smaller drawdowns and meaningfully less long-run growth as forgone gains compound over your 10+ year horizon. Do you want to proceed with 60% equity?
 
 **User:** Wait, let's do 55%
 
-**Agent:** You’re proposing 55% equity: ₪27,500 in stock ETFs and ₪22,500 in the buffer (45%). Do you want to proceed with this split?
+**Agent:** Got it: you’re proposing 55% equity, which is ₪27,500 in stock ETFs and 45% buffer, which is ₪22,500. Do you want to proceed with this split?
 
 **User:** Sorry, change to 50%
 
-**Agent:** Got it—your updated split would be **50% equity**: **₪25,000** in stock ETFs and **₪25,000** in buffer. Do you want to proceed with **50% equity**?
+**Agent:** You’re proposing 50% in stock ETFs (₪25,000) and 50% in buffer (₪25,000). Do you want to proceed with this split?
 
 **User:** Actually 45%
 
-**Agent:** Got it—going with 45% equity: ₪22,500 in stock ETFs and ₪27,500 in buffer.
-
-Do you want to proceed with this allocation?
+**Agent:** Understood. You’re proposing 45% in stock ETFs (₪22,500) and 55% in buffer (₪27,500). Do you want to proceed with this split?
 
 **User:** Make it 40%
 

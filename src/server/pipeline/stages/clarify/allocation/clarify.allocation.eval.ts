@@ -222,6 +222,26 @@ describe("collectAllocation", () => {
     );
   });
 
+  // clarify.allocation.rules.md rule 2 (accept-original): after countering, the
+  // user retracts to the original anchor without naming a number. Classifier
+  // returns `accept-original`; handler resolves to anchorEquity, not the latest
+  // counter.
+  it("should resolve to the anchor when the user retracts to the original proposal", async () => {
+    const responder = createTrackedResponder([
+      "Make it 60%",
+      "Actually, never mind — stick with your original suggestion",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    // aggressive + 10+ yr + score 5 → anchor = 90% (cell.max), not 60
+    expect(output.equityPercentage).toBe(90);
+    expect(output.bufferPercentage).toBe(10);
+  });
+
   // clarify.allocation.rules.md rule 3: non-round counter-proposal honored without snapping
   it("should honor a non-round counter-proposal exactly (no snap-to-cell)", async () => {
     const responder = createTrackedResponder(["77%", "yes"]);
@@ -468,6 +488,28 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+  });
+
+  // clarify.allocation.rules.md "Budget exhaustion": accept on the MAX_TURNSth
+  // turn wins — the handler classifies first and resolves to `completed` rather
+  // than throwing the user's "yes" away. 4 counters + 1 accept = 5 turns total
+  // (MAX_TURNS). Final equity is the last counter's value.
+  it("should accept on the MAX_TURNSth turn instead of returning unresolved", async () => {
+    const responder = createTrackedResponder([
+      "Actually I want 60% stocks",
+      "Wait, let's do 55%",
+      "Sorry, change to 50%",
+      "Actually 45%",
+      "Yes, lock it in",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBe(45);
+    expect(output.bufferPercentage).toBe(55);
   });
 
   // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals
