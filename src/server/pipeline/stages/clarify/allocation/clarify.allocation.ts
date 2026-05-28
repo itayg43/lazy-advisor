@@ -184,6 +184,28 @@ User's question: ${question}`;
   return reply;
 };
 
+const toBudgetExhaustedDone = (): AllocationDoneDirective => {
+  logger.warn("Allocation phase unresolved — turn budget exhausted");
+
+  return {
+    kind: DirectiveKind.Done,
+    result: {
+      status: PipelineStatusEnum.enum.unresolved,
+      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+    },
+  };
+};
+
+const toMissingCounterAsk = (): AllocationAskDirective => {
+  logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
+
+  return {
+    kind: DirectiveKind.Ask,
+    message:
+      "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?",
+  };
+};
+
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
   state: ConversationState,
@@ -209,15 +231,7 @@ const handleCounterTurn = async (
   state: ConversationState,
   ctx: ProposalContext,
 ): Promise<AllocationAskDirective> => {
-  if (proposedEquityPercentage === null) {
-    logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
-
-    return {
-      kind: DirectiveKind.Ask,
-      message:
-        "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?",
-    };
-  }
+  if (proposedEquityPercentage === null) return toMissingCounterAsk();
 
   const previousEquityPercentage = state.currentEquityPercentage;
   state.currentEquityPercentage = proposedEquityPercentage;
@@ -277,17 +291,7 @@ const createTurnHandler =
     )
       return handleAcceptTurn(kind, state, anchorEquityPercentage);
 
-    if (state.turnsTaken >= MAX_NEGOTIATION_TURNS) {
-      logger.warn("Allocation phase unresolved — turn budget exhausted");
-
-      return {
-        kind: DirectiveKind.Done,
-        result: {
-          status: PipelineStatusEnum.enum.unresolved,
-          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-        },
-      };
-    }
+    if (state.turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
 
     if (intent.kind === AllocationIntentKindEnum.enum.counter)
       return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
