@@ -490,11 +490,12 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md "Budget exhaustion": accept on the MAX_TURNSth
-  // turn wins — the handler classifies first and resolves to `completed` rather
-  // than throwing the user's "yes" away. 4 counters + 1 accept = 5 turns total
-  // (MAX_TURNS). Final equity is the last counter's value.
-  it("should accept on the MAX_TURNSth turn instead of returning unresolved", async () => {
+  // clarify.allocation.rules.md "Budget exhaustion": accept on the
+  // MAX_NEGOTIATION_TURNS-th turn wins — the handler classifies first and
+  // resolves to `completed` rather than throwing the user's "yes" away. 4
+  // counters + 1 accept = 5 turns total (MAX_NEGOTIATION_TURNS). Final equity
+  // is the last counter's value.
+  it("should accept on the MAX_NEGOTIATION_TURNS-th turn instead of returning unresolved", async () => {
     const responder = createTrackedResponder([
       "Actually I want 60% stocks",
       "Wait, let's do 55%",
@@ -513,7 +514,8 @@ describe("collectAllocation", () => {
   });
 
   // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals
-  // exhausts the closure-owned turn budget (MAX_TURNS = 5 in clarify.allocation.ts).
+  // exhausts the turn budget threaded via state (MAX_NEGOTIATION_TURNS = 5 in
+  // clarify.allocation.constants.ts).
   // On the budget-th turn, the handler returns `Done` with
   // { status: "unresolved", reason: "allocation" } before composing another reply.
   it("should return failure when the user keeps counter-proposing past the turn budget", async () => {

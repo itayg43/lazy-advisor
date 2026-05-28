@@ -31,16 +31,16 @@
 
 The external-boundary rule has one exception: when the error under test originates *inside* an internal function (not at the OpenAI boundary), a global `vi.mock` would contaminate all other tests in the file. In that case, use `vi.spyOn` scoped to that specific test — `vi.restoreAllMocks()` in `beforeEach` handles cleanup automatically, so no manual `spy.mockRestore()` is needed.
 
-In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., parameters, risk, contribution) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal.
+In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., parameters, risk, contribution) or `runConversation` (allocation) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal. Note that `runConversation` does not throw an exhaustion error; its convergence is handled in-band via the phase's own `unresolved` result variant (see `ARCHITECTURE.md § Pipeline control-flow errors`).
 
 ```ts
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 
-it("should handle allocation tool-call exhaustion", async () => {
-  // ... callOpenAIParsed setup for classify / ef-debt / parameters / risk ...
+it("should handle intake tool-call exhaustion", async () => {
+  // ... callOpenAIParsed setup for upstream phases ...
 
   vi.spyOn(clarifyPhase, "runPhaseLoop").mockRejectedValueOnce(
-    new PhaseLoopToolCallsExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
+    new PhaseLoopToolCallsExhaustedError("Out-of-scope intake", MAX_INTAKE_TOOL_CALLS),
   );
 
   await runPipeline(...);

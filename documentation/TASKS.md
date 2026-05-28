@@ -25,7 +25,7 @@ Aligned with notebook guidance from Research-Plan-Implement: "use control flow f
 
 #### Implementation
 
-Research and design are settled — see `RUN_CONVERSATION_DESIGN.md` and the working demo at `T4_allocation_demo.ts`. What remains is porting the design into the real phase:
+Research and design are settled (the `runConversation` primitive landed and the design pass has been folded into `documentation/ARCHITECTURE.md § Phase conversation patterns`). What remains is porting the design into the real phase:
 
 1. **Replace `runPhaseLoop` + `runPhaseExtraction` with `runConversation`** in `clarify.allocation.ts`. Phase function signature (`AllocationPhaseInput → AllocationPhaseResult`) and the `completed | unresolved` mapping at the call site stay identical; only the internals change.
 2. **Implement real `classifyIntent` and `composeCounterResponse`** to replace the regex/template stubs in the demo. Classifier returns `{ kind: "accept" } | { kind: "counter"; proposedEquity: number } | { kind: "unknown" }`. Composer takes `{ counters, hasShownDrawdownFraming }` and emits the next-turn message.
@@ -99,7 +99,7 @@ Three satellites (typically a small allocation alongside a core; user can pick a
 
 #### Conversation pattern — classifier-first + agentic RAG over the knowledge file
 
-T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifier-first dispatch and an inner agentic RAG loop for educational Q&A. The CX-level conversation flow below stays the same; what changes is how it's wired underneath.
+T5 lands on `runConversation` (see `ARCHITECTURE.md § Phase conversation patterns`), with classifier-first dispatch and an inner agentic RAG loop for educational Q&A. The CX-level conversation flow below stays the same; what changes is how it's wired underneath.
 
 **CX flow (unchanged from prior pass):**
 - **Cold-open:** present the two cores (single global fund vs S&P 500) with one-line descriptions and the tradeoff between them (global diversification vs US-only with pension-overlap caveat). Do not lead with a strong default. The three satellites and Holy Trinity are not in the cold-open.
@@ -116,7 +116,7 @@ T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifie
 - Discuss intent invokes the inner Q&A tool loop over `clarify.equity.knowledge.md` (see *Knowledge tool surface* below). Output is structured `{ answer, citations: { section, quote }[] }`.
 - Closure state holds the running candidate `EquityAllocation[]`, plus surface-once flags (`pensionOverlapShown`, `usListedWarningShown`, per-instrument sanity-check flags).
 
-**Knowledge tool surface (new — per `RUN_CONVERSATION_DESIGN.md`):**
+**Knowledge tool surface (new):**
 - Knowledge file is loaded at boot but **not** appended to every prompt.
 - TOC (heading + one-line description per `##` section) lives in the inner Q&A system prompt (~150 tokens).
 - Two tools, scoped to equity: `grep_equity(pattern)` and `read_equity_section(name)`. Errors as human-readable strings, not exceptions.
@@ -135,7 +135,7 @@ T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifie
 
 #### Design decisions
 
-1. **Classifier-first dispatch + agentic RAG over the knowledge file.** Reverses the earlier "no classifier — single flow" plan, which was tied to the `runPhaseLoop` pattern where the LLM owned the whole conversation. With `runConversation` in place after T4, classifier-first is strictly better at this scope: control flow stays in code (matching T4's core principle), the ~170-LOC knowledge file stays out of every prompt (retrieved via `grep_equity` / `read_equity_section` tools only on `discuss` intent), and classifier accuracy + Q&A composition become independently evaluable. See `RUN_CONVERSATION_DESIGN.md § T5/T6 knowledge access — agentic RAG`.
+1. **Classifier-first dispatch + agentic RAG over the knowledge file.** Reverses the earlier "no classifier — single flow" plan, which was tied to the `runPhaseLoop` pattern where the LLM owned the whole conversation. With `runConversation` in place after T4, classifier-first is strictly better at this scope: control flow stays in code (matching T4's core principle), the ~170-LOC knowledge file stays out of every prompt (retrieved via `grep_equity` / `read_equity_section` tools only on `discuss` intent), and classifier accuracy + Q&A composition become independently evaluable.
 2. **No goal pass-through.** Aligned with the rest of the pipeline. If T5 evals later show meaningful UX cost from losing the goal's equity hints, revisit with goal as ambient context (not for routing — just for the LLM to reference).
 3. **Cold-open is 2 cores, not all 5.** Presenting all five anchors upfront is too much for a beginner. The 2-cores-then-tilt-offer pattern keeps the initial decision tractable while still exposing satellites for users who want them.
 4. **Holy Trinity not in the cold-open.** A single global fund delivers very similar exposure with much less operational overhead. The Holy Trinity is in the knowledge file for users who specifically ask, but the phase does not propose it.

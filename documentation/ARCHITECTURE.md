@@ -63,15 +63,15 @@ Splitting by responsibility keeps each prompt short and focused, improving instr
 
 ### Phase conversation patterns
 
-Two patterns are used depending on whether the LLM needs to drive the conversation or just classify a response to a fixed question.
+Three patterns are used depending on how code and the LLM divide control of the conversation flow.
 
 **`runPhaseLoop` — LLM as orchestrator**
 
 The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
 
-Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: allocation and intake handlers.
+Used when the LLM needs to generate dynamic content and navigate multi-step flows where the next action depends on nuanced judgment that does not benefit from being auditable in code: intake handlers.
 
-**`askWithClassify` — code as orchestrator**
+**`askWithClassify` — code as orchestrator, single fixed question**
 
 Code drives the conversation — decides what question to ask and in what order. The LLM does one narrow job per call: classify a single user response into a typed schema. Code calls `sendToUser`/`waitForResponse` directly (the same primitives `ask_user` is built on). State lives in TypeScript variables, not conversation history.
 
@@ -79,14 +79,21 @@ A scoped conversation history is maintained client-side within a single question
 
 Used when questions are fixed and answers need structured extraction: ef-debt, parameters, risk, contribution.
 
+**`runConversation` — code as orchestrator, multi-turn negotiation**
+
+Code drives a multi-turn loop where the next action depends on classifying each user reply. Per turn, the handler runs a classification LLM call against the conversation history, branches on the classified intent in code, and may run additional LLM calls (e.g., to compose a free-text reply). State is threaded through handler return values: each turn the handler receives `Readonly<TState>`, derives a new state via spread, and returns `{ kind: Ask, state, message }` or `{ kind: Done, result }`. The runner owns no phase state — it only owns `history` and the user I/O round-trip.
+
+The per-turn branching logic (e.g., "first counter-proposal vs. Nth", "extreme deviation triggers sanity check") lives in TypeScript, not in the prompt. This extends the `askWithClassify` principle — use control flow for control flow, prompts for what code cannot do (free-text classification + free-text generation) — to multi-turn flows. Convergence is the handler's responsibility: handlers self-limit via a turn counter in the threaded state.
+
+Used for multi-turn negotiation with deterministic per-turn branching: allocation.
+
 **The boundary**
 
 | Need | Pattern |
 |------|---------|
-| LLM generates the question content dynamically | `runPhaseLoop` |
-| LLM decides what question to ask next | `runPhaseLoop` |
 | Questions are fixed; answers need classification | `askWithClassify` |
-| Multi-turn negotiation or complex branching | `runPhaseLoop` |
+| Code drives multi-turn flow; LLM classifies + composes per turn | `runConversation` |
+| LLM decides what question to ask next or generates the flow dynamically | `runPhaseLoop` |
 
 ### Phase error contract
 
@@ -117,7 +124,7 @@ Uncaught exceptions from either primitive — unexpected errors, OpenAI failures
 
 **Pipeline control-flow errors — `PipelineControlFlowError`.** The exhaustion errors thrown by pipeline primitives — `PhaseLoopToolCallsExhaustedError` (`runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (`askWithClassify`) — share a common base class, `PipelineControlFlowError`. It is a sibling to `BaseError` and carries no HTTP `status`: these errors are caught at the phase boundary and translated to in-band results, so they never reach the HTTP layer. The base captures the semantic distinction from genuine system failures (`InternalError` for code/model bugs; `SchemaValidationError` for schema breaches like `ClassifyResolvedOutputInvalidError`), which continue to propagate as exceptions and convert to `SYSTEM_ERROR_EXIT_MESSAGE` at the stage boundary. Phases catch the specific subclass via its predicate (`isPhaseLoopExhaustedError`, `isClassifyError`) rather than the base — each subclass is independently mapped to its own `unresolved` reason or, where the phase opts in, a `completed` default.
 
-`runConversation` is intentionally an outlier here: it has no exhaustion error of its own. Convergence is the handler's responsibility — handlers self-limit (e.g., via a closure-owned turn counter) and return `Done` with the appropriate phase-result variant (`completed` or `unresolved`) on their own terms. The primitive has no notion of a turn budget. See `RUN_CONVERSATION_DESIGN.md` for the rationale.
+`runConversation` is intentionally an outlier here: it has no exhaustion error of its own. Convergence is the handler's responsibility — handlers self-limit via a turn counter in the threaded state and return `Done` with the appropriate phase-result variant (`completed` or `unresolved`) on their own terms. The primitive has no notion of a turn budget.
 
 #### Next-tier — error contract
 
@@ -207,7 +214,7 @@ The model locates the user's cell from `riskTolerance` × `timeline` and picks a
 
 **What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase and are not passed to this phase.
 
-**Unresolved-split exit.** `collectAllocation` returns `{ status: "unresolved", reason: "allocation" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The orchestrator dispatches a closing message rather than locking the user into a split they were still negotiating.
+**Unresolved-split exit.** `collectAllocation` returns `{ status: "unresolved", reason: "allocation" }` if the user keeps counter-proposing past `MAX_NEGOTIATION_TURNS` without converging. The orchestrator dispatches a closing message rather than locking the user into a split they were still negotiating.
 
 ### Contribution phase — `plansToContribute: boolean`
 
