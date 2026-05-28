@@ -6,7 +6,7 @@ import {
   AllocationCounterBranchKindEnum,
   AllocationCounterDirectionEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
-import type { CounterBranch } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { AllocationCounterBranch } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
 export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-US")}`;
@@ -54,7 +54,7 @@ export const selectCounterBranch = (
   suggestedEquityRange: AllocationSuggestedEquityRange,
   hasShownExtreme: boolean,
   hasShownCompoundImpact: boolean,
-): CounterBranch => {
+): AllocationCounterBranch => {
   const deviation = equityDeviationPercentagePoints(
     proposedEquityPercentage,
     suggestedEquityRange,

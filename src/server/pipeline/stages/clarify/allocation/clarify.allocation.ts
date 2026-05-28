@@ -33,12 +33,13 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
-  AllocationAskDirective,
+  AllocationTurnAskOutput,
   AllocationClassifierOutput,
-  AllocationDoneDirective,
+  AllocationTurnDoneOutput,
   AllocationPhaseInput,
   AllocationPhaseResult,
-  CounterBranch,
+  AllocationConversationState,
+  AllocationCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -51,13 +52,6 @@ type ProposalContext = {
   amount: number;
   timeline: string;
   suggestedEquityRange: AllocationSuggestedEquityRange;
-};
-
-type ConversationState = {
-  currentEquityPercentage: number;
-  extremeFramingShown: boolean;
-  compoundImpactFramingShown: boolean;
-  turnsTaken: number;
 };
 
 const buildInitialProposal = (
@@ -103,7 +97,7 @@ const classifyTurn = async (
 };
 
 const composeCounterReply = async (
-  branch: CounterBranch,
+  branch: AllocationCounterBranch,
   proposedEquityPercentage: number,
   previousEquityPercentage: number,
   ctx: ProposalContext,
@@ -184,7 +178,7 @@ User's question: ${question}`;
   return reply;
 };
 
-const toBudgetExhaustedDone = (): AllocationDoneDirective => {
+const toBudgetExhaustedDone = (): AllocationTurnDoneOutput => {
   logger.warn("Allocation phase unresolved — turn budget exhausted");
 
   return {
@@ -196,21 +190,27 @@ const toBudgetExhaustedDone = (): AllocationDoneDirective => {
   };
 };
 
-const toMissingCounterAsk = (): AllocationAskDirective => {
+const toMissingCounterAsk = (
+  state: Readonly<AllocationConversationState>,
+): AllocationTurnAskOutput => {
   logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
 
   return {
     kind: DirectiveKind.Ask,
+    state,
     message:
       "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?",
   };
 };
 
-const toUnknownAsk = (): AllocationAskDirective => {
+const toUnknownAsk = (
+  state: Readonly<AllocationConversationState>,
+): AllocationTurnAskOutput => {
   logger.warn("Unknown allocation intent — re-asking with generic prompt");
 
   return {
     kind: DirectiveKind.Ask,
+    state,
     message:
       "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?",
   };
@@ -218,9 +218,9 @@ const toUnknownAsk = (): AllocationAskDirective => {
 
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
-  state: ConversationState,
+  state: Readonly<AllocationConversationState>,
   anchorEquityPercentage: number,
-): AllocationDoneDirective => {
+): AllocationTurnDoneOutput => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
@@ -238,13 +238,12 @@ const handleAcceptTurn = (
 
 const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
-  state: ConversationState,
+  state: Readonly<AllocationConversationState>,
   ctx: ProposalContext,
-): Promise<AllocationAskDirective> => {
-  if (proposedEquityPercentage === null) return toMissingCounterAsk();
+): Promise<AllocationTurnAskOutput> => {
+  if (proposedEquityPercentage === null) return toMissingCounterAsk(state);
 
   const previousEquityPercentage = state.currentEquityPercentage;
-  state.currentEquityPercentage = proposedEquityPercentage;
 
   const branch = selectCounterBranch(
     proposedEquityPercentage,
@@ -252,12 +251,17 @@ const handleCounterTurn = async (
     state.extremeFramingShown,
     state.compoundImpactFramingShown,
   );
-  const { kind } = branch;
 
-  if (kind === AllocationCounterBranchKindEnum.enum.extreme)
-    state.extremeFramingShown = true;
-  else if (kind === AllocationCounterBranchKindEnum.enum["compound-impact"])
-    state.compoundImpactFramingShown = true;
+  const nextState: AllocationConversationState = {
+    ...state,
+    currentEquityPercentage: proposedEquityPercentage,
+    extremeFramingShown:
+      state.extremeFramingShown ||
+      branch.kind === AllocationCounterBranchKindEnum.enum.extreme,
+    compoundImpactFramingShown:
+      state.compoundImpactFramingShown ||
+      branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"],
+  };
 
   const reply = await composeCounterReply(
     branch,
@@ -266,31 +270,33 @@ const handleCounterTurn = async (
     ctx,
   );
 
-  return { kind: DirectiveKind.Ask, message: reply };
+  return { kind: DirectiveKind.Ask, state: nextState, message: reply };
 };
 
 const handleQuestionTurn = async (
   lastUserResponse: string,
-  state: ConversationState,
+  state: Readonly<AllocationConversationState>,
   ctx: ProposalContext,
-): Promise<AllocationAskDirective> => {
+): Promise<AllocationTurnAskOutput> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
     state.currentEquityPercentage,
     ctx,
   );
 
-  return { kind: DirectiveKind.Ask, message: reply };
+  return { kind: DirectiveKind.Ask, state, message: reply };
 };
 
 const createTurnHandler =
   (
-    state: ConversationState,
     ctx: ProposalContext,
     anchorEquityPercentage: number,
-  ): TurnHandler<AllocationPhaseResult> =>
-  async (history, lastUserResponse) => {
-    state.turnsTaken++;
+  ): TurnHandler<AllocationConversationState, AllocationPhaseResult> =>
+  async (state, history, lastUserResponse) => {
+    const nextState: AllocationConversationState = {
+      ...state,
+      turnsTaken: state.turnsTaken + 1,
+    };
 
     const intent = await classifyTurn(history);
     const { kind } = intent;
@@ -299,16 +305,16 @@ const createTurnHandler =
       kind === AllocationIntentKindEnum.enum.accept ||
       kind === AllocationIntentKindEnum.enum["accept-original"]
     )
-      return handleAcceptTurn(kind, state, anchorEquityPercentage);
+      return handleAcceptTurn(kind, nextState, anchorEquityPercentage);
 
-    if (state.turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
+    if (nextState.turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
 
     if (intent.kind === AllocationIntentKindEnum.enum.counter)
-      return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
+      return handleCounterTurn(intent.proposedEquityPercentage, nextState, ctx);
     if (intent.kind === AllocationIntentKindEnum.enum.question)
-      return handleQuestionTurn(lastUserResponse, state, ctx);
+      return handleQuestionTurn(lastUserResponse, nextState, ctx);
 
-    return toUnknownAsk();
+    return toUnknownAsk(nextState);
   };
 
 export const collectAllocation = async (
@@ -331,17 +337,17 @@ export const collectAllocation = async (
   );
   const ctx: ProposalContext = { amount, timeline, suggestedEquityRange };
 
-  const state: ConversationState = {
-    currentEquityPercentage: anchorEquityPercentage,
-    extremeFramingShown: false,
-    compoundImpactFramingShown: false,
-    turnsTaken: 0,
-  };
-
   const initHandler: InitHandler<
+    AllocationConversationState,
     AllocationPhaseResult
-  > = async (): Promise<AllocationAskDirective> => ({
+  > = async (): Promise<AllocationTurnAskOutput> => ({
     kind: DirectiveKind.Ask,
+    state: {
+      currentEquityPercentage: anchorEquityPercentage,
+      extremeFramingShown: false,
+      compoundImpactFramingShown: false,
+      turnsTaken: 0,
+    },
     message: buildInitialProposal(
       amount,
       anchorEquityPercentage,
@@ -349,7 +355,7 @@ export const collectAllocation = async (
     ),
   });
 
-  const turnHandler = createTurnHandler(state, ctx, anchorEquityPercentage);
+  const turnHandler = createTurnHandler(ctx, anchorEquityPercentage);
 
   return runConversation({ initHandler, turnHandler, responder });
 };

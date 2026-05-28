@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { DirectiveKind, type Directive } from "#pipeline/run-conversation";
+import { DirectiveKind, type TurnHandlerOutput } from "#pipeline/run-conversation";
 import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationClassifierOutputSchema,
@@ -30,12 +30,26 @@ export type AllocationAcceptIntentKind = Extract<
 >;
 export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutputSchema>;
 
-export type AllocationAskDirective = Extract<
-  Directive<AllocationPhaseResult>,
+// Negotiation state threaded across turns. Owned by the runner once
+// `initHandler` returns it; every handler receives it `Readonly` and produces
+// a new value via spread rather than mutating in place.
+export type AllocationConversationState = {
+  currentEquityPercentage: number;
+  extremeFramingShown: boolean;
+  compoundImpactFramingShown: boolean;
+  turnsTaken: number;
+};
+
+export type AllocationTurnOutput = TurnHandlerOutput<
+  AllocationConversationState,
+  AllocationPhaseResult
+>;
+export type AllocationTurnAskOutput = Extract<
+  AllocationTurnOutput,
   { kind: typeof DirectiveKind.Ask }
 >;
-export type AllocationDoneDirective = Extract<
-  Directive<AllocationPhaseResult>,
+export type AllocationTurnDoneOutput = Extract<
+  AllocationTurnOutput,
   { kind: typeof DirectiveKind.Done }
 >;
 
@@ -44,7 +58,7 @@ export type AllocationCounterDirection = z.infer<typeof AllocationCounterDirecti
 
 // Counter-proposal branch — Rule 3 in clarify.allocation.rules.md. Selected in
 // code from {counters, hasShownCompoundImpactFraming, isExtreme(proposed, range)}.
-export type CounterBranch =
+export type AllocationCounterBranch =
   | {
       kind: Extract<AllocationCounterBranchKind, "extreme">;
       direction: AllocationCounterDirection;
