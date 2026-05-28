@@ -228,12 +228,12 @@ const handleCounterTurn = async (
     state.extremeFramingShown,
     state.compoundImpactFramingShown,
   );
-  if (branch.kind === AllocationCounterBranchKindEnum.enum.extreme) {
+  const { kind } = branch;
+
+  if (kind === AllocationCounterBranchKindEnum.enum.extreme)
     state.extremeFramingShown = true;
-  }
-  if (branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"]) {
+  else if (kind === AllocationCounterBranchKindEnum.enum["compound-impact"])
     state.compoundImpactFramingShown = true;
-  }
 
   const reply = await composeCounterReply(
     branch,
@@ -269,13 +269,13 @@ const createTurnHandler =
     state.turnsTaken++;
 
     const intent = await classifyTurn(history);
+    const { kind } = intent;
 
     if (
-      intent.kind === AllocationIntentKindEnum.enum.accept ||
-      intent.kind === AllocationIntentKindEnum.enum["accept-original"]
-    ) {
-      return handleAcceptTurn(intent.kind, state, anchorEquityPercentage);
-    }
+      kind === AllocationIntentKindEnum.enum.accept ||
+      kind === AllocationIntentKindEnum.enum["accept-original"]
+    )
+      return handleAcceptTurn(kind, state, anchorEquityPercentage);
 
     if (state.turnsTaken >= MAX_NEGOTIATION_TURNS) {
       logger.warn("Allocation phase unresolved — turn budget exhausted");
@@ -289,13 +289,10 @@ const createTurnHandler =
       };
     }
 
-    if (intent.kind === AllocationIntentKindEnum.enum.counter) {
+    if (intent.kind === AllocationIntentKindEnum.enum.counter)
       return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
-    }
-
-    if (intent.kind === AllocationIntentKindEnum.enum.question) {
+    if (intent.kind === AllocationIntentKindEnum.enum.question)
       return handleQuestionTurn(lastUserResponse, state, ctx);
-    }
 
     return {
       kind: DirectiveKind.Ask,
