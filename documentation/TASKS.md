@@ -25,7 +25,7 @@ Aligned with notebook guidance from Research-Plan-Implement: "use control flow f
 
 #### Implementation
 
-Research and design are settled (the `runConversation` primitive landed and the design pass has been folded into `documentation/ARCHITECTURE.md § Phase conversation patterns`). What remains is porting the design into the real phase:
+Research and design are settled (the `runConversation` runner landed and the design pass has been folded into `documentation/ARCHITECTURE.md § Phase conversation patterns`). What remains is porting the design into the real phase:
 
 1. **Replace `runPhaseLoop` + `runPhaseExtraction` with `runConversation`** in `clarify.allocation.ts`. Phase function signature (`AllocationPhaseInput → AllocationPhaseResult`) and the `completed | unresolved` mapping at the call site stay identical; only the internals change.
 2. **Implement real `classifyIntent` and `composeCounterResponse`** to replace the regex/template stubs in the demo. Classifier returns `{ kind: "accept" } | { kind: "counter"; proposedEquity: number } | { kind: "unknown" }`. Composer takes `{ counters, hasShownDrawdownFraming }` and emits the next-turn message.
