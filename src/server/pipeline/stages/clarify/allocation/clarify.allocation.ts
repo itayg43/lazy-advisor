@@ -3,7 +3,7 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
 import {
-  DirectiveKind,
+  HandlerOutputKind,
   runConversation,
   type InitHandler,
   type TurnHandler,
@@ -33,12 +33,12 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
-  AllocationTurnAskOutput,
+  AllocationHandlerAskOutput,
   AllocationClassifierOutput,
-  AllocationTurnDoneOutput,
+  AllocationHandlerDoneOutput,
   AllocationPhaseInput,
   AllocationPhaseResult,
-  AllocationConversationState,
+  AllocationNegotiationState,
   AllocationCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
@@ -178,11 +178,11 @@ User's question: ${question}`;
   return reply;
 };
 
-const toBudgetExhaustedDone = (): AllocationTurnDoneOutput => {
+const toBudgetExhaustedDone = (): AllocationHandlerDoneOutput => {
   logger.warn("Allocation phase unresolved — turn budget exhausted");
 
   return {
-    kind: DirectiveKind.Done,
+    kind: HandlerOutputKind.Done,
     result: {
       status: PipelineStatusEnum.enum.unresolved,
       reason: ClarifyUnresolvedReasonEnum.enum.allocation,
@@ -191,12 +191,12 @@ const toBudgetExhaustedDone = (): AllocationTurnDoneOutput => {
 };
 
 const toMissingCounterAsk = (
-  state: Readonly<AllocationConversationState>,
-): AllocationTurnAskOutput => {
+  state: Readonly<AllocationNegotiationState>,
+): AllocationHandlerAskOutput => {
   logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
 
   return {
-    kind: DirectiveKind.Ask,
+    kind: HandlerOutputKind.Ask,
     state,
     message:
       "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?",
@@ -204,12 +204,12 @@ const toMissingCounterAsk = (
 };
 
 const toUnknownAsk = (
-  state: Readonly<AllocationConversationState>,
-): AllocationTurnAskOutput => {
+  state: Readonly<AllocationNegotiationState>,
+): AllocationHandlerAskOutput => {
   logger.warn("Unknown allocation intent — re-asking with generic prompt");
 
   return {
-    kind: DirectiveKind.Ask,
+    kind: HandlerOutputKind.Ask,
     state,
     message:
       "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?",
@@ -218,16 +218,16 @@ const toUnknownAsk = (
 
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
-  state: Readonly<AllocationConversationState>,
+  state: Readonly<AllocationNegotiationState>,
   anchorEquityPercentage: number,
-): AllocationTurnDoneOutput => {
+): AllocationHandlerDoneOutput => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
       : state.currentEquityPercentage;
 
   return {
-    kind: DirectiveKind.Done,
+    kind: HandlerOutputKind.Done,
     result: {
       status: PipelineStatusEnum.enum.completed,
       equityPercentage: finalEquityPercentage,
@@ -238,9 +238,9 @@ const handleAcceptTurn = (
 
 const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
-  state: Readonly<AllocationConversationState>,
+  state: Readonly<AllocationNegotiationState>,
   ctx: ProposalContext,
-): Promise<AllocationTurnAskOutput> => {
+): Promise<AllocationHandlerAskOutput> => {
   if (proposedEquityPercentage === null) return toMissingCounterAsk(state);
 
   const previousEquityPercentage = state.currentEquityPercentage;
@@ -248,18 +248,18 @@ const handleCounterTurn = async (
   const branch = selectCounterBranch(
     proposedEquityPercentage,
     ctx.suggestedEquityRange,
-    state.extremeFramingShown,
-    state.compoundImpactFramingShown,
+    state.hasShownExtremeFraming,
+    state.hasShownCompoundImpactFraming,
   );
 
-  const nextState: AllocationConversationState = {
+  const nextState: AllocationNegotiationState = {
     ...state,
     currentEquityPercentage: proposedEquityPercentage,
-    extremeFramingShown:
-      state.extremeFramingShown ||
+    hasShownExtremeFraming:
+      state.hasShownExtremeFraming ||
       branch.kind === AllocationCounterBranchKindEnum.enum.extreme,
-    compoundImpactFramingShown:
-      state.compoundImpactFramingShown ||
+    hasShownCompoundImpactFraming:
+      state.hasShownCompoundImpactFraming ||
       branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"],
   };
 
@@ -270,30 +270,30 @@ const handleCounterTurn = async (
     ctx,
   );
 
-  return { kind: DirectiveKind.Ask, state: nextState, message: reply };
+  return { kind: HandlerOutputKind.Ask, state: nextState, message: reply };
 };
 
 const handleQuestionTurn = async (
   lastUserResponse: string,
-  state: Readonly<AllocationConversationState>,
+  state: Readonly<AllocationNegotiationState>,
   ctx: ProposalContext,
-): Promise<AllocationTurnAskOutput> => {
+): Promise<AllocationHandlerAskOutput> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
     state.currentEquityPercentage,
     ctx,
   );
 
-  return { kind: DirectiveKind.Ask, state, message: reply };
+  return { kind: HandlerOutputKind.Ask, state, message: reply };
 };
 
 const createTurnHandler =
   (
     ctx: ProposalContext,
     anchorEquityPercentage: number,
-  ): TurnHandler<AllocationConversationState, AllocationPhaseResult> =>
+  ): TurnHandler<AllocationNegotiationState, AllocationPhaseResult> =>
   async (state, history, lastUserResponse) => {
-    const nextState: AllocationConversationState = {
+    const nextState: AllocationNegotiationState = {
       ...state,
       turnsTaken: state.turnsTaken + 1,
     };
@@ -338,14 +338,14 @@ export const collectAllocation = async (
   const ctx: ProposalContext = { amount, timeline, suggestedEquityRange };
 
   const initHandler: InitHandler<
-    AllocationConversationState,
+    AllocationNegotiationState,
     AllocationPhaseResult
-  > = async (): Promise<AllocationTurnAskOutput> => ({
-    kind: DirectiveKind.Ask,
+  > = async (): Promise<AllocationHandlerAskOutput> => ({
+    kind: HandlerOutputKind.Ask,
     state: {
       currentEquityPercentage: anchorEquityPercentage,
-      extremeFramingShown: false,
-      compoundImpactFramingShown: false,
+      hasShownExtremeFraming: false,
+      hasShownCompoundImpactFraming: false,
       turnsTaken: 0,
     },
     message: buildInitialProposal(

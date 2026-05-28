@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import {
-  DirectiveKind,
+  HandlerOutputKind,
   runConversation,
   type InitHandler,
   type TurnHandler,
@@ -18,7 +18,7 @@ describe("runConversation", () => {
     const responder = createTrackedResponder([]);
 
     const initHandler: InitHandler<void, string> = async () => ({
-      kind: DirectiveKind.Done,
+      kind: HandlerOutputKind.Done,
       result: "early-done",
     });
     const turnHandler = vi.fn<TurnHandler<void, string>>();
@@ -38,7 +38,7 @@ describe("runConversation", () => {
     const responder = createTrackedResponder(["yes"]);
 
     const initHandler: InitHandler<void, { ok: boolean }> = async () => ({
-      kind: DirectiveKind.Ask,
+      kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "ready?",
     });
@@ -47,7 +47,7 @@ describe("runConversation", () => {
       _history,
       lastUserResponse,
     ) => ({
-      kind: DirectiveKind.Done,
+      kind: HandlerOutputKind.Done,
       result: { ok: lastUserResponse === "yes" },
     });
 
@@ -72,7 +72,7 @@ describe("runConversation", () => {
     }> = [];
 
     const initHandler: InitHandler<void, string> = async () => ({
-      kind: DirectiveKind.Ask,
+      kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "q1",
     });
@@ -86,8 +86,8 @@ describe("runConversation", () => {
       calls.push({ history: [...history], lastUserResponse });
 
       return callIndex === 1
-        ? { kind: DirectiveKind.Ask, state: undefined, message: "q2" }
-        : { kind: DirectiveKind.Done, result: "ok" };
+        ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
+        : { kind: HandlerOutputKind.Done, result: "ok" };
     };
 
     await runConversation({ initHandler, turnHandler, responder });
@@ -115,12 +115,12 @@ describe("runConversation", () => {
     const responder = createTrackedResponder(["ok"]);
 
     const initHandler: InitHandler<void, string> = async () => ({
-      kind: DirectiveKind.Ask,
+      kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "ready?",
     });
     const turnHandler: TurnHandler<void, string> = async () => ({
-      kind: DirectiveKind.Done,
+      kind: HandlerOutputKind.Done,
       message: "Locked in 70/30.",
       result: "done",
     });
@@ -143,7 +143,7 @@ describe("runConversation", () => {
     const responder = createTrackedResponder([]);
 
     const initHandler: InitHandler<void, string> = async () => ({
-      kind: DirectiveKind.Done,
+      kind: HandlerOutputKind.Done,
       message: "Nothing to do here.",
       result: "skipped",
     });
@@ -168,7 +168,7 @@ describe("runConversation", () => {
     const snapshotsOnEntry: EasyInputMessage[][] = [];
 
     const initHandler: InitHandler<void, string> = async () => ({
-      kind: DirectiveKind.Ask,
+      kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "q1",
     });
@@ -180,8 +180,8 @@ describe("runConversation", () => {
       });
 
       return snapshotsOnEntry.length === 1
-        ? { kind: DirectiveKind.Ask, state: undefined, message: "q2" }
-        : { kind: DirectiveKind.Done, result: "ok" };
+        ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
+        : { kind: HandlerOutputKind.Done, result: "ok" };
     };
 
     await runConversation({ initHandler, turnHandler, responder });
@@ -204,7 +204,7 @@ describe("runConversation", () => {
     const statesSeen: State[] = [];
 
     const initHandler: InitHandler<State, string> = async () => ({
-      kind: DirectiveKind.Ask,
+      kind: HandlerOutputKind.Ask,
       state: { counter: 0 },
       message: "q1",
     });
@@ -213,11 +213,11 @@ describe("runConversation", () => {
 
       return statesSeen.length === 1
         ? {
-            kind: DirectiveKind.Ask,
+            kind: HandlerOutputKind.Ask,
             state: { counter: state.counter + 1 },
             message: "q2",
           }
-        : { kind: DirectiveKind.Done, result: `final-counter:${state.counter}` };
+        : { kind: HandlerOutputKind.Done, result: `final-counter:${state.counter}` };
     };
 
     const result = await runConversation({

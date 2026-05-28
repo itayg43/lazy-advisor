@@ -4,7 +4,7 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   AllocationCounterBranchKindEnum,
-  AllocationCounterDirectionEnum,
+  AllocationExtremeCounterDirectionEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type { AllocationCounterBranch } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
@@ -52,23 +52,23 @@ export const equityDeviationPercentagePoints = (
 export const selectCounterBranch = (
   proposedEquityPercentage: number,
   suggestedEquityRange: AllocationSuggestedEquityRange,
-  hasShownExtreme: boolean,
-  hasShownCompoundImpact: boolean,
+  hasShownExtremeFraming: boolean,
+  hasShownCompoundImpactFraming: boolean,
 ): AllocationCounterBranch => {
   const deviation = equityDeviationPercentagePoints(
     proposedEquityPercentage,
     suggestedEquityRange,
   );
-  if (deviation >= EXTREME_DEVIATION_PERCENTAGE_POINTS && !hasShownExtreme) {
+  if (deviation >= EXTREME_DEVIATION_PERCENTAGE_POINTS && !hasShownExtremeFraming) {
     return {
       kind: AllocationCounterBranchKindEnum.enum.extreme,
       direction:
         proposedEquityPercentage > suggestedEquityRange.max
-          ? AllocationCounterDirectionEnum.enum["too-high"]
-          : AllocationCounterDirectionEnum.enum["too-low"],
+          ? AllocationExtremeCounterDirectionEnum.enum["too-high"]
+          : AllocationExtremeCounterDirectionEnum.enum["too-low"],
     };
   }
-  if (!hasShownCompoundImpact) {
+  if (!hasShownCompoundImpactFraming) {
     return { kind: AllocationCounterBranchKindEnum.enum["compound-impact"] };
   }
 

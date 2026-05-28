@@ -2,9 +2,9 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
 import {
-  DirectiveKind,
+  HandlerOutputKind,
+  type HandlerOutput,
   type RunConversationParams,
-  type TurnHandlerOutput,
 } from "#pipeline/run-conversation/run-conversation.types";
 
 const logger = createLogger("runConversation");
@@ -16,13 +16,12 @@ export const runConversation = async <TState, TResult>({
 }: RunConversationParams<TState, TResult>): Promise<TResult> => {
   logger.info("Starting conversation");
 
+  let next: HandlerOutput<TState, TResult> = await initHandler();
   const history: EasyInputMessage[] = [];
-
-  let next: TurnHandlerOutput<TState, TResult> = await initHandler();
 
   while (true) {
     switch (next.kind) {
-      case DirectiveKind.Done: {
+      case HandlerOutputKind.Done: {
         if (next.message) {
           history.push({ role: "assistant", content: next.message });
           responder.sendToUser(next.message);
@@ -33,7 +32,7 @@ export const runConversation = async <TState, TResult>({
 
         return next.result;
       }
-      case DirectiveKind.Ask: {
+      case HandlerOutputKind.Ask: {
         history.push({ role: "assistant", content: next.message });
         responder.sendToUser(next.message);
         logger.info("Asked user", { message: next.message });

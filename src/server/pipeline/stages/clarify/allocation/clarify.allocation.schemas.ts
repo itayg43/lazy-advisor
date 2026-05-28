@@ -60,7 +60,7 @@ export const AllocationCounterBranchKindEnum = z.enum([
   "bare",
 ]);
 
-export const AllocationCounterDirectionEnum = z.enum(["too-high", "too-low"]);
+export const AllocationExtremeCounterDirectionEnum = z.enum(["too-high", "too-low"]);
 
 export const AllocationClassifierOutputSchema = z.object({
   kind: AllocationIntentKindEnum,

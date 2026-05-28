@@ -1,11 +1,11 @@
 import type { z } from "zod";
 
-import { DirectiveKind, type TurnHandlerOutput } from "#pipeline/run-conversation";
+import { HandlerOutputKind, type TurnHandlerOutput } from "#pipeline/run-conversation";
 import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationClassifierOutputSchema,
   AllocationCounterBranchKindEnum,
-  AllocationCounterDirectionEnum,
+  AllocationExtremeCounterDirectionEnum,
   AllocationIntentKindEnum,
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
@@ -33,35 +33,37 @@ export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutp
 // Negotiation state threaded across turns. Owned by the runner once
 // `initHandler` returns it; every handler receives it `Readonly` and produces
 // a new value via spread rather than mutating in place.
-export type AllocationConversationState = {
+export type AllocationNegotiationState = {
   currentEquityPercentage: number;
-  extremeFramingShown: boolean;
-  compoundImpactFramingShown: boolean;
+  hasShownExtremeFraming: boolean;
+  hasShownCompoundImpactFraming: boolean;
   turnsTaken: number;
 };
 
-export type AllocationTurnOutput = TurnHandlerOutput<
-  AllocationConversationState,
+export type AllocationHandlerOutput = TurnHandlerOutput<
+  AllocationNegotiationState,
   AllocationPhaseResult
 >;
-export type AllocationTurnAskOutput = Extract<
-  AllocationTurnOutput,
-  { kind: typeof DirectiveKind.Ask }
+export type AllocationHandlerAskOutput = Extract<
+  AllocationHandlerOutput,
+  { kind: typeof HandlerOutputKind.Ask }
 >;
-export type AllocationTurnDoneOutput = Extract<
-  AllocationTurnOutput,
-  { kind: typeof DirectiveKind.Done }
+export type AllocationHandlerDoneOutput = Extract<
+  AllocationHandlerOutput,
+  { kind: typeof HandlerOutputKind.Done }
 >;
 
 export type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
-export type AllocationCounterDirection = z.infer<typeof AllocationCounterDirectionEnum>;
+export type AllocationExtremeCounterDirection = z.infer<
+  typeof AllocationExtremeCounterDirectionEnum
+>;
 
 // Counter-proposal branch — Rule 3 in clarify.allocation.rules.md. Selected in
 // code from {counters, hasShownCompoundImpactFraming, isExtreme(proposed, range)}.
 export type AllocationCounterBranch =
   | {
       kind: Extract<AllocationCounterBranchKind, "extreme">;
-      direction: AllocationCounterDirection;
+      direction: AllocationExtremeCounterDirection;
     }
   | { kind: Extract<AllocationCounterBranchKind, "compound-impact"> }
   | { kind: Extract<AllocationCounterBranchKind, "bare"> };
