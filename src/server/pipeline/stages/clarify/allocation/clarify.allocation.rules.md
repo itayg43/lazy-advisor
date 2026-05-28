@@ -62,7 +62,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 **Retraction to the original anchor.** After one or more counters, a reply that signals acceptance but explicitly retracts to the *original* proposal — without naming a number (e.g., "actually, never mind — stick with your original suggestion", "let's go back to the first proposal", "I'll trust your original split") — is classified as `kind: "accept-original"`. The handler resolves to `anchorEquityPercentage` (the initial precomputed proposal), not `currentEquityPercentage`. This closes the gap where a verbal retraction would otherwise lock in the abandoned counter. If the retraction-shaped reply *names* a number ("actually, stick with the original 88"), it is a counter (Rule 3) — the named number takes precedence.
 
-**Last-turn behavior.** Both `accept` and `accept-original` win on the MAX_TURNSth turn — see Budget exhaustion. Returning `unresolved` after a clear acceptance would be a UX regression.
+**Last-turn behavior.** Both `accept` and `accept-original` win on the `MAX_NEGOTIATION_TURNS`-th turn — see Budget exhaustion. Returning `unresolved` after a clear acceptance would be a UX regression.
 
 **Disambiguation:** A response that names a specific percentage or ratio different from the current proposal — even if phrased as acceptance (e.g., "let's do 50/50", "I want 60%") — is a counter-proposal. Apply Rule 3 instead.
 
@@ -116,7 +116,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## Turn budget
 
-`MAX_TURNS = 5` in `clarify.allocation.ts`. Counts user replies (each call to `turnHandler`). Typical paths:
+`MAX_NEGOTIATION_TURNS = 5` in `clarify.allocation.constants.ts`. Counts user replies (each call to `turnHandler`). Typical paths:
 
 - **Happy path:** initial proposal + user accepts on turn 1 = 1 turn used.
 - **Counter-proposal path:** initial proposal + counter on turn 1 + accept on turn 2 = 2 turns used.
@@ -126,7 +126,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## Budget exhaustion
 
-The `runConversation` primitive enforces no budget — convergence is the handler's responsibility. The handler increments a closure-owned `turnCount` per turn and classifies the user's reply first; if the intent is `accept`, the phase resolves to `completed` even on the MAX_TURNSth turn (closing on the user's "yes" is the right UX — returning `unresolved` after a clear acceptance would feel broken). For any non-accept intent on the MAX_TURNSth turn the handler returns `Done` with `{ status: "unresolved", reason: "allocation" }`, and the orchestrator maps that to `ALLOCATION_EXIT_MESSAGE`. The trade-off is one extra classifier call on the last turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
+The `runConversation` primitive enforces no budget — convergence is the handler's responsibility. The handler increments a `turnsTaken` counter in the threaded state and classifies the user's reply first; if the intent is `accept`, the phase resolves to `completed` even on the `MAX_NEGOTIATION_TURNS`-th turn (closing on the user's "yes" is the right UX — returning `unresolved` after a clear acceptance would feel broken). For any non-accept intent on the `MAX_NEGOTIATION_TURNS`-th turn the handler returns `Done` with `{ status: "unresolved", reason: "allocation" }`, and the orchestrator maps that to `ALLOCATION_EXIT_MESSAGE`. The trade-off is one extra classifier call on the last turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
 
 ## Out of scope
 
