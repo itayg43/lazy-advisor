@@ -126,7 +126,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ## Budget exhaustion
 
-The `runConversation` primitive enforces no budget — convergence is the handler's responsibility. The handler increments a `turnsTaken` counter in the threaded state and classifies the user's reply first; if the intent is `accept`, the phase resolves to `completed` even on the `MAX_NEGOTIATION_TURNS`-th turn (closing on the user's "yes" is the right UX — returning `unresolved` after a clear acceptance would feel broken). For any non-accept intent on the `MAX_NEGOTIATION_TURNS`-th turn the handler returns `Done` with `{ status: "unresolved", reason: "allocation" }`, and the orchestrator maps that to `ALLOCATION_EXIT_MESSAGE`. The trade-off is one extra classifier call on the last turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
+The `runConversation` runner enforces no budget — convergence is the handler's responsibility. The handler increments a `turnsTaken` counter in the threaded state and classifies the user's reply first; if the intent is `accept`, the phase resolves to `completed` even on the `MAX_NEGOTIATION_TURNS`-th turn (closing on the user's "yes" is the right UX — returning `unresolved` after a clear acceptance would feel broken). For any non-accept intent on the `MAX_NEGOTIATION_TURNS`-th turn the handler returns `Done` with `{ status: "unresolved", reason: "allocation" }`, and the orchestrator maps that to `ALLOCATION_EXIT_MESSAGE`. The trade-off is one extra classifier call on the last turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
 
 ## Out of scope
 
