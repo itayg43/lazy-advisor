@@ -206,6 +206,16 @@ const toMissingCounterAsk = (): AllocationAskDirective => {
   };
 };
 
+const toUnknownAsk = (): AllocationAskDirective => {
+  logger.warn("Unknown allocation intent — re-asking with generic prompt");
+
+  return {
+    kind: DirectiveKind.Ask,
+    message:
+      "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?",
+  };
+};
+
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
   state: ConversationState,
@@ -298,11 +308,7 @@ const createTurnHandler =
     if (intent.kind === AllocationIntentKindEnum.enum.question)
       return handleQuestionTurn(lastUserResponse, state, ctx);
 
-    return {
-      kind: DirectiveKind.Ask,
-      message:
-        "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?",
-    };
+    return toUnknownAsk();
   };
 
 export const collectAllocation = async (
