@@ -162,9 +162,8 @@ describe("runConversation", () => {
     ]);
   });
 
-  it("should deep-clone history before passing to turnHandler so handler mutations don't leak", async () => {
+  it("should pass the growing history reference each turn", async () => {
     const responder = createTrackedResponder(["r1", "r2"]);
-    // Snapshot before mutating, otherwise the recorded array IS the mutated one.
     const snapshotsOnEntry: EasyInputMessage[][] = [];
 
     const initHandler: InitHandler<void, string> = async () => ({
@@ -174,10 +173,6 @@ describe("runConversation", () => {
     });
     const turnHandler: TurnHandler<void, string> = async (_state, history) => {
       snapshotsOnEntry.push([...history]);
-      (history as EasyInputMessage[]).push({
-        role: "assistant",
-        content: "INJECTED",
-      });
 
       return snapshotsOnEntry.length === 1
         ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
@@ -186,10 +181,10 @@ describe("runConversation", () => {
 
     await runConversation({ initHandler, turnHandler, responder });
 
-    expect(snapshotsOnEntry[1]).not.toContainEqual({
-      role: "assistant",
-      content: "INJECTED",
-    });
+    expect(snapshotsOnEntry[0]).toEqual([
+      { role: "assistant", content: "q1" },
+      { role: "user", content: "r1" },
+    ]);
     expect(snapshotsOnEntry[1]).toEqual([
       { role: "assistant", content: "q1" },
       { role: "user", content: "r1" },
@@ -228,5 +223,44 @@ describe("runConversation", () => {
 
     expect(statesSeen).toEqual([{ counter: 0 }, { counter: 1 }]);
     expect(result).toBe("final-counter:1");
+  });
+
+  it("should throw on an unknown HandlerOutputKind via the exhaustive guard", async () => {
+    const responder = createTrackedResponder([]);
+
+    // Force an invalid kind past the type system to assert the runtime guard.
+    const initHandler = (async () => ({
+      kind: "bogus",
+      result: "never",
+    })) as unknown as InitHandler<void, string>;
+    const turnHandler = vi.fn<TurnHandler<void, string>>();
+
+    await expect(
+      runConversation({ initHandler, turnHandler, responder }),
+    ).rejects.toThrow(/unhandled output kind/);
+    expect(turnHandler).not.toHaveBeenCalled();
+  });
+
+  it("should propagate errors thrown from turnHandler mid-conversation", async () => {
+    const responder = createTrackedResponder(["r1"]);
+    const boom = new Error("turn-handler-blew-up");
+
+    const initHandler: InitHandler<void, string> = async () => ({
+      kind: HandlerOutputKind.Ask,
+      state: undefined,
+      message: "q1",
+    });
+    const turnHandler: TurnHandler<void, string> = async () => {
+      throw boom;
+    };
+
+    await expect(runConversation({ initHandler, turnHandler, responder })).rejects.toBe(
+      boom,
+    );
+    // The Ask message did reach the user before the handler threw.
+    expect(responder.transcript).toEqual([
+      { role: "agent", content: "q1" },
+      { role: "user", content: "r1" },
+    ]);
   });
 });

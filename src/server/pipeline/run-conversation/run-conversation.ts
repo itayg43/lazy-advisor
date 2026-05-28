@@ -14,52 +14,53 @@ export const runConversation = async <TState, TResult>({
   turnHandler,
   responder,
 }: RunConversationParams<TState, TResult>): Promise<TResult> => {
-  logger.info("Starting conversation");
+  logger.debug("Starting conversation");
 
   let currentOutput: HandlerOutput<TState, TResult> = await initHandler();
   const history: EasyInputMessage[] = [];
 
+  // No max-turn guard: a handler that always returns Ask will loop until the
+  // responder rejects or the process is killed. Turn accounting lives in the
+  // caller's phase state (e.g. `turnsTaken`), so the runner stays generic.
+  // Revisit (`maxTurns` param here) before any production deployment where
+  // cost exposure matters. The companion hang-exposure control — a wait
+  // timeout — belongs inside `Responder.waitForResponse`, not in the runner,
+  // since the runner has no view into the underlying transport.
   while (true) {
-    const { kind } = currentOutput;
-
-    switch (kind) {
+    switch (currentOutput.kind) {
       case HandlerOutputKind.Done: {
         const { message, result } = currentOutput;
 
         if (message) {
-          history.push({ role: "assistant", content: message });
           responder.sendToUser(message);
-          logger.info("Sent closing message", { message });
+          logger.debug("Sent closing message", { message });
         }
 
-        logger.info("Conversation complete");
+        logger.debug("Conversation complete");
 
         return result;
       }
       case HandlerOutputKind.Ask: {
-        history.push({ role: "assistant", content: currentOutput.message });
-        responder.sendToUser(currentOutput.message);
-        logger.info("Asked user", { message: currentOutput.message });
+        const { message } = currentOutput;
+
+        history.push({ role: "assistant", content: message });
+        responder.sendToUser(message);
+        logger.debug("Asked user", { message });
 
         const lastUserResponse = await responder.waitForResponse();
         history.push({ role: "user", content: lastUserResponse });
-        logger.info("Turn complete", { lastUserResponse });
+        logger.debug("User responded", { lastUserResponse });
 
         // `currentOutput` is overwritten atomically here. If the next iteration's
         // `sendToUser` throws, the runner unwinds and the closure dies — the
         // freshly-returned state and directive are discarded together, so
         // there is no halfway-committed phase state to recover from.
-        currentOutput = await turnHandler(
-          currentOutput.state,
-          structuredClone(history),
-          lastUserResponse,
-        );
-        // Read `kind` off the freshly-assigned `currentOutput`, not the
-        // destructured `kind` above — that one still holds the pre-turn value.
-        logger.info("Turn handler returned", { kind: currentOutput.kind });
+        currentOutput = await turnHandler(currentOutput.state, history, lastUserResponse);
+        logger.debug("Turn handler returned", { ...currentOutput });
 
         break;
       }
+
       default: {
         const _exhaustive: never = currentOutput;
 

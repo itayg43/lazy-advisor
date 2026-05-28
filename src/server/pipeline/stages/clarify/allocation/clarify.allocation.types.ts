@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { HandlerOutputKind, type TurnHandlerOutput } from "#pipeline/run-conversation";
+import { HandlerOutputKind, type HandlerOutput } from "#pipeline/run-conversation";
 import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationClassifierOutputSchema,
@@ -40,7 +40,7 @@ export type AllocationNegotiationState = {
   turnsTaken: number;
 };
 
-export type AllocationHandlerOutput = TurnHandlerOutput<
+export type AllocationHandlerOutput = HandlerOutput<
   AllocationNegotiationState,
   AllocationPhaseResult
 >;

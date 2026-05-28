@@ -81,7 +81,11 @@ Used when questions are fixed and answers need structured extraction: ef-debt, p
 
 **`runConversation` — code as orchestrator, multi-turn negotiation**
 
-Code drives a multi-turn loop where the next action depends on classifying each user reply. Per turn, the handler runs a classification LLM call against the conversation history, branches on the classified intent in code, and may run additional LLM calls (e.g., to compose a free-text reply). State is threaded through handler return values: each turn the handler receives `Readonly<TState>`, derives a new state via spread, and returns `{ kind: Ask, state, message }` or `{ kind: Done, result }`. The runner owns no phase state — it only owns `history` and the user I/O round-trip.
+Code drives a multi-turn loop where the next action depends on classifying each user reply. Per turn, the handler runs a classification LLM call against the conversation history, branches on the classified intent in code, and may run additional LLM calls (e.g., to compose a free-text reply).
+
+Two handler slots are exposed. `initHandler` runs once before any user input — it produces the opening Ask or, when the phase has nothing to do (e.g., T6's `bufferPercentage === 0` early-skip), returns Done immediately, with or without a closing message. `turnHandler` runs after each user reply and receives the threaded state. Splitting the two means the turn signature doesn't have to model "no reply yet."
+
+State is threaded through handler return values: each turn the handler receives `Readonly<TState>`, derives a new state via spread, and returns `{ kind: Ask, state, message }` or `{ kind: Done, result, message? }` (message optional on Done so phases can terminate silently or with a closing line). Ownership is split deliberately: the runner owns `history` because it's coupled to user I/O; the caller owns `TState` because it's coupled to phase domain logic, including turn accounting and convergence.
 
 The per-turn branching logic (e.g., "first counter-proposal vs. Nth", "extreme deviation triggers sanity check") lives in TypeScript, not in the prompt. This extends the `askWithClassify` principle — use control flow for control flow, prompts for what code cannot do (free-text classification + free-text generation) — to multi-turn flows. Convergence is the handler's responsibility: handlers self-limit via a turn counter in the threaded state.
 
