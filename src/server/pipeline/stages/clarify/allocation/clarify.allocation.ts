@@ -18,6 +18,7 @@ import {
   calculateBufferPercentage,
   computeSplit,
   formatCurrency,
+  isAcceptKind,
   pickEquityPercentage,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
@@ -328,10 +329,7 @@ const createTurnHandler =
     const intent = await classifyTurn(history);
     const { kind } = intent;
 
-    if (
-      kind === AllocationIntentKindEnum.enum.accept ||
-      kind === AllocationIntentKindEnum.enum["accept-original"]
-    )
+    if (isAcceptKind(kind))
       return handleAcceptTurn(
         kind,
         nextState.currentEquityPercentage,

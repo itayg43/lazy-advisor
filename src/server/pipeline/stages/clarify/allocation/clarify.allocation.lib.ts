@@ -5,14 +5,25 @@ import {
 import {
   AllocationCounterBranchKindEnum,
   AllocationExtremeCounterDirectionEnum,
+  AllocationIntentKindEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
-import type { AllocationCounterBranch } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type {
+  AllocationAcceptIntentKind,
+  AllocationCounterBranch,
+  AllocationIntentKind,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
 export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-US")}`;
 
 export const calculateBufferPercentage = (equityPercentage: number): number =>
   100 - equityPercentage;
+
+export const isAcceptKind = (
+  kind: AllocationIntentKind,
+): kind is AllocationAcceptIntentKind =>
+  kind === AllocationIntentKindEnum.enum.accept ||
+  kind === AllocationIntentKindEnum.enum["accept-original"];
 
 export const pickEquityPercentage = (
   range: AllocationSuggestedEquityRange,
