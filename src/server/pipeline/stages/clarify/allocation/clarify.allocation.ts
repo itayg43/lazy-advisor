@@ -217,13 +217,13 @@ const toUnknownAsk = (
 
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
-  state: Readonly<AllocationNegotiationState>,
+  currentEquityPercentage: number,
   anchorEquityPercentage: number,
 ): AllocationHandlerDoneOutput => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
-      : state.currentEquityPercentage;
+      : currentEquityPercentage;
 
   return {
     kind: HandlerOutputKind.Done,
@@ -324,7 +324,11 @@ const createTurnHandler =
       kind === AllocationIntentKindEnum.enum.accept ||
       kind === AllocationIntentKindEnum.enum["accept-original"]
     )
-      return handleAcceptTurn(kind, nextState, anchorEquityPercentage);
+      return handleAcceptTurn(
+        kind,
+        nextState.currentEquityPercentage,
+        anchorEquityPercentage,
+      );
 
     if (nextState.turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
 
