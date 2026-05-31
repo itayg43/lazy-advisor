@@ -13,6 +13,12 @@ export const ALLOCATION_RISK_LEVELS = RiskToleranceEnum.options
 
 export const MAX_NEGOTIATION_TURNS = 5;
 
+export const ALLOCATION_MISSING_COUNTER_MESSAGE =
+  "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?";
+
+export const ALLOCATION_UNKNOWN_INTENT_MESSAGE =
+  "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?";
+
 export const EXTREME_DEVIATION_PERCENTAGE_POINTS = 40;
 
 export type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;

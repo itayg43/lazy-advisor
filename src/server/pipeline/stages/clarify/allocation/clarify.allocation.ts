@@ -10,8 +10,9 @@ import {
 } from "#pipeline/run-conversation";
 import {
   ALLOCATION_ANCHOR_DATA,
+  ALLOCATION_MISSING_COUNTER_MESSAGE,
+  ALLOCATION_UNKNOWN_INTENT_MESSAGE,
   MAX_NEGOTIATION_TURNS,
-  type AllocationSuggestedEquityRange,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   calculateBufferPercentage,
@@ -33,13 +34,14 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
-  AllocationHandlerAskOutput,
   AllocationClassifierOutput,
+  AllocationCounterBranch,
+  AllocationHandlerAskOutput,
   AllocationHandlerDoneOutput,
+  AllocationNegotiationState,
   AllocationPhaseInput,
   AllocationPhaseResult,
-  AllocationNegotiationState,
-  AllocationCounterBranch,
+  AllocationProposalContext,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -47,12 +49,6 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAllocation");
-
-type ProposalContext = {
-  amount: number;
-  timeline: string;
-  suggestedEquityRange: AllocationSuggestedEquityRange;
-};
 
 const buildInitialProposal = (
   amount: number,
@@ -100,7 +96,7 @@ const composeCounterReply = async (
   branch: AllocationCounterBranch,
   proposedEquityPercentage: number,
   previousEquityPercentage: number,
-  ctx: ProposalContext,
+  ctx: AllocationProposalContext,
 ): Promise<string> => {
   const proposedBufferPercentage = calculateBufferPercentage(proposedEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
@@ -144,7 +140,7 @@ Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.
 const composeQuestionReply = async (
   question: string,
   currentEquityPercentage: number,
-  ctx: ProposalContext,
+  ctx: AllocationProposalContext,
 ): Promise<string> => {
   const bufferPercentage = calculateBufferPercentage(currentEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
@@ -198,8 +194,7 @@ const toMissingCounterAsk = (
   return {
     kind: HandlerOutputKind.Ask,
     state,
-    message:
-      "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?",
+    message: ALLOCATION_MISSING_COUNTER_MESSAGE,
   };
 };
 
@@ -211,8 +206,7 @@ const toUnknownAsk = (
   return {
     kind: HandlerOutputKind.Ask,
     state,
-    message:
-      "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?",
+    message: ALLOCATION_UNKNOWN_INTENT_MESSAGE,
   };
 };
 
@@ -239,7 +233,7 @@ const handleAcceptTurn = (
 const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
   state: Readonly<AllocationNegotiationState>,
-  ctx: ProposalContext,
+  ctx: AllocationProposalContext,
 ): Promise<AllocationHandlerAskOutput> => {
   if (proposedEquityPercentage === null) return toMissingCounterAsk(state);
 
@@ -276,7 +270,7 @@ const handleCounterTurn = async (
 const handleQuestionTurn = async (
   lastUserResponse: string,
   state: Readonly<AllocationNegotiationState>,
-  ctx: ProposalContext,
+  ctx: AllocationProposalContext,
 ): Promise<AllocationHandlerAskOutput> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
@@ -287,9 +281,29 @@ const handleQuestionTurn = async (
   return { kind: HandlerOutputKind.Ask, state, message: reply };
 };
 
+const createInitHandler =
+  (
+    amount: number,
+    anchorEquityPercentage: number,
+  ): InitHandler<AllocationNegotiationState, AllocationPhaseResult> =>
+  async () => ({
+    kind: HandlerOutputKind.Ask,
+    state: {
+      currentEquityPercentage: anchorEquityPercentage,
+      hasShownExtremeFraming: false,
+      hasShownCompoundImpactFraming: false,
+      turnsTaken: 0,
+    },
+    message: buildInitialProposal(
+      amount,
+      anchorEquityPercentage,
+      calculateBufferPercentage(anchorEquityPercentage),
+    ),
+  });
+
 const createTurnHandler =
   (
-    ctx: ProposalContext,
+    ctx: AllocationProposalContext,
     anchorEquityPercentage: number,
   ): TurnHandler<AllocationNegotiationState, AllocationPhaseResult> =>
   async (state, history, lastUserResponse) => {
@@ -309,9 +323,9 @@ const createTurnHandler =
 
     if (nextState.turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
 
-    if (intent.kind === AllocationIntentKindEnum.enum.counter)
+    if (kind === AllocationIntentKindEnum.enum.counter)
       return handleCounterTurn(intent.proposedEquityPercentage, nextState, ctx);
-    if (intent.kind === AllocationIntentKindEnum.enum.question)
+    if (kind === AllocationIntentKindEnum.enum.question)
       return handleQuestionTurn(lastUserResponse, nextState, ctx);
 
     return toUnknownAsk(nextState);
@@ -335,27 +349,11 @@ export const collectAllocation = async (
     suggestedEquityRange,
     riskSelfRatingScore,
   );
-  const ctx: ProposalContext = { amount, timeline, suggestedEquityRange };
+  const ctx: AllocationProposalContext = { amount, timeline, suggestedEquityRange };
 
-  const initHandler: InitHandler<
-    AllocationNegotiationState,
-    AllocationPhaseResult
-  > = async (): Promise<AllocationHandlerAskOutput> => ({
-    kind: HandlerOutputKind.Ask,
-    state: {
-      currentEquityPercentage: anchorEquityPercentage,
-      hasShownExtremeFraming: false,
-      hasShownCompoundImpactFraming: false,
-      turnsTaken: 0,
-    },
-    message: buildInitialProposal(
-      amount,
-      anchorEquityPercentage,
-      calculateBufferPercentage(anchorEquityPercentage),
-    ),
+  return runConversation({
+    initHandler: createInitHandler(amount, anchorEquityPercentage),
+    turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
+    responder,
   });
-
-  const turnHandler = createTurnHandler(ctx, anchorEquityPercentage);
-
-  return runConversation({ initHandler, turnHandler, responder });
 };

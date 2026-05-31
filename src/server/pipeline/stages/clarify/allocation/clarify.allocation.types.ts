@@ -1,7 +1,10 @@
 import type { z } from "zod";
 
 import { HandlerOutputKind, type HandlerOutput } from "#pipeline/run-conversation";
-import type { AllocationTimeline } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import type {
+  AllocationSuggestedEquityRange,
+  AllocationTimeline,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationClassifierOutputSchema,
   AllocationCounterBranchKindEnum,
@@ -29,6 +32,14 @@ export type AllocationAcceptIntentKind = Extract<
   "accept" | "accept-original"
 >;
 export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutputSchema>;
+
+// Immutable per-phase inputs shared by the proposal/composer functions —
+// derived once in `collectAllocation` and passed through, never mutated.
+export type AllocationProposalContext = {
+  amount: number;
+  timeline: string;
+  suggestedEquityRange: AllocationSuggestedEquityRange;
+};
 
 // Negotiation state threaded across turns. Owned by the runner once
 // `initHandler` returns it; every handler receives it `Readonly` and produces
