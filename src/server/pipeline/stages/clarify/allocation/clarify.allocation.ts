@@ -92,6 +92,29 @@ const classifyTurn = async (
   return output;
 };
 
+const composeReply = async (
+  instructions: string,
+  input: string,
+  formatName: string,
+): Promise<string> => {
+  const {
+    output: { reply },
+  } = await callOpenAIParsed(
+    {
+      model: "gpt-5.4-nano",
+      instructions,
+      input,
+      text: {
+        format: zodTextFormat(AllocationComposerOutputSchema, formatName),
+      },
+      reasoning: { effort: "low" },
+    },
+    AllocationComposerOutputSchema,
+  );
+
+  return reply;
+};
+
 const composeCounterReply = async (
   branch: AllocationCounterBranch,
   proposedEquityPercentage: number,
@@ -117,19 +140,10 @@ New split in shekels: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCur
 Investment timeline: ${ctx.timeline}
 Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity`;
 
-  const {
-    output: { reply },
-  } = await callOpenAIParsed(
-    {
-      model: "gpt-5.4-nano",
-      instructions: ALLOCATION_COUNTER_COMPOSER_PROMPT,
-      input,
-      text: {
-        format: zodTextFormat(AllocationComposerOutputSchema, "AllocationCounterReply"),
-      },
-      reasoning: { effort: "low" },
-    },
-    AllocationComposerOutputSchema,
+  const reply = await composeReply(
+    ALLOCATION_COUNTER_COMPOSER_PROMPT,
+    input,
+    "AllocationCounterReply",
   );
 
   logger.info("Composed counter reply", { reply });
@@ -154,19 +168,10 @@ Investment timeline: ${ctx.timeline}
 Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity
 User's question: ${question}`;
 
-  const {
-    output: { reply },
-  } = await callOpenAIParsed(
-    {
-      model: "gpt-5.4-nano",
-      instructions: ALLOCATION_QUESTION_COMPOSER_PROMPT,
-      input,
-      text: {
-        format: zodTextFormat(AllocationComposerOutputSchema, "AllocationQuestionReply"),
-      },
-      reasoning: { effort: "low" },
-    },
-    AllocationComposerOutputSchema,
+  const reply = await composeReply(
+    ALLOCATION_QUESTION_COMPOSER_PROMPT,
+    input,
+    "AllocationQuestionReply",
   );
 
   logger.info("Composed question reply", { reply });
