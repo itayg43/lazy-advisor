@@ -225,6 +225,8 @@ const handleAcceptTurn = (
       ? anchorEquityPercentage
       : currentEquityPercentage;
 
+  logger.info("Accepted allocation", { intentKind, finalEquityPercentage });
+
   return {
     kind: HandlerOutputKind.Done,
     result: {
@@ -250,6 +252,12 @@ const handleCounterTurn = async (
     state.hasShownExtremeFraming,
     state.hasShownCompoundImpactFraming,
   );
+
+  logger.info("Selected counter branch", {
+    branch,
+    previousEquityPercentage,
+    proposedEquityPercentage,
+  });
 
   const nextState: AllocationNegotiationState = {
     ...state,
@@ -360,9 +368,18 @@ export const collectAllocation = async (
   );
   const ctx: AllocationProposalContext = { amount, timeline, suggestedEquityRange };
 
-  return runConversation({
+  logger.info("Derived allocation anchor", {
+    suggestedEquityRange,
+    anchorEquityPercentage,
+  });
+
+  const result = await runConversation({
     initHandler: createInitHandler(amount, anchorEquityPercentage),
     turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
     responder,
   });
+
+  logger.info("Completed allocation phase", { result });
+
+  return result;
 };
