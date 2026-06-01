@@ -197,10 +197,9 @@ const createInitHandler =
     ),
   });
 
-// Turn policy: classify the intent into the decision the turn should take. Pulled
-// out of the handler so `createTurnHandler` stays pure wiring (count → classify →
-// decide → map to output) and this ladder reads as the one place turn intent is
-// routed.
+// Turn policy: routes an already-classified intent to the decision the turn takes.
+// Lifted out of `createTurnHandler` so the handler stays pure wiring and intent
+// routing lives in one place.
 const resolveTurnDecision = async (
   intent: AllocationClassifierOutput,
   state: Readonly<AllocationNegotiationState>,
@@ -246,12 +245,15 @@ const createTurnHandler =
 
     if (decision.kind === HandlerOutputKind.Done) return decision;
 
-    // Assemble the successor state: spread the prior state, apply the central
-    // `turnsTaken` increment, then overlay the decision's patch.
+    const { message, statePatch } = decision;
+
+    // Ask decisions carry only a state patch — this is the single place that
+    // applies the `turnsTaken` increment and lifts that patch into the full
+    // successor state the runner needs.
     return {
       kind: HandlerOutputKind.Ask,
-      state: { ...state, turnsTaken, ...decision.statePatch },
-      message: decision.message,
+      state: { ...state, turnsTaken, ...statePatch },
+      message,
     };
   };
 
