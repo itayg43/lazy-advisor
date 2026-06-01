@@ -37,12 +37,14 @@ import type {
   AllocationAcceptIntentKind,
   AllocationClassifierOutput,
   AllocationCounterBranch,
-  AllocationHandlerAskOutput,
-  AllocationHandlerDoneOutput,
+  AllocationHandlerOutput,
   AllocationNegotiationState,
   AllocationPhaseInput,
   AllocationPhaseResult,
   AllocationProposalContext,
+  AllocationTurnAskDecision,
+  AllocationTurnDecision,
+  AllocationTurnDoneDecision,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -180,7 +182,7 @@ User's question: ${question}`;
   return reply;
 };
 
-const toBudgetExhaustedDone = (): AllocationHandlerDoneOutput => {
+const toBudgetExhaustedDone = (): AllocationTurnDoneDecision => {
   logger.warn("Allocation phase unresolved — turn budget exhausted");
 
   return {
@@ -192,26 +194,20 @@ const toBudgetExhaustedDone = (): AllocationHandlerDoneOutput => {
   };
 };
 
-const toMissingCounterAsk = (
-  state: Readonly<AllocationNegotiationState>,
-): AllocationHandlerAskOutput => {
+const toMissingCounterAsk = (): AllocationTurnAskDecision => {
   logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
 
   return {
     kind: HandlerOutputKind.Ask,
-    state,
     message: ALLOCATION_MISSING_COUNTER_MESSAGE,
   };
 };
 
-const toUnknownAsk = (
-  state: Readonly<AllocationNegotiationState>,
-): AllocationHandlerAskOutput => {
+const toUnknownAsk = (): AllocationTurnAskDecision => {
   logger.warn("Unknown allocation intent — re-asking with generic prompt");
 
   return {
     kind: HandlerOutputKind.Ask,
-    state,
     message: ALLOCATION_UNKNOWN_INTENT_MESSAGE,
   };
 };
@@ -220,7 +216,7 @@ const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
   currentEquityPercentage: number,
   anchorEquityPercentage: number,
-): AllocationHandlerDoneOutput => {
+): AllocationTurnDoneDecision => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
@@ -242,8 +238,8 @@ const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
   state: Readonly<AllocationNegotiationState>,
   ctx: AllocationProposalContext,
-): Promise<AllocationHandlerAskOutput> => {
-  if (proposedEquityPercentage === null) return toMissingCounterAsk(state);
+): Promise<AllocationTurnAskDecision> => {
+  if (proposedEquityPercentage === null) return toMissingCounterAsk();
 
   const previousEquityPercentage = state.currentEquityPercentage;
 
@@ -260,17 +256,6 @@ const handleCounterTurn = async (
     proposedEquityPercentage,
   });
 
-  const nextState: AllocationNegotiationState = {
-    ...state,
-    currentEquityPercentage: proposedEquityPercentage,
-    hasShownExtremeFraming:
-      state.hasShownExtremeFraming ||
-      branch.kind === AllocationCounterBranchKindEnum.enum.extreme,
-    hasShownCompoundImpactFraming:
-      state.hasShownCompoundImpactFraming ||
-      branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"],
-  };
-
   const reply = await composeCounterReply(
     branch,
     proposedEquityPercentage,
@@ -278,21 +263,33 @@ const handleCounterTurn = async (
     ctx,
   );
 
-  return { kind: HandlerOutputKind.Ask, state: nextState, message: reply };
+  return {
+    kind: HandlerOutputKind.Ask,
+    message: reply,
+    statePatch: {
+      currentEquityPercentage: proposedEquityPercentage,
+      hasShownExtremeFraming:
+        state.hasShownExtremeFraming ||
+        branch.kind === AllocationCounterBranchKindEnum.enum.extreme,
+      hasShownCompoundImpactFraming:
+        state.hasShownCompoundImpactFraming ||
+        branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"],
+    },
+  };
 };
 
 const handleQuestionTurn = async (
   lastUserResponse: string,
-  state: Readonly<AllocationNegotiationState>,
+  currentEquityPercentage: number,
   ctx: AllocationProposalContext,
-): Promise<AllocationHandlerAskOutput> => {
+): Promise<AllocationTurnAskDecision> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
-    state.currentEquityPercentage,
+    currentEquityPercentage,
     ctx,
   );
 
-  return { kind: HandlerOutputKind.Ask, state, message: reply };
+  return { kind: HandlerOutputKind.Ask, message: reply };
 };
 
 const createInitHandler =
@@ -315,35 +312,56 @@ const createInitHandler =
     ),
   });
 
+// Maps a turn handler's decision onto a runner output. The successor state is
+// assembled here — the single place that spreads the prior state, applies the
+// central `turnsTaken` increment, and overlays the handler's patch.
+const toHandlerOutput = (
+  decision: AllocationTurnDecision,
+  state: Readonly<AllocationNegotiationState>,
+  turnsTaken: number,
+): AllocationHandlerOutput => {
+  if (decision.kind === HandlerOutputKind.Done) return decision;
+
+  return {
+    kind: HandlerOutputKind.Ask,
+    state: { ...state, turnsTaken, ...decision.statePatch },
+    message: decision.message,
+  };
+};
+
 const createTurnHandler =
   (
     ctx: AllocationProposalContext,
     anchorEquityPercentage: number,
   ): TurnHandler<AllocationNegotiationState, AllocationPhaseResult> =>
   async (state, history, lastUserResponse) => {
-    const nextState: AllocationNegotiationState = {
-      ...state,
-      turnsTaken: state.turnsTaken + 1,
-    };
+    const turnsTaken = state.turnsTaken + 1;
 
     const intent = await classifyTurn(history);
     const { kind } = intent;
 
-    if (isAcceptKind(kind))
-      return handleAcceptTurn(
+    let decision: AllocationTurnDecision;
+    if (isAcceptKind(kind)) {
+      decision = handleAcceptTurn(
         kind,
-        nextState.currentEquityPercentage,
+        state.currentEquityPercentage,
         anchorEquityPercentage,
       );
+    } else if (turnsTaken >= MAX_NEGOTIATION_TURNS) {
+      decision = toBudgetExhaustedDone();
+    } else if (kind === AllocationIntentKindEnum.enum.counter) {
+      decision = await handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
+    } else if (kind === AllocationIntentKindEnum.enum.question) {
+      decision = await handleQuestionTurn(
+        lastUserResponse,
+        state.currentEquityPercentage,
+        ctx,
+      );
+    } else {
+      decision = toUnknownAsk();
+    }
 
-    if (nextState.turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
-
-    if (kind === AllocationIntentKindEnum.enum.counter)
-      return handleCounterTurn(intent.proposedEquityPercentage, nextState, ctx);
-    if (kind === AllocationIntentKindEnum.enum.question)
-      return handleQuestionTurn(lastUserResponse, nextState, ctx);
-
-    return toUnknownAsk(nextState);
+    return toHandlerOutput(decision, state, turnsTaken);
   };
 
 export const collectAllocation = async (

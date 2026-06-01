@@ -55,13 +55,36 @@ export type AllocationHandlerOutput = HandlerOutput<
   AllocationNegotiationState,
   AllocationPhaseResult
 >;
-export type AllocationHandlerAskOutput = Extract<
-  AllocationHandlerOutput,
-  { kind: typeof HandlerOutputKind.Ask }
+
+// State mutations a turn handler may request. `turnsTaken` is excluded — the
+// turn runner owns that counter and increments it centrally, so a handler can
+// never write it. `createTurnHandler` merges the patch over the prior state.
+export type AllocationStatePatch = Partial<
+  Omit<AllocationNegotiationState, "turnsTaken">
 >;
-export type AllocationHandlerDoneOutput = Extract<
-  AllocationHandlerOutput,
+
+// What a turn handler returns: end the phase (Done) or ask again (Ask) carrying
+// only the fields that changed. Distinct from `AllocationHandlerOutput` — a
+// handler decides *what* changed; `createTurnHandler` maps the decision to a
+// runner output, assembling the full successor state in one place.
+export type AllocationTurnDecision =
+  | {
+      kind: typeof HandlerOutputKind.Done;
+      message?: string;
+      result: AllocationPhaseResult;
+    }
+  | {
+      kind: typeof HandlerOutputKind.Ask;
+      message: string;
+      statePatch?: AllocationStatePatch;
+    };
+export type AllocationTurnDoneDecision = Extract<
+  AllocationTurnDecision,
   { kind: typeof HandlerOutputKind.Done }
+>;
+export type AllocationTurnAskDecision = Extract<
+  AllocationTurnDecision,
+  { kind: typeof HandlerOutputKind.Ask }
 >;
 
 export type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
