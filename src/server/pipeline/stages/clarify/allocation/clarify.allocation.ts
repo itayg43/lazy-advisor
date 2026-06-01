@@ -241,19 +241,25 @@ const handleCounterTurn = async (
 ): Promise<AllocationTurnAskDecision> => {
   if (proposedEquityPercentage === null) return toMissingCounterAsk();
 
-  const previousEquityPercentage = state.currentEquityPercentage;
+  const {
+    currentEquityPercentage: previousEquityPercentage,
+    hasShownExtremeFraming,
+    hasShownCompoundImpactFraming,
+  } = state;
 
   const branch = selectCounterBranch(
     proposedEquityPercentage,
     ctx.suggestedEquityRange,
-    state.hasShownExtremeFraming,
-    state.hasShownCompoundImpactFraming,
+    hasShownExtremeFraming,
+    hasShownCompoundImpactFraming,
   );
 
   logger.info("Selected counter branch", {
     branch,
     previousEquityPercentage,
     proposedEquityPercentage,
+    hasShownExtremeFraming,
+    hasShownCompoundImpactFraming,
   });
 
   const reply = await composeCounterReply(
@@ -263,16 +269,18 @@ const handleCounterTurn = async (
     ctx,
   );
 
+  // Framing flags are sticky — once a branch has been shown, it stays shown for
+  // the rest of the phase so `selectCounterBranch` won't repeat it.
   return {
     kind: HandlerOutputKind.Ask,
     message: reply,
     statePatch: {
       currentEquityPercentage: proposedEquityPercentage,
       hasShownExtremeFraming:
-        state.hasShownExtremeFraming ||
+        hasShownExtremeFraming ||
         branch.kind === AllocationCounterBranchKindEnum.enum.extreme,
       hasShownCompoundImpactFraming:
-        state.hasShownCompoundImpactFraming ||
+        hasShownCompoundImpactFraming ||
         branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"],
     },
   };
@@ -297,7 +305,7 @@ const createInitHandler =
     amount: number,
     anchorEquityPercentage: number,
   ): InitHandler<AllocationNegotiationState, AllocationPhaseResult> =>
-  async () => ({
+  async (): Promise<AllocationHandlerOutput> => ({
     kind: HandlerOutputKind.Ask,
     state: {
       currentEquityPercentage: anchorEquityPercentage,
@@ -315,7 +323,7 @@ const createInitHandler =
 // Maps a turn handler's decision onto a runner output. The successor state is
 // assembled here — the single place that spreads the prior state, applies the
 // central `turnsTaken` increment, and overlays the handler's patch.
-const toHandlerOutput = (
+const toTurnHandlerOutput = (
   decision: AllocationTurnDecision,
   state: Readonly<AllocationNegotiationState>,
   turnsTaken: number,
@@ -334,12 +342,14 @@ const createTurnHandler =
     ctx: AllocationProposalContext,
     anchorEquityPercentage: number,
   ): TurnHandler<AllocationNegotiationState, AllocationPhaseResult> =>
-  async (state, history, lastUserResponse) => {
+  async (state, history, lastUserResponse): Promise<AllocationHandlerOutput> => {
     const turnsTaken = state.turnsTaken + 1;
 
     const intent = await classifyTurn(history);
     const { kind } = intent;
 
+    // Accept is checked before the budget gate on purpose: a user who accepts
+    // on the final turn should complete the phase, not be failed as exhausted.
     let decision: AllocationTurnDecision;
     if (isAcceptKind(kind)) {
       decision = handleAcceptTurn(
@@ -361,7 +371,7 @@ const createTurnHandler =
       decision = toUnknownAsk();
     }
 
-    return toHandlerOutput(decision, state, turnsTaken);
+    return toTurnHandlerOutput(decision, state, turnsTaken);
   };
 
 export const collectAllocation = async (
