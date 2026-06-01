@@ -1,6 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
-import type { EasyInputMessage } from "openai/resources/responses/responses";
-
 import { createLogger } from "#lib/logger";
 import {
   HandlerOutputKind,
@@ -15,6 +12,11 @@ import {
   MAX_NEGOTIATION_TURNS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
+  classifyTurn,
+  composeCounterReply,
+  composeQuestionReply,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.io";
+import {
   calculateBufferPercentage,
   computeSplit,
   formatCurrency,
@@ -23,20 +25,11 @@ import {
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
-  ALLOCATION_CLASSIFIER_PROMPT,
-  ALLOCATION_COUNTER_COMPOSER_PROMPT,
-  ALLOCATION_QUESTION_COMPOSER_PROMPT,
-} from "#pipeline/stages/clarify/allocation/clarify.allocation.prompts";
-import {
-  AllocationClassifierOutputSchema,
-  AllocationComposerOutputSchema,
   AllocationCounterBranchKindEnum,
   AllocationIntentKindEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
-  AllocationClassifierOutput,
-  AllocationCounterBranch,
   AllocationHandlerOutput,
   AllocationNegotiationState,
   AllocationPhaseInput,
@@ -49,7 +42,6 @@ import type {
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
-import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("clarifyAllocation");
 
@@ -64,122 +56,6 @@ const buildInitialProposal = (
 More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.
 Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen.
 Want that split, more in stocks, or more in buffer?`;
-};
-
-const classifyTurn = async (
-  history: ReadonlyArray<EasyInputMessage>,
-): Promise<AllocationClassifierOutput> => {
-  const { id, output } = await callOpenAIParsed(
-    {
-      model: "gpt-5.4-nano",
-      instructions: ALLOCATION_CLASSIFIER_PROMPT,
-      // Spread to strip readonly — SDK's input field expects a mutable array.
-      input: [...history],
-      text: {
-        format: zodTextFormat(
-          AllocationClassifierOutputSchema,
-          "AllocationClassifierOutput",
-        ),
-      },
-      reasoning: { effort: "low" },
-    },
-    AllocationClassifierOutputSchema,
-  );
-
-  logger.info("Classified turn", {
-    responseId: id,
-    kind: output.kind,
-    proposedEquityPercentage: output.proposedEquityPercentage,
-  });
-
-  return output;
-};
-
-const composeReply = async (
-  instructions: string,
-  input: string,
-  formatName: string,
-): Promise<string> => {
-  const {
-    output: { reply },
-  } = await callOpenAIParsed(
-    {
-      model: "gpt-5.4-nano",
-      instructions,
-      input,
-      text: {
-        format: zodTextFormat(AllocationComposerOutputSchema, formatName),
-      },
-      reasoning: { effort: "low" },
-    },
-    AllocationComposerOutputSchema,
-  );
-
-  return reply;
-};
-
-const composeCounterReply = async (
-  branch: AllocationCounterBranch,
-  proposedEquityPercentage: number,
-  previousEquityPercentage: number,
-  ctx: AllocationProposalContext,
-): Promise<string> => {
-  const proposedBufferPercentage = calculateBufferPercentage(proposedEquityPercentage);
-  const { equityAmount, bufferAmount } = computeSplit(
-    ctx.amount,
-    proposedEquityPercentage,
-  );
-
-  const branchTag =
-    branch.kind === AllocationCounterBranchKindEnum.enum.extreme
-      ? `extreme-${branch.direction}`
-      : branch.kind;
-
-  const input = `Branch to render: ${branchTag}
-User's exact equity proposal: ${proposedEquityPercentage}% (buffer ${proposedBufferPercentage}%)
-Previous equity in conversation: ${previousEquityPercentage}%
-Investment amount: ${formatCurrency(ctx.amount)}
-New split in shekels: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCurrency(bufferAmount)} in buffer
-Investment timeline: ${ctx.timeline}
-Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity`;
-
-  const reply = await composeReply(
-    ALLOCATION_COUNTER_COMPOSER_PROMPT,
-    input,
-    "AllocationCounterReply",
-  );
-
-  logger.info("Composed counter reply", { reply });
-
-  return reply;
-};
-
-const composeQuestionReply = async (
-  question: string,
-  currentEquityPercentage: number,
-  ctx: AllocationProposalContext,
-): Promise<string> => {
-  const bufferPercentage = calculateBufferPercentage(currentEquityPercentage);
-  const { equityAmount, bufferAmount } = computeSplit(
-    ctx.amount,
-    currentEquityPercentage,
-  );
-
-  const input = `Current proposal: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCurrency(bufferAmount)} in buffer (${currentEquityPercentage}/${bufferPercentage})
-Investment amount: ${formatCurrency(ctx.amount)}
-Investment timeline: ${ctx.timeline}
-Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity
-User's question: ${question}`;
-
-  const reply = await composeReply(
-    ALLOCATION_QUESTION_COMPOSER_PROMPT,
-    input,
-    "AllocationQuestionReply",
-  );
-
-  logger.info("Composed question reply", { reply });
-
-  return reply;
 };
 
 const toBudgetExhaustedDone = (): AllocationTurnDoneDecision => {

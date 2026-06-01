@@ -49,7 +49,9 @@
 - **`src/server/pipeline/data/`** — static reference data that doesn't change at runtime (e.g., brokerage tables)
 - **Schemas and types** in `src/server/schemas/[domain].schemas.ts` and `src/server/types/[domain].types.ts` — or co-located with a phase/module as `[name].schemas.ts` / `[name].types.ts`
 - **Phase prompts** co-located with the phase as `[phase].prompts.ts` — named-exported as constants, or as builder functions when interpolation requires runtime values. Standard pattern for `askWithClassify` phases (parameters, risk, contribution)
-- **Pure helpers** co-located with a phase as `[phase].lib.ts` — math, branch selection, formatters, and other side-effect-free utilities. Orchestration (LLM calls, conversation flow, state management) stays in the main `[phase].ts` file. Examples: `clarify.intake.lib.ts`, `clarify.allocation.lib.ts`
+- **Pure helpers** co-located with a phase as `[phase].lib.ts` — math, branch selection, formatters, and other utilities that are strictly side-effect-free: **no IO, no logging, no state**. Keeping `.lib` pure means it tests with no mocks. Logging and model calls live in the IO/orchestration layers, never here. Example: `clarify.allocation.lib.ts`
+- **Model-IO layer** for `runConversation`-based phases, co-located as `[phase].io.ts` — the functions that call OpenAI (turn classifiers, reply composers) with the phase's prompts/schemas, plus the logging of those calls. Extracting them keeps the main `[phase].ts` file focused on turn-decision logic and runner wiring, and keeps `.lib` pure. Deterministic message builders that don't call the model (e.g. an opening proposal string) stay with their caller in the main file. Example: `clarify.allocation.io.ts`. (Older intake-style phases keep their phase IO in `.lib`; new run-conversation phases should split it into `.io`.)
+- **Turn-decision logic, conversation flow, and state management** stay in the main `[phase].ts` file — it wires the `runConversation` handlers, maps turn decisions to runner outputs, and calls into `.io` and `.lib`
 
 ## Types
 
