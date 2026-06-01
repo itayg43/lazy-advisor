@@ -30,6 +30,7 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
+  AllocationClassifierOutput,
   AllocationHandlerOutput,
   AllocationNegotiationState,
   AllocationPhaseInput,
@@ -196,21 +197,33 @@ const createInitHandler =
     ),
   });
 
-// Maps a turn handler's decision onto a runner output. The successor state is
-// assembled here — the single place that spreads the prior state, applies the
-// central `turnsTaken` increment, and overlays the handler's patch.
-const toTurnHandlerOutput = (
-  decision: AllocationTurnDecision,
+// Turn policy: classify the intent into the decision the turn should take. Pulled
+// out of the handler so `createTurnHandler` stays pure wiring (count → classify →
+// decide → map to output) and this ladder reads as the one place turn intent is
+// routed.
+const resolveTurnDecision = async (
+  intent: AllocationClassifierOutput,
   state: Readonly<AllocationNegotiationState>,
   turnsTaken: number,
-): AllocationHandlerOutput => {
-  if (decision.kind === HandlerOutputKind.Done) return decision;
+  ctx: AllocationProposalContext,
+  anchorEquityPercentage: number,
+  lastUserResponse: string,
+): Promise<AllocationTurnDecision> => {
+  const { kind } = intent;
 
-  return {
-    kind: HandlerOutputKind.Ask,
-    state: { ...state, turnsTaken, ...decision.statePatch },
-    message: decision.message,
-  };
+  // Accept is checked before the budget gate on purpose: a user who accepts
+  // on the final turn should complete the phase, not be failed as exhausted.
+  if (isAcceptKind(kind))
+    return handleAcceptTurn(kind, state.currentEquityPercentage, anchorEquityPercentage);
+
+  if (turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
+
+  if (kind === AllocationIntentKindEnum.enum.counter)
+    return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
+  if (kind === AllocationIntentKindEnum.enum.question)
+    return handleQuestionTurn(lastUserResponse, state.currentEquityPercentage, ctx);
+
+  return toUnknownAsk();
 };
 
 const createTurnHandler =
@@ -222,32 +235,24 @@ const createTurnHandler =
     const turnsTaken = state.turnsTaken + 1;
 
     const intent = await classifyTurn(history);
-    const { kind } = intent;
+    const decision = await resolveTurnDecision(
+      intent,
+      state,
+      turnsTaken,
+      ctx,
+      anchorEquityPercentage,
+      lastUserResponse,
+    );
 
-    // Accept is checked before the budget gate on purpose: a user who accepts
-    // on the final turn should complete the phase, not be failed as exhausted.
-    let decision: AllocationTurnDecision;
-    if (isAcceptKind(kind)) {
-      decision = handleAcceptTurn(
-        kind,
-        state.currentEquityPercentage,
-        anchorEquityPercentage,
-      );
-    } else if (turnsTaken >= MAX_NEGOTIATION_TURNS) {
-      decision = toBudgetExhaustedDone();
-    } else if (kind === AllocationIntentKindEnum.enum.counter) {
-      decision = await handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
-    } else if (kind === AllocationIntentKindEnum.enum.question) {
-      decision = await handleQuestionTurn(
-        lastUserResponse,
-        state.currentEquityPercentage,
-        ctx,
-      );
-    } else {
-      decision = toUnknownAsk();
-    }
+    if (decision.kind === HandlerOutputKind.Done) return decision;
 
-    return toTurnHandlerOutput(decision, state, turnsTaken);
+    // Assemble the successor state: spread the prior state, apply the central
+    // `turnsTaken` increment, then overlay the decision's patch.
+    return {
+      kind: HandlerOutputKind.Ask,
+      state: { ...state, turnsTaken, ...decision.statePatch },
+      message: decision.message,
+    };
   };
 
 export const collectAllocation = async (
