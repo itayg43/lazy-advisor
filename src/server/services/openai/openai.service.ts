@@ -9,7 +9,11 @@ import type {
 import type { ZodError, ZodType } from "zod";
 
 import { openaiClient } from "#clients/openai.client";
-import { InternalError, SchemaValidationError, ServiceUnavailableError } from "#errors";
+import {
+  BadGatewaySchemaValidationError,
+  InternalError,
+  ServiceUnavailableError,
+} from "#errors";
 import { createLogger } from "#lib/logger";
 
 const logger = createLogger("openaiService");
@@ -54,7 +58,7 @@ const toSchemaValidationError = (id: string, cause: ZodError): Error => {
     issues: cause.issues,
   });
 
-  return new SchemaValidationError(SCHEMA_VALIDATION_ERROR_MESSAGE, cause);
+  return new BadGatewaySchemaValidationError(SCHEMA_VALIDATION_ERROR_MESSAGE, cause);
 };
 
 // Errors reaching this handler are post-retry — the SDK retries 408/409/429/5xx

@@ -1,6 +1,10 @@
 import type { ZodError } from "zod";
 
-import { InternalError, PipelineControlFlowError, SchemaValidationError } from "#errors";
+import {
+  BadGatewaySchemaValidationError,
+  InternalError,
+  PipelineControlFlowError,
+} from "#errors";
 import { createLogger } from "#lib/logger";
 import { ClassifyErroredReasonEnum } from "#pipeline/ask-with-classify/ask-with-classify.schemas";
 import type {
@@ -27,7 +31,7 @@ export class ClassifyMessageMissingError extends InternalError {
   }
 }
 
-export class ClassifyResolvedOutputInvalidError extends SchemaValidationError {
+export class ClassifyResolvedOutputInvalidError extends BadGatewaySchemaValidationError {
   constructor(cause: ZodError) {
     super("askWithClassify: classify output failed resolved-schema validation", cause);
     this.name = "ClassifyResolvedOutputInvalidError";

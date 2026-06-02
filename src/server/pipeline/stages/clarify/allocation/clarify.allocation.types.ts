@@ -59,15 +59,13 @@ export type AllocationHandlerOutput = HandlerOutput<
 // State mutations a turn handler may request. `turnsTaken` is excluded — the
 // turn runner owns that counter and increments it centrally, so a handler can
 // never write it. `createTurnHandler` merges the patch over the prior state.
-export type AllocationStatePatch = Partial<
-  Omit<AllocationNegotiationState, "turnsTaken">
->;
+type AllocationStatePatch = Partial<Omit<AllocationNegotiationState, "turnsTaken">>;
 
 // What a turn handler returns: end the phase (Done) or ask again (Ask) carrying
 // only the fields that changed. Distinct from `AllocationHandlerOutput` — a
 // handler decides *what* changed; `createTurnHandler` maps the decision to a
 // runner output, assembling the full successor state in one place.
-export type AllocationTurnDecision =
+type AllocationTurnDecision =
   | {
       kind: typeof HandlerOutputKind.Done;
       message?: string;
@@ -87,13 +85,13 @@ export type AllocationTurnAskDecision = Extract<
   { kind: typeof HandlerOutputKind.Ask }
 >;
 
-export type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
-export type AllocationExtremeCounterDirection = z.infer<
+type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
+type AllocationExtremeCounterDirection = z.infer<
   typeof AllocationExtremeCounterDirectionEnum
 >;
 
 // Counter-proposal branch — Rule 3 in clarify.allocation.rules.md. Selected in
-// code from {counters, hasShownCompoundImpactFraming, isExtreme(proposed, range)}.
+// code from {hasShownExtremeFraming, hasShownCompoundImpactFraming, isExtreme(proposed, range)}.
 export type AllocationCounterBranch =
   | {
       kind: Extract<AllocationCounterBranchKind, "extreme">;

@@ -1,3 +1,4 @@
+import { InternalSchemaValidationError } from "#errors";
 import { createLogger } from "#lib/logger";
 import {
   HandlerOutputKind,
@@ -27,10 +28,10 @@ import {
 import {
   AllocationCounterBranchKindEnum,
   AllocationIntentKindEnum,
+  AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
-  AllocationClassifierOutput,
   AllocationHandlerOutput,
   AllocationIntentKind,
   AllocationNegotiationState,
@@ -72,7 +73,9 @@ const toBudgetExhaustedDone = (): AllocationTurnDoneDecision => {
 };
 
 const toMissingCounterAsk = (): AllocationTurnAskDecision => {
-  logger.warn("Counter intent without proposedEquityPercentage — treating as unknown");
+  logger.warn(
+    "Counter intent without proposedEquityPercentage — re-asking for a specific split",
+  );
 
   return {
     kind: HandlerOutputKind.Ask,
@@ -81,7 +84,7 @@ const toMissingCounterAsk = (): AllocationTurnAskDecision => {
 };
 
 const toUnknownAsk = (): AllocationTurnAskDecision => {
-  logger.warn("Unknown allocation intent — re-asking with generic prompt");
+  logger.warn("Unknown allocation intent — re-asking with the generic prompt");
 
   return {
     kind: HandlerOutputKind.Ask,
@@ -201,22 +204,20 @@ const createInitHandler =
 // intents (accept / budget exhaustion) are resolved in `createTurnHandler`
 // before this runs, so every branch here returns Ask.
 const resolveAskDecision = async (
-  intent: AllocationClassifierOutput & {
-    kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>;
-  },
+  kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>,
+  proposedEquityPercentage: number | null,
   state: Readonly<AllocationNegotiationState>,
   ctx: AllocationProposalContext,
   lastUserResponse: string,
 ): Promise<AllocationTurnAskDecision> => {
-  const { kind } = intent;
-
   switch (kind) {
     case AllocationIntentKindEnum.enum.counter:
-      return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
+      return handleCounterTurn(proposedEquityPercentage, state, ctx);
     case AllocationIntentKindEnum.enum.question:
       return handleQuestionTurn(lastUserResponse, state.currentEquityPercentage, ctx);
     case AllocationIntentKindEnum.enum.unknown:
       return toUnknownAsk();
+
     default: {
       const _exhaustive: never = kind;
 
@@ -249,10 +250,9 @@ const createTurnHandler =
 
     if (turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
 
-    // `kind` is narrowed to the continuing intents past the guard above; re-attach
-    // it so `resolveAskDecision` receives an intent without the accept variants.
     const { message, statePatch } = await resolveAskDecision(
-      { ...intent, kind },
+      kind,
+      intent.proposedEquityPercentage,
       state,
       ctx,
       lastUserResponse,
@@ -267,6 +267,29 @@ const createTurnHandler =
       message,
     };
   };
+
+// Enforces the phase invariants (int 0–100, equity + buffer = 100) at the
+// boundary. Takes `unknown` on purpose: this is a validation boundary, so it
+// must not trust the static type. The split holds by construction today, so a
+// failure is an internal bug, not malformed upstream data — surface it as a 500.
+// Logs here because no error boundary consumes it yet; once one does (and logs
+// `BaseError`s), this should throw silently to avoid double-logging.
+const parseResult = (result: unknown): AllocationPhaseResult => {
+  const parsed = AllocationPhaseResultSchema.safeParse(result);
+  if (!parsed.success) {
+    logger.error("Allocation phase result failed schema validation", parsed.error, {
+      result,
+      issues: parsed.error.issues,
+    });
+
+    throw new InternalSchemaValidationError(
+      "Allocation phase produced a result that failed schema validation",
+      parsed.error,
+    );
+  }
+
+  return parsed.data;
+};
 
 export const collectAllocation = async (
   input: AllocationPhaseInput,
@@ -293,11 +316,13 @@ export const collectAllocation = async (
     anchorEquityPercentage,
   });
 
-  const result = await runConversation({
-    initHandler: createInitHandler(amount, anchorEquityPercentage),
-    turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
-    responder,
-  });
+  const result = parseResult(
+    await runConversation({
+      initHandler: createInitHandler(amount, anchorEquityPercentage),
+      turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
+      responder,
+    }),
+  );
 
   logger.info("Completed allocation phase", { result });
 

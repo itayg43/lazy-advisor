@@ -455,7 +455,7 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md rule 4 + rule 3: clarifying question followed by counter-proposal (4-tool-call worst case)
+  // clarify.allocation.rules.md rule 4 + rule 3: clarifying question followed by counter-proposal (3-turn worst case)
   it("should handle a clarifying question followed by a counter-proposal", async () => {
     const responder = createTrackedResponder([
       "What's a buffer?",

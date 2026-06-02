@@ -22,7 +22,7 @@ export const UserProfileSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
   timeline: TimelineBucketEnum,
   riskTolerance: RiskToleranceEnum,
-  // sum-to-100 is validated in AllocationPhaseOutputSchema, not here
+  // sum-to-100 is validated by AllocationPhaseResultSchema in collectAllocation, not here
   equityPercentage: z.number().int().min(0).max(100),
   bufferPercentage: z.number().int().min(0).max(100),
   plansToContribute: z.boolean(),
