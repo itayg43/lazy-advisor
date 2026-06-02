@@ -18,6 +18,7 @@ import {
   composeQuestionReply,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.io";
 import {
+  applyBranchFraming,
   calculateBufferPercentage,
   computeSplit,
   deriveAnchorEquityPercentage,
@@ -26,13 +27,13 @@ import {
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
-  AllocationCounterBranchKindEnum,
   AllocationIntentKindEnum,
   AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
   AllocationAskDecision,
+  AllocationFramingFlags,
   AllocationHandlerOutput,
   AllocationIntentKind,
   AllocationNegotiationState,
@@ -120,25 +121,23 @@ const handleCounterTurn = async (
 ): Promise<AllocationAskDecision> => {
   if (proposedEquityPercentage === null) return toMissingCounterAsk();
 
-  const {
-    currentEquityPercentage: previousEquityPercentage,
-    hasShownExtremeFraming,
-    hasShownCompoundImpactFraming,
-  } = state;
+  const previousEquityPercentage = state.currentEquityPercentage;
+  const currentFramingFlags: AllocationFramingFlags = {
+    hasShownExtremeFraming: state.hasShownExtremeFraming,
+    hasShownCompoundImpactFraming: state.hasShownCompoundImpactFraming,
+  };
 
   const branch = selectCounterBranch(
     proposedEquityPercentage,
     ctx.suggestedEquityRange,
-    hasShownExtremeFraming,
-    hasShownCompoundImpactFraming,
+    currentFramingFlags,
   );
 
   logger.info("Selected counter branch", {
     branch,
     previousEquityPercentage,
     proposedEquityPercentage,
-    hasShownExtremeFraming,
-    hasShownCompoundImpactFraming,
+    ...currentFramingFlags,
   });
 
   const reply = await composeCounterReply(
@@ -148,19 +147,12 @@ const handleCounterTurn = async (
     ctx,
   );
 
-  // Framing flags are sticky — once a branch has been shown, it stays shown for
-  // the rest of the phase so `selectCounterBranch` won't repeat it.
   return {
     kind: HandlerOutputKind.Ask,
     message: reply,
     statePatch: {
       currentEquityPercentage: proposedEquityPercentage,
-      hasShownExtremeFraming:
-        hasShownExtremeFraming ||
-        branch.kind === AllocationCounterBranchKindEnum.enum.extreme,
-      hasShownCompoundImpactFraming:
-        hasShownCompoundImpactFraming ||
-        branch.kind === AllocationCounterBranchKindEnum.enum["compound-impact"],
+      ...applyBranchFraming(currentFramingFlags, branch),
     },
   };
 };

@@ -10,6 +10,7 @@ import {
 import type {
   AllocationAcceptIntentKind,
   AllocationCounterBranch,
+  AllocationFramingFlags,
   AllocationIntentKind,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
@@ -63,8 +64,7 @@ export const equityDeviationPercentagePoints = (
 export const selectCounterBranch = (
   proposedEquityPercentage: number,
   suggestedEquityRange: AllocationSuggestedEquityRange,
-  hasShownExtremeFraming: boolean,
-  hasShownCompoundImpactFraming: boolean,
+  { hasShownExtremeFraming, hasShownCompoundImpactFraming }: AllocationFramingFlags,
 ): AllocationCounterBranch => {
   const deviation = equityDeviationPercentagePoints(
     proposedEquityPercentage,
@@ -84,4 +84,31 @@ export const selectCounterBranch = (
   }
 
   return { kind: AllocationCounterBranchKindEnum.enum.bare };
+};
+
+// Marks the framing a counter branch has now shown, keeping the branch→flag
+// mapping co-located with `selectCounterBranch` (its inverse). Flags are sticky:
+// an already-shown flag stays true. Switching on `branch.kind` with the
+// exhaustiveness guard makes adding a branch kind a compile error here, so the
+// taxonomy can't drift out of sync with the selector.
+export const applyBranchFraming = (
+  framingFlags: AllocationFramingFlags,
+  branch: AllocationCounterBranch,
+): AllocationFramingFlags => {
+  switch (branch.kind) {
+    case AllocationCounterBranchKindEnum.enum.extreme:
+      return { ...framingFlags, hasShownExtremeFraming: true };
+    case AllocationCounterBranchKindEnum.enum["compound-impact"]:
+      return { ...framingFlags, hasShownCompoundImpactFraming: true };
+    case AllocationCounterBranchKindEnum.enum.bare:
+      return framingFlags;
+
+    default: {
+      const _exhaustive: never = branch;
+
+      throw new Error(
+        `applyBranchFraming: unhandled branch kind: ${JSON.stringify(_exhaustive)}`,
+      );
+    }
+  }
 };

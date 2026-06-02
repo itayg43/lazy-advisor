@@ -41,13 +41,21 @@ export type AllocationProposalContext = {
   suggestedEquityRange: AllocationSuggestedEquityRange;
 };
 
+// Sticky "have we already shown this framing?" flags. Once a counter branch is
+// shown its flag stays true for the rest of the phase, so `selectCounterBranch`
+// won't repeat it. Grouped because they travel together through branch
+// selection (`selectCounterBranch`), the post-branch update (`applyBranchFraming`),
+// and the threaded state.
+export type AllocationFramingFlags = {
+  hasShownExtremeFraming: boolean;
+  hasShownCompoundImpactFraming: boolean;
+};
+
 // Negotiation state threaded across turns. Owned by the runner once
 // `initHandler` returns it; every handler receives it `Readonly` and produces
 // a new value via spread rather than mutating in place.
-export type AllocationNegotiationState = {
+export type AllocationNegotiationState = AllocationFramingFlags & {
   currentEquityPercentage: number;
-  hasShownExtremeFraming: boolean;
-  hasShownCompoundImpactFraming: boolean;
   turnsTaken: number;
 };
 
