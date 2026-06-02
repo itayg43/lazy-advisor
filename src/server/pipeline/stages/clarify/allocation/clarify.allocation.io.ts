@@ -82,7 +82,7 @@ const composeReply = async (
 };
 
 export const composeCounterReply = async (
-  branch: AllocationCounterBranch,
+  counterBranch: AllocationCounterBranch,
   proposedEquityPercentage: number,
   previousEquityPercentage: number,
   ctx: AllocationProposalContext,
@@ -94,9 +94,9 @@ export const composeCounterReply = async (
   );
 
   const branchTag =
-    branch.kind === AllocationCounterBranchKindEnum.enum.extreme
-      ? `extreme-${branch.direction}`
-      : branch.kind;
+    counterBranch.kind === AllocationCounterBranchKindEnum.enum.extreme
+      ? `extreme-${counterBranch.direction}`
+      : counterBranch.kind;
 
   const input = `Branch to render: ${branchTag}
 User's exact equity proposal: ${proposedEquityPercentage}% (buffer ${proposedBufferPercentage}%)

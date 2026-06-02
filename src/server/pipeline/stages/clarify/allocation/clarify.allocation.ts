@@ -126,33 +126,38 @@ const handleCounterTurn = async (
     hasShownExtremeFraming: state.hasShownExtremeFraming,
     hasShownCompoundImpactFraming: state.hasShownCompoundImpactFraming,
   };
-
-  const branch = selectCounterBranch(
+  const counterBranch = selectCounterBranch(
     proposedEquityPercentage,
     ctx.suggestedEquityRange,
     currentFramingFlags,
   );
+  const nextFramingFlags = applyBranchFraming(currentFramingFlags, counterBranch);
 
-  logger.info("Selected counter branch", {
-    branch,
+  logger.info("Resolved counter turn", {
+    counterBranch,
     previousEquityPercentage,
     proposedEquityPercentage,
-    ...currentFramingFlags,
+    currentFramingFlags,
+    nextFramingFlags,
   });
 
   const reply = await composeCounterReply(
-    branch,
+    counterBranch,
     proposedEquityPercentage,
     previousEquityPercentage,
     ctx,
   );
 
+  // `nextFramingFlags` marks this framing shown, but it rides with `reply`: the
+  // runner commits this patch only once `reply` is sent, so a framing is never
+  // recorded as shown on a turn the user never received (atomicity note in
+  // run-conversation.ts).
   return {
     kind: HandlerOutputKind.Ask,
     message: reply,
     statePatch: {
       currentEquityPercentage: proposedEquityPercentage,
-      ...applyBranchFraming(currentFramingFlags, branch),
+      ...nextFramingFlags,
     },
   };
 };

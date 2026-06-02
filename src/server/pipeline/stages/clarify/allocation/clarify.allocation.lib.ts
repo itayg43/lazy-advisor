@@ -86,16 +86,16 @@ export const selectCounterBranch = (
   return { kind: AllocationCounterBranchKindEnum.enum.bare };
 };
 
-// Marks the framing a counter branch has now shown, keeping the branch→flag
-// mapping co-located with `selectCounterBranch` (its inverse). Flags are sticky:
-// an already-shown flag stays true. Switching on `branch.kind` with the
-// exhaustiveness guard makes adding a branch kind a compile error here, so the
-// taxonomy can't drift out of sync with the selector.
+// Maps a chosen branch to the framing flag it marks as shown (flags only ever
+// flip true). Co-located with `selectCounterBranch` — which reads these flags to
+// pick the branch — so the branch↔flag knowledge lives in one place. Switching
+// on `counterBranch.kind` with the exhaustiveness guard makes adding a branch
+// kind a compile error here, so the mapping can't drift from the selector.
 export const applyBranchFraming = (
   framingFlags: AllocationFramingFlags,
-  branch: AllocationCounterBranch,
+  counterBranch: AllocationCounterBranch,
 ): AllocationFramingFlags => {
-  switch (branch.kind) {
+  switch (counterBranch.kind) {
     case AllocationCounterBranchKindEnum.enum.extreme:
       return { ...framingFlags, hasShownExtremeFraming: true };
     case AllocationCounterBranchKindEnum.enum["compound-impact"]:
@@ -104,7 +104,7 @@ export const applyBranchFraming = (
       return framingFlags;
 
     default: {
-      const _exhaustive: never = branch;
+      const _exhaustive: never = counterBranch;
 
       throw new Error(
         `applyBranchFraming: unhandled branch kind: ${JSON.stringify(_exhaustive)}`,

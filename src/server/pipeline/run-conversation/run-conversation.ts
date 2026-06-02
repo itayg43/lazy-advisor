@@ -51,10 +51,12 @@ export const runConversation = async <TState, TResult>({
         history.push({ role: "user", content: lastUserResponse });
         logger.debug("User responded", { lastUserResponse });
 
-        // `currentOutput` is overwritten atomically here. If the next iteration's
-        // `sendToUser` throws, the runner unwinds and the closure dies — the
-        // freshly-returned state and directive are discarded together, so
-        // there is no halfway-committed phase state to recover from.
+        // State and the next directive are replaced together here: if the
+        // following iteration's `sendToUser` throws, the closure unwinds and both
+        // are discarded — no halfway-committed phase state. Fine for now: with no
+        // session persistence, an unrecoverable error ends the conversation at the
+        // stage boundary and the user restarts from scratch, so there's nothing to
+        // resume to. Revisit when session state is persisted.
         currentOutput = await turnHandler(currentOutput.state, history, lastUserResponse);
         logger.debug("Turn handler returned", { ...currentOutput });
 
