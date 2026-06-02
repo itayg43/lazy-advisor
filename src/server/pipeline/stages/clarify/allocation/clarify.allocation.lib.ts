@@ -38,7 +38,9 @@ export const deriveAnchorEquityPercentage = (
     case 5:
       return range.max;
     case 3:
-      return (range.min + range.max) / 2;
+      // Round to an integer: the phase result schema requires integer equity,
+      // and a cell whose bounds sum to an odd number yields a .5 midpoint.
+      return Math.round((range.min + range.max) / 2);
   }
 };
 

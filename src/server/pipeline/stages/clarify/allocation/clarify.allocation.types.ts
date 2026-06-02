@@ -37,7 +37,7 @@ export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutp
 // derived once in `collectAllocation` and passed through, never mutated.
 export type AllocationProposalContext = {
   amount: number;
-  timeline: string;
+  timeline: AllocationTimeline;
   suggestedEquityRange: AllocationSuggestedEquityRange;
 };
 

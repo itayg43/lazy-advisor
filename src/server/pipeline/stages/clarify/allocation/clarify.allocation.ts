@@ -273,11 +273,6 @@ const createTurnHandler =
 const parseResult = (result: unknown): AllocationPhaseResult => {
   const parsed = AllocationPhaseResultSchema.safeParse(result);
   if (!parsed.success) {
-    logger.error("Allocation phase result failed schema validation", parsed.error, {
-      result,
-      issues: parsed.error.issues,
-    });
-
     throw new InternalSchemaValidationError(
       "Allocation phase produced a result that failed schema validation",
       parsed.error,
