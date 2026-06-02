@@ -61,29 +61,18 @@ export type AllocationHandlerOutput = HandlerOutput<
 // never write it. `createTurnHandler` merges the patch over the prior state.
 type AllocationStatePatch = Partial<Omit<AllocationNegotiationState, "turnsTaken">>;
 
-// What a turn handler returns: end the phase (Done) or ask again (Ask) carrying
-// only the fields that changed. Distinct from `AllocationHandlerOutput` — a
-// handler decides *what* changed; `createTurnHandler` maps the decision to a
-// runner output, assembling the full successor state in one place.
-type AllocationTurnDecision =
-  | {
-      kind: typeof HandlerOutputKind.Done;
-      message?: string;
-      result: AllocationPhaseResult;
-    }
-  | {
-      kind: typeof HandlerOutputKind.Ask;
-      message: string;
-      statePatch?: AllocationStatePatch;
-    };
-export type AllocationTurnDoneDecision = Extract<
-  AllocationTurnDecision,
-  { kind: typeof HandlerOutputKind.Done }
->;
-export type AllocationTurnAskDecision = Extract<
-  AllocationTurnDecision,
-  { kind: typeof HandlerOutputKind.Ask }
->;
+// What a *continuing* turn handler returns: ask again, carrying only the fields
+// that changed (`statePatch`). Distinct from `AllocationHandlerOutput` — the
+// handler decides *what* changed; `createTurnHandler` applies the `turnsTaken`
+// increment and merges the patch into the full successor state in one place.
+// Terminal turns (accept / budget exhaustion) skip this and return an
+// `AllocationHandlerOutput` Done directly: they end the phase, so there's no
+// successor state to assemble and the patch concept doesn't apply.
+export type AllocationAskDecision = {
+  kind: typeof HandlerOutputKind.Ask;
+  message: string;
+  statePatch?: AllocationStatePatch;
+};
 
 type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
 type AllocationExtremeCounterDirection = z.infer<

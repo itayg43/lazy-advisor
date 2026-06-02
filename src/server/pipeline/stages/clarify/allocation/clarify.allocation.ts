@@ -32,14 +32,13 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptIntentKind,
+  AllocationAskDecision,
   AllocationHandlerOutput,
   AllocationIntentKind,
   AllocationNegotiationState,
   AllocationPhaseInput,
   AllocationPhaseResult,
   AllocationProposalContext,
-  AllocationTurnAskDecision,
-  AllocationTurnDoneDecision,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
@@ -60,7 +59,7 @@ Sizing to your comfort level tends to reduce the chance of panic-selling when dr
 Want that split, more in stocks, or more in buffer?`;
 };
 
-const toBudgetExhaustedDone = (): AllocationTurnDoneDecision => {
+const toBudgetExhaustedDone = (): AllocationHandlerOutput => {
   logger.warn("Allocation phase unresolved — turn budget exhausted");
 
   return {
@@ -72,7 +71,7 @@ const toBudgetExhaustedDone = (): AllocationTurnDoneDecision => {
   };
 };
 
-const toMissingCounterAsk = (): AllocationTurnAskDecision => {
+const toMissingCounterAsk = (): AllocationAskDecision => {
   logger.warn(
     "Counter intent without proposedEquityPercentage — re-asking for a specific split",
   );
@@ -83,7 +82,7 @@ const toMissingCounterAsk = (): AllocationTurnAskDecision => {
   };
 };
 
-const toUnknownAsk = (): AllocationTurnAskDecision => {
+const toUnknownAsk = (): AllocationAskDecision => {
   logger.warn("Unknown allocation intent — re-asking with the generic prompt");
 
   return {
@@ -96,7 +95,7 @@ const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
   currentEquityPercentage: number,
   anchorEquityPercentage: number,
-): AllocationTurnDoneDecision => {
+): AllocationHandlerOutput => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
@@ -118,7 +117,7 @@ const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
   state: Readonly<AllocationNegotiationState>,
   ctx: AllocationProposalContext,
-): Promise<AllocationTurnAskDecision> => {
+): Promise<AllocationAskDecision> => {
   if (proposedEquityPercentage === null) return toMissingCounterAsk();
 
   const {
@@ -170,7 +169,7 @@ const handleQuestionTurn = async (
   lastUserResponse: string,
   currentEquityPercentage: number,
   ctx: AllocationProposalContext,
-): Promise<AllocationTurnAskDecision> => {
+): Promise<AllocationAskDecision> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
     currentEquityPercentage,
@@ -209,7 +208,7 @@ const resolveAskDecision = async (
   state: Readonly<AllocationNegotiationState>,
   ctx: AllocationProposalContext,
   lastUserResponse: string,
-): Promise<AllocationTurnAskDecision> => {
+): Promise<AllocationAskDecision> => {
   switch (kind) {
     case AllocationIntentKindEnum.enum.counter:
       return handleCounterTurn(proposedEquityPercentage, state, ctx);
