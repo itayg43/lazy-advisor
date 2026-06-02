@@ -19,9 +19,9 @@ import {
 import {
   calculateBufferPercentage,
   computeSplit,
+  deriveAnchorEquityPercentage,
   formatCurrency,
   isAcceptKind,
-  pickEquityPercentage,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
@@ -32,12 +32,12 @@ import type {
   AllocationAcceptIntentKind,
   AllocationClassifierOutput,
   AllocationHandlerOutput,
+  AllocationIntentKind,
   AllocationNegotiationState,
   AllocationPhaseInput,
   AllocationPhaseResult,
   AllocationProposalContext,
   AllocationTurnAskDecision,
-  AllocationTurnDecision,
   AllocationTurnDoneDecision,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
@@ -197,32 +197,34 @@ const createInitHandler =
     ),
   });
 
-// Turn policy: routes an already-classified intent to the decision the turn takes.
-// Lifted out of `createTurnHandler` so the handler stays pure wiring and intent
-// routing lives in one place.
-const resolveTurnDecision = async (
-  intent: AllocationClassifierOutput,
+// Routes a *continuing* intent to the Ask reply it produces. The terminal
+// intents (accept / budget exhaustion) are resolved in `createTurnHandler`
+// before this runs, so every branch here returns Ask.
+const resolveAskDecision = async (
+  intent: AllocationClassifierOutput & {
+    kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>;
+  },
   state: Readonly<AllocationNegotiationState>,
-  turnsTaken: number,
   ctx: AllocationProposalContext,
-  anchorEquityPercentage: number,
   lastUserResponse: string,
-): Promise<AllocationTurnDecision> => {
+): Promise<AllocationTurnAskDecision> => {
   const { kind } = intent;
 
-  // Accept is checked before the budget gate on purpose: a user who accepts
-  // on the final turn should complete the phase, not be failed as exhausted.
-  if (isAcceptKind(kind))
-    return handleAcceptTurn(kind, state.currentEquityPercentage, anchorEquityPercentage);
+  switch (kind) {
+    case AllocationIntentKindEnum.enum.counter:
+      return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
+    case AllocationIntentKindEnum.enum.question:
+      return handleQuestionTurn(lastUserResponse, state.currentEquityPercentage, ctx);
+    case AllocationIntentKindEnum.enum.unknown:
+      return toUnknownAsk();
+    default: {
+      const _exhaustive: never = kind;
 
-  if (turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
-
-  if (kind === AllocationIntentKindEnum.enum.counter)
-    return handleCounterTurn(intent.proposedEquityPercentage, state, ctx);
-  if (kind === AllocationIntentKindEnum.enum.question)
-    return handleQuestionTurn(lastUserResponse, state.currentEquityPercentage, ctx);
-
-  return toUnknownAsk();
+      throw new Error(
+        `resolveAskDecision: unhandled intent kind: ${JSON.stringify(_exhaustive)}`,
+      );
+    }
+  }
 };
 
 const createTurnHandler =
@@ -234,18 +236,27 @@ const createTurnHandler =
     const turnsTaken = state.turnsTaken + 1;
 
     const intent = await classifyTurn(history);
-    const decision = await resolveTurnDecision(
-      intent,
+    const { kind } = intent;
+
+    // Accept is checked before the budget gate on purpose: a user who accepts
+    // on the final turn should complete the phase, not be failed as exhausted.
+    if (isAcceptKind(kind))
+      return handleAcceptTurn(
+        kind,
+        state.currentEquityPercentage,
+        anchorEquityPercentage,
+      );
+
+    if (turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
+
+    // `kind` is narrowed to the continuing intents past the guard above; re-attach
+    // it so `resolveAskDecision` receives an intent without the accept variants.
+    const { message, statePatch } = await resolveAskDecision(
+      { ...intent, kind },
       state,
-      turnsTaken,
       ctx,
-      anchorEquityPercentage,
       lastUserResponse,
     );
-
-    if (decision.kind === HandlerOutputKind.Done) return decision;
-
-    const { message, statePatch } = decision;
 
     // Ask decisions carry only a state patch — this is the single place that
     // applies the `turnsTaken` increment and lifts that patch into the full
@@ -271,7 +282,7 @@ export const collectAllocation = async (
   });
 
   const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
-  const anchorEquityPercentage = pickEquityPercentage(
+  const anchorEquityPercentage = deriveAnchorEquityPercentage(
     suggestedEquityRange,
     riskSelfRatingScore,
   );

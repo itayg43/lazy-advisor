@@ -25,7 +25,7 @@ export const isAcceptKind = (
   kind === AllocationIntentKindEnum.enum.accept ||
   kind === AllocationIntentKindEnum.enum["accept-original"];
 
-export const pickEquityPercentage = (
+export const deriveAnchorEquityPercentage = (
   range: AllocationSuggestedEquityRange,
   score: RiskSelfRatingScore,
 ): number => {

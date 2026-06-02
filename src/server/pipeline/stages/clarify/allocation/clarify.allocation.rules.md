@@ -37,7 +37,7 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 
 ### Within-bucket discrimination
 
-The equity percentage inside a cell is selected by `pickEquityPercentage(cell, riskSelfRatingScore)`:
+The equity percentage inside a cell is selected by `deriveAnchorEquityPercentage(cell, riskSelfRatingScore)`:
 
 | `riskSelfRatingScore` | Position in cell | Formula                     |
 | --------------------- | ---------------- | --------------------------- |

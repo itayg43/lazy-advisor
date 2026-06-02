@@ -48,7 +48,7 @@ Unblocked: `refactor/allocation-precomputed-proposal` merged to main. T4 lands a
 
 #### Out of scope (carry-overs to verify, not to touch in T4)
 
-- Allocation's precomputed-proposal architecture (`pickEquityPercentage`, shekel math in code) — just landed, stable, don't touch.
+- Allocation's precomputed-proposal architecture (`deriveAnchorEquityPercentage`, shekel math in code) — just landed, stable, don't touch.
 - Other phases that use `runPhaseLoop` — verify scope during research; do not retire the helper as part of T4.
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.allocation.eval.ts`
