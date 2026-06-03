@@ -88,11 +88,13 @@ export const selectCounterBranch = (
   return { kind: AllocationCounterBranchKindEnum.enum.bare };
 };
 
-// Maps a chosen branch to the framing flag it marks as shown (flags only ever
-// flip true). Co-located with `selectCounterBranch` — which reads these flags to
-// pick the branch — so the branch↔flag knowledge lives in one place. Switching
-// on `counterBranch.kind` with the exhaustiveness guard makes adding a branch
-// kind a compile error here, so the mapping can't drift from the selector.
+/**
+ * Maps a chosen branch to the framing flag it marks as shown (flags only ever
+ * flip true). Co-located with `selectCounterBranch` — which reads these flags to
+ * pick the branch — so the branch↔flag knowledge lives in one place. Switching
+ * on `counterBranch.kind` with the exhaustiveness guard makes adding a branch
+ * kind a compile error here, so the mapping can't drift from the selector.
+ */
 export const applyBranchFraming = (
   framingFlags: AllocationFramingFlags,
   counterBranch: AllocationCounterBranch,

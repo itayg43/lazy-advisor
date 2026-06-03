@@ -41,8 +41,9 @@
 
 ## Comments
 
-- **Comment only what's non-obvious** — not what the name, structure, or surrounding code already makes clear
+- **Comment only what's non-obvious** — the *why* (rationale behind a non-obvious choice) or a *gotcha* (a load-bearing constraint that isn't visible locally, e.g. ordering that's actually a correctness guard). Never restate what the name, structure, or surrounding code already makes clear
 - **Every line must add distinct information** — merge related thoughts rather than splitting across lines
+- **`//` for internal rationale, `/**` only for TSDoc on exported/public declarations.** Why/gotcha comments on internal code use `//` — both block comments above a non-exported declaration and notes mid-function. Reserve `/**` for doc comments attached to an *exported* function, type, or constant: the editor surfaces these on hover at every call site, so they document the contract (what it does / what it guarantees / how to call it), not internal reasoning. Never put `/**` mid-function or on an internal declaration — it only looks like a doc comment and attaches to nothing
 
 ## File Organization
 
