@@ -28,6 +28,7 @@ import {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
   AllocationIntentKindEnum,
+  AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
@@ -38,6 +39,7 @@ import type {
   AllocationIntentKind,
   AllocationNegotiationState,
   AllocationPhaseInput,
+  AllocationPhaseOutput,
   AllocationPhaseResult,
   AllocationProposalContext,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
@@ -89,6 +91,22 @@ const toUnknownAsk = (): AllocationAskDecision => {
   };
 };
 
+// Inner fail-fast: re-validates the equity/buffer pair at its construction site,
+// so a bug in the accept path surfaces here instead of flowing out. `unknown`
+// keeps it a genuine boundary check. No logging here — the `runClarify` catch
+// logs `BaseError`s once. Overlaps `parseResult` on purpose: defense-in-depth.
+const parseOutput = (output: unknown): AllocationPhaseOutput => {
+  const parsed = AllocationPhaseOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new InternalSchemaValidationError(
+      "Allocation phase produced an output that failed schema validation",
+      parsed.error,
+    );
+  }
+
+  return parsed.data;
+};
+
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
   {
@@ -101,15 +119,16 @@ const handleAcceptTurn = (
       ? anchorEquityPercentage
       : currentEquityPercentage;
 
-  logger.info("Accepted allocation", { intentKind, finalEquityPercentage });
+  const output = parseOutput({
+    equityPercentage: finalEquityPercentage,
+    bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
+  });
+
+  logger.info("Accepted allocation", { intentKind, ...output });
 
   return {
     kind: HandlerOutputKind.Done,
-    result: {
-      status: PipelineStatusEnum.enum.completed,
-      equityPercentage: finalEquityPercentage,
-      bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
-    },
+    result: { status: PipelineStatusEnum.enum.completed, ...output },
   };
 };
 
@@ -146,10 +165,9 @@ const handleCounterTurn = async (
     ctx,
   );
 
-  // `nextFramingFlags` marks this framing shown, but it rides with `reply`: the
-  // runner commits this patch only once `reply` is sent, so a framing is never
-  // recorded as shown on a turn the user never received (atomicity note in
-  // run-conversation.ts).
+  // `nextFramingFlags` rides in the patch, which the runner commits only after
+  // `reply` is sent — so a framing is never marked shown on a turn the user never
+  // received. (Atomicity note in run-conversation.ts.)
   return {
     kind: HandlerOutputKind.Ask,
     message: reply,
@@ -257,12 +275,8 @@ const createTurnHandler =
     };
   };
 
-// Enforces the phase invariants (int 0–100, equity + buffer = 100) at the
-// boundary. Takes `unknown` on purpose: this is a validation boundary, so it
-// must not trust the static type. The split holds by construction today, so a
-// failure is an internal bug, not malformed upstream data — surface it as a 500.
-// Logs here because no error boundary consumes it yet; once one does (and logs
-// `BaseError`s), this should throw silently to avoid double-logging.
+// Outer boundary, mirroring `parseOutput`, over the whole result — it also covers
+// the unresolved arm, which has no upstream fail-fast check.
 const parseResult = (result: unknown): AllocationPhaseResult => {
   const parsed = AllocationPhaseResultSchema.safeParse(result);
   if (!parsed.success) {
