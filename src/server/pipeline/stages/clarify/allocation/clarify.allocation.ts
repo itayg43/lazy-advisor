@@ -47,12 +47,9 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
 
-const buildInitialProposal = (
-  amount: number,
-  equityPercentage: number,
-  bufferPercentage: number,
-): string => {
+const buildInitialProposal = (amount: number, equityPercentage: number): string => {
   const { equityAmount, bufferAmount } = computeSplit(amount, equityPercentage);
+  const bufferPercentage = calculateBufferPercentage(equityPercentage);
 
   return `Based on your timeline and comfort with drops, I'd propose ${formatCurrency(equityAmount)} in stock ETFs and ${formatCurrency(bufferAmount)} in a buffer — roughly ${equityPercentage}/${bufferPercentage}.
 More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.
@@ -94,8 +91,10 @@ const toUnknownAsk = (): AllocationAskDecision => {
 
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
-  currentEquityPercentage: number,
-  anchorEquityPercentage: number,
+  {
+    currentEquityPercentage,
+    anchorEquityPercentage,
+  }: { currentEquityPercentage: number; anchorEquityPercentage: number },
 ): AllocationHandlerOutput => {
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
@@ -143,8 +142,7 @@ const handleCounterTurn = async (
 
   const reply = await composeCounterReply(
     counterBranch,
-    proposedEquityPercentage,
-    previousEquityPercentage,
+    { proposedEquityPercentage, previousEquityPercentage },
     ctx,
   );
 
@@ -189,11 +187,7 @@ const createInitHandler =
       hasShownCompoundImpactFraming: false,
       turnsTaken: 0,
     },
-    message: buildInitialProposal(
-      amount,
-      anchorEquityPercentage,
-      calculateBufferPercentage(anchorEquityPercentage),
-    ),
+    message: buildInitialProposal(amount, anchorEquityPercentage),
   });
 
 // Routes a *continuing* intent to the Ask reply it produces. The terminal
@@ -238,11 +232,10 @@ const createTurnHandler =
     // Accept is checked before the budget gate on purpose: a user who accepts
     // on the final turn should complete the phase, not be failed as exhausted.
     if (isAcceptKind(kind))
-      return handleAcceptTurn(
-        kind,
-        state.currentEquityPercentage,
+      return handleAcceptTurn(kind, {
+        currentEquityPercentage: state.currentEquityPercentage,
         anchorEquityPercentage,
-      );
+      });
 
     if (turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
 
