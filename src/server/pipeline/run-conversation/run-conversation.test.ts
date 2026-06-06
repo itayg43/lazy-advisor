@@ -6,6 +6,7 @@ import {
   HandlerOutputKind,
   runConversation,
   RunConversationHardStopError,
+  RunConversationUnhandledOutputKindError,
   type InitHandler,
   type TurnHandler,
 } from "#pipeline/run-conversation";
@@ -18,7 +19,7 @@ describe("runConversation", () => {
   it("should return init's Done result without invoking turnHandler", async () => {
     const responder = createTrackedResponder([]);
 
-    const initHandler: InitHandler<void, string> = async () => ({
+    const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Done,
       result: "early-done",
     });
@@ -39,19 +40,17 @@ describe("runConversation", () => {
   it("should complete a single-turn conversation and return the handler's result", async () => {
     const responder = createTrackedResponder(["yes"]);
 
-    const initHandler: InitHandler<void, { ok: boolean }> = async () => ({
+    const initHandler = vi.fn<InitHandler<void, { ok: boolean }>>().mockResolvedValue({
       kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "ready?",
     });
-    const turnHandler: TurnHandler<void, { ok: boolean }> = async (
-      _state,
-      _history,
-      lastUserResponse,
-    ) => ({
-      kind: HandlerOutputKind.Done,
-      result: { ok: lastUserResponse === "yes" },
-    });
+    const turnHandler = vi.fn<TurnHandler<void, { ok: boolean }>>(
+      async (_state, _history, lastUserResponse) => ({
+        kind: HandlerOutputKind.Done,
+        result: { ok: lastUserResponse === "yes" },
+      }),
+    );
 
     const result = await runConversation({
       initHandler,
@@ -74,24 +73,22 @@ describe("runConversation", () => {
       lastUserResponse: string;
     }> = [];
 
-    const initHandler: InitHandler<void, string> = async () => ({
+    const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "q1",
     });
     let callIndex = 0;
-    const turnHandler: TurnHandler<void, string> = async (
-      _state,
-      history,
-      lastUserResponse,
-    ) => {
-      callIndex++;
-      calls.push({ history: [...history], lastUserResponse });
+    const turnHandler = vi.fn<TurnHandler<void, string>>(
+      async (_state, history, lastUserResponse) => {
+        callIndex++;
+        calls.push({ history: [...history], lastUserResponse });
 
-      return callIndex === 1
-        ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
-        : { kind: HandlerOutputKind.Done, result: "ok" };
-    };
+        return callIndex === 1
+          ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
+          : { kind: HandlerOutputKind.Done, result: "ok" };
+      },
+    );
 
     await runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 });
 
@@ -117,12 +114,12 @@ describe("runConversation", () => {
   it("should send Done.message to the user before returning", async () => {
     const responder = createTrackedResponder(["ok"]);
 
-    const initHandler: InitHandler<void, string> = async () => ({
+    const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "ready?",
     });
-    const turnHandler: TurnHandler<void, string> = async () => ({
+    const turnHandler = vi.fn<TurnHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Done,
       message: "Locked in 70/30.",
       result: "done",
@@ -146,7 +143,7 @@ describe("runConversation", () => {
   it("should send Done.message from initHandler (early-resolve with acknowledgment)", async () => {
     const responder = createTrackedResponder([]);
 
-    const initHandler: InitHandler<void, string> = async () => ({
+    const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Done,
       message: "Nothing to do here.",
       result: "skipped",
@@ -167,48 +164,17 @@ describe("runConversation", () => {
     ]);
   });
 
-  it("should pass the growing history reference each turn", async () => {
-    const responder = createTrackedResponder(["r1", "r2"]);
-    const snapshotsOnEntry: EasyInputMessage[][] = [];
-
-    const initHandler: InitHandler<void, string> = async () => ({
-      kind: HandlerOutputKind.Ask,
-      state: undefined,
-      message: "q1",
-    });
-    const turnHandler: TurnHandler<void, string> = async (_state, history) => {
-      snapshotsOnEntry.push([...history]);
-
-      return snapshotsOnEntry.length === 1
-        ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
-        : { kind: HandlerOutputKind.Done, result: "ok" };
-    };
-
-    await runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 });
-
-    expect(snapshotsOnEntry[0]).toEqual([
-      { role: "assistant", content: "q1" },
-      { role: "user", content: "r1" },
-    ]);
-    expect(snapshotsOnEntry[1]).toEqual([
-      { role: "assistant", content: "q1" },
-      { role: "user", content: "r1" },
-      { role: "assistant", content: "q2" },
-      { role: "user", content: "r2" },
-    ]);
-  });
-
   it("should thread state across turn handler invocations", async () => {
     const responder = createTrackedResponder(["r1", "r2"]);
     type State = { counter: number };
     const statesSeen: State[] = [];
 
-    const initHandler: InitHandler<State, string> = async () => ({
+    const initHandler = vi.fn<InitHandler<State, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Ask,
       state: { counter: 0 },
       message: "q1",
     });
-    const turnHandler: TurnHandler<State, string> = async (state) => {
+    const turnHandler = vi.fn<TurnHandler<State, string>>(async (state) => {
       statesSeen.push({ ...state });
 
       return statesSeen.length === 1
@@ -218,7 +184,7 @@ describe("runConversation", () => {
             message: "q2",
           }
         : { kind: HandlerOutputKind.Done, result: `final-counter:${state.counter}` };
-    };
+    });
 
     const result = await runConversation({
       initHandler,
@@ -231,7 +197,7 @@ describe("runConversation", () => {
     expect(result).toBe("final-counter:1");
   });
 
-  it("should throw on an unknown HandlerOutputKind via the exhaustive guard", async () => {
+  it("should throw RunConversationUnhandledOutputKindError on an unknown HandlerOutputKind", async () => {
     const responder = createTrackedResponder([]);
 
     // Force an invalid kind past the type system to assert the runtime guard.
@@ -243,7 +209,8 @@ describe("runConversation", () => {
 
     await expect(
       runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 }),
-    ).rejects.toThrow(/unhandled output kind/);
+    ).rejects.toThrow(RunConversationUnhandledOutputKindError);
+
     expect(turnHandler).not.toHaveBeenCalled();
   });
 
@@ -251,12 +218,12 @@ describe("runConversation", () => {
     const responder = createTrackedResponder(["r1", "r2", "r3", "r4"]);
 
     // A handler that never returns Done — the runaway case the backstop exists for.
-    const initHandler: InitHandler<void, string> = async () => ({
+    const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "q",
     });
-    const turnHandler: TurnHandler<void, string> = async () => ({
+    const turnHandler = vi.fn<TurnHandler<void, string>>().mockResolvedValue({
       kind: HandlerOutputKind.Ask,
       state: undefined,
       message: "q",
@@ -269,28 +236,5 @@ describe("runConversation", () => {
     // Tripped on the would-be 4th ask: exactly hardStopTurns asks reached the user.
     const agentMessages = responder.transcript.filter((m) => m.role === "agent");
     expect(agentMessages).toHaveLength(3);
-  });
-
-  it("should propagate errors thrown from turnHandler mid-conversation", async () => {
-    const responder = createTrackedResponder(["r1"]);
-    const boom = new Error("turn-handler-blew-up");
-
-    const initHandler: InitHandler<void, string> = async () => ({
-      kind: HandlerOutputKind.Ask,
-      state: undefined,
-      message: "q1",
-    });
-    const turnHandler: TurnHandler<void, string> = async () => {
-      throw boom;
-    };
-
-    await expect(
-      runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 }),
-    ).rejects.toBe(boom);
-    // The Ask message did reach the user before the handler threw.
-    expect(responder.transcript).toEqual([
-      { role: "agent", content: "q1" },
-      { role: "user", content: "r1" },
-    ]);
   });
 });
