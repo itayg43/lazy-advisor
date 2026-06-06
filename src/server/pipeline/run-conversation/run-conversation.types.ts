@@ -49,4 +49,14 @@ export type RunConversationParams<TState, TResult> = {
   initHandler: InitHandler<TState, TResult>;
   turnHandler: TurnHandler<TState, TResult>;
   responder: Responder;
+  /**
+   * Backstop on the number of asks the runner will emit before it throws —
+   * defense-in-depth against a handler that never returns Done. Distinct from
+   * a phase's own turn budget (e.g. `MAX_NEGOTIATION_TURNS`): set it a margin
+   * above the real budget — enough slack to absorb an off-by-one in the
+   * handler's accounting, tight enough to catch a runaway handler quickly — so
+   * it only trips on a bug. Required so every caller states its ceiling rather
+   * than inheriting a hidden default.
+   */
+  hardStopTurns: number;
 };

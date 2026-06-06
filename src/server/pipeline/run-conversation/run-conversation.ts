@@ -2,6 +2,10 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
 import {
+  RunConversationHardStopError,
+  RunConversationUnhandledOutputKindError,
+} from "#pipeline/run-conversation/run-conversation.errors";
+import {
   HandlerOutputKind,
   type HandlerOutput,
   type RunConversationParams,
@@ -13,19 +17,24 @@ export const runConversation = async <TState, TResult>({
   initHandler,
   turnHandler,
   responder,
+  hardStopTurns,
 }: RunConversationParams<TState, TResult>): Promise<TResult> => {
   logger.debug("Starting conversation");
 
   let currentOutput: HandlerOutput<TState, TResult> = await initHandler();
   const history: EasyInputMessage[] = [];
 
-  // No max-turn guard: a handler that always returns Ask will loop until the
-  // responder rejects or the process is killed. Turn accounting lives in the
-  // caller's phase state (e.g. `turnsTaken`), so the runner stays generic.
-  // Revisit (`maxTurns` param here) before any production deployment where
-  // cost exposure matters. The companion hang-exposure control — a wait
-  // timeout — belongs inside `Responder.waitForResponse`, not in the runner,
-  // since the runner has no view into the underlying transport.
+  // `hardStopTurns` is a backstop, not the real limit: turn accounting lives in
+  // the caller's phase state (e.g. `turnsTaken`), and a well-formed handler
+  // returns Done before this trips. It exists so a buggy handler that always
+  // returns Ask can't loop forever. The companion hang-exposure control — a wait
+  // timeout — belongs inside `Responder.waitForResponse`, not here, since the
+  // runner has no view into the underlying transport.
+  //
+  // We count asks emitted: when the cap is hit, the handler's preceding call
+  // (e.g. the LLM turn that produced this Ask) is already spent and discarded.
+  // That waste is acceptable — under correct self-limiting we never reach it.
+  let asksEmitted = 0;
   while (true) {
     switch (currentOutput.kind) {
       case HandlerOutputKind.Done: {
@@ -41,6 +50,11 @@ export const runConversation = async <TState, TResult>({
         return result;
       }
       case HandlerOutputKind.Ask: {
+        if (asksEmitted >= hardStopTurns)
+          throw new RunConversationHardStopError(hardStopTurns);
+
+        asksEmitted++;
+
         const { message } = currentOutput;
 
         history.push({ role: "assistant", content: message });
@@ -66,9 +80,7 @@ export const runConversation = async <TState, TResult>({
       default: {
         const _exhaustive: never = currentOutput;
 
-        throw new Error(
-          `runConversation: unhandled output kind: ${JSON.stringify(_exhaustive)}`,
-        );
+        throw new RunConversationUnhandledOutputKindError(JSON.stringify(_exhaustive));
       }
     }
   }

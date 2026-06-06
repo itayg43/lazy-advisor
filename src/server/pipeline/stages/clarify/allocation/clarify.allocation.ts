@@ -319,6 +319,13 @@ export const collectAllocation = async (
       initHandler: createInitHandler(amount, anchorEquityPercentage),
       turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
       responder,
+      // Backstop only. The legitimate ask count maxes at exactly
+      // MAX_NEGOTIATION_TURNS (the init ask with no preceding turn offsets the
+      // final budget-exhausted Done with no following ask), so +1 sits just
+      // above the real budget: it never false-trips and leaves slack against an
+      // off-by-one in the handler's turn accounting, while still catching a
+      // runaway handler one turn later.
+      hardStopTurns: MAX_NEGOTIATION_TURNS + 1,
     }),
   );
 

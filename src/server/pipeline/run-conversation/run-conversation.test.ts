@@ -5,6 +5,7 @@ import { createTrackedResponder } from "#pipeline/eval.transcript";
 import {
   HandlerOutputKind,
   runConversation,
+  RunConversationHardStopError,
   type InitHandler,
   type TurnHandler,
 } from "#pipeline/run-conversation";
@@ -27,6 +28,7 @@ describe("runConversation", () => {
       initHandler,
       turnHandler,
       responder,
+      hardStopTurns: 10,
     });
 
     expect(result).toBe("early-done");
@@ -55,6 +57,7 @@ describe("runConversation", () => {
       initHandler,
       turnHandler,
       responder,
+      hardStopTurns: 10,
     });
 
     expect(result).toEqual({ ok: true });
@@ -90,7 +93,7 @@ describe("runConversation", () => {
         : { kind: HandlerOutputKind.Done, result: "ok" };
     };
 
-    await runConversation({ initHandler, turnHandler, responder });
+    await runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 });
 
     expect(calls).toHaveLength(2);
     expect(calls[0]).toEqual({
@@ -129,6 +132,7 @@ describe("runConversation", () => {
       initHandler,
       turnHandler,
       responder,
+      hardStopTurns: 10,
     });
 
     expect(result).toBe("done");
@@ -153,6 +157,7 @@ describe("runConversation", () => {
       initHandler,
       turnHandler,
       responder,
+      hardStopTurns: 10,
     });
 
     expect(result).toBe("skipped");
@@ -179,7 +184,7 @@ describe("runConversation", () => {
         : { kind: HandlerOutputKind.Done, result: "ok" };
     };
 
-    await runConversation({ initHandler, turnHandler, responder });
+    await runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 });
 
     expect(snapshotsOnEntry[0]).toEqual([
       { role: "assistant", content: "q1" },
@@ -219,6 +224,7 @@ describe("runConversation", () => {
       initHandler,
       turnHandler,
       responder,
+      hardStopTurns: 10,
     });
 
     expect(statesSeen).toEqual([{ counter: 0 }, { counter: 1 }]);
@@ -236,9 +242,33 @@ describe("runConversation", () => {
     const turnHandler = vi.fn<TurnHandler<void, string>>();
 
     await expect(
-      runConversation({ initHandler, turnHandler, responder }),
+      runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 }),
     ).rejects.toThrow(/unhandled output kind/);
     expect(turnHandler).not.toHaveBeenCalled();
+  });
+
+  it("should throw RunConversationHardStopError after emitting hardStopTurns asks", async () => {
+    const responder = createTrackedResponder(["r1", "r2", "r3", "r4"]);
+
+    // A handler that never returns Done — the runaway case the backstop exists for.
+    const initHandler: InitHandler<void, string> = async () => ({
+      kind: HandlerOutputKind.Ask,
+      state: undefined,
+      message: "q",
+    });
+    const turnHandler: TurnHandler<void, string> = async () => ({
+      kind: HandlerOutputKind.Ask,
+      state: undefined,
+      message: "q",
+    });
+
+    await expect(
+      runConversation({ initHandler, turnHandler, responder, hardStopTurns: 3 }),
+    ).rejects.toThrow(RunConversationHardStopError);
+
+    // Tripped on the would-be 4th ask: exactly hardStopTurns asks reached the user.
+    const agentMessages = responder.transcript.filter((m) => m.role === "agent");
+    expect(agentMessages).toHaveLength(3);
   });
 
   it("should propagate errors thrown from turnHandler mid-conversation", async () => {
@@ -254,9 +284,9 @@ describe("runConversation", () => {
       throw boom;
     };
 
-    await expect(runConversation({ initHandler, turnHandler, responder })).rejects.toBe(
-      boom,
-    );
+    await expect(
+      runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 }),
+    ).rejects.toBe(boom);
     // The Ask message did reach the user before the handler threw.
     expect(responder.transcript).toEqual([
       { role: "agent", content: "q1" },
