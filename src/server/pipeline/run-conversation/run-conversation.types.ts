@@ -34,10 +34,13 @@ export type HandlerOutput<TState, TResult> =
 export type InitHandler<TState, TResult> = () => Promise<HandlerOutput<TState, TResult>>;
 
 /**
- * Called after each user reply. State is threaded through return values —
- * `Readonly<TState>` and `ReadonlyArray` enforce at compile time that handlers
- * don't mutate their inputs. No runtime copy: handlers are internal code and
- * the type system is the contract.
+ * Called after each user reply. A handler returns its next state instead of
+ * changing the state it was given. The `Readonly`/`ReadonlyArray` types are a
+ * reminder to follow that rule, not a real guarantee: `Readonly` is shallow,
+ * gone at runtime, and TypeScript still lets you pass a readonly object where a
+ * mutable one is expected. It works here because `TState` is flat primitives and
+ * handlers build a new object via spread; nested or shared state would slip past
+ * it and need a deeper readonly type.
  */
 export type TurnHandler<TState, TResult> = (
   state: Readonly<TState>,

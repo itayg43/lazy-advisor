@@ -99,13 +99,21 @@ export const applyBranchFraming = (
   framingFlags: AllocationFramingFlags,
   counterBranch: AllocationCounterBranch,
 ): AllocationFramingFlags => {
+  // Destructure and build each return from the two named fields: TypeScript lets
+  // a structurally-wider argument (e.g. the full negotiation state) satisfy
+  // `AllocationFramingFlags`, and spreading that argument would copy its extra
+  // runtime properties — which then overwrite unrelated keys when the caller
+  // spreads the result into a state patch. Building from the named fields keeps
+  // the result narrow regardless of what was passed.
+  const { hasShownExtremeFraming, hasShownCompoundImpactFraming } = framingFlags;
+
   switch (counterBranch.kind) {
     case AllocationCounterBranchKindEnum.enum.extreme:
-      return { ...framingFlags, hasShownExtremeFraming: true };
+      return { hasShownExtremeFraming: true, hasShownCompoundImpactFraming };
     case AllocationCounterBranchKindEnum.enum["compound-impact"]:
-      return { ...framingFlags, hasShownCompoundImpactFraming: true };
+      return { hasShownCompoundImpactFraming: true, hasShownExtremeFraming };
     case AllocationCounterBranchKindEnum.enum.bare:
-      return framingFlags;
+      return { hasShownExtremeFraming, hasShownCompoundImpactFraming };
 
     default: {
       const _exhaustive: never = counterBranch;
