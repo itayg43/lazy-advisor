@@ -83,12 +83,14 @@ const composeReply = async (
 
 export const composeCounterReply = async (
   counterBranch: AllocationCounterBranch,
-  {
-    proposedEquityPercentage,
-    previousEquityPercentage,
-  }: { proposedEquityPercentage: number; previousEquityPercentage: number },
+  equityPercentages: {
+    proposedEquityPercentage: number;
+    previousEquityPercentage: number;
+  },
   ctx: AllocationProposalContext,
 ): Promise<string> => {
+  const { proposedEquityPercentage, previousEquityPercentage } = equityPercentages;
+
   const proposedBufferPercentage = calculateBufferPercentage(proposedEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
     ctx.amount,

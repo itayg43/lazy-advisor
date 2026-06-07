@@ -109,11 +109,13 @@ const parseOutput = (output: unknown): AllocationPhaseOutput => {
 
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
-  {
-    currentEquityPercentage,
-    anchorEquityPercentage,
-  }: { currentEquityPercentage: number; anchorEquityPercentage: number },
+  equityPercentages: {
+    currentEquityPercentage: number;
+    anchorEquityPercentage: number;
+  },
 ): AllocationHandlerOutput => {
+  const { currentEquityPercentage, anchorEquityPercentage } = equityPercentages;
+
   const finalEquityPercentage =
     intentKind === AllocationIntentKindEnum.enum["accept-original"]
       ? anchorEquityPercentage
