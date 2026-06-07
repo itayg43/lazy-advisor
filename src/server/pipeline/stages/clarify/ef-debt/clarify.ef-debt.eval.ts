@@ -1,11 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  appendLastRunEntry,
-  createTrackedResponder,
-  initLastRun,
-  type TranscriptEntry,
-} from "#pipeline/eval.transcript";
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
+import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { collectEfDebt } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
 
 const LAST_RUN_PATH = new URL("clarify.ef-debt.last-run.md", import.meta.url).pathname;

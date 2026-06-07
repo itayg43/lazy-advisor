@@ -1,11 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  appendLastRunEntry,
-  createTrackedResponder,
-  initLastRun,
-  type TranscriptEntry,
-} from "#pipeline/eval.transcript";
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
+import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type { RiskPhaseResult } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { RiskToleranceEnum } from "#schemas/pipeline.schemas";
