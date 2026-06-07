@@ -77,7 +77,7 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 - _Too-high direction_ (e.g., conservative profile, user asks 100%): "Your earlier answers suggested you're uncomfortable with big drops — going 100% stocks could mean watching 30–50% of your portfolio disappear in a bad year. Still want to go there?"
 - _Too-low direction_ (e.g., aggressive long-horizon profile, user asks 0%): "Your earlier answers indicated a long horizon and comfort with bigger swings (recommended range X–Y%) — going to 0% stocks means your entire ₪Z stays in buffer, giving up most of the long-run growth stocks typically provide over many years. Still want to proceed with 0% equity?"
 
-**Branch 2 — First counter-proposal in the conversation (not extreme).** Add one compound-impact trade-off sentence over the user's timeline: more equity → bigger drawdowns and meaningfully more long-run growth as gains stack year after year; less equity → smaller drawdowns and meaningfully less long-run growth as forgone gains compound. Reference the user's specific timeline (e.g., "over your 10+ year horizon").
+**Branch 2 — First counter-proposal in the conversation (not extreme).** Add one compound-impact trade-off sentence over the user's timeline: more equity → bigger dips when markets fall but more long-run growth; less equity → smaller dips but less long-run growth. Say it in **plain words a beginner understands** — avoid jargon like "forgone gains compound", "gains stack", or "drawdowns". Keep it to short sentences (confirm the split, then the trade-off, then the proceed question), and reference the user's specific timeline (e.g., "over your 10+ year horizon").
 
 **Branch 3 — Subsequent counter-proposals (compound-impact framing already delivered).** Just confirm the new split and ask whether the user wants to proceed. No framing.
 
@@ -141,3 +141,12 @@ The `runConversation` runner enforces no budget — convergence is the handler's
 
 - **Instrument selection.** If the user asks "which ETF?" or "which money-market fund?", deflect to later phases (T5 equity / T6 buffer) and bring the conversation back to sizing.
 - **EF / debt collection.** Emergency fund and debt status are collected and addressed in the ef-debt phase (an educational gate) before the parameters phase. This phase does not consume them.
+
+## Quality judging (dev-only eval layer)
+
+Beyond the schema/behavior assertions in `clarify.allocation.eval.ts`, the LLM-composed turns are scored for prose quality by an LLM judge (`clarify.allocation.judge.ts`) — the allocation phase is the **pilot** for this pattern. It catches what regex can't: wordiness, scope-bleed, jargon, and tone. The judge runs only under `npm run test:evals` (never CI) and fails the eval when a criterion fails; verdicts are written to `clarify.allocation.last-run.md`. General mechanics live in [TESTING § Quality judging](../../../../../../documentation/TESTING.md#quality-judging-llm-as-judge). Criteria graded here:
+
+- **conciseness** — each turn says what it needs and stops; no run-ons, no restating the same numbers (the required re-ask is expected, not bloat).
+- **answer-scoping** — Rule 4 answers stay on the asked topic and don't bleed into adjacent territory; the mandated re-ask is in-scope.
+- **naturalness** — calm, matter-of-fact, no filler openers ("Great", "Sure", "Of course", "Understood", "Got it").
+- **framing-plain-language** — Rule 3 trade-off framing reads as plain beginner language tied to the user's timeline/amounts, not a keyword drop.

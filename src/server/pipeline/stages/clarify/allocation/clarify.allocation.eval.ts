@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { InternalError } from "#errors";
 import {
   appendLastRunEntry,
   createTrackedResponder,
@@ -8,6 +9,11 @@ import {
 } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import { ALLOCATION_UNKNOWN_INTENT_MESSAGE } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import {
+  AllocationJudgeCriterionEnum,
+  judgeAllocationConversation,
+  type AllocationJudgeOutput,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.judge";
 import type {
   AllocationPhaseInput,
   AllocationPhaseOutput,
@@ -92,7 +98,7 @@ describe("collectAllocation", () => {
   const expectSuccess = (result: AllocationPhaseResult): AllocationPhaseOutput => {
     expect(result.status).toBe("completed");
     if (result.status !== "completed") {
-      throw new Error("expected allocation completed result");
+      throw new InternalError("expected allocation completed result");
     }
 
     return result;
@@ -100,6 +106,39 @@ describe("collectAllocation", () => {
 
   let lastTranscript: TranscriptEntry[] | undefined;
   let lastOutput: AllocationPhaseResult | undefined;
+  let lastJudge: AllocationJudgeOutput | undefined;
+
+  // Criteria shared by the cases that exercise the same turn type. An extreme
+  // sanity-check turn is graded on its framing and tone; a question-answer turn
+  // is graded on scope, length, and tone. Cases with a one-off mix pass their
+  // criteria inline.
+  const EXTREME_TURN_CRITERIA = [
+    AllocationJudgeCriterionEnum.enum["framing-plain-language"],
+    AllocationJudgeCriterionEnum.enum.naturalness,
+  ];
+  const ANSWER_TURN_CRITERIA = [
+    AllocationJudgeCriterionEnum.enum["answer-scoping"],
+    AllocationJudgeCriterionEnum.enum.conciseness,
+    AllocationJudgeCriterionEnum.enum.naturalness,
+  ];
+
+  // Runs the dev-only LLM judge over a finished conversation, stashes the
+  // verdict for the last-run artifact, and fails the test if any criterion
+  // failed — surfacing the judge's reason in the assertion message. Only the
+  // LLM-composed turns are worth judging; deterministic text never varies.
+  const judgeAndExpectPass = async (
+    transcript: TranscriptEntry[],
+    criteria: Parameters<typeof judgeAllocationConversation>[1],
+  ) => {
+    // judgeAllocationConversation guarantees one verdict per requested
+    // criterion (it throws otherwise), so here we only check none failed.
+    lastJudge = await judgeAllocationConversation(transcript, criteria);
+    const failures = lastJudge.verdicts.filter((v) => !v.pass);
+    expect(
+      failures,
+      failures.map((f) => `[${f.criterion}] ${f.reason}`).join("; "),
+    ).toHaveLength(0);
+  };
 
   beforeAll(() => initLastRun(LAST_RUN_PATH));
 
@@ -110,9 +149,10 @@ describe("collectAllocation", () => {
       passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
       output: lastOutput,
+      judge: lastJudge,
       error: ctx.task.result?.errors?.[0]?.message,
     });
-    lastTranscript = lastOutput = undefined;
+    lastTranscript = lastOutput = lastJudge = undefined;
   });
 
   // clarify.allocation.rules.md rule 1 + 2: anchor proposal accepted as-is (happy path)
@@ -260,6 +300,12 @@ describe("collectAllocation", () => {
       output,
     );
     expectCounterTurnReferencesTimeline(responder.transcript);
+
+    await judgeAndExpectPass(responder.transcript, [
+      AllocationJudgeCriterionEnum.enum["framing-plain-language"],
+      AllocationJudgeCriterionEnum.enum.conciseness,
+      AllocationJudgeCriterionEnum.enum.naturalness,
+    ]);
   });
 
   // clarify.allocation.rules.md rule 3: mid-size counter-proposal still honored (not extreme for profile)
@@ -314,6 +360,8 @@ describe("collectAllocation", () => {
       longHorizonConservativeInput.amount,
       output,
     );
+
+    await judgeAndExpectPass(responder.transcript, EXTREME_TURN_CRITERIA);
   });
 
   // clarify.allocation.rules.md rule 3 Branch 1 too-low: aggressive 10+ yr user asks for 0% equity → sanity check fires with opportunity-cost framing (no drawdown %), accept
@@ -345,6 +393,8 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+
+    await judgeAndExpectPass(responder.transcript, EXTREME_TURN_CRITERIA);
   });
 
   // clarify.allocation.rules.md rule 3 Branch 3 (repeated counter-proposals):
@@ -398,6 +448,8 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+
+    await judgeAndExpectPass(responder.transcript, ANSWER_TURN_CRITERIA);
   });
 
   // clarify.allocation.rules.md rule 4 (concept question, Hebrew instrument): the
@@ -470,6 +522,8 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+
+    await judgeAndExpectPass(responder.transcript, ANSWER_TURN_CRITERIA);
   });
 
   // clarify.allocation.rules.md rule 4: instrument question deflected to later phases
@@ -492,6 +546,8 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+
+    await judgeAndExpectPass(responder.transcript, ANSWER_TURN_CRITERIA);
   });
 
   // clarify.allocation.rules.md rule 4 + rule 3: clarifying question followed by counter-proposal (3-turn worst case)

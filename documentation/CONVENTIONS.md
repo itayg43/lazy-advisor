@@ -53,6 +53,7 @@
 - **Pure helpers** co-located with a phase as `[phase].lib.ts` — math, branch selection, formatters, and pure state transitions (functional updates that take a state value and return the next, e.g. `applyBranchFraming`). Strictly side-effect-free: **no IO, no logging, no mutable or persistent state** — operating on state-*shaped* values is fine, holding or mutating state is not. Keeping `.lib` pure means it tests with no mocks. Logging and model calls live in the IO/orchestration layers, never here. Example: `clarify.allocation.lib.ts`
 - **Model-IO layer** for `runConversation`-based phases, co-located as `[phase].io.ts` — the functions that call OpenAI (turn classifiers, reply composers) with the phase's prompts/schemas, plus the logging of those calls. Extracting them keeps the main `[phase].ts` file focused on turn-decision logic and runner wiring, and keeps `.lib` pure. Deterministic message builders that don't call the model (e.g. an opening proposal string) stay with their caller in the main file. Example: `clarify.allocation.io.ts`. (Older intake-style phases keep their phase IO in `.lib`; new run-conversation phases should split it into `.io`.)
 - **Turn-decision logic, conversation flow, and state management** stay in the main `[phase].ts` file — it wires the `runConversation` handlers, maps turn decisions to runner outputs, and calls into `.io` and `.lib`
+- **Quality-judge layer** for evals, co-located as `[phase].judge.ts` — the dev-only LLM-as-judge that scores an eval conversation's prose quality (wordiness, scope-bleed, tone) against a rubric, beyond schema/behavior assertions. Imported by `*.eval.ts` only, reuses `callOpenAIParsed` with a stronger judge model than the phase composes with. A pilot on allocation (`clarify.allocation.judge.ts`); add one only when a phase needs prose-quality coverage. Mechanics in [TESTING § Quality judging](TESTING.md#quality-judging-llm-as-judge)
 
 ## Types
 
@@ -90,14 +91,15 @@
 
 ## Error Handling
 
-- **HTTP-based base error classes** live in `src/server/errors/index.ts`:
-  - `BaseError` extends `Error`, adds `status`
-  - `InternalError` (500)
-  - `BadGatewayError` (502)
-  - `SchemaValidationError` (502, extends `BadGatewayError`, carries a `ZodError` cause)
-  - `ServiceUnavailableError` (503)
-- **No new HTTP-based error classes per feature** — reuse the base classes above with descriptive messages. A new HTTP status should be a deliberate, cross-cutting decision, not a per-feature convenience
-- **Pick the error class by what the failure indicates about _cause_:** upstream-temporary (5xx, connection failure, rate-limit, non-completed response) → `ServiceUnavailableError`; our-fault (4xx malformed request, unexpected post-success state, missing config) → `InternalError`. The OpenAI mapping table below is the canonical example
+- **HTTP-based error classes** live in `src/server/errors/index.ts` — each carries a `status`; TSDoc on every class states its "use when". The catalog:
+  - `BaseError` — root, extends `Error`, adds `status`. Never thrown directly
+  - `InternalError` (500) — our fault
+  - `BadGatewayError` (502) — an upstream answered but the response is invalid or incomplete per our contract
+  - `ServiceUnavailableError` (503) — an upstream is down or temporarily failing; caller may retry
+  - `SchemaValidationError` — base for Zod-parse failures, carries the `ZodError` cause; never thrown directly. Subclasses fix the status by origin: `BadGatewaySchemaValidationError` (502, bad upstream response) and `InternalSchemaValidationError` (500, value our own code produced)
+- **`PipelineControlFlowError`** — sibling of `BaseError` (no `status`, never reaches HTTP): expected user-driven flow outcomes thrown by pipeline primitives and caught at the phase boundary, translated to in-band results. Not a failure
+- **No new HTTP-based error classes per feature** — reuse the classes above with descriptive messages. A new HTTP status should be a deliberate, cross-cutting decision, not a per-feature convenience
+- **Pick the error class by what the failure indicates about _cause_:** an upstream that is down or temporarily failing (5xx, connection failure, rate-limit, non-completed response) → `ServiceUnavailableError`; an upstream that answered but with an invalid or incomplete response → `BadGatewayError`; our own fault (4xx malformed request, unexpected post-success state, missing config, a broken invariant such as an unreachable `_exhaustive` branch) → `InternalError`. For Zod-parse failures use the matching `*SchemaValidationError`. The OpenAI mapping table below is the canonical example
 - **`is*Error` predicates** for multi-class error families intended to be caught together (e.g., `isOpenAIError`, `isClassifyError`) so catch blocks read as a single intent
 - **Error helper naming and shape:**
   - `to*Error` — direct builder, returns an `Error`. The caller throws explicitly (`throw toFooError(...)`). Returning rather than throwing keeps the `throw` keyword visible at the call site and lets the helper compose (e.g., be logged or returned from another function)
@@ -105,14 +107,14 @@
 - **Domain error subclasses** (e.g., `ClassifyFollowUpsExhaustedError extends InternalError`) are allowed _only_ to support an `is*Error` / `map*Error` family — when the dispatcher needs to discriminate between failure modes that share an HTTP class. They must extend an existing HTTP base class and never introduce a new HTTP status. Colocate these subclasses with the family's predicate and dispatcher; if the dispatcher serves multiple consumers with different result shapes, parameterize it generically over consumer-specific bits (e.g., `mapClassifyError<TReason extends string>` over the unresolved-reason value) rather than splitting per consumer — keeps the whole family in one place
 - **OpenAI error mapping.** Use generic constant messages at the boundary (prevent token/response leakage); log full details at `error` level.
 
-  | Source                                     | Mapped to                                   |
-  | ------------------------------------------ | ------------------------------------------- |
-  | `APIError` 5xx or 429                      | `ServiceUnavailableError`                   |
-  | `APIError` 4xx non-429                     | `InternalError`                             |
-  | `APIConnectionError`                       | `ServiceUnavailableError`                   |
-  | Non-completed response status              | `ServiceUnavailableError`                   |
-  | Schema validation failure on parsed output | `SchemaValidationError` (cause: `ZodError`) |
-  | Non-API error                              | rethrow unchanged                           |
+  | Source                                     | Mapped to                                             |
+  | ------------------------------------------ | ----------------------------------------------------- |
+  | `APIError` 5xx or 429                      | `ServiceUnavailableError`                             |
+  | `APIError` 4xx non-429                     | `InternalError`                                       |
+  | `APIConnectionError`                       | `ServiceUnavailableError`                             |
+  | Non-completed response status              | `ServiceUnavailableError`                             |
+  | Schema validation failure on parsed output | `BadGatewaySchemaValidationError` (cause: `ZodError`) |
+  | Non-API error                              | rethrow unchanged                                     |
 
   `APIConnectionError extends APIError` — the ordering pitfall is encapsulated in `mapOpenAIError`, so catch sites use the `isOpenAIError` predicate
 

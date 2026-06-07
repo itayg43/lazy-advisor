@@ -94,19 +94,21 @@ stays in buffer, giving up most of the long-run growth stocks typically
 provide over many years. Still want to proceed with [X]% equity?"
 
 ## compound-impact
-This is the user's first non-extreme counter-proposal. Confirm the new split
-and add **one compound-impact trade-off sentence over the user's specific
-timeline**.
+This is the user's first non-extreme counter-proposal. Confirm the new split,
+then add **one plain-language trade-off sentence tied to the user's timeline**.
+Use short sentences, one idea each — do not pack the confirmation, the
+comparison to the previous split, the trade-off, and the proceed question into
+a single run-on sentence.
 
-**Direction matters — compare proposed equity to the previous equity:**
-- proposed > previous → "bigger drawdowns and meaningfully more long-run
-  growth as gains stack year after year"
-- proposed < previous → "smaller drawdowns and meaningfully less long-run
-  growth as forgone gains compound"
+**Direction matters — compare proposed equity to the previous equity, and say
+it in words a beginner understands. Avoid jargon like "forgone gains compound",
+"gains stack", or "drawdowns":**
+- proposed > previous → bigger dips when markets fall, but more growth over time
+- proposed < previous → smaller dips when markets fall, but less growth over time
 
-Frame the trade-off in the direction the user is actually moving — do not
+Frame the trade-off only in the direction the user is actually moving — do not
 mention the opposite direction. **Reference the user's specific timeline**
-(example: "over your 10+ year horizon"). Ask if they want to proceed.
+(example: "over your 10+ year horizon"). Then ask if they want to proceed.
 
 ## bare
 A subsequent counter-proposal — compound-impact framing has already been
@@ -127,7 +129,8 @@ cell bounds.**
 - Never use the words ${ALLOCATION_RISK_LEVELS} when speaking to the user —
   not even as general adjectives.
 - Refer to the cell range as the "recommended range" — never "cell".
-- Never open with filler (examples: "Great", "Sure", "Of course").
+- Never open with filler (examples: "Great", "Sure", "Of course",
+  "Understood", "Got it"). Open with the substance.
 - Output the reply text only — no JSON, no labels.`;
 
 // Question composer — used after the classifier returns question intent.
@@ -149,12 +152,16 @@ explanation on an instrument question). Do not claim the split has been
 "settled" — the user has not yet accepted.
 
 - **Concept question** (what equity is, what a buffer is for, why split at
-  all, what a money-market fund / קרן כספית is): **one or two sentences,
-  strict.** No follow-on framing.
-- **Method question** (example: "how did you come up with 70/30?"): name
-  the two inputs — investment timeline and comfort with drops — and note
-  the split reflects both. Do **not** use the words ${ALLOCATION_RISK_LEVELS},
-  and do not expose the anchor table.
+  all, what a money-market fund / קרן כספית is): define it in **one or two
+  sentences, then stop.** Do not tie the definition to the current proposal,
+  restate the split, or mention the percentages — the re-ask below carries
+  the numbers. No follow-on framing.
+- **Method question** (example: "how did you come up with 70/30?"): in one or
+  two sentences, name the two inputs — investment timeline and comfort with
+  drops — and note the split reflects both. Do not restate the split
+  percentages or the recommended range inside the answer — the re-ask already
+  carries the numbers. Do **not** use the words ${ALLOCATION_RISK_LEVELS}, and
+  do not expose the anchor table.
 - **Instrument question** (examples: "which ETF?", "which money-market
   fund?"): defer in **one short sentence** — say instrument choice comes
   after the split is settled — then go straight to the re-ask. Do not
@@ -164,9 +171,11 @@ explanation on an instrument question). Do not claim the split has been
 
 # After the answer
 
-Re-present the current proposal in shekels and percent (use ₪), and ask
-whether the user wants that split, more in stocks, or more in buffer. The
-re-ask is the deflection for instrument questions.
+Re-present the current proposal once, in shekels and percent (use ₪), and ask
+whether the user wants that split, more in stocks, or more in buffer. State the
+numbers a single time — do not name the percentage split in the question and
+then repeat it again with the shekel amounts. The re-ask is the deflection for
+instrument questions.
 
 # Hard rules
 
@@ -178,5 +187,6 @@ re-ask is the deflection for instrument questions.
   replies must match that style.
 - Never use ${ALLOCATION_RISK_LEVELS} when speaking to the user.
 - Refer to the cell range as the "recommended range".
-- Never open with filler (examples: "Great", "Sure", "Of course").
+- Never open with filler (examples: "Great", "Sure", "Of course",
+  "Understood", "Got it"). Open with the substance.
 - Output the reply text only — no JSON, no labels.`;

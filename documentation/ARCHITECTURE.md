@@ -59,7 +59,7 @@ Phases use one of three conversation patterns depending on how code and the LLM 
 
 ### Multi-phase split
 
-Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
+Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate. Evals run in two layers: schema/behavior assertions (every phase) plus an optional dev-only LLM-as-judge that scores prose quality against a rubric (a pilot on allocation — see [TESTING § Quality judging](TESTING.md#quality-judging-llm-as-judge)).
 
 ### Phase conversation patterns
 
