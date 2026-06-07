@@ -7,6 +7,7 @@ import {
   type TranscriptEntry,
 } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
+import { ALLOCATION_UNKNOWN_INTENT_MESSAGE } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type {
   AllocationPhaseInput,
   AllocationPhaseOutput,
@@ -399,6 +400,44 @@ describe("collectAllocation", () => {
     );
   });
 
+  // clarify.allocation.rules.md rule 4 (concept question, Hebrew instrument): the
+  // user asks what a קרן כספית (money-market fund) is. Same composer path as the
+  // "What's a buffer?" case, but guards the English-body / Hebrew-inline hard rule —
+  // the answer may name the Hebrew term inline but must stay in English prose and
+  // must not leak internal risk labels.
+  it("should answer a Hebrew concept question and re-ask the anchor", async () => {
+    const responder = createTrackedResponder([
+      "What's a קרן כספית?",
+      "Got it, sounds good",
+    ]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBeGreaterThanOrEqual(80);
+    expect(output.equityPercentage).toBeLessThanOrEqual(90);
+    expect(output.equityPercentage + output.bufferPercentage).toBe(100);
+    expect(
+      responder.transcript.filter((t) => t.role === "agent").length,
+    ).toBeGreaterThanOrEqual(2);
+
+    // internal risk labels must never leak to the user
+    const agentText = responder.transcript
+      .filter((t) => t.role === "agent")
+      .map((t) => t.content.toLowerCase())
+      .join(" ");
+    expect(agentText).not.toContain("aggressive");
+    expect(agentText).not.toContain("conservative");
+    expect(agentText).not.toContain("moderate");
+    expectShekelMathConsistent(
+      responder.transcript,
+      longHorizonAggressiveInput.amount,
+      output,
+    );
+  });
+
   // clarify.allocation.rules.md rule 4: method question answered without exposing internal labels
   it("should answer a method question and re-ask the anchor", async () => {
     const responder = createTrackedResponder([
@@ -488,6 +527,29 @@ describe("collectAllocation", () => {
       longHorizonAggressiveInput.amount,
       output,
     );
+  });
+
+  // clarify.allocation.rules.md rule 5: an unparseable / numberless reply ("more
+  // in stocks" with no number) classifies as `unknown` → the handler re-asks with
+  // the fixed generic prompt and the phase stays open. The constant is rendered in
+  // code (not the LLM), so assert on it exactly. A following accept then closes.
+  it("should re-ask with the generic prompt on an unparseable reply", async () => {
+    const responder = createTrackedResponder(["more in stocks", "Sounds good"]);
+    lastTranscript = responder.transcript;
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+    lastOutput = result;
+    const output = expectSuccess(result);
+
+    expect(output.equityPercentage).toBeGreaterThanOrEqual(80);
+    expect(output.equityPercentage).toBeLessThanOrEqual(90);
+    expect(output.equityPercentage + output.bufferPercentage).toBe(100);
+
+    const agentText = responder.transcript
+      .filter((t) => t.role === "agent")
+      .map((t) => t.content)
+      .join(" ");
+    expect(agentText).toContain(ALLOCATION_UNKNOWN_INTENT_MESSAGE);
   });
 
   // clarify.allocation.rules.md "Budget exhaustion": accept on the

@@ -114,6 +114,15 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 ---
 
+## 5. Unparseable or numberless replies → re-ask, stay open
+
+**Rule:** When the user's reply can't be turned into an accept, counter, or question, the handler re-asks and the phase stays open (the turn still counts against the budget). Two sub-cases:
+
+- **`unknown` intent.** The reply is ambiguous, off-topic, or names no number where one is needed — including a bare directional phrase like "more in stocks" with no figure (the classifier labels these `unknown`, not `counter`, because it cannot guess a number). The handler returns `ALLOCATION_UNKNOWN_INTENT_MESSAGE` ("I didn't catch that. Want the proposed split, more in stocks, or more in buffer?") via `toUnknownAsk`.
+- **`counter` intent with no extracted number** (`proposedEquityPercentage === null`). A **defensive guard** only: the classifier is instructed to route numberless input to `unknown`, so a well-behaved classifier never produces this combination. If it ever does (classifier malfunction), the handler returns `ALLOCATION_MISSING_COUNTER_MESSAGE` ("I didn't catch a specific percentage…") via `toMissingCounterAsk` rather than acting on a missing value. Because this path is unreachable through normal classification, it has no eval — it is exercised only by the type system and this guard.
+
+Both messages are rendered **in code** (constants in `clarify.allocation.constants.ts`), not by the LLM.
+
 ## Turn budget
 
 `MAX_NEGOTIATION_TURNS = 5` in `clarify.allocation.constants.ts`. Counts user replies (each call to `turnHandler`). Typical paths:

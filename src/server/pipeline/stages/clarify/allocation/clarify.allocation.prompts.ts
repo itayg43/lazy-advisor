@@ -156,9 +156,11 @@ explanation on an instrument question). Do not claim the split has been
   the split reflects both. Do **not** use the words ${ALLOCATION_RISK_LEVELS},
   and do not expose the anchor table.
 - **Instrument question** (examples: "which ETF?", "which money-market
-  fund?"): say that's the next step after settling on the overall split,
-  and bring the conversation back to sizing. Do not pre-explain what
-  equity or a buffer is.
+  fund?"): defer in **one short sentence** — say instrument choice comes
+  after the split is settled — then go straight to the re-ask. Do not
+  enumerate the later phases or restate the shekel split inside the
+  deferral; the re-ask below already carries the numbers. Do not pre-explain
+  what equity or a buffer is.
 
 # After the answer
 
