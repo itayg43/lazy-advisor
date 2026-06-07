@@ -13,12 +13,11 @@ import {
 
 const logger = createLogger("runConversation");
 
-export const runConversation = async <TState, TResult>({
-  initHandler,
-  turnHandler,
-  responder,
-  hardStopTurns,
-}: RunConversationParams<TState, TResult>): Promise<TResult> => {
+export const runConversation = async <TState, TResult>(
+  params: RunConversationParams<TState, TResult>,
+): Promise<TResult> => {
+  const { initHandler, turnHandler, responder, hardStopTurns } = params;
+
   logger.debug("Starting conversation");
 
   let currentOutput: HandlerOutput<TState, TResult> = await initHandler();
