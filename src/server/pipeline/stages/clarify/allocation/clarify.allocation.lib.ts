@@ -15,17 +15,25 @@ import type {
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
+/** Formats a shekel amount with thousands separators (e.g. `120000` → `₪120,000`). */
 export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-US")}`;
 
+/** The buffer's share of the portfolio — the complement of the equity percentage. */
 export const calculateBufferPercentage = (equityPercentage: number): number =>
   100 - equityPercentage;
 
+/** Type guard for the two terminal accept intents (`accept`, `accept-original`). */
 export const isAcceptKind = (
   kind: AllocationIntentKind,
 ): kind is AllocationAcceptIntentKind =>
   kind === AllocationIntentKindEnum.enum.accept ||
   kind === AllocationIntentKindEnum.enum["accept-original"];
 
+/**
+ * Picks the opening equity percentage from the suggested range using the user's
+ * risk self-rating: cautious scores anchor to the low edge, bold scores to the
+ * high edge, and a neutral score to the (integer-rounded) midpoint.
+ */
 export const deriveAnchorEquityPercentage = (
   range: AllocationSuggestedEquityRange,
   score: RiskSelfRatingScore,
@@ -44,6 +52,7 @@ export const deriveAnchorEquityPercentage = (
   }
 };
 
+/** Splits an amount into its equity and buffer shekel amounts at the given equity percentage. */
 export const computeSplit = (
   amount: number,
   equityPercentage: number,
@@ -53,33 +62,39 @@ export const computeSplit = (
   return { equityAmount, bufferAmount: amount - equityAmount };
 };
 
-export const equityDeviationPercentagePoints = (
+/**
+ * Chooses which counter framing to show for an off-range proposal, escalating
+ * once through each framing the user hasn't seen yet: an `extreme` warning when
+ * the proposal is far past the suggested range, otherwise `compound-impact`,
+ * otherwise a `bare` restatement. Reads the framing flags to avoid repeating a
+ * framing; `applyBranchFraming` records the chosen branch back into those flags.
+ */
+export const selectCounterBranch = (
   proposedEquityPercentage: number,
   suggestedEquityRange: AllocationSuggestedEquityRange,
-): number =>
-  Math.max(
+  framingFlags: AllocationFramingFlags,
+): AllocationCounterBranch => {
+  const { hasShownExtremeFraming, hasShownCompoundImpactFraming } = framingFlags;
+
+  // Distance past the nearest edge of the suggested range; 0 while inside it.
+  const deviationPercentagePoints = Math.max(
     0,
     proposedEquityPercentage - suggestedEquityRange.max,
     suggestedEquityRange.min - proposedEquityPercentage,
   );
 
-export const selectCounterBranch = (
-  proposedEquityPercentage: number,
-  suggestedEquityRange: AllocationSuggestedEquityRange,
-  { hasShownExtremeFraming, hasShownCompoundImpactFraming }: AllocationFramingFlags,
-): AllocationCounterBranch => {
-  const deviation = equityDeviationPercentagePoints(
-    proposedEquityPercentage,
-    suggestedEquityRange,
-  );
-  if (deviation >= EXTREME_DEVIATION_PERCENTAGE_POINTS && !hasShownExtremeFraming) {
-    return {
-      kind: AllocationCounterBranchKindEnum.enum.extreme,
-      direction:
-        proposedEquityPercentage > suggestedEquityRange.max
-          ? AllocationExtremeCounterDirectionEnum.enum["too-high"]
-          : AllocationExtremeCounterDirectionEnum.enum["too-low"],
-    };
+  if (
+    deviationPercentagePoints >= EXTREME_DEVIATION_PERCENTAGE_POINTS &&
+    !hasShownExtremeFraming
+  ) {
+    // The deviation is a magnitude — equally large above max or below min — so it
+    // can't tell us the side. Re-check against max to recover the direction.
+    const direction =
+      proposedEquityPercentage > suggestedEquityRange.max
+        ? AllocationExtremeCounterDirectionEnum.enum["too-high"]
+        : AllocationExtremeCounterDirectionEnum.enum["too-low"];
+
+    return { kind: AllocationCounterBranchKindEnum.enum.extreme, direction };
   }
   if (!hasShownCompoundImpactFraming) {
     return { kind: AllocationCounterBranchKindEnum.enum["compound-impact"] };
