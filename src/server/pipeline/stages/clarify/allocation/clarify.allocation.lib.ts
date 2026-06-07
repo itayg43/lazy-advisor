@@ -1,3 +1,4 @@
+import { InternalError } from "#errors";
 import {
   EXTREME_DEVIATION_PERCENTAGE_POINTS,
   type AllocationSuggestedEquityRange,
@@ -133,7 +134,7 @@ export const applyBranchFraming = (
     default: {
       const _exhaustive: never = counterBranch;
 
-      throw new Error(
+      throw new InternalError(
         `applyBranchFraming: unhandled branch kind: ${JSON.stringify(_exhaustive)}`,
       );
     }

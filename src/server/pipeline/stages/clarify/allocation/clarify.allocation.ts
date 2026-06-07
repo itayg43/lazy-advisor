@@ -1,4 +1,4 @@
-import { InternalSchemaValidationError } from "#errors";
+import { InternalError, InternalSchemaValidationError } from "#errors";
 import { createLogger } from "#lib/logger";
 import {
   HandlerOutputKind,
@@ -231,7 +231,7 @@ const resolveAskDecision = async (
     default: {
       const _exhaustive: never = kind;
 
-      throw new Error(
+      throw new InternalError(
         `resolveAskDecision: unhandled intent kind: ${JSON.stringify(_exhaustive)}`,
       );
     }
