@@ -1,5 +1,6 @@
 import { InternalError, InternalSchemaValidationError } from "#errors";
 import { createLogger } from "#lib/logger";
+import { parseSchema } from "#lib/parse-schema";
 import {
   HandlerOutputKind,
   runConversation,
@@ -39,7 +40,6 @@ import type {
   AllocationIntentKind,
   AllocationNegotiationState,
   AllocationPhaseInput,
-  AllocationPhaseOutput,
   AllocationPhaseResult,
   AllocationProposalContext,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
@@ -59,54 +59,6 @@ Sizing to your comfort level tends to reduce the chance of panic-selling when dr
 Want that split, more in stocks, or more in buffer?`;
 };
 
-const toBudgetExhaustedDone = (): AllocationHandlerOutput => {
-  logger.warn("Allocation phase unresolved — turn budget exhausted");
-
-  return {
-    kind: HandlerOutputKind.Done,
-    result: {
-      status: PipelineStatusEnum.enum.unresolved,
-      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-    },
-  };
-};
-
-const toMissingCounterAsk = (): AllocationAskDecision => {
-  logger.warn(
-    "Counter intent without proposedEquityPercentage — re-asking for a specific split",
-  );
-
-  return {
-    kind: HandlerOutputKind.Ask,
-    message: ALLOCATION_MISSING_COUNTER_MESSAGE,
-  };
-};
-
-const toUnknownAsk = (): AllocationAskDecision => {
-  logger.warn("Unknown allocation intent — re-asking with the generic prompt");
-
-  return {
-    kind: HandlerOutputKind.Ask,
-    message: ALLOCATION_UNKNOWN_INTENT_MESSAGE,
-  };
-};
-
-// Inner fail-fast: re-validates the equity/buffer pair at its construction site,
-// so a bug in the accept path surfaces here instead of flowing out. `unknown`
-// keeps it a genuine boundary check. No logging here — the `runClarify` catch
-// logs `BaseError`s once. Overlaps `parseResult` on purpose: defense-in-depth.
-const parseOutput = (output: unknown): AllocationPhaseOutput => {
-  const parsed = AllocationPhaseOutputSchema.safeParse(output);
-  if (!parsed.success) {
-    throw new InternalSchemaValidationError(
-      "Allocation phase produced an output that failed schema validation",
-      parsed.error,
-    );
-  }
-
-  return parsed.data;
-};
-
 const handleAcceptTurn = (
   intentKind: AllocationAcceptIntentKind,
   equityPercentages: {
@@ -121,10 +73,22 @@ const handleAcceptTurn = (
       ? anchorEquityPercentage
       : currentEquityPercentage;
 
-  const output = parseOutput({
-    equityPercentage: finalEquityPercentage,
-    bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
-  });
+  // Inner fail-fast: re-validate the equity/buffer pair at its construction
+  // site, so a bug in the accept path surfaces here instead of flowing out.
+  // Overlaps the outer result parse on purpose: defense-in-depth. No logging
+  // here — the `runClarify` catch logs `BaseError`s once.
+  const output = parseSchema(
+    AllocationPhaseOutputSchema,
+    {
+      equityPercentage: finalEquityPercentage,
+      bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
+    },
+    (error) =>
+      new InternalSchemaValidationError(
+        "Allocation phase produced an output that failed schema validation",
+        error,
+      ),
+  );
 
   logger.info("Accepted allocation", { intentKind, ...output });
 
@@ -139,7 +103,16 @@ const handleCounterTurn = async (
   state: Readonly<AllocationNegotiationState>,
   ctx: AllocationProposalContext,
 ): Promise<AllocationAskDecision> => {
-  if (proposedEquityPercentage === null) return toMissingCounterAsk();
+  if (proposedEquityPercentage === null) {
+    logger.warn(
+      "Counter intent without proposedEquityPercentage — re-asking for a specific split",
+    );
+
+    return {
+      kind: HandlerOutputKind.Ask,
+      message: ALLOCATION_MISSING_COUNTER_MESSAGE,
+    };
+  }
 
   const previousEquityPercentage = state.currentEquityPercentage;
   const currentFramingFlags: AllocationFramingFlags = {
@@ -225,8 +198,14 @@ const resolveAskDecision = async (
       return handleCounterTurn(proposedEquityPercentage, state, ctx);
     case AllocationIntentKindEnum.enum.question:
       return handleQuestionTurn(lastUserResponse, state.currentEquityPercentage, ctx);
-    case AllocationIntentKindEnum.enum.unknown:
-      return toUnknownAsk();
+    case AllocationIntentKindEnum.enum.unknown: {
+      logger.warn("Unknown allocation intent — re-asking with the generic prompt");
+
+      return {
+        kind: HandlerOutputKind.Ask,
+        message: ALLOCATION_UNKNOWN_INTENT_MESSAGE,
+      };
+    }
 
     default: {
       const _exhaustive: never = kind;
@@ -251,13 +230,24 @@ const createTurnHandler =
 
     // Accept is checked before the budget gate on purpose: a user who accepts
     // on the final turn should complete the phase, not be failed as exhausted.
-    if (isAcceptKind(kind))
+    if (isAcceptKind(kind)) {
       return handleAcceptTurn(kind, {
         currentEquityPercentage: state.currentEquityPercentage,
         anchorEquityPercentage,
       });
+    }
 
-    if (turnsTaken >= MAX_NEGOTIATION_TURNS) return toBudgetExhaustedDone();
+    if (turnsTaken >= MAX_NEGOTIATION_TURNS) {
+      logger.warn("Allocation phase unresolved — turn budget exhausted");
+
+      return {
+        kind: HandlerOutputKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+        },
+      };
+    }
 
     const { message, statePatch } = await resolveAskDecision(
       kind,
@@ -276,20 +266,6 @@ const createTurnHandler =
       message,
     };
   };
-
-// Outer boundary, mirroring `parseOutput`, over the whole result — it also covers
-// the unresolved arm, which has no upstream fail-fast check.
-const parseResult = (result: unknown): AllocationPhaseResult => {
-  const parsed = AllocationPhaseResultSchema.safeParse(result);
-  if (!parsed.success) {
-    throw new InternalSchemaValidationError(
-      "Allocation phase produced a result that failed schema validation",
-      parsed.error,
-    );
-  }
-
-  return parsed.data;
-};
 
 export const collectAllocation = async (
   input: AllocationPhaseInput,
@@ -316,7 +292,10 @@ export const collectAllocation = async (
     anchorEquityPercentage,
   });
 
-  const result = parseResult(
+  // Outer boundary over the whole result — mirrors the inner accept-path parse,
+  // but also covers the unresolved arm, which has no upstream fail-fast check.
+  const result = parseSchema(
+    AllocationPhaseResultSchema,
     await runConversation({
       initHandler: createInitHandler(amount, anchorEquityPercentage),
       turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
@@ -329,6 +308,11 @@ export const collectAllocation = async (
       // runaway handler one turn later.
       hardStopTurns: MAX_NEGOTIATION_TURNS + 1,
     }),
+    (error) =>
+      new InternalSchemaValidationError(
+        "Allocation phase produced a result that failed schema validation",
+        error,
+      ),
   );
 
   logger.info("Completed allocation phase", { result });

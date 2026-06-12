@@ -1,9 +1,9 @@
 import { zodTextFormat } from "openai/helpers/zod";
 import type { EasyInputMessage } from "openai/resources/responses/responses";
-import type { z } from "zod";
 
 import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
+import { parseSchema } from "#lib/parse-schema";
 import {
   ClassifyFollowUpsExhaustedError,
   ClassifyMessageMissingError,
@@ -16,16 +16,6 @@ import type {
 import { callOpenAIParsed } from "#services/openai";
 
 const logger = createLogger("askWithClassify");
-
-const resolveOutput = <TResolved>(
-  output: unknown,
-  resolvedSchema: z.ZodType<TResolved>,
-): TResolved => {
-  const parsed = resolvedSchema.safeParse(output);
-  if (!parsed.success) throw new ClassifyResolvedOutputInvalidError(parsed.error);
-
-  return parsed.data;
-};
 
 export const askWithClassify = async <
   TOutput extends AskWithClassifyBase,
@@ -78,7 +68,11 @@ export const askWithClassify = async <
     if (!clarificationNeeded) {
       logger.info("Complete");
 
-      return resolveOutput(output, resolvedSchema);
+      return parseSchema(
+        resolvedSchema,
+        output,
+        (error) => new ClassifyResolvedOutputInvalidError(error),
+      );
     }
     // Final attempt — exhaust before processing a clarification we wouldn't send.
     // Consequence: a final attempt with clarificationNeeded=true AND clarificationMessage=null
