@@ -52,13 +52,18 @@ const toNotCompletedError = (
   return new ServiceUnavailableError(RESPONSE_NOT_COMPLETED_ERROR_MESSAGE);
 };
 
-const toSchemaValidationError = (id: string, cause: ZodError): Error => {
+const toSchemaValidationError = (id: string, cause: ZodError, value: unknown): Error => {
   logger.warn(SCHEMA_VALIDATION_ERROR_MESSAGE, {
     responseId: id,
     issues: cause.issues,
+    value,
   });
 
-  return new BadGatewaySchemaValidationError(SCHEMA_VALIDATION_ERROR_MESSAGE, cause);
+  return new BadGatewaySchemaValidationError(
+    SCHEMA_VALIDATION_ERROR_MESSAGE,
+    cause,
+    value,
+  );
 };
 
 // Errors reaching this handler are post-retry — the SDK retries 408/409/429/5xx
@@ -128,7 +133,7 @@ export const callOpenAIParsed = async <T>(
     if (status !== "completed") throw toNotCompletedError(id, status);
 
     const result = schema.safeParse(output);
-    if (!result.success) throw toSchemaValidationError(id, result.error);
+    if (!result.success) throw toSchemaValidationError(id, result.error, output);
 
     return { id, output: result.data, usage };
   } catch (error) {

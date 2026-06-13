@@ -57,18 +57,22 @@ export class ServiceUnavailableError extends BaseError {
 }
 
 /**
- * Base for schema-validation failures that carry the offending `ZodError`. Never
- * thrown directly — concrete subclasses fix the HTTP status by origin:
- * BadGateway when an upstream response is malformed, Internal when our own code
- * produces a value that violates its schema.
+ * Base for schema-validation failures that carry the offending `ZodError` cause
+ * and the original `value` that failed to parse (for diagnostics — the
+ * `ZodError` alone reports issue paths, not the full input). Never thrown
+ * directly — concrete subclasses fix the HTTP status by origin: BadGateway when
+ * an upstream response is malformed, Internal when our own code produces a value
+ * that violates its schema.
  */
 export class SchemaValidationError extends BaseError {
   readonly cause: ZodError;
+  readonly value: unknown;
 
-  constructor(message: string, status: number, cause: ZodError) {
+  constructor(message: string, status: number, cause: ZodError, value: unknown) {
     super(message, status);
     this.name = "SchemaValidationError";
     this.cause = cause;
+    this.value = value;
   }
 }
 
@@ -78,8 +82,8 @@ export class SchemaValidationError extends BaseError {
  * carries the `ZodError` cause for diagnostics.
  */
 export class BadGatewaySchemaValidationError extends SchemaValidationError {
-  constructor(message: string, cause: ZodError) {
-    super(message, StatusCodes.BAD_GATEWAY, cause);
+  constructor(message: string, cause: ZodError, value: unknown) {
+    super(message, StatusCodes.BAD_GATEWAY, cause, value);
     this.name = "BadGatewaySchemaValidationError";
   }
 }
@@ -90,8 +94,8 @@ export class BadGatewaySchemaValidationError extends SchemaValidationError {
  * cause for diagnostics.
  */
 export class InternalSchemaValidationError extends SchemaValidationError {
-  constructor(message: string, cause: ZodError) {
-    super(message, StatusCodes.INTERNAL_SERVER_ERROR, cause);
+  constructor(message: string, cause: ZodError, value: unknown) {
+    super(message, StatusCodes.INTERNAL_SERVER_ERROR, cause, value);
     this.name = "InternalSchemaValidationError";
   }
 }

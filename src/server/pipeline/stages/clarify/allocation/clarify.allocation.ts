@@ -49,6 +49,14 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
 
+type ResolveAskDecisionArgs = {
+  kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>;
+  proposedEquityPercentage: number | null;
+  state: Readonly<AllocationNegotiationState>;
+  proposalContext: AllocationProposalContext;
+  lastUserResponse: string;
+};
+
 const buildInitialProposal = (amount: number, equityPercentage: number): string => {
   const { equityAmount, bufferAmount } = computeSplit(amount, equityPercentage);
   const bufferPercentage = calculateBufferPercentage(equityPercentage);
@@ -82,10 +90,11 @@ const handleAcceptTurn = (
       equityPercentage: finalEquityPercentage,
       bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
     },
-    (error) =>
+    (error, value) =>
       new InternalSchemaValidationError(
         "Allocation phase produced an output that failed schema validation",
         error,
+        value,
       ),
   );
 
@@ -100,7 +109,7 @@ const handleAcceptTurn = (
 const handleCounterTurn = async (
   proposedEquityPercentage: number | null,
   state: Readonly<AllocationNegotiationState>,
-  ctx: AllocationProposalContext,
+  proposalContext: AllocationProposalContext,
 ): Promise<AllocationAskDecision> => {
   if (proposedEquityPercentage === null) {
     logger.warn(
@@ -120,7 +129,7 @@ const handleCounterTurn = async (
   };
   const counterBranch = selectCounterBranch(
     proposedEquityPercentage,
-    ctx.suggestedEquityRange,
+    proposalContext.suggestedEquityRange,
     currentFramingFlags,
   );
   const nextFramingFlags = applyBranchFraming(currentFramingFlags, counterBranch);
@@ -136,7 +145,7 @@ const handleCounterTurn = async (
   const reply = await composeCounterReply(
     counterBranch,
     { proposedEquityPercentage, previousEquityPercentage },
-    ctx,
+    proposalContext,
   );
 
   // `nextFramingFlags` rides in the patch, which the runner commits only after
@@ -155,12 +164,12 @@ const handleCounterTurn = async (
 const handleQuestionTurn = async (
   lastUserResponse: string,
   currentEquityPercentage: number,
-  ctx: AllocationProposalContext,
+  proposalContext: AllocationProposalContext,
 ): Promise<AllocationAskDecision> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
     currentEquityPercentage,
-    ctx,
+    proposalContext,
   );
 
   return { kind: HandlerOutputKind.Ask, message: reply };
@@ -186,17 +195,20 @@ const createInitHandler =
 // intents (accept / budget exhaustion) are resolved in `createTurnHandler`
 // before this runs, so every branch here returns Ask.
 const resolveAskDecision = async (
-  kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>,
-  proposedEquityPercentage: number | null,
-  state: Readonly<AllocationNegotiationState>,
-  ctx: AllocationProposalContext,
-  lastUserResponse: string,
+  args: ResolveAskDecisionArgs,
 ): Promise<AllocationAskDecision> => {
+  const { kind, proposedEquityPercentage, state, proposalContext, lastUserResponse } =
+    args;
+
   switch (kind) {
     case AllocationIntentKindEnum.enum.counter:
-      return handleCounterTurn(proposedEquityPercentage, state, ctx);
+      return handleCounterTurn(proposedEquityPercentage, state, proposalContext);
     case AllocationIntentKindEnum.enum.question:
-      return handleQuestionTurn(lastUserResponse, state.currentEquityPercentage, ctx);
+      return handleQuestionTurn(
+        lastUserResponse,
+        state.currentEquityPercentage,
+        proposalContext,
+      );
     case AllocationIntentKindEnum.enum.unknown: {
       logger.warn("Unknown allocation intent — re-asking with the generic prompt");
 
@@ -218,7 +230,7 @@ const resolveAskDecision = async (
 
 const createTurnHandler =
   (
-    ctx: AllocationProposalContext,
+    proposalContext: AllocationProposalContext,
     anchorEquityPercentage: number,
   ): TurnHandler<AllocationNegotiationState, AllocationPhaseResult> =>
   async (state, history, lastUserResponse): Promise<AllocationHandlerOutput> => {
@@ -248,13 +260,13 @@ const createTurnHandler =
       };
     }
 
-    const { message, statePatch } = await resolveAskDecision(
+    const { message, statePatch } = await resolveAskDecision({
       kind,
-      intent.proposedEquityPercentage,
+      proposedEquityPercentage: intent.proposedEquityPercentage,
       state,
-      ctx,
+      proposalContext,
       lastUserResponse,
-    );
+    });
 
     // Ask decisions carry only a state patch — this is the single place that
     // applies the `turnsTaken` increment and lifts that patch into the full
@@ -302,10 +314,11 @@ export const collectAllocation = async (
       // catching a runaway handler one turn later.
       hardStopTurns: MAX_NEGOTIATION_TURNS + 1,
     }),
-    (error) =>
+    (error, value) =>
       new InternalSchemaValidationError(
         "Allocation phase produced a result that failed schema validation",
         error,
+        value,
       ),
   );
 

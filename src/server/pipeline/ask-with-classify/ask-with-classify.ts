@@ -71,7 +71,7 @@ export const askWithClassify = async <
       return parseSchema(
         resolvedSchema,
         output,
-        (error) => new ClassifyResolvedOutputInvalidError(error),
+        (error, value) => new ClassifyResolvedOutputInvalidError(error, value),
       );
     }
     // Final attempt — exhaust before processing a clarification we wouldn't send.
