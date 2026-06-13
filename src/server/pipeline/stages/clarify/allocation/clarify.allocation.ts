@@ -49,7 +49,7 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
 
-type ResolveAskDecisionArgs = {
+type ResolveAskDecisionParams = {
   kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>;
   proposedEquityPercentage: number | null;
   state: Readonly<AllocationNegotiationState>;
@@ -195,10 +195,10 @@ const createInitHandler =
 // intents (accept / budget exhaustion) are resolved in `createTurnHandler`
 // before this runs, so every branch here returns Ask.
 const resolveAskDecision = async (
-  args: ResolveAskDecisionArgs,
+  params: ResolveAskDecisionParams,
 ): Promise<AllocationAskDecision> => {
   const { kind, proposedEquityPercentage, state, proposalContext, lastUserResponse } =
-    args;
+    params;
 
   switch (kind) {
     case AllocationIntentKindEnum.enum.counter:

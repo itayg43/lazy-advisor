@@ -85,11 +85,11 @@ export const handleOutOfScopeRedirect = async (
   goal: string,
   responder: Responder,
 ): Promise<IntakePhaseOutput> => {
-  return runIntakePhase(
-    OUT_OF_SCOPE_PROMPT,
-    "Out-of-scope redirect phase",
+  return runIntakePhase({
+    instructions: OUT_OF_SCOPE_PROMPT,
+    phaseName: "Out-of-scope redirect phase",
     goal,
     responder,
-    OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS,
-  );
+    extractionInstructions: OUT_OF_SCOPE_EXTRACTION_INSTRUCTIONS,
+  });
 };
