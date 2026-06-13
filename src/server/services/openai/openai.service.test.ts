@@ -10,11 +10,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, SchemaValidationError, ServiceUnavailableError } from "#errors";
-import {
-  RiskToleranceEnum,
-  TimelineBucketEnum,
-  UserProfileSchema,
-} from "#schemas/pipeline.schemas";
+import { TimelineBucketEnum, UserProfileSchema } from "#schemas/pipeline.schemas";
 import { callOpenAI, callOpenAIParsed } from "#services/openai/openai.service";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -137,7 +133,6 @@ describe("openaiService", () => {
     const mockParsedOutput: UserProfile = {
       amount: 10000,
       timeline: TimelineBucketEnum.enum["10+ years"],
-      riskTolerance: RiskToleranceEnum.enum.moderate,
       equityPercentage: 60,
       bufferPercentage: 40,
       plansToContribute: true,

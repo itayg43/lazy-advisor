@@ -3,6 +3,8 @@
 **Date:** 2026-04-21
 **Status:** Reference. Records the design decision and the research behind it.
 
+> **Update (2026-06-13):** The score→bucket mapping described below was moved out of this phase into allocation (`mapRiskSelfRatingScoreToTolerance` in `clarify.allocation.lib.ts`). The risk phase now emits only `riskSelfRatingScore`; the `RiskPhaseOutput` snippet below (with its `riskTolerance` field) is historical. The research rationale still holds — only the home of the mapping changed. See `clarify.risk.rules.md` and ARCHITECTURE.md § "Risk phase" for current behavior.
+
 ## Decision
 
 Phase 4 uses a **single 1–5 self-rating** to measure risk willingness. Deterministic mapping:

@@ -33,11 +33,7 @@ import {
   ClarifyUnresolvedReasonEnum,
   GoalClassificationEnum,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import {
-  PipelineStatusEnum,
-  RiskToleranceEnum,
-  TimelineBucketEnum,
-} from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -157,7 +153,6 @@ describe("runClarify", () => {
   const expectedHappyPathProfile = {
     amount: 50000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-    riskTolerance: RiskToleranceEnum.enum.moderate,
     equityPercentage: 65,
     bufferPercentage: 35,
     plansToContribute: true,

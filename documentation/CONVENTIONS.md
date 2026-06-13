@@ -32,7 +32,7 @@
 - **Functions:** `camelCase`
 - **Constants:** `UPPER_SNAKE_CASE`
 - **Spell out units and domain terms — no jargon abbreviations.** The name should be readable without a glossary. Applies across constants, variables, params, schema fields, and log keys:
-  - Constants: `EXTREME_DEVIATION_PERCENTAGE_POINTS`, not `EXTREME_THRESHOLD_PP`; `MAX_NEGOTIATION_TURNS`, not `MAX_TURNS`
+  - Constants: `ALLOCATION_EXTREME_DEVIATION_PERCENTAGE_POINTS`, not `EXTREME_THRESHOLD_PP`; `ALLOCATION_MAX_NEGOTIATION_TURNS`, not `MAX_TURNS`
   - Percentages: `*Percentage` (e.g., `currentEquityPercentage`, `proposedEquityPercentage`)
   - Currency amounts: `*Amount` (e.g., `equityAmount`, `bufferAmount`)
   - Percentage-point gaps: `*PercentagePoints` (e.g., `deviationPercentagePoints`)

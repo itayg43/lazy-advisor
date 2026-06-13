@@ -2,16 +2,36 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALLOCATION_ANCHOR_DATA,
+  AllocationRiskToleranceEnum,
+  type AllocationRiskTolerance,
   type AllocationTimeline,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
-import { deriveAnchorEquityPercentage } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
+import {
+  deriveAnchorEquityPercentage,
+  mapRiskSelfRatingScoreToTolerance,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
-import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
-import type { RiskTolerance } from "#types/pipeline.types";
+import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 describe("clarifyAllocationLib", () => {
+  const { conservative, moderate, aggressive } = AllocationRiskToleranceEnum.enum;
+
+  describe("mapRiskSelfRatingScoreToTolerance", () => {
+    // Pins the 5→3 collapse that keys the anchor table: 1–2 → conservative,
+    // 3 → moderate, 4–5 → aggressive. Relocated here from the risk phase, which
+    // now emits only the raw score.
+    it.each<{ score: RiskSelfRatingScore; expected: AllocationRiskTolerance }>([
+      { score: 1, expected: conservative },
+      { score: 2, expected: conservative },
+      { score: 3, expected: moderate },
+      { score: 4, expected: aggressive },
+      { score: 5, expected: aggressive },
+    ])("should map score $score to $expected", ({ score, expected }) => {
+      expect(mapRiskSelfRatingScoreToTolerance(score)).toBe(expected);
+    });
+  });
+
   describe("deriveAnchorEquityPercentage", () => {
-    const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
     const {
       "3–5 years": t3to5,
       "5–10 years": t5to10,
@@ -25,7 +45,7 @@ describe("clarifyAllocationLib", () => {
     // odd-summed cell would surface as a runtime 500. Pinning every current
     // midpoint locks both the expected value and the integer invariant.
     it.each<{
-      riskTolerance: RiskTolerance;
+      riskTolerance: AllocationRiskTolerance;
       timeline: AllocationTimeline;
       expectedMidpoint: number;
     }>([

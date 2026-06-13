@@ -11,7 +11,7 @@ import {
   ALLOCATION_ANCHOR_DATA,
   ALLOCATION_MISSING_COUNTER_MESSAGE,
   ALLOCATION_UNKNOWN_INTENT_MESSAGE,
-  MAX_NEGOTIATION_TURNS,
+  ALLOCATION_MAX_NEGOTIATION_TURNS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   classifyTurn,
@@ -25,6 +25,7 @@ import {
   deriveAnchorEquityPercentage,
   formatCurrency,
   isAcceptKind,
+  mapRiskSelfRatingScoreToTolerance,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
@@ -248,7 +249,7 @@ const createTurnHandler =
       });
     }
 
-    if (turnsTaken >= MAX_NEGOTIATION_TURNS) {
+    if (turnsTaken >= ALLOCATION_MAX_NEGOTIATION_TURNS) {
       logger.warn("Allocation phase unresolved — turn budget exhausted");
 
       return {
@@ -284,9 +285,12 @@ export const collectAllocation = async (
 ): Promise<AllocationPhaseResult> => {
   logger.info("Starting allocation phase", { input });
 
-  const { amount, timeline, riskTolerance, riskSelfRatingScore } = input;
+  const { amount, timeline, riskSelfRatingScore } = input;
 
-  const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
+  const suggestedEquityRange =
+    ALLOCATION_ANCHOR_DATA[mapRiskSelfRatingScoreToTolerance(riskSelfRatingScore)][
+      timeline
+    ];
   const anchorEquityPercentage = deriveAnchorEquityPercentage(
     suggestedEquityRange,
     riskSelfRatingScore,
@@ -308,11 +312,11 @@ export const collectAllocation = async (
         anchorEquityPercentage,
       ),
       responder,
-      // Backstop only. Legitimate asks max at exactly MAX_NEGOTIATION_TURNS (the
+      // Backstop only. Legitimate asks max at exactly ALLOCATION_MAX_NEGOTIATION_TURNS (the
       // init ask offsets the final budget-exhausted Done), so +1 never false-trips
       // — it absorbs an off-by-one in the handler's turn accounting while still
       // catching a runaway handler one turn later.
-      hardStopTurns: MAX_NEGOTIATION_TURNS + 1,
+      hardStopTurns: ALLOCATION_MAX_NEGOTIATION_TURNS + 1,
     }),
     (error, value) =>
       new InternalSchemaValidationError(

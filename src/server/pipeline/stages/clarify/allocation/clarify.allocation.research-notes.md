@@ -3,6 +3,8 @@
 **Date:** 2026-04-21
 **Status:** Reference. Records the design decision and the research behind it.
 
+> **Update (2026-06-13):** The risk phase no longer emits a tolerance bucket — allocation now derives it from `riskSelfRatingScore` via `mapRiskSelfRatingScoreToTolerance`. References below to a "3-bucket output from Phase 4" describe the same buckets, now computed inside this phase. The two-axis design is unchanged. See `clarify.allocation.rules.md` for current behavior.
+
 ## Decision
 
 Phase 4b uses a **two-axis anchor table: risk tolerance × timeline**.

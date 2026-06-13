@@ -1,6 +1,6 @@
 # Clarify Allocation Phase — Behavior Rules
 
-Behavioral rules for the allocation phase. This phase converts the user's risk-tolerance bucket (from the risk phase) and timeline (from the parameters phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100.
+Behavioral rules for the allocation phase. This phase converts the user's risk self-rating (a 1–5 score from the risk phase) and timeline (from the parameters phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. The score is collapsed into an internal risk-tolerance bucket (`mapRiskSelfRatingScoreToTolerance` in `clarify.allocation.lib.ts`) that keys the anchor table below.
 
 This phase does **not** pick instruments. Ticker selection belongs to T5 (equity) and T6 (buffer).
 
@@ -22,7 +22,7 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 
 - **Point-estimate, not distribution.** Output is a single integer (e.g., 70), not a range. Acceptable for a behavioral anchor; not acceptable as portfolio-optimization output.
 - **"Sizing tends to reduce panic-selling" — directional, not absolute.** Use "tends to reduce"; never "prevents" or "eliminates". Aligned with Kitces's composure-vs-tolerance distinction.
-- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. Our 3-bucket output from the risk phase compresses into a 3×4 table, with `RiskPhaseOutput.riskSelfRatingScore` providing within-bucket discrimination so each score lands at a distinct point inside its cell (see Rule 1).
+- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. We collapse the 1–5 self-rating into a 3-bucket scale that keys a 3×4 table, with `riskSelfRatingScore` providing within-bucket discrimination so each score lands at a distinct point inside its cell (see Rule 1).
 
 ---
 

@@ -9,8 +9,6 @@ export const PipelineStatusEnum = z.enum([
   "errored",
 ]);
 
-export const RiskToleranceEnum = z.enum(["conservative", "moderate", "aggressive"]);
-
 export const TimelineBucketEnum = z.enum([
   "under 3 years",
   "3–5 years",
@@ -21,7 +19,6 @@ export const TimelineBucketEnum = z.enum([
 export const UserProfileSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
   timeline: TimelineBucketEnum,
-  riskTolerance: RiskToleranceEnum,
   // sum-to-100 is validated by AllocationPhaseResultSchema in collectAllocation, not here
   equityPercentage: z.number().int().min(0).max(100),
   bufferPercentage: z.number().int().min(0).max(100),

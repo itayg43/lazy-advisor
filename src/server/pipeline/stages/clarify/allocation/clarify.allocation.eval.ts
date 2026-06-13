@@ -16,11 +16,9 @@ import type {
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
-import { RiskToleranceEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
+import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
-
-const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 describe("collectAllocation", () => {
   // Mutable capture for the last-run artifact: each test stashes its transcript,
@@ -34,28 +32,24 @@ describe("collectAllocation", () => {
   const longHorizonAggressiveInput: AllocationPhaseInput = {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-    riskTolerance: aggressive,
     riskSelfRatingScore: 5,
   };
 
   const midHorizonModerateInput: AllocationPhaseInput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
-    riskTolerance: moderate,
     riskSelfRatingScore: 3,
   };
 
   const longHorizonConservativeInput: AllocationPhaseInput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-    riskTolerance: conservative,
     riskSelfRatingScore: 2,
   };
 
   const shortMidHorizonConservativeInput: AllocationPhaseInput = {
     amount: 30_000,
     timeline: TimelineBucketEnum.enum["3–5 years"],
-    riskTolerance: conservative,
     riskSelfRatingScore: 2,
   };
 
@@ -524,11 +518,11 @@ describe("collectAllocation", () => {
   });
 
   // clarify.allocation.rules.md "Budget exhaustion": accept on the
-  // MAX_NEGOTIATION_TURNS-th turn wins — the handler classifies first and
+  // ALLOCATION_MAX_NEGOTIATION_TURNS-th turn wins — the handler classifies first and
   // resolves to `completed` rather than throwing the user's "yes" away. 4
-  // counters + 1 accept = 5 turns total (MAX_NEGOTIATION_TURNS). Final equity
+  // counters + 1 accept = 5 turns total (ALLOCATION_MAX_NEGOTIATION_TURNS). Final equity
   // is the last counter's value.
-  it("should accept on the MAX_NEGOTIATION_TURNS-th turn instead of returning unresolved", async () => {
+  it("should accept on the ALLOCATION_MAX_NEGOTIATION_TURNS-th turn instead of returning unresolved", async () => {
     const { result } = await runAllocation(longHorizonAggressiveInput, [
       "Actually I want 60% stocks",
       "Wait, let's do 55%",
@@ -543,7 +537,7 @@ describe("collectAllocation", () => {
   });
 
   // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals
-  // exhausts the turn budget threaded via state (MAX_NEGOTIATION_TURNS = 5 in
+  // exhausts the turn budget threaded via state (ALLOCATION_MAX_NEGOTIATION_TURNS = 5 in
   // clarify.allocation.constants.ts).
   // On the budget-th turn, the handler returns `Done` with
   // { status: "unresolved", reason: "allocation" } before composing another reply.

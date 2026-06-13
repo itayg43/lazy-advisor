@@ -1,8 +1,8 @@
 # Clarify Risk Phase — Behavior Rules
 
-Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The numeric score is mapped deterministically to one of three internal labels (`conservative`, `moderate`, `aggressive`) — these labels are **never shown to the user**. Score → bucket mapping (1–2 → conservative, 3 → moderate, 4–5 → aggressive) is applied in code, not by the LLM; see `clarify.risk.ts` and `clarify.risk.test.ts`.
+Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The phase output is the raw 1–5 score. The downstream allocation phase collapses that score into one of three internal tolerance buckets (`conservative`, `moderate`, `aggressive`, via `mapRiskSelfRatingScoreToTolerance` in `clarify.allocation.lib.ts`) to key its anchor table — those labels are **never shown to the user** and are not produced here.
 
-The phase is willingness-only. Age and investment timeline are not passed as context and do not affect the question asked or the score mapping.
+The phase is willingness-only. Age and investment timeline are not passed as context and do not affect the question asked or the score.
 
 ## Neutrality (applies to all clarificationMessage responses)
 
@@ -10,21 +10,21 @@ The phase is willingness-only. Age and investment timeline are not passed as con
 - Do **not** add historical reassurance ("markets have recovered from 2008 and 2020"). Historical-recovery framing is a documented priming bias on risk-tolerance questionnaires and is the specific bias this design avoids.
 - Do **not** introduce hypothetical drop scenarios. The scale itself is the elicitation; scenarios re-introduce the framing problem.
 - Do **not** interpret free-form wording as a score (e.g., "I'd panic" → 1). Wording-based mapping is an LLM judgment call that is hard to audit and model-version-sensitive. Re-ask instead — the user will give a number.
-- If evals reveal misclassification, tighten the score→bucket mapping in code before adding scenario content back into the prompt.
+- If evals reveal misclassification, tighten the score-extraction rules in code before adding scenario content back into the prompt.
 
 ---
 
 ## 1. User gives a clear 1–5 number → end the phase
 
-**Rule:** If the user replies with one of the integers 1, 2, 3, 4, or 5 — as a digit or as an English word (`one`, `two`, `three`, `four`, `five`), with or without surrounding text — accept it and end the phase. The score → bucket mapping is applied in code.
+**Rule:** If the user replies with one of the integers 1, 2, 3, 4, or 5 — as a digit or as an English word (`one`, `two`, `three`, `four`, `five`), with or without surrounding text — accept it and end the phase. Only the score is recorded.
 
-**Scenarios** (one per bucket + extraction variants; all-digit and all-word coverage is owned by unit tests):
+**Scenarios** (extraction variants; all-digit and all-word coverage is owned by unit tests):
 
-- `"1"` → riskSelfRatingScore: 1 → riskTolerance: conservative
-- `"3"` → riskSelfRatingScore: 3 → riskTolerance: moderate
-- `"5"` → riskSelfRatingScore: 5 → riskTolerance: aggressive
-- `"three"` → riskSelfRatingScore: 3 → riskTolerance: moderate (word-form acceptance)
-- `"I'd say 4"` → riskSelfRatingScore: 4 → riskTolerance: aggressive (digit embedded in surrounding text)
+- `"1"` → riskSelfRatingScore: 1
+- `"3"` → riskSelfRatingScore: 3
+- `"5"` → riskSelfRatingScore: 5
+- `"three"` → riskSelfRatingScore: 3 (word-form acceptance)
+- `"I'd say 4"` → riskSelfRatingScore: 4 (digit embedded in surrounding text)
 
 No budget impact — this terminates the phase successfully.
 
@@ -41,10 +41,10 @@ No budget impact — this terminates the phase successfully.
 
 **Scenarios:**
 
-- `"7"` → re-ask → `"4"` → riskSelfRatingScore: 4 → riskTolerance: aggressive
-- `"I'd panic"` → re-ask → `"1"` → riskSelfRatingScore: 1 → riskTolerance: conservative
-- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → riskSelfRatingScore: 3 → riskTolerance: moderate
-- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → riskSelfRatingScore: 2 → riskTolerance: conservative
+- `"7"` → re-ask → `"4"` → riskSelfRatingScore: 4
+- `"I'd panic"` → re-ask → `"1"` → riskSelfRatingScore: 1
+- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → riskSelfRatingScore: 3
+- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → riskSelfRatingScore: 2
 
 ---
 

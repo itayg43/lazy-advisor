@@ -1,6 +1,8 @@
 import { InternalError } from "#errors";
 import {
-  EXTREME_DEVIATION_PERCENTAGE_POINTS,
+  ALLOCATION_EXTREME_DEVIATION_PERCENTAGE_POINTS,
+  AllocationRiskToleranceEnum,
+  type AllocationRiskTolerance,
   type AllocationSuggestedEquityRange,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
@@ -29,6 +31,25 @@ export const isAcceptKind = (
 ): kind is AllocationAcceptIntentKind =>
   kind === AllocationIntentKindEnum.enum.accept ||
   kind === AllocationIntentKindEnum.enum["accept-original"];
+
+/**
+ * Collapses the user's 1–5 risk self-rating into the three internal tolerance
+ * buckets that key the anchor table (1–2 → conservative, 3 → moderate, 4–5 →
+ * aggressive). This is the only consumer of the bucket: the risk phase emits the
+ * raw score and allocation derives the bucket on demand, so the label is never
+ * threaded through the pipeline. The score still discriminates *within* the
+ * chosen cell via `deriveAnchorEquityPercentage`.
+ */
+export const mapRiskSelfRatingScoreToTolerance = (
+  score: RiskSelfRatingScore,
+): AllocationRiskTolerance => {
+  const { conservative, moderate, aggressive } = AllocationRiskToleranceEnum.enum;
+
+  if (score <= 2) return conservative;
+  if (score === 3) return moderate;
+
+  return aggressive;
+};
 
 /**
  * Picks the opening equity percentage from the suggested range using the user's
@@ -85,7 +106,7 @@ export const selectCounterBranch = (
   );
 
   if (
-    deviationPercentagePoints >= EXTREME_DEVIATION_PERCENTAGE_POINTS &&
+    deviationPercentagePoints >= ALLOCATION_EXTREME_DEVIATION_PERCENTAGE_POINTS &&
     !hasShownExtremeFraming
   ) {
     // The deviation is a magnitude — equally large above max or below min — so it

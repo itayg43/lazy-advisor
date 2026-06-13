@@ -148,7 +148,6 @@ T5 lands on `runConversation` (see `ARCHITECTURE.md § Phase conversation patter
 ```
 Investment amount: ₪<amount>
 Investment timeline: <timeline>
-Risk tolerance: <riskTolerance>
 Equity portion of portfolio: <equityPercentage>% (buffer is <bufferPercentage>%)
 Plans to contribute periodically: yes | no (lump-sum investment)
 ```
@@ -227,7 +226,6 @@ Educational Q&A is supported during the loop — the user may ask clarifying que
 User goal: <goal>
 Investment amount: ₪<amount>
 Investment timeline: <timeline>
-Risk tolerance: <riskTolerance>
 Buffer portion of portfolio: <bufferPercentage>% (₪<amount × bufferPercentage / 100>)
 Equity allocation (the other <equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
 ```
