@@ -73,10 +73,9 @@ const handleAcceptTurn = (
       ? anchorEquityPercentage
       : currentEquityPercentage;
 
-  // Inner fail-fast: re-validate the equity/buffer pair at its construction
-  // site, so a bug in the accept path surfaces here instead of flowing out.
-  // Overlaps the outer result parse on purpose: defense-in-depth. No logging
-  // here — the `runClarify` catch logs `BaseError`s once.
+  // Inner fail-fast: a bug in the accept path surfaces here, not downstream.
+  // Overlaps the outer result parse on purpose. No logging — the `runClarify`
+  // catch logs `BaseError`s once.
   const output = parseSchema(
     AllocationPhaseOutputSchema,
     {
@@ -141,8 +140,8 @@ const handleCounterTurn = async (
   );
 
   // `nextFramingFlags` rides in the patch, which the runner commits only after
-  // `reply` is sent — so a framing is never marked shown on a turn the user never
-  // received. (Atomicity note in run-conversation.ts.)
+  // `reply` is sent — so a framing is never marked shown on an undelivered turn.
+  // (Atomicity note in run-conversation.ts.)
   return {
     kind: HandlerOutputKind.Ask,
     message: reply,
@@ -271,21 +270,15 @@ export const collectAllocation = async (
   input: AllocationPhaseInput,
   responder: Responder,
 ): Promise<AllocationPhaseResult> => {
-  const { amount, timeline, riskTolerance, riskSelfRatingScore } = input;
+  logger.info("Starting allocation phase", { input });
 
-  logger.info("Starting allocation phase", {
-    amount,
-    timeline,
-    riskTolerance,
-    riskSelfRatingScore,
-  });
+  const { amount, timeline, riskTolerance, riskSelfRatingScore } = input;
 
   const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
   const anchorEquityPercentage = deriveAnchorEquityPercentage(
     suggestedEquityRange,
     riskSelfRatingScore,
   );
-  const ctx: AllocationProposalContext = { amount, timeline, suggestedEquityRange };
 
   logger.info("Derived allocation anchor", {
     suggestedEquityRange,
@@ -298,14 +291,15 @@ export const collectAllocation = async (
     AllocationPhaseResultSchema,
     await runConversation({
       initHandler: createInitHandler(amount, anchorEquityPercentage),
-      turnHandler: createTurnHandler(ctx, anchorEquityPercentage),
+      turnHandler: createTurnHandler(
+        { amount, timeline, suggestedEquityRange },
+        anchorEquityPercentage,
+      ),
       responder,
-      // Backstop only. The legitimate ask count maxes at exactly
-      // MAX_NEGOTIATION_TURNS (the init ask with no preceding turn offsets the
-      // final budget-exhausted Done with no following ask), so +1 sits just
-      // above the real budget: it never false-trips and leaves slack against an
-      // off-by-one in the handler's turn accounting, while still catching a
-      // runaway handler one turn later.
+      // Backstop only. Legitimate asks max at exactly MAX_NEGOTIATION_TURNS (the
+      // init ask offsets the final budget-exhausted Done), so +1 never false-trips
+      // — it absorbs an off-by-one in the handler's turn accounting while still
+      // catching a runaway handler one turn later.
       hardStopTurns: MAX_NEGOTIATION_TURNS + 1,
     }),
     (error) =>
