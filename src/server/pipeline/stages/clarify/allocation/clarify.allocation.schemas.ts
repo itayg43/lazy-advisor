@@ -77,7 +77,15 @@ export const AllocationExtremeCounterDirectionEnum = z.enum(["too-high", "too-lo
  */
 export const AllocationClassifierOutputSchema = z.object({
   kind: AllocationIntentKindEnum,
-  proposedEquityPercentage: z.number().int().min(0).max(100).nullable(),
+  proposedEquityPercentage: z
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .nullable()
+    .describe(
+      'The user\'s equity percentage when kind is "counter" (buffer is implied as 100 − equity). null for every other intent.',
+    ),
 });
 
 /**
