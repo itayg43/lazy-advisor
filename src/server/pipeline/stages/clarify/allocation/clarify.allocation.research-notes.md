@@ -3,7 +3,7 @@
 **Date:** 2026-04-21
 **Status:** Reference. Records the design decision and the research behind it.
 
-> **Update (2026-06-13):** The risk phase no longer emits a tolerance bucket — allocation now derives it from `riskSelfRatingScore` via `mapRiskSelfRatingScoreToTolerance`. References below to a "3-bucket output from Phase 4" describe the same buckets, now computed inside this phase. The two-axis design is unchanged. See `clarify.allocation.rules.md` for current behavior.
+> **Update (2026-06-13):** There is no longer a `conservative`/`moderate`/`aggressive` tolerance bucket — allocation keys the anchor table on the 1–5 `riskTolerance` score directly (scores 1≡2 and 4≡5 share a range, so the table has duplicated rows; score then selects the within-cell edge). References below to "3 buckets" or a "3-bucket output from Phase 4" describe the same **three distinct ranges**, now addressed by score rather than by a bucket label. The two-axis (risk tolerance × timeline) design is unchanged. `riskSelfRatingScore` in the body below is today's `riskTolerance`. See `clarify.allocation.rules.md` for current behavior.
 
 ## Decision
 
@@ -66,7 +66,9 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 
 ## Trade-offs
 
-1. **3-bucket willingness input.** Industry norm is 7–9 anchors. A `riskSelfRatingScore=5` and a `riskSelfRatingScore=4` both map to `aggressive` with the same anchor. `riskSelfRatingScore` is available to refine without changing Phase 4 if evals show discrimination problems.
+1. **Three distinct ranges, not five.** We key the table on the 1–5 `riskTolerance`, but it resolves to only three distinct ranges per timeline (1≡2 and 4≡5 share a range; score 3 alone). We deliberately do **not** stretch this to five distinct ranges, despite carrying a five-point score:
+   - A single-item 1–5 self-rating doesn't carry five levels of reliable signal. Single-item risk-tolerance questions have modest test-retest reliability — the gap between a self-rated 4 and 5 is inside the instrument's noise. Giving 4 and 5 distinct allocations would encode a distinction the measurement can't resolve: textbook false precision, inviting the "why is a 4 different from a 5?" critique with no defensible answer.
+   - This is consistent with the findings above — single-variable self-ratings are "consumer shorthand, not professional methodology", and industry's 7–9 anchors come from _multi-item questionnaires_, not one 1–5 tap. The granularity lives in the **instrument, not the table**. Genuinely finer discrimination would require a richer risk-phase instrument (a multi-item questionnaire yielding a more reliable score) — a separate, evidence-gated change upstream of allocation, not a finer table on the same thin input. The within-cell edge selection already spreads the five scores across five landing points without claiming five _reliable_ tiers.
 2. **Point-estimate, not distribution.** Single integer (e.g., 70%), not a range. Acceptable for a behavioral anchor; not appropriate as portfolio-optimization output.
 3. **No composure probe.** A well-sized user may still panic-sell if risk perception changes during a drawdown. Rules file frames sizing as reducing — not preventing — panic-selling.
 4. **No household balance sheet.** We have `amount`, `age`, `timeline`, `hasEmergencyFund`, `hasDebt`. No income, other assets, liquidity needs beyond EF, or spouse's situation.
@@ -77,6 +79,6 @@ Kitces distinguishes composure (stability of risk perception over time) from tol
 
 - **Five-factor anchor.** Age redundant with timeline; EF/debt not treated as continuous inputs anywhere in the literature.
 - **Continuous formula for equity%.** Harder to prompt and eval; invites false-precision critiques.
-- **Finer-grained table (7–9 anchors).** Requires richer willingness input than Phase 4's 3-bucket output. Deferred — can be refined using `riskSelfRatingScore` if evals show the need.
+- **Finer-grained table (7–9 anchors), or five distinct ranges off the 1–5 score.** Requires a richer willingness instrument than a single 1–5 self-rating. Not merely deferred — fine-graining the _same_ thin input would be false precision (see Trade-off #1); the real prerequisite is a multi-item risk instrument upstream, not a bigger table.
 - **Hard block on pre-stated splits.** Inconsistent with "user has final say" philosophy.
 - **Composure probe.** No primary-source evidence that a short-form composure probe works for beginners.

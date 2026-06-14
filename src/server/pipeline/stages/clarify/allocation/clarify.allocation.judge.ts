@@ -28,6 +28,8 @@ export const AllocationJudgeCriterionEnum = z.enum([
   "answer-scoping", // answer stays on the asked topic, then the standard re-ask
   "naturalness", // calm, matter-of-fact human tone, no filler or lecturing
   "framing-plain-language", // trade-off framing a beginner understands, not jargon
+  "no-risk-labeling", // never pins a risk personality on the user
+  "english-body", // prose is English; Hebrew instrument names inline are fine
 ]);
 
 type AllocationJudgeCriterion = z.infer<typeof AllocationJudgeCriterionEnum>;
@@ -74,11 +76,37 @@ keyword drop.
 **PASS:** The framing is clear and concrete.
 **FAIL:** It is jargon-y, generic, or merely name-checks a keyword.`;
 
+const NO_RISK_LABELING_RUBRIC = `**Rule:** The advisor never pins a risk personality on the user — it describes
+the split and the reasoning, not the person.
+**Note:** Factually restating the user's own answers or situation is NOT a label
+("your timeline is long", "you said big drops make you uncomfortable"). Plain,
+non-personal uses of these words are also fine — "a moderate amount in stocks",
+calling a fund or the market "aggressive". Only a label aimed at the *user*
+counts.
+**PASS:** No turn assigns the user a risk tier or investor personality — not by a
+standard label ("you're a conservative/moderate/aggressive investor", "your
+moderate profile") nor any equivalent "you're a ___ kind of investor" phrasing.
+**FAIL:** A turn characterizes the *user* with a risk persona — e.g. "since
+you're fairly aggressive", "for a conservative investor like you", "your moderate
+risk profile".`;
+
+const ENGLISH_BODY_RUBRIC = `**Rule:** The body of the advisor's message is written in English.
+**Note:** Naming a specific Israeli instrument by its Hebrew term inline is
+explicitly allowed and is NOT a violation — e.g. "a money-market fund (קרן
+כספית)" or "the קרן כספית". The carve-out is for *instrument names*, not running
+prose.
+**PASS:** Sentences and explanations are in English; any Hebrew is limited to
+inline instrument names.
+**FAIL:** A full sentence or clause is written in Hebrew, or the message answers
+in Hebrew prose rather than English.`;
+
 const CRITERION_RUBRIC: Record<AllocationJudgeCriterion, string> = {
   conciseness: CONCISENESS_RUBRIC,
   "answer-scoping": ANSWER_SCOPING_RUBRIC,
   naturalness: NATURALNESS_RUBRIC,
   "framing-plain-language": FRAMING_PLAIN_LANGUAGE_RUBRIC,
+  "no-risk-labeling": NO_RISK_LABELING_RUBRIC,
+  "english-body": ENGLISH_BODY_RUBRIC,
 };
 
 // `reason` precedes `pass` so the judge reasons before committing to a verdict

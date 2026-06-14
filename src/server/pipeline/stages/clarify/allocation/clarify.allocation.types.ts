@@ -13,12 +13,12 @@ import type {
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
-import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
+import type { RiskTolerance } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
 export type AllocationPhaseInput = {
   amount: number;
   timeline: AllocationTimeline;
-  riskSelfRatingScore: RiskSelfRatingScore;
+  riskTolerance: RiskTolerance;
 };
 
 export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;

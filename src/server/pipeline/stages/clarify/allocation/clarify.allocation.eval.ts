@@ -15,7 +15,7 @@ import type {
   AllocationPhaseOutput,
   AllocationPhaseResult,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
+import type { RiskTolerance } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.allocation.last-run.md", import.meta.url).pathname;
@@ -27,45 +27,31 @@ describe("collectAllocation", () => {
   let lastOutput: AllocationPhaseResult | undefined;
   let lastJudge: AllocationJudgeOutput | undefined;
 
-  // Default scores hit the deep end of each bucket; within-bucket discrimination
+  // Default scores hit the deep end of each anchor range; within-cell discrimination
   // cases below override the score to verify the LLM honors the precomputed value.
   const longHorizonAggressiveInput: AllocationPhaseInput = {
     amount: 50_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-    riskSelfRatingScore: 5,
+    riskTolerance: 5,
   };
 
   const midHorizonModerateInput: AllocationPhaseInput = {
     amount: 80_000,
     timeline: TimelineBucketEnum.enum["5–10 years"],
-    riskSelfRatingScore: 3,
+    riskTolerance: 3,
   };
 
   const longHorizonConservativeInput: AllocationPhaseInput = {
     amount: 60_000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-    riskSelfRatingScore: 2,
+    riskTolerance: 2,
   };
 
   const shortMidHorizonConservativeInput: AllocationPhaseInput = {
     amount: 30_000,
     timeline: TimelineBucketEnum.enum["3–5 years"],
-    riskSelfRatingScore: 2,
+    riskTolerance: 2,
   };
-
-  // Criteria shared by the cases that exercise the same turn type. An extreme
-  // sanity-check turn is graded on its framing and tone; a question-answer turn
-  // is graded on scope, length, and tone. Cases with a one-off mix pass their
-  // criteria inline.
-  const EXTREME_TURN_CRITERIA = [
-    AllocationJudgeCriterionEnum.enum["framing-plain-language"],
-    AllocationJudgeCriterionEnum.enum.naturalness,
-  ];
-  const ANSWER_TURN_CRITERIA = [
-    AllocationJudgeCriterionEnum.enum["answer-scoping"],
-    AllocationJudgeCriterionEnum.enum.conciseness,
-    AllocationJudgeCriterionEnum.enum.naturalness,
-  ];
 
   // A percentage (optionally a range like "30–50%") sitting within ~40 chars of a
   // loss/decline word. This is the concrete drawdown framing that the too-high
@@ -108,14 +94,11 @@ describe("collectAllocation", () => {
     expect(agentTurns(transcript).length).toBeGreaterThanOrEqual(min);
   };
 
-  // Internal risk-tolerance labels must never reach the user — not even as
-  // general adjectives (clarify.allocation.rules.md, Anchor Table preamble + rule 4).
-  const expectNoInternalLabels = (transcript: TranscriptEntry[]) => {
-    const text = agentText(transcript).toLowerCase();
-    expect(text).not.toContain("aggressive");
-    expect(text).not.toContain("conservative");
-    expect(text).not.toContain("moderate");
-  };
+  // The "never pin a risk personality on the user" rule is graded by the judge's
+  // `no-risk-labeling` criterion on the relevant composed turns (each case lists
+  // it inline), not a substring grep — a token scan can't tell "you're an
+  // aggressive investor" (a violation) from "a moderate amount in stocks" (fine).
+  // See clarify.allocation.rules.md, Anchor Table preamble + rule 4.
 
   // Asserts the agent's transcript mentions shekel amounts consistent with the final
   // extracted split — catches model arithmetic drift (e.g., "₪85,000 equity + ₪15,000
@@ -244,7 +227,7 @@ describe("collectAllocation", () => {
     expectShekelMathConsistent(transcript, midHorizonModerateInput.amount, output);
   });
 
-  // clarify.allocation.rules.md rule 1 (within-bucket discrimination): verifies the
+  // clarify.allocation.rules.md rule 1 (within-cell discrimination): verifies the
   // LLM uses the precomputed proposal exactly across different cells. The expected
   // equity here is a hand-computed oracle for deriveAnchorEquityPercentage, which maps
   // scores {1,4} → cell.min (low edge), {2,5} → cell.max (high edge), {3} → midpoint.
@@ -252,7 +235,7 @@ describe("collectAllocation", () => {
   // fixtures cover the high edge (score 5 → 90, score 2 → 20).
   it.each<{
     fixture: AllocationPhaseInput;
-    score: RiskSelfRatingScore;
+    score: RiskTolerance;
     equity: number;
     buffer: number;
     label: string;
@@ -272,9 +255,9 @@ describe("collectAllocation", () => {
       label: "conservative 10+ year, low edge",
     },
   ])(
-    "should propose $equity% equity for $label with riskSelfRatingScore=$score",
+    "should propose $equity% equity for $label with riskTolerance=$score",
     async ({ fixture, score, equity, buffer }) => {
-      const input: AllocationPhaseInput = { ...fixture, riskSelfRatingScore: score };
+      const input: AllocationPhaseInput = { ...fixture, riskTolerance: score };
       const { transcript, result } = await runAllocation(input, ["Sounds good"]);
       const output = expectSuccess(result);
 
@@ -366,7 +349,11 @@ describe("collectAllocation", () => {
     expectDrawdownFraming(agentTurns(transcript)[1].content.toLowerCase());
     expectShekelMathConsistent(transcript, longHorizonConservativeInput.amount, output);
 
-    await judgeAndExpectPass(transcript, EXTREME_TURN_CRITERIA);
+    await judgeAndExpectPass(transcript, [
+      AllocationJudgeCriterionEnum.enum["framing-plain-language"],
+      AllocationJudgeCriterionEnum.enum.naturalness,
+      AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
+    ]);
   });
 
   // clarify.allocation.rules.md rule 3 Branch 1 too-low: aggressive 10+ yr user asks for 0% equity → sanity check fires with opportunity-cost framing (no drawdown %), accept
@@ -385,7 +372,11 @@ describe("collectAllocation", () => {
     expectNoDrawdownFraming(agentTurns(transcript)[1].content.toLowerCase());
     expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
-    await judgeAndExpectPass(transcript, EXTREME_TURN_CRITERIA);
+    await judgeAndExpectPass(transcript, [
+      AllocationJudgeCriterionEnum.enum["framing-plain-language"],
+      AllocationJudgeCriterionEnum.enum.naturalness,
+      AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
+    ]);
   });
 
   // clarify.allocation.rules.md rule 3 Branch 3 (repeated counter-proposals):
@@ -427,14 +418,23 @@ describe("collectAllocation", () => {
     expectMinAgentTurns(transcript, 2);
     expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
-    await judgeAndExpectPass(transcript, ANSWER_TURN_CRITERIA);
+    await judgeAndExpectPass(transcript, [
+      AllocationJudgeCriterionEnum.enum["answer-scoping"],
+      AllocationJudgeCriterionEnum.enum.conciseness,
+      AllocationJudgeCriterionEnum.enum.naturalness,
+      AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
+    ]);
   });
 
   // clarify.allocation.rules.md rule 4 (concept question, Hebrew instrument): the
   // user asks what a קרן כספית (money-market fund) is. Same composer path as the
-  // "What's a buffer?" case, but guards the English-body / Hebrew-inline hard rule —
-  // the answer may name the Hebrew term inline but must stay in English prose and
-  // must not leak internal risk labels.
+  // "What's a buffer?" case, but exercises the Hebrew-instrument path: the user
+  // asks with a Hebrew term, so the answer must name it inline yet keep the body
+  // English (`english-body`) and must not pin a risk persona on the user
+  // (`no-risk-labeling`). Also grades `answer-scoping`: a concept answer must
+  // define only the asked term and stop — this turn previously bled into "why the
+  // split exists", which the question composer's concept bullet now explicitly
+  // forbids, so the guard belongs here.
   it("should answer a Hebrew concept question and re-ask the anchor", async () => {
     const { transcript, result } = await runAllocation(longHorizonAggressiveInput, [
       "What's a קרן כספית?",
@@ -444,11 +444,19 @@ describe("collectAllocation", () => {
 
     expectEquityInRange(output, 80, 90);
     expectMinAgentTurns(transcript, 2);
-    expectNoInternalLabels(transcript);
     expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+
+    await judgeAndExpectPass(transcript, [
+      AllocationJudgeCriterionEnum.enum["answer-scoping"],
+      AllocationJudgeCriterionEnum.enum["english-body"],
+      AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
+    ]);
   });
 
-  // clarify.allocation.rules.md rule 4: method question answered without exposing internal labels
+  // clarify.allocation.rules.md rule 4: method question answered without pinning a
+  // risk persona on the user (the prime labeling-risk turn — "how did you decide?"
+  // tempts "well, you're a moderate investor"). Graded by the judge's
+  // no-risk-labeling criterion among the answer-turn criteria below.
   it("should answer a method question and re-ask the anchor", async () => {
     const { transcript, result } = await runAllocation(longHorizonAggressiveInput, [
       "How did you come up with that split?",
@@ -458,10 +466,14 @@ describe("collectAllocation", () => {
 
     expectEquityInRange(output, 80, 90);
     expectMinAgentTurns(transcript, 2);
-    expectNoInternalLabels(transcript);
     expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
-    await judgeAndExpectPass(transcript, ANSWER_TURN_CRITERIA);
+    await judgeAndExpectPass(transcript, [
+      AllocationJudgeCriterionEnum.enum["answer-scoping"],
+      AllocationJudgeCriterionEnum.enum.conciseness,
+      AllocationJudgeCriterionEnum.enum.naturalness,
+      AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
+    ]);
   });
 
   // clarify.allocation.rules.md rule 4: instrument question deflected to later phases
@@ -476,7 +488,12 @@ describe("collectAllocation", () => {
     expectMinAgentTurns(transcript, 2);
     expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
-    await judgeAndExpectPass(transcript, ANSWER_TURN_CRITERIA);
+    await judgeAndExpectPass(transcript, [
+      AllocationJudgeCriterionEnum.enum["answer-scoping"],
+      AllocationJudgeCriterionEnum.enum.conciseness,
+      AllocationJudgeCriterionEnum.enum.naturalness,
+      AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
+    ]);
   });
 
   // clarify.allocation.rules.md rule 4 + rule 3: clarifying question followed by counter-proposal (3-turn worst case)

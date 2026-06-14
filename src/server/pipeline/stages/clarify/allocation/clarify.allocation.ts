@@ -25,7 +25,6 @@ import {
   deriveAnchorEquityPercentage,
   formatCurrency,
   isAcceptKind,
-  mapRiskSelfRatingScoreToTolerance,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
@@ -285,15 +284,12 @@ export const collectAllocation = async (
 ): Promise<AllocationPhaseResult> => {
   logger.info("Starting allocation phase", { input });
 
-  const { amount, timeline, riskSelfRatingScore } = input;
+  const { amount, timeline, riskTolerance } = input;
 
-  const suggestedEquityRange =
-    ALLOCATION_ANCHOR_DATA[mapRiskSelfRatingScoreToTolerance(riskSelfRatingScore)][
-      timeline
-    ];
+  const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
   const anchorEquityPercentage = deriveAnchorEquityPercentage(
     suggestedEquityRange,
-    riskSelfRatingScore,
+    riskTolerance,
   );
 
   logger.info("Derived allocation anchor", {

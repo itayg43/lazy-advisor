@@ -1,18 +1,6 @@
-import { z } from "zod";
-
+import type { RiskTolerance } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { TimelineBucket } from "#types/pipeline.types";
-
-// Internal risk-tolerance buckets. Scoped to allocation: the only consumers are
-// the anchor table keys and the banned-words list below. The bucket is never
-// threaded through the pipeline or shown to the user — it's derived on demand
-// from the user's `riskSelfRatingScore` via `mapRiskSelfRatingScoreToTolerance`.
-export const AllocationRiskToleranceEnum = z.enum([
-  "conservative",
-  "moderate",
-  "aggressive",
-]);
-export type AllocationRiskTolerance = z.infer<typeof AllocationRiskToleranceEnum>;
 
 const {
   "3–5 years": t3to5,
@@ -20,8 +8,16 @@ const {
   "10+ years": t10plus,
 } = TimelineBucketEnum.enum;
 
-export const ALLOCATION_RISK_LEVELS = AllocationRiskToleranceEnum.options
-  .map((o) => `\`${o}\``)
+// The advisor must never pin a risk personality on the user — not "you're an
+// aggressive investor", not "your moderate profile", not any "you're a ___
+// investor" label. This is a UX rule (don't hand a beginner a risk identity off
+// a single 1–5 self-rating), enforced in the composer prompts and graded by the
+// allocation judge's `no-risk-labeling` criterion. These three words are the
+// most common such labels, kept here as the illustrative examples injected into
+// the prompt instruction — not an exhaustive denylist (the rule is broader than
+// any fixed word set, and plain uses like "a moderate amount" are fine).
+export const ALLOCATION_RISK_LABEL_EXAMPLES = ["conservative", "moderate", "aggressive"]
+  .map((w) => `\`${w}\``)
   .join(", ");
 
 export const ALLOCATION_MAX_NEGOTIATION_TURNS = 5;
@@ -38,23 +34,40 @@ export type AllocationTimeline = Exclude<TimelineBucket, "under 3 years">;
 
 export type AllocationSuggestedEquityRange = { min: number; max: number };
 
+// Keyed directly by the 1–5 `riskTolerance` score × timeline. Scores pair up by
+// design: 1 and 2 share the cautious range, 4 and 5 share the bold range, with
+// `deriveAnchorEquityPercentage` splitting each shared range's low/high edge by
+// score. The duplicated rows (1≡2, 4≡5) are intentional — the prior version
+// collapsed the score into a conservative/moderate/aggressive bucket to avoid
+// the duplication, but that bucket had no other reader and only added a mapping
+// step, so the table now carries the score directly.
 export const ALLOCATION_ANCHOR_DATA = {
-  conservative: {
+  1: {
     [t3to5]: { min: 10, max: 20 },
     [t5to10]: { min: 30, max: 40 },
     [t10plus]: { min: 40, max: 50 },
   },
-  moderate: {
+  2: {
+    [t3to5]: { min: 10, max: 20 },
+    [t5to10]: { min: 30, max: 40 },
+    [t10plus]: { min: 40, max: 50 },
+  },
+  3: {
     [t3to5]: { min: 20, max: 30 },
     [t5to10]: { min: 50, max: 60 },
     [t10plus]: { min: 60, max: 70 },
   },
-  aggressive: {
+  4: {
+    [t3to5]: { min: 30, max: 40 },
+    [t5to10]: { min: 60, max: 70 },
+    [t10plus]: { min: 80, max: 90 },
+  },
+  5: {
     [t3to5]: { min: 30, max: 40 },
     [t5to10]: { min: 60, max: 70 },
     [t10plus]: { min: 80, max: 90 },
   },
 } satisfies Record<
-  AllocationRiskTolerance,
+  RiskTolerance,
   Record<AllocationTimeline, AllocationSuggestedEquityRange>
 >;

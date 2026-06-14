@@ -7,7 +7,7 @@ import {
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
-export const RiskSelfRatingScoreSchema = z.union([
+export const RiskToleranceSchema = z.union([
   z.literal(1),
   z.literal(2),
   z.literal(3),
@@ -16,15 +16,15 @@ export const RiskSelfRatingScoreSchema = z.union([
 ]);
 
 export const RiskClassifySchema = AskWithClassifyBaseSchema.extend({
-  riskSelfRatingScore: RiskSelfRatingScoreSchema.nullable(),
+  riskTolerance: RiskToleranceSchema.nullable(),
 });
 
 export const RiskClassifyResolvedSchema = RiskClassifySchema.extend({
-  riskSelfRatingScore: RiskSelfRatingScoreSchema,
+  riskTolerance: RiskToleranceSchema,
 });
 
 export const RiskPhaseOutputSchema = z.object({
-  riskSelfRatingScore: RiskSelfRatingScoreSchema,
+  riskTolerance: RiskToleranceSchema,
 });
 
 export const RiskPhaseResultSchema = z.discriminatedUnion("status", [

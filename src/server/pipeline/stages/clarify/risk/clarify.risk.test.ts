@@ -4,7 +4,7 @@ import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type {
   RiskClassify,
-  RiskSelfRatingScore,
+  RiskTolerance,
 } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
@@ -29,18 +29,16 @@ describe("collectRisk", () => {
     output,
   });
 
-  const converged = (
-    riskSelfRatingScore: RiskSelfRatingScore | null,
-  ): OpenAIResponse<RiskClassify> =>
+  const converged = (riskTolerance: RiskTolerance | null): OpenAIResponse<RiskClassify> =>
     createParsedResponse({
       clarificationNeeded: false,
       clarificationMessage: null,
-      riskSelfRatingScore,
+      riskTolerance,
     });
 
-  // The phase emits the raw self-rating; the score→tolerance bucketing now lives
-  // in allocation (mapRiskSelfRatingScoreToTolerance), covered by its lib tests.
-  it.each<{ score: RiskSelfRatingScore }>([{ score: 1 }, { score: 3 }, { score: 5 }])(
+  // The phase emits the raw 1–5 score; allocation keys its anchor table on that
+  // score directly (no tolerance bucketing), covered by its lib tests.
+  it.each<{ score: RiskTolerance }>([{ score: 1 }, { score: 3 }, { score: 5 }])(
     "should return the converged self-rating score $score",
     async ({ score }) => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(converged(score));
@@ -50,7 +48,7 @@ describe("collectRisk", () => {
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.completed,
-        riskSelfRatingScore: score,
+        riskTolerance: score,
       });
     },
   );
@@ -60,7 +58,7 @@ describe("collectRisk", () => {
     const needsClarification: OpenAIResponse<RiskClassify> = createParsedResponse({
       clarificationNeeded: true,
       clarificationMessage: "Please pick a whole number between 1 and 5.",
-      riskSelfRatingScore: null,
+      riskTolerance: null,
     });
     mockedCallOpenAIParsed
       .mockResolvedValueOnce(needsClarification)

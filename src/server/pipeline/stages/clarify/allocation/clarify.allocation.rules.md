@@ -1,28 +1,32 @@
 # Clarify Allocation Phase — Behavior Rules
 
-Behavioral rules for the allocation phase. This phase converts the user's risk self-rating (a 1–5 score from the risk phase) and timeline (from the parameters phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. The score is collapsed into an internal risk-tolerance bucket (`mapRiskSelfRatingScoreToTolerance` in `clarify.allocation.lib.ts`) that keys the anchor table below.
+Behavioral rules for the allocation phase. This phase converts the user's `riskTolerance` (a 1–5 score from the risk phase) and timeline (from the parameters phase) into a **total-portfolio split** between two buckets: equity (stocks / stock ETFs) and buffer (cash, money-market funds, short-term bonds). Output is two integers summing to 100. The 1–5 `riskTolerance` keys the anchor table below directly — there is no intermediate `conservative`/`moderate`/`aggressive` bucket.
 
 This phase does **not** pick instruments. Ticker selection belongs to T5 (equity) and T6 (buffer).
 
-## Anchor Table (risk tolerance × timeline)
+## Anchor Table (riskTolerance × timeline)
 
-| Willingness \ Timeline | 3–5 years | 5–10 years | 10+ years |
-| ---------------------- | --------- | ---------- | --------- |
-| `conservative`         | 10–20%    | 30–40%     | 40–50%    |
-| `moderate`             | 20–30%    | 50–60%     | 60–70%    |
-| `aggressive`           | 30–40%    | 60–70%     | 80–90%    |
+| `riskTolerance` \ Timeline | 3–5 years | 5–10 years | 10+ years |
+| -------------------------- | --------- | ---------- | --------- |
+| 1                          | 10–20%    | 30–40%     | 40–50%    |
+| 2                          | 10–20%    | 30–40%     | 40–50%    |
+| 3                          | 20–30%    | 50–60%     | 60–70%    |
+| 4                          | 30–40%    | 60–70%     | 80–90%    |
+| 5                          | 30–40%    | 60–70%     | 80–90%    |
 
-All cells are **ranges**, not points. The specific equity percentage inside a cell is **precomputed in code** based on the user's `riskSelfRatingScore` (see Rule 1 → Within-bucket discrimination). Buffer percentage is always `100 - equity`.
+Scores pair up onto shared ranges by design — 1≡2 (cautious) and 4≡5 (bold) — with score 3 (neutral) on a range of its own. The duplicated rows are intentional: the within-cell edge selection (Rule 1) then splits each shared range so every score still lands at a distinct point. There are three distinct ranges per timeline, not five.
+
+All cells are **ranges**, not points. The specific equity percentage inside a cell is **precomputed in code** based on the user's `riskTolerance` (see Rule 1 → Within-cell discrimination). Buffer percentage is always `100 - equity`.
 
 Users with an `under 3 years` timeline never reach this phase — the orchestrator exits early after parameters collection and redirects them to a money market fund. This phase only receives timelines of `3–5 years`, `5–10 years`, or `10+ years`.
 
-The words `conservative`, `moderate`, and `aggressive` are **never used when speaking to the user** — not even as general adjectives. Internal "cell" terminology is also never exposed to the user; the cell range is referred to as the "recommended range" in user-facing text.
+The advisor **never pins a risk personality on the user** — not "you're an aggressive investor", not "your moderate profile", nor any equivalent "you're a ___ investor" label. This is a UX no-label rule: a single 1–5 self-rating is too thin to hand a beginner a risk identity. It is broader than any fixed word list — `conservative`/`moderate`/`aggressive` are just the most common examples (`ALLOCATION_RISK_LABEL_EXAMPLES`, injected into the composer prompts), and the rule is graded by the allocation judge's `no-risk-labeling` criterion rather than a token scan. Factually restating the user's own answers ("your timeline is long", "you said big drops make you uncomfortable") is not a label and is fine; so are plain, non-personal uses like "a moderate amount in stocks". Internal "cell" terminology is also never exposed to the user; the cell range is referred to as the "recommended range" in user-facing text.
 
 ## Design constraints
 
 - **Point-estimate, not distribution.** Output is a single integer (e.g., 70), not a range. Acceptable for a behavioral anchor; not acceptable as portfolio-optimization output.
 - **"Sizing tends to reduce panic-selling" — directional, not absolute.** Use "tends to reduce"; never "prevents" or "eliminates". Aligned with Kitces's composure-vs-tolerance distinction.
-- **3-bucket willingness input is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. We collapse the 1–5 self-rating into a 3-bucket scale that keys a 3×4 table, with `riskSelfRatingScore` providing within-bucket discrimination so each score lands at a distinct point inside its cell (see Rule 1).
+- **3 distinct anchor ranges is coarser than industry norm.** Vanguard uses 9 anchors, Fidelity 7. The 1–5 `riskTolerance` maps onto only three distinct ranges per timeline (scores 1≡2 and 4≡5 share a range); the within-cell edge selection then spreads the five scores across five distinct landing points inside those ranges (see Rule 1).
 
 ---
 
@@ -35,24 +39,24 @@ The words `conservative`, `moderate`, and `aggressive` are **never used when spe
 - The behavioral framing: "sizing to your comfort level **tends to reduce** the chance of panic-selling when drops happen." Never "prevents" or "eliminates".
 - A question asking whether the user wants that split, more in stocks, or more in buffer.
 
-### Within-bucket discrimination
+### Within-cell discrimination
 
-The equity percentage inside a cell is selected by `deriveAnchorEquityPercentage(cell, riskSelfRatingScore)`:
+The equity percentage inside a cell is selected by `deriveAnchorEquityPercentage(cell, riskTolerance)`:
 
-| `riskSelfRatingScore` | Position in cell | Formula                     |
-| --------------------- | ---------------- | --------------------------- |
-| 1, 4                  | Low end          | `cell.min`                  |
-| 2, 5                  | High end         | `cell.max`                  |
-| 3                     | Midpoint         | `(cell.min + cell.max) / 2` |
+| `riskTolerance` | Position in cell | Formula                     |
+| --------------- | ---------------- | --------------------------- |
+| 1, 4            | Low end          | `cell.min`                  |
+| 2, 5            | High end         | `cell.max`                  |
+| 3               | Midpoint         | `(cell.min + cell.max) / 2` |
 
-Score 3 hits the midpoint because it's the only score in the moderate risk-tolerance bucket — no within-bucket discrimination is needed. Landing on the cell edges keeps proposals round (80/20, 90/10) rather than awkward insets like 82/18 or 88/12.
+Score 3 hits the midpoint because it has its anchor row to itself — unlike the paired 1≡2 and 4≡5 rows, there is no second score to split the range's low/high edge with. Landing on the cell edges keeps proposals round (80/20, 90/10) rather than awkward insets like 82/18 or 88/12.
 
 **Scenarios:**
 
-- Aggressive, 10+ years, ₪50,000, score 5 → 90% equity (cell.max) → propose ₪45,000 / ₪5,000.
-- Moderate, 5–10 years, ₪80,000, score 3 → 55% equity (midpoint) → propose ₪44,000 / ₪36,000.
-- Conservative, 3–5 years, ₪30,000, score 2 → 20% equity (cell.max) → propose ₪6,000 / ₪24,000.
-- Same cell, different score: aggressive 10+ yr, score 4 → 80% equity (cell.min), not 90% (score 5). Score discriminates within the bucket.
+- Score 5, 10+ years, ₪50,000 → 90% equity (cell.max) → propose ₪45,000 / ₪5,000.
+- Score 3, 5–10 years, ₪80,000 → 55% equity (midpoint) → propose ₪44,000 / ₪36,000.
+- Score 2, 3–5 years, ₪30,000 → 20% equity (cell.max) → propose ₪6,000 / ₪24,000.
+- Same row, different score: score 4 at 10+ yr → 80% equity (cell.min), not 90% (score 5). The score selects the edge within the shared range.
 
 ---
 
@@ -102,8 +106,8 @@ Score 3 hits the midpoint because it's the only score in the moderate risk-toler
 
 **Explanation scope:**
 
-- **Concept questions** (what equity is, what a buffer is for, why split at all, what a money-market fund / קרן כספית is): answer in one or two sentences.
-- **Method questions** ("how did you come up with 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** use the words `conservative`, `moderate`, or `aggressive` when speaking to the user — not even as general adjectives — and do not show the anchor table.
+- **Concept questions** (what equity is, what a buffer is for, why split at all, what a money-market fund / קרן כספית is): answer in one or two sentences, covering **only the concept asked** — do not drift into an adjacent one (e.g. defining a money-market fund, then explaining why the portfolio is split).
+- **Method questions** ("how did you come up with 70/30?"): name the two inputs — investment timeline and comfort with drops — and note the split reflects both. Do **not** pin a risk personality on the user (no "you're a conservative/moderate/aggressive investor" or similar) and do not show the anchor table.
 - **Instrument questions** ("which ETF?", "which money-market fund?"): say that's the next step after we settle on the split, and bring the conversation back to sizing.
 
 **Scenarios:**
@@ -150,3 +154,5 @@ Beyond the schema/behavior assertions in `clarify.allocation.eval.ts`, the LLM-c
 - **answer-scoping** — Rule 4 answers stay on the asked topic and don't bleed into adjacent territory; the mandated re-ask is in-scope.
 - **naturalness** — calm, matter-of-fact, no filler openers ("Great", "Sure", "Of course", "Understood", "Got it").
 - **framing-plain-language** — Rule 3 trade-off framing reads as plain beginner language tied to the user's timeline/amounts, not a keyword drop.
+- **no-risk-labeling** — no turn pins a risk personality on the user (e.g. "you're an aggressive investor", "your moderate profile"); factual restatements of the user's own answers, and plain non-personal uses like "a moderate amount", are fine.
+- **english-body** — the message body is English; naming an Israeli instrument by its Hebrew term inline (e.g. `קרן כספית`) is allowed. Graded on the Hebrew-instrument question case.

@@ -1,6 +1,6 @@
 # Clarify Risk Phase — Behavior Rules
 
-Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The phase output is the raw 1–5 score. The downstream allocation phase collapses that score into one of three internal tolerance buckets (`conservative`, `moderate`, `aggressive`, via `mapRiskSelfRatingScoreToTolerance` in `clarify.allocation.lib.ts`) to key its anchor table — those labels are **never shown to the user** and are not produced here.
+Behavioral rules for the risk phase. This phase resolves the user's willingness to tolerate temporary drops via a single 1-to-5 self-rating question. The phase output is the raw 1–5 score, emitted as `riskTolerance`. The downstream allocation phase keys its anchor table on that score directly — no `conservative`/`moderate`/`aggressive` bucket is computed, here or there.
 
 The phase is willingness-only. Age and investment timeline are not passed as context and do not affect the question asked or the score.
 
@@ -20,11 +20,11 @@ The phase is willingness-only. Age and investment timeline are not passed as con
 
 **Scenarios** (extraction variants; all-digit and all-word coverage is owned by unit tests):
 
-- `"1"` → riskSelfRatingScore: 1
-- `"3"` → riskSelfRatingScore: 3
-- `"5"` → riskSelfRatingScore: 5
-- `"three"` → riskSelfRatingScore: 3 (word-form acceptance)
-- `"I'd say 4"` → riskSelfRatingScore: 4 (digit embedded in surrounding text)
+- `"1"` → riskTolerance: 1
+- `"3"` → riskTolerance: 3
+- `"5"` → riskTolerance: 5
+- `"three"` → riskTolerance: 3 (word-form acceptance)
+- `"I'd say 4"` → riskTolerance: 4 (digit embedded in surrounding text)
 
 No budget impact — this terminates the phase successfully.
 
@@ -41,10 +41,10 @@ No budget impact — this terminates the phase successfully.
 
 **Scenarios:**
 
-- `"7"` → re-ask → `"4"` → riskSelfRatingScore: 4
-- `"I'd panic"` → re-ask → `"1"` → riskSelfRatingScore: 1
-- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → riskSelfRatingScore: 3
-- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → riskSelfRatingScore: 2
+- `"7"` → re-ask → `"4"` → riskTolerance: 4
+- `"I'd panic"` → re-ask → `"1"` → riskTolerance: 1
+- `"3.5"` → re-ask (note: single whole number needed) → `"3"` → riskTolerance: 3
+- `"2-3"` → re-ask (note: single whole number needed) → `"2"` → riskTolerance: 2
 
 ---
 

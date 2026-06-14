@@ -37,7 +37,7 @@ const askRisk = async (responder: Responder): Promise<AskRiskResult> => {
 
     const result = {
       status: PipelineStatusEnum.enum.completed,
-      riskSelfRatingScore: output.riskSelfRatingScore,
+      riskTolerance: output.riskTolerance,
     } as const;
 
     logger.debug("askRisk output", { output: result });
@@ -64,7 +64,7 @@ export const collectRisk = async (responder: Responder): Promise<RiskPhaseResult
 
   const result = {
     status: PipelineStatusEnum.enum.completed,
-    riskSelfRatingScore: riskResult.riskSelfRatingScore,
+    riskTolerance: riskResult.riskTolerance,
   } as const;
 
   logger.debug("Risk output", { output: result });

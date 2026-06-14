@@ -54,7 +54,7 @@ describe("collectRisk", () => {
       lastOutput = output;
       if (output.status !== "completed") return;
 
-      expect(output.riskSelfRatingScore).toBe(expectedScore);
+      expect(output.riskTolerance).toBe(expectedScore);
       expectNoNeutralityViolation(responder.transcript);
     },
   );
@@ -68,7 +68,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(3);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
     expectNoNeutralityViolation(responder.transcript);
   });
@@ -82,7 +82,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(4);
+    expect(output.riskTolerance).toBe(4);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
 
@@ -98,7 +98,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(3);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     expect(agentTurns[1].content).toContain("1 = very uncomfortable");
@@ -114,7 +114,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(4);
+    expect(output.riskTolerance).toBe(4);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     // re-ask must instruct the user to pick within 1–5
@@ -132,7 +132,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(1);
+    expect(output.riskTolerance).toBe(1);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     // re-ask must acknowledge the emotional content — not a bare scale re-presentation
@@ -149,7 +149,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(3);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
@@ -162,7 +162,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(2);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     // re-ask must explain the scale needs a single number, not just re-present it
@@ -181,7 +181,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
+    expect(output.riskTolerance).toBe(3);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     expect(agentTurns[1].content).toContain("1 = very uncomfortable");
@@ -205,7 +205,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(2);
+    expect(output.riskTolerance).toBe(2);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 

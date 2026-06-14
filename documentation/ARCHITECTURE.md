@@ -46,10 +46,10 @@ flowchart TD
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
 | parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops | — → `RiskPhaseResult` |
-| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table; derives the tolerance bucket from the risk self-rating | amount, timeline, riskSelfRatingScore → `AllocationPhaseResult` |
+| allocation | Size the total-portfolio equity/buffer split from a 2-axis (riskTolerance × timeline) anchor table keyed on the 1–5 score directly | amount, timeline, riskTolerance → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | amount, equityPercentage → `ContributionPhaseResult` |
-| equity | *(planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskSelfRatingScore, equityPercentage, plansToContribute → `EquityPhaseOutput` |
-| buffer | *(planned)* Resolve which buffer instrument fills the buffer bucket | amount, timeline, riskSelfRatingScore, bufferPercentage, equity allocations → `BufferPhaseOutput` |
+| equity | *(planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskTolerance, equityPercentage, plansToContribute → `EquityPhaseOutput` |
+| buffer | *(planned)* Resolve which buffer instrument fills the buffer bucket | amount, timeline, riskTolerance, bufferPercentage, equity allocations → `BufferPhaseOutput` |
 
 Phases use one of three conversation patterns depending on how code and the LLM divide control of the flow — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Per-phase schemas, types, and constants are co-located with each phase (e.g., `allocation/clarify.allocation.schemas.ts`). Cross-phase shared primitives (goal classification, halt/unresolved enums, `ClarifyStageResult`, shared phase helpers) live under `clarify/shared/`.
 
@@ -173,7 +173,7 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
   → handleOutOfScopeRedirect   → IntakePhaseOutput { accepted: true }
   → collectEfDebt()
   → collectParameters()
-  → collectRisk() → collectAllocation(amount, timeline, riskSelfRatingScore) → ... → UserProfile
+  → collectRisk() → collectAllocation(amount, timeline, riskTolerance) → ... → UserProfile
 ```
 
 Each intake handler lives in its own subfolder under `clarify/intake/` alongside its evals. Each is a sub-agent: its own system prompt, its own `runPhaseLoop`, and a typed `IntakePhaseOutput`. Acceptance is determined by a post-loop structured LLM call:
@@ -196,13 +196,13 @@ After parameters collection, the stage compares the destructured `timeline` agai
 
 ### Risk phase — single 1–5 self-rating
 
-The risk phase asks one question: a 1–5 self-rating of comfort with seeing investments drop temporarily, with behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The phase emits only `riskSelfRatingScore` — the raw integer, nothing else. The downstream allocation phase collapses it into a `conservative`/`moderate`/`aggressive` bucket (1–2 / 3 / 4–5) to key its anchor table — deterministically in code (`mapRiskSelfRatingScoreToTolerance`), not by the LLM. The bucket is allocation-internal and never persisted on the profile.
+The risk phase asks one question: a 1–5 self-rating of comfort with seeing investments drop temporarily, with behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The phase emits only `riskTolerance` — the raw 1–5 integer, nothing else. The downstream allocation phase keys its anchor table on that score directly; there is no `conservative`/`moderate`/`aggressive` bucket. `riskTolerance` is consumed only by allocation and is never persisted on the profile.
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
 **Hard-fail on unresolved.** If the retry budget is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "unresolved", reason: "risk_tolerance" }`. The orchestrator dispatches a closing message rather than the stage defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline` hard-fail pattern.
 
-**`riskSelfRatingScore` is the phase's only output** and the allocation phase consumes it for both jobs: deriving the tolerance bucket *and* calibrating within that bucket (e.g., distinguishing a "5" aggressive from a "4" aggressive). Keeping the bucketing out of the risk phase means granularity belongs to allocation, not classification.
+**`riskTolerance` is the phase's only output** and the allocation phase consumes it directly: it both selects the anchor row and calibrates the landing point within the row's range (e.g., a "5" anchors to the high edge, a "4" to the low edge of the same range). Keeping all anchor logic in allocation means granularity belongs there, not in classification.
 
 **Willingness-only, no external context.** No timeline, age, or amount is passed to the phase. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Surfacing the timeline would reintroduce the framing bias the design avoids.
 
@@ -212,7 +212,7 @@ The allocation phase resolves the total-portfolio split between equity (stocks /
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
-Code derives the tolerance bucket from `riskSelfRatingScore` (`mapRiskSelfRatingScoreToTolerance`), locates the user's cell from bucket × `timeline`, and picks a specific integer inside the cell's range — all deterministically, no LLM call. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
+Code locates the user's cell from `riskTolerance` × `timeline` (the anchor table is keyed on the 1–5 score directly, with rows 1≡2 and 4≡5 duplicated), then picks a specific integer inside the cell's range via `deriveAnchorEquityPercentage` — all deterministically, no LLM call. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
@@ -244,7 +244,7 @@ The clarify stage output is validated with `UserProfileSchema` before returning.
 
 ### Inline assembly from typed outputs
 
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` and `timeline` from parameters; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `riskSelfRatingScore` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` and `timeline` from parameters; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `riskTolerance` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ### Session correlation
 
