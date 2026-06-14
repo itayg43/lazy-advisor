@@ -1,6 +1,8 @@
 import type { EasyInputMessage } from "openai/resources/responses/responses";
 
+import { BadGatewaySchemaValidationError } from "#errors";
 import { createLogger } from "#lib/logger";
+import { parseSchema } from "#lib/parse-schema";
 import {
   calculateBufferPercentage,
   computeSplit,
@@ -15,10 +17,11 @@ import {
   AllocationClassifierOutputSchema,
   AllocationComposerOutputSchema,
   AllocationCounterBranchKindEnum,
+  AllocationIntentSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
-  AllocationClassifierOutput,
   AllocationCounterBranch,
+  AllocationIntent,
   AllocationProposalContext,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import { callOpenAIParsed } from "#services/openai";
@@ -30,7 +33,7 @@ const logger = createLogger("clarifyAllocationIO");
 
 export const classifyTurn = async (
   history: ReadonlyArray<EasyInputMessage>,
-): Promise<AllocationClassifierOutput> => {
+): Promise<AllocationIntent> => {
   const { id, output } = await callOpenAIParsed(
     {
       model: "gpt-5.4-nano",
@@ -42,12 +45,28 @@ export const classifyTurn = async (
     AllocationClassifierOutputSchema,
   );
 
+  // Re-parse the flat model output into the resolved intent: enforces the
+  // "percentage iff counter" invariant. A `counter` with a null percentage
+  // throws here — model disobedience (the prompt routes numberless replies to
+  // `unknown`), so it's a bad-upstream-response (502), mirroring askWithClassify's
+  // resolved-schema parse. No logging — the `runClarify` catch logs `BaseError`s once.
+  const intent = parseSchema(
+    AllocationIntentSchema,
+    output,
+    (error, value) =>
+      new BadGatewaySchemaValidationError(
+        "Allocation classifier produced an intent that failed resolved-schema validation",
+        error,
+        value,
+      ),
+  );
+
   logger.info("Classified turn", {
     responseId: id,
-    ...output,
+    ...intent,
   });
 
-  return output;
+  return intent;
 };
 
 const composeReply = async (instructions: string, input: string): Promise<string> => {

@@ -69,28 +69,52 @@ export const AllocationCounterBranchKindEnum = z.enum([
 
 export const AllocationExtremeCounterDirectionEnum = z.enum(["too-high", "too-low"]);
 
+const AllocationProposedEquityPercentageSchema = z.number().int().min(0).max(100);
+
 /**
- * Classifier output. Flat shape (not a discriminated union) because OpenAI
- * structured outputs don't accept z.discriminatedUnion — same pattern as the
- * askWithClassify two-schema setup. `proposedEquityPercentage` is meaningful
+ * Classifier output — the model-facing shape. Flat (not a discriminated union)
+ * because OpenAI structured outputs don't accept z.discriminatedUnion;
+ * `classifyTurn` re-parses it into the resolved `AllocationIntentSchema`. Same
+ * two-schema split as askWithClassify. `proposedEquityPercentage` is meaningful
  * only when `kind === "counter"`; nullable otherwise.
  */
 export const AllocationClassifierOutputSchema = z.object({
   kind: AllocationIntentKindEnum,
-  proposedEquityPercentage: z
-    .number()
-    .int()
-    .min(0)
-    .max(100)
-    .nullable()
-    .describe(
-      'The user\'s equity percentage when kind is "counter" (buffer is implied as 100 − equity). null for every other intent.',
-    ),
+  proposedEquityPercentage: AllocationProposedEquityPercentageSchema.nullable().describe(
+    'The user\'s equity percentage when kind is "counter" (buffer is implied as 100 − equity). null for every other intent.',
+  ),
 });
 
 /**
- * Composer schemas — wrap free-text replies in a single `reply` field so we
- * can keep using callOpenAIParsed (consistent with the rest of the codebase).
+ * Resolved intent — the internal contract, parsed from the flat classifier
+ * output inside `classifyTurn`. A discriminated union makes the
+ * "percentage iff counter" invariant real in the types: `counter` carries a
+ * guaranteed number, every other intent drops the field (zod strips the
+ * model's null). A `counter` with a null percentage fails this parse and
+ * throws — the prompt routes numberless replies to `unknown`, so that shape is
+ * model disobedience, surfaced rather than masked.
+ *
+ * Each kind is its own variant rather than collapsing the four non-counter
+ * kinds into one `exclude(["counter"])` member: a collapsed member fuses the
+ * accept kinds with question/unknown under a single `kind` union, and no type
+ * operation can separate them again — so `AllocationContinuingIntent` (the
+ * accept-free type `resolveAskDecision` consumes) can't be derived via
+ * `Exclude`. Listing the variants keeps each kind independently extractable.
+ */
+export const AllocationIntentSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: AllocationIntentKindEnum.extract(["counter"]),
+    proposedEquityPercentage: AllocationProposedEquityPercentageSchema,
+  }),
+  z.object({ kind: AllocationIntentKindEnum.extract(["accept"]) }),
+  z.object({ kind: AllocationIntentKindEnum.extract(["accept-original"]) }),
+  z.object({ kind: AllocationIntentKindEnum.extract(["question"]) }),
+  z.object({ kind: AllocationIntentKindEnum.extract(["unknown"]) }),
+]);
+
+/**
+ * Composer output schema — wraps a free-text reply in a single `reply` field so
+ * the composers can keep using callOpenAIParsed (consistent with the codebase).
  */
 export const AllocationComposerOutputSchema = z.object({
   reply: z.string().min(1),

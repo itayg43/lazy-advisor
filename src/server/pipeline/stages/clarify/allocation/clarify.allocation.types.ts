@@ -10,6 +10,7 @@ import type {
   AllocationCounterBranchKindEnum,
   AllocationExtremeCounterDirectionEnum,
   AllocationIntentKindEnum,
+  AllocationIntentSchema,
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
@@ -24,12 +25,30 @@ export type AllocationPhaseInput = {
 export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
 export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
 
-export type AllocationIntentKind = z.infer<typeof AllocationIntentKindEnum>;
+type AllocationIntentKind = z.infer<typeof AllocationIntentKindEnum>;
 export type AllocationAcceptIntentKind = Extract<
   AllocationIntentKind,
   "accept" | "accept-original"
 >;
 export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutputSchema>;
+
+/**
+ * Resolved intent — what `classifyTurn` returns after re-parsing the flat
+ * classifier output. The `counter` variant carries a guaranteed
+ * `proposedEquityPercentage`; every other variant has no such field.
+ */
+export type AllocationIntent = z.infer<typeof AllocationIntentSchema>;
+
+/**
+ * The continuing (non-terminal) intents — what `resolveAskDecision` handles.
+ * `createTurnHandler` resolves the accept intents before the continuing path,
+ * so they're excluded here; this keeps the Ask-producing switch to the three
+ * kinds it actually serves.
+ */
+export type AllocationContinuingIntent = Exclude<
+  AllocationIntent,
+  { kind: AllocationAcceptIntentKind }
+>;
 
 /**
  * Immutable per-phase inputs shared by the proposal/composer functions —
@@ -66,6 +85,28 @@ export type AllocationNegotiationState = AllocationFramingFlags & {
 export type AllocationHandlerOutput = HandlerOutput<
   AllocationNegotiationState,
   AllocationPhaseResult
+>;
+
+/**
+ * What the accept path returns: Done with a *completed* result only. Narrower
+ * than AllocationHandlerOutput — excludes the Ask arm (accept is terminal) and
+ * the unresolved result (that's the budget gate's outcome, not accept's).
+ * Mirrors AllocationAskDecision on the continuing side.
+ */
+export type AllocationAcceptDecision = {
+  kind: typeof HandlerOutputKind.Done;
+  result: Extract<AllocationPhaseResult, { status: "completed" }>;
+};
+
+/**
+ * What the init handler returns: the opening Ask only. Narrower than
+ * AllocationHandlerOutput — the allocation init always opens the negotiation
+ * with a proposal, never resolves the phase, so a Done (and with it the
+ * unresolved result) is unreachable and excluded here.
+ */
+export type AllocationInitHandlerOutput = Extract<
+  AllocationHandlerOutput,
+  { kind: typeof HandlerOutputKind.Ask }
 >;
 
 // State mutations a turn handler may request. `turnsTaken` is excluded — the

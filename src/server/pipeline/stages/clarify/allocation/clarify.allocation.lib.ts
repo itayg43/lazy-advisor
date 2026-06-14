@@ -12,7 +12,7 @@ import type {
   AllocationAcceptIntentKind,
   AllocationCounterBranch,
   AllocationFramingFlags,
-  AllocationIntentKind,
+  AllocationIntent,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { RiskTolerance } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
@@ -23,12 +23,15 @@ export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-
 export const calculateBufferPercentage = (equityPercentage: number): number =>
   100 - equityPercentage;
 
-/** Type guard for the two terminal accept intents (`accept`, `accept-original`). */
-export const isAcceptKind = (
-  kind: AllocationIntentKind,
-): kind is AllocationAcceptIntentKind =>
-  kind === AllocationIntentKindEnum.enum.accept ||
-  kind === AllocationIntentKindEnum.enum["accept-original"];
+/**
+ * Type guard for the two terminal accept intents (`accept`, `accept-original`).
+ * Narrows the whole intent so the negative branch yields `AllocationContinuingIntent`.
+ */
+export const isAcceptIntent = (
+  intent: AllocationIntent,
+): intent is Extract<AllocationIntent, { kind: AllocationAcceptIntentKind }> =>
+  intent.kind === AllocationIntentKindEnum.enum.accept ||
+  intent.kind === AllocationIntentKindEnum.enum["accept-original"];
 
 /**
  * Picks the opening equity percentage from the suggested range using the user's

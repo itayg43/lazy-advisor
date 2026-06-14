@@ -9,7 +9,6 @@ import {
 } from "#pipeline/run-conversation";
 import {
   ALLOCATION_ANCHOR_DATA,
-  ALLOCATION_MISSING_COUNTER_MESSAGE,
   ALLOCATION_UNKNOWN_INTENT_MESSAGE,
   ALLOCATION_MAX_NEGOTIATION_TURNS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
@@ -24,7 +23,7 @@ import {
   computeSplit,
   deriveAnchorEquityPercentage,
   formatCurrency,
-  isAcceptKind,
+  isAcceptIntent,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
@@ -33,11 +32,13 @@ import {
   AllocationPhaseResultSchema,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
+  AllocationAcceptDecision,
   AllocationAcceptIntentKind,
   AllocationAskDecision,
+  AllocationContinuingIntent,
   AllocationFramingFlags,
   AllocationHandlerOutput,
-  AllocationIntentKind,
+  AllocationInitHandlerOutput,
   AllocationNegotiationState,
   AllocationPhaseInput,
   AllocationPhaseResult,
@@ -50,8 +51,7 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 const logger = createLogger("clarifyAllocation");
 
 type ResolveAskDecisionParams = {
-  kind: Exclude<AllocationIntentKind, AllocationAcceptIntentKind>;
-  proposedEquityPercentage: number | null;
+  intent: AllocationContinuingIntent;
   state: Readonly<AllocationNegotiationState>;
   proposalContext: AllocationProposalContext;
   lastUserResponse: string;
@@ -73,7 +73,7 @@ const handleAcceptTurn = (
     currentEquityPercentage: number;
     anchorEquityPercentage: number;
   },
-): AllocationHandlerOutput => {
+): AllocationAcceptDecision => {
   const { currentEquityPercentage, anchorEquityPercentage } = equityPercentages;
 
   const finalEquityPercentage =
@@ -107,21 +107,10 @@ const handleAcceptTurn = (
 };
 
 const handleCounterTurn = async (
-  proposedEquityPercentage: number | null,
+  proposedEquityPercentage: number,
   state: Readonly<AllocationNegotiationState>,
   proposalContext: AllocationProposalContext,
 ): Promise<AllocationAskDecision> => {
-  if (proposedEquityPercentage === null) {
-    logger.warn(
-      "Counter intent without proposedEquityPercentage — re-asking for a specific split",
-    );
-
-    return {
-      kind: HandlerOutputKind.Ask,
-      message: ALLOCATION_MISSING_COUNTER_MESSAGE,
-    };
-  }
-
   const previousEquityPercentage = state.currentEquityPercentage;
   const currentFramingFlags: AllocationFramingFlags = {
     hasShownExtremeFraming: state.hasShownExtremeFraming,
@@ -180,7 +169,7 @@ const createInitHandler =
     amount: number,
     anchorEquityPercentage: number,
   ): InitHandler<AllocationNegotiationState, AllocationPhaseResult> =>
-  async (): Promise<AllocationHandlerOutput> => ({
+  async (): Promise<AllocationInitHandlerOutput> => ({
     kind: HandlerOutputKind.Ask,
     state: {
       currentEquityPercentage: anchorEquityPercentage,
@@ -197,12 +186,11 @@ const createInitHandler =
 const resolveAskDecision = async (
   params: ResolveAskDecisionParams,
 ): Promise<AllocationAskDecision> => {
-  const { kind, proposedEquityPercentage, state, proposalContext, lastUserResponse } =
-    params;
+  const { intent, state, proposalContext, lastUserResponse } = params;
 
-  switch (kind) {
+  switch (intent.kind) {
     case AllocationIntentKindEnum.enum.counter:
-      return handleCounterTurn(proposedEquityPercentage, state, proposalContext);
+      return handleCounterTurn(intent.proposedEquityPercentage, state, proposalContext);
     case AllocationIntentKindEnum.enum.question:
       return handleQuestionTurn(
         lastUserResponse,
@@ -219,10 +207,10 @@ const resolveAskDecision = async (
     }
 
     default: {
-      const _exhaustive: never = kind;
+      const _exhaustive: never = intent;
 
       throw new InternalError(
-        `resolveAskDecision: unhandled intent kind: ${JSON.stringify(_exhaustive)}`,
+        `resolveAskDecision: unhandled intent: ${JSON.stringify(_exhaustive)}`,
       );
     }
   }
@@ -237,12 +225,11 @@ const createTurnHandler =
     const turnsTaken = state.turnsTaken + 1;
 
     const intent = await classifyTurn(history);
-    const { kind } = intent;
 
     // Accept is checked before the budget gate on purpose: a user who accepts
     // on the final turn should complete the phase, not be failed as exhausted.
-    if (isAcceptKind(kind)) {
-      return handleAcceptTurn(kind, {
+    if (isAcceptIntent(intent)) {
+      return handleAcceptTurn(intent.kind, {
         currentEquityPercentage: state.currentEquityPercentage,
         anchorEquityPercentage,
       });
@@ -261,8 +248,7 @@ const createTurnHandler =
     }
 
     const { message, statePatch } = await resolveAskDecision({
-      kind,
-      proposedEquityPercentage: intent.proposedEquityPercentage,
+      intent,
       state,
       proposalContext,
       lastUserResponse,

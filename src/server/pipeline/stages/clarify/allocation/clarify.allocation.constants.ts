@@ -22,9 +22,6 @@ export const ALLOCATION_RISK_LABEL_EXAMPLES = ["conservative", "moderate", "aggr
 
 export const ALLOCATION_MAX_NEGOTIATION_TURNS = 5;
 
-export const ALLOCATION_MISSING_COUNTER_MESSAGE =
-  "I didn't catch a specific percentage. Could you tell me what split you'd like, or reply 'yes' to accept the current one?";
-
 export const ALLOCATION_UNKNOWN_INTENT_MESSAGE =
   "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?";
 
