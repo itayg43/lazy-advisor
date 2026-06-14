@@ -1,4 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
 import { BadGatewayError } from "#errors";
@@ -199,9 +198,6 @@ export const judgeAllocationConversation = async (
       model: "gpt-5.4",
       instructions: buildJudgeInstructions(criteria),
       input: conversation,
-      text: {
-        format: zodTextFormat(AllocationJudgeOutputSchema, "AllocationJudgeOutputSchema"),
-      },
       reasoning: { effort: "medium" },
     },
     AllocationJudgeOutputSchema,

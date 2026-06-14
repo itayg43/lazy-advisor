@@ -1,4 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseFunctionToolCall,
   ResponseInputItem,
@@ -160,7 +159,6 @@ export const runPhaseExtraction = async <T>(
       instructions,
       input: [],
       previous_response_id: lastResponseId,
-      text: { format: zodTextFormat(schema, "output") },
       reasoning: { effort },
     },
     schema,

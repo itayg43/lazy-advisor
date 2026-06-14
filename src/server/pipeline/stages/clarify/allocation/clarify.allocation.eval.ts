@@ -24,7 +24,7 @@ describe("collectAllocation", () => {
   // Mutable capture for the last-run artifact: each test stashes its transcript,
   // result, and judge verdict here; afterEach writes them and resets to undefined.
   let lastTranscript: TranscriptEntry[] | undefined;
-  let lastOutput: AllocationPhaseResult | undefined;
+  let lastResult: AllocationPhaseResult | undefined;
   let lastJudge: AllocationJudgeOutput | undefined;
 
   // Default scores hit the deep end of each anchor range; within-cell discrimination
@@ -115,12 +115,11 @@ describe("collectAllocation", () => {
     const expectedEquityAmount = (amount * output.equityPercentage) / 100;
     const expectedBufferAmount = amount - expectedEquityAmount;
     const text = agentText(transcript);
-    if (output.equityPercentage > 0) {
+    if (output.equityPercentage > 0)
       expect(text).toContain(`₪${expectedEquityAmount.toLocaleString("en-US")}`);
-    }
-    if (output.bufferPercentage > 0) {
+
+    if (output.bufferPercentage > 0)
       expect(text).toContain(`₪${expectedBufferAmount.toLocaleString("en-US")}`);
-    }
   };
 
   // rule 3 (Option-A): the first counter confirmation (agent turn [1]) must
@@ -160,7 +159,7 @@ describe("collectAllocation", () => {
     const responder = createTrackedResponder(replies);
     lastTranscript = responder.transcript;
     const result = await collectAllocation(input, responder);
-    lastOutput = result;
+    lastResult = result;
 
     return { transcript: responder.transcript, result };
   };
@@ -192,11 +191,11 @@ describe("collectAllocation", () => {
       name: ctx.task.name,
       passed: ctx.task.result?.state === "pass",
       transcript: lastTranscript,
-      output: lastOutput,
+      output: lastResult,
       judge: lastJudge,
       error: ctx.task.result?.errors?.[0]?.message,
     });
-    lastTranscript = lastOutput = lastJudge = undefined;
+    lastTranscript = lastResult = lastJudge = undefined;
   });
 
   // clarify.allocation.rules.md rule 1 + 2: anchor proposal accepted as-is (happy path)

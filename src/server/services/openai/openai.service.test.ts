@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { APIConnectionError, APIError } from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ParsedResponse,
   Response,
@@ -156,7 +157,11 @@ describe("openaiService", () => {
 
       const result = await callOpenAIParsed(mockParams, UserProfileSchema);
 
-      expect(mockedParse).toHaveBeenCalledWith(mockParams);
+      // callOpenAIParsed injects text.format from the passed schema (name "output").
+      expect(mockedParse).toHaveBeenCalledWith({
+        ...mockParams,
+        text: { format: zodTextFormat(UserProfileSchema, "output") },
+      });
       expect(result).toStrictEqual({
         id: mockResponse.id,
         output: mockParsedOutput,

@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { APIConnectionError, APIError } from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseCreateParamsNonStreaming,
   ResponseOutputItem,
@@ -115,8 +116,17 @@ export const callOpenAI = async (
   }
 };
 
+// `text` is owned here, not by callers: we derive the structured-output format
+// from the same `schema` we validate against, so the two can never drift. Callers
+// pass everything except `text`.
+//
+// The schema name passed to zodTextFormat is hardcoded to "output". It's a
+// required-but-cosmetic label on the response_format — the model is constrained by
+// the schema itself, not its name, and any semantic hint to the model belongs in
+// the schema's field descriptions. A single constant keeps call sites clean; revisit
+// only if a per-schema name turns out to matter (e.g. for response-log readability).
 export const callOpenAIParsed = async <T>(
-  params: ResponseCreateParamsNonStreaming,
+  params: Omit<ResponseCreateParamsNonStreaming, "text">,
   schema: ZodType<T>,
 ): Promise<OpenAIResponse<T>> => {
   try {
@@ -125,9 +135,10 @@ export const callOpenAIParsed = async <T>(
       usage,
       id,
       output_parsed: output,
-    } = await openaiClient.responses.parse<ResponseCreateParamsNonStreaming, unknown>(
-      params,
-    );
+    } = await openaiClient.responses.parse<ResponseCreateParamsNonStreaming, unknown>({
+      ...params,
+      text: { format: zodTextFormat(schema, "output") },
+    });
 
     if (usage) logUsage(usage);
     if (status !== "completed") throw toNotCompletedError(id, status);

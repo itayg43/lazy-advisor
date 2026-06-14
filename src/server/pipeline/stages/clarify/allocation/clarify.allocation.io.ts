@@ -1,4 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
 import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import { createLogger } from "#lib/logger";
@@ -27,7 +26,7 @@ import { callOpenAIParsed } from "#services/openai";
 // Model-IO layer for the allocation phase: every OpenAI call lives here, so the
 // main file holds turn-decision logic and the runner wiring, and `.lib` stays
 // pure. These functions own their prompts/schemas and log each call.
-const logger = createLogger("clarifyAllocation");
+const logger = createLogger("clarifyAllocationIO");
 
 export const classifyTurn = async (
   history: ReadonlyArray<EasyInputMessage>,
@@ -38,12 +37,6 @@ export const classifyTurn = async (
       instructions: ALLOCATION_CLASSIFIER_PROMPT,
       // Spread to strip readonly — SDK's input field expects a mutable array.
       input: [...history],
-      text: {
-        format: zodTextFormat(
-          AllocationClassifierOutputSchema,
-          "AllocationClassifierOutput",
-        ),
-      },
       reasoning: { effort: "low" },
     },
     AllocationClassifierOutputSchema,
@@ -51,18 +44,13 @@ export const classifyTurn = async (
 
   logger.info("Classified turn", {
     responseId: id,
-    kind: output.kind,
-    proposedEquityPercentage: output.proposedEquityPercentage,
+    ...output,
   });
 
   return output;
 };
 
-const composeReply = async (
-  instructions: string,
-  input: string,
-  formatName: string,
-): Promise<string> => {
+const composeReply = async (instructions: string, input: string): Promise<string> => {
   const {
     output: { reply },
   } = await callOpenAIParsed(
@@ -70,9 +58,6 @@ const composeReply = async (
       model: "gpt-5.4-nano",
       instructions,
       input,
-      text: {
-        format: zodTextFormat(AllocationComposerOutputSchema, formatName),
-      },
       reasoning: { effort: "low" },
     },
     AllocationComposerOutputSchema,
@@ -87,13 +72,13 @@ export const composeCounterReply = async (
     proposedEquityPercentage: number;
     previousEquityPercentage: number;
   },
-  ctx: AllocationProposalContext,
+  proposalContext: AllocationProposalContext,
 ): Promise<string> => {
   const { proposedEquityPercentage, previousEquityPercentage } = equityPercentages;
 
   const proposedBufferPercentage = calculateBufferPercentage(proposedEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
-    ctx.amount,
+    proposalContext.amount,
     proposedEquityPercentage,
   );
 
@@ -105,16 +90,12 @@ export const composeCounterReply = async (
   const input = `Branch to render: ${branchTag}
 User's exact equity proposal: ${proposedEquityPercentage}% (buffer ${proposedBufferPercentage}%)
 Previous equity in conversation: ${previousEquityPercentage}%
-Investment amount: ${formatCurrency(ctx.amount)}
+Investment amount: ${formatCurrency(proposalContext.amount)}
 New split in shekels: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCurrency(bufferAmount)} in buffer
-Investment timeline: ${ctx.timeline}
-Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity`;
+Investment timeline: ${proposalContext.timeline}
+Recommended range: ${proposalContext.suggestedEquityRange.min}–${proposalContext.suggestedEquityRange.max}% equity`;
 
-  const reply = await composeReply(
-    ALLOCATION_COUNTER_COMPOSER_PROMPT,
-    input,
-    "AllocationCounterReply",
-  );
+  const reply = await composeReply(ALLOCATION_COUNTER_COMPOSER_PROMPT, input);
 
   logger.info("Composed counter reply", { reply });
 
@@ -124,25 +105,21 @@ Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.
 export const composeQuestionReply = async (
   question: string,
   currentEquityPercentage: number,
-  ctx: AllocationProposalContext,
+  proposalContext: AllocationProposalContext,
 ): Promise<string> => {
   const bufferPercentage = calculateBufferPercentage(currentEquityPercentage);
   const { equityAmount, bufferAmount } = computeSplit(
-    ctx.amount,
+    proposalContext.amount,
     currentEquityPercentage,
   );
 
   const input = `Current proposal: ${formatCurrency(equityAmount)} in stock ETFs, ${formatCurrency(bufferAmount)} in buffer (${currentEquityPercentage}/${bufferPercentage})
-Investment amount: ${formatCurrency(ctx.amount)}
-Investment timeline: ${ctx.timeline}
-Recommended range: ${ctx.suggestedEquityRange.min}–${ctx.suggestedEquityRange.max}% equity
+Investment amount: ${formatCurrency(proposalContext.amount)}
+Investment timeline: ${proposalContext.timeline}
+Recommended range: ${proposalContext.suggestedEquityRange.min}–${proposalContext.suggestedEquityRange.max}% equity
 User's question: ${question}`;
 
-  const reply = await composeReply(
-    ALLOCATION_QUESTION_COMPOSER_PROMPT,
-    input,
-    "AllocationQuestionReply",
-  );
+  const reply = await composeReply(ALLOCATION_QUESTION_COMPOSER_PROMPT, input);
 
   logger.info("Composed question reply", { reply });
 

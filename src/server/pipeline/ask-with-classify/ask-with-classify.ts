@@ -1,4 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
 import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import { InternalError } from "#errors";
@@ -38,7 +37,6 @@ export const askWithClassify = async <
   responder.sendToUser(question);
 
   const history: EasyInputMessage[] = [{ role: "assistant", content: question }];
-  const format = zodTextFormat(schema, "output");
 
   const totalAttempts = followUps + 1;
   for (let attempt = 0; attempt < totalAttempts; attempt++) {
@@ -53,7 +51,6 @@ export const askWithClassify = async <
         model,
         instructions: classifyInstructions,
         input: history,
-        text: { format },
         reasoning: { effort },
       },
       schema,
