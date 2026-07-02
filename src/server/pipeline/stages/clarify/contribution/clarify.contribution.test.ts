@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectContribution } from "#pipeline/stages/clarify/contribution/clarify.contribution";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
-import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -39,7 +38,7 @@ describe("collectContribution", () => {
     { answer: "yes" as const, plansToContribute: true },
     { answer: "no" as const, plansToContribute: false },
   ])(
-    "should return completed/$plansToContribute when user answers $answer",
+    "should return $plansToContribute when user answers $answer",
     async ({ answer, plansToContribute }) => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(converged(answer));
       const responder = createTrackedResponder([answer]);
@@ -50,14 +49,11 @@ describe("collectContribution", () => {
         responder,
       );
 
-      expect(result).toEqual({
-        status: PipelineStatusEnum.enum.completed,
-        plansToContribute,
-      });
+      expect(result).toEqual({ plansToContribute });
     },
   );
 
-  it("should return completed/false when follow-ups are exhausted", async () => {
+  it("should return false when follow-ups are exhausted", async () => {
     // followUps: 2 → 3 total classification attempts (loop × 2 + final)
     const needsClarification: OpenAIResponse<ContributionClassify> = createParsedResponse(
       {
@@ -78,9 +74,6 @@ describe("collectContribution", () => {
 
     const result = await collectContribution(mockAmount, mockEquityPercentage, responder);
 
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      plansToContribute: false,
-    });
+    expect(result).toEqual({ plansToContribute: false });
   });
 });

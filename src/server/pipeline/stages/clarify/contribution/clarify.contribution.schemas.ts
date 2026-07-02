@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { AskWithClassifyBaseSchema } from "#pipeline/ask-with-classify";
-import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const AnswerSchema = z.enum(["yes", "no"]);
 
@@ -15,9 +14,8 @@ export const ContributionClassifyResolvedSchema = ContributionClassifySchema.ext
 
 // Contribution is non-blocking by design — all classify-error modes collapse to
 // `plansToContribute: false` inside the phase (mirrors ef-debt's safe-fallback
-// pattern). The phase therefore has a single terminal status; no discriminated
-// union needed.
+// pattern). The phase always produces a value, so its result carries no status:
+// unlike sibling phases it can't terminate the stage.
 export const ContributionPhaseResultSchema = z.object({
-  status: PipelineStatusEnum.extract(["completed"]),
   plansToContribute: z.boolean(),
 });

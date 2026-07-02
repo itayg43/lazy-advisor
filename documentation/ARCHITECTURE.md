@@ -113,7 +113,7 @@ Non-collapsing phases (parameters, risk) translate these errors via the shared `
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarify`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
+Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarifyOrchestrator`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
 **Pipeline control-flow errors — `PipelineControlFlowError`.** The exhaustion errors thrown by pipeline primitives — `PhaseLoopToolCallsExhaustedError` (`runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (`askWithClassify`) — share a common base class, `PipelineControlFlowError`. It is a sibling to `BaseError` and carries no HTTP `status`: these errors are caught at the phase boundary and translated to in-band results, so they never reach the HTTP layer. The base captures the semantic distinction from genuine system failures (`InternalError` for code/model bugs; `SchemaValidationError` for schema breaches like `ClassifyResolvedOutputInvalidError`), which continue to propagate as exceptions and convert to `SYSTEM_ERROR_EXIT_MESSAGE` at the stage boundary. Phases catch the specific subclass via its predicate (`isPhaseLoopExhaustedError`, `isClassifyError`) rather than the base — each subclass is independently mapped to its own `unresolved` reason or, where the phase opts in, a `completed` default.
 
@@ -125,14 +125,14 @@ Uncaught exceptions from either primitive — unexpected errors, OpenAI failures
 
 ### Stage vs. orchestrator split
 
-`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarify` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
+`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarifyOrchestrator` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
 
 1. **Stage error boundary** — any thrown exception is caught, logged, and converted to an errored result carrying `SYSTEM_ERROR_EXIT_MESSAGE`. The stage stays exception-free in its return contract.
 2. **Termination resolution** — `halted` / `unresolved` / `errored` results map to user-facing strings via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`, then wrapped as `{ status, message }` preserving the original status. The `completed` arm returns `{ status: "completed", profile }`.
 
-`ClarifyResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
+`ClarifyOrchestratorResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
 
-`runPipeline` is the thin top-level wrapper that runs all stages inside `runWithSession`, switches on each stage's result status, and delivers any terminal message via `responder.sendToUser`. It holds no error-handling logic of its own.
+`runPipelineOrchestrator` is the thin top-level wrapper that runs all stages inside `runWithSession`, switches on each stage's result status, and delivers any terminal message via `responder.sendToUser`. It holds no error-handling logic of its own.
 
 #### Next-tier — orchestrator
 
@@ -241,5 +241,5 @@ Each pipeline run is assigned a `sessionId` (UUID) at its entry point and propag
 
 Concurrent sessions on the same server instance are fully isolated: `AsyncLocalStorage` tracks which async context each continuation belongs to, so interleaved log lines from different sessions each carry only their own `sessionId`. This is a concurrency guarantee, not a parallelism one — Node.js is single-threaded; isolation is achieved by the event loop restoring the correct store on each async resumption.
 
-`runWithSession` is established once in `runPipeline` (the orchestrator) so the context spans all stages. Stages take no `sessionId` parameter — they simply inherit the ambient context from the orchestrator's wrapper.
+`runWithSession` is established once in `runPipelineOrchestrator` so the context spans all stages. Stages take no `sessionId` parameter — they simply inherit the ambient context from the orchestrator's wrapper.
 
