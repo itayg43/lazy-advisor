@@ -23,10 +23,11 @@ flowchart TD
     Contra -->|accepted| EfDebt
     Contra -->|rejected| End
 
-    EfDebt --> Parameters[parameters]
-    Parameters -->|amount unresolved| ExitAmount([exit: amount unresolved message])
-    Parameters -->|timeline unresolved| ExitTimeline([exit: timeline unresolved message])
-    Parameters --> ShortHorizon{timeline < 3yr?}
+    EfDebt --> Amount[amount]
+    Amount -->|amount unresolved| ExitAmount([exit: amount unresolved message])
+    Amount --> Timeline[timeline]
+    Timeline -->|timeline unresolved| ExitTimeline([exit: timeline unresolved message])
+    Timeline --> ShortHorizon{timeline < 3yr?}
     ShortHorizon -->|yes| ExitShort([halt: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
     Risk -->|risk_tolerance unresolved| ExitRisk([exit: risk unresolved message])
@@ -44,8 +45,9 @@ flowchart TD
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` (`GoalClassificationEnum`) | `goal` → `GoalClassification` |
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
-| parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
-| risk | Elicit a 1–5 self-rating of comfort with temporary drops | — → `RiskPhaseResult` |
+| amount | Collect the investment amount as an integer in shekels | — → `AmountPhaseResult` |
+| timeline | Collect the investment timeline as one of four horizon buckets | — → `TimelinePhaseResult` |
+| risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (riskTolerance × timeline) anchor table keyed on the 1–5 score directly | amount, timeline, riskTolerance → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | amount, equityPercentage → `ContributionPhaseResult` |
 | equity | *(planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskTolerance, equityPercentage, plansToContribute → `EquityPhaseOutput` |
@@ -77,7 +79,7 @@ Code drives the conversation — decides what question to ask and in what order.
 
 A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
 
-Used when questions are fixed and answers need structured extraction: ef-debt, parameters, risk, contribution.
+Used when questions are fixed and answers need structured extraction: ef-debt, amount, timeline, risk, contribution.
 
 **`runConversation` — code as orchestrator, multi-turn negotiation**
 
@@ -120,11 +122,11 @@ Both conversation patterns share the same error contract: internal runners throw
   - `ClassifyResolvedOutputInvalidError` (extends `SchemaValidationError`, carries `ZodError` cause) when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_resolved_output_invalid"`
   - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"`
 
-Non-collapsing phases (parameters, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.
+Non-collapsing phases (amount, timeline, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
-Uncaught exceptions from either runner — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarify`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
+Uncaught exceptions from either runner — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarifyOrchestrator`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
 **Pipeline control-flow errors — `PipelineControlFlowError`.** The exhaustion errors thrown by pipeline runners — `PhaseLoopToolCallsExhaustedError` (`runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (`askWithClassify`) — share a common base class, `PipelineControlFlowError`. It is a sibling to `BaseError` and carries no HTTP `status`: these errors are caught at the phase boundary and translated to in-band results, so they never reach the HTTP layer. The base captures the semantic distinction from genuine system failures (`InternalError` for code/model bugs; `SchemaValidationError` for schema breaches like `ClassifyResolvedOutputInvalidError`), which continue to propagate as exceptions and convert to `SYSTEM_ERROR_EXIT_MESSAGE` at the stage boundary. Phases catch the specific subclass via its predicate (`isPhaseLoopExhaustedError`, `isClassifyError`) rather than the base — each subclass is independently mapped to its own `unresolved` reason or, where the phase opts in, a `completed` default.
 
@@ -136,14 +138,14 @@ Uncaught exceptions from either runner — unexpected errors, OpenAI failures �
 
 ### Stage vs. orchestrator split
 
-`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarify` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
+`runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarifyOrchestrator` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
 
 1. **Stage error boundary** — any thrown exception is caught, logged, and converted to an errored result carrying `SYSTEM_ERROR_EXIT_MESSAGE`. The stage stays exception-free in its return contract.
 2. **Termination resolution** — `halted` / `unresolved` / `errored` results map to user-facing strings via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`, then wrapped as `{ status, message }` preserving the original status. The `completed` arm returns `{ status: "completed", profile }`.
 
-`ClarifyResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
+`ClarifyOrchestratorResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
 
-`runPipeline` is the thin top-level wrapper that runs all stages inside `runWithSession`, switches on each stage's result status, and delivers any terminal message via `responder.sendToUser`. It holds no error-handling logic of its own.
+`runPipelineOrchestrator` is the thin top-level wrapper that runs all stages inside `runWithSession`, switches on each stage's result status, and delivers any terminal message via `responder.sendToUser`. It holds no error-handling logic of its own.
 
 #### Next-tier — orchestrator
 
@@ -163,7 +165,7 @@ The pipeline uses discriminated-union result types and an in-process orchestrato
 
 ### Classify + intake routing
 
-Some goals require handling before parameter collection: stock-picking requests need an ETF redirect, unrealistic return expectations need a reality check. Embedding that branching in the parameters prompt would create a mega-prompt where routing logic competes with parameter-collection instructions, degrading adherence.
+Some goals require handling before parameter collection: stock-picking requests need an ETF redirect, unrealistic return expectations need a reality check. Embedding that branching in a parameter-collection prompt would create a mega-prompt where routing logic competes with collection instructions, degrading adherence.
 
 The solution: move routing into code. A lightweight classifier (`classifyGoal`) makes a single structured LLM call and returns one of four values — `normal`, `out_of_scope`, `unrealistic`, or `contradictory`. Code routes to the appropriate intake phase before parameter collection:
 
@@ -172,7 +174,7 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
   → classifyGoal()             → out_of_scope
   → handleOutOfScopeRedirect   → IntakePhaseOutput { accepted: true }
   → collectEfDebt()
-  → collectParameters()
+  → collectAmount() → collectTimeline()
   → collectRisk() → collectAllocation(amount, timeline, riskTolerance) → ... → UserProfile
 ```
 
@@ -180,19 +182,19 @@ Each intake handler lives in its own subfolder under `clarify/intake/` alongside
 - `{ accepted: true }` — user accepted the redirect; stage continues to parameter collection
 - `{ accepted: false }` — stage returns `{ status: "halted", reason: "intake_rejected", classification }`; the orchestrator dispatches the per-classification closing message from `INTAKE_REDIRECT_REJECTION_MESSAGES`
 
-The parameters prompt is left with one job: collect required profile parameters.
+The amount and timeline prompts are each left with one job: collect a single required profile parameter.
 
 An alternative considered: skip the classifier and expose handlers as LLM tools, letting a top-level agent route via tool call. This breaks down because the handlers are multi-turn conversations — the outer agent would just wait, making it an expensive classifier with no upside. Explicit code routing after a lightweight classifier is cheaper, independently testable, and observable in isolation.
 
 (The `contradictory` classification is kept despite the risk phase's self-rating resolving the stated contradiction — surfacing the conflict up-front has educational value for beginner users.)
 
-### Parameters — hard exits on missing data
+### Amount & timeline — hard exits on missing data
 
-`collectParameters` returns `{ status: "unresolved", reason: "amount" }` if the user cannot provide a valid investment amount after two attempts, and the stage propagates the result so the orchestrator dispatches the exit message. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "unresolved", reason: "timeline" }`. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
+`collectAmount` returns `{ status: "unresolved", reason: "amount" }` if the user cannot provide a valid investment amount after two attempts, and the stage propagates the result so the orchestrator dispatches the exit message. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectTimeline` returns `{ status: "unresolved", reason: "timeline" }`. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split. Amount and timeline are separate single-value phases collected in sequence (amount first); each carries its own unresolved reason, so the stage propagates the phase result directly without re-deriving which value is missing.
 
 ### Short-horizon early halt (timeline < 3 years)
 
-After parameters collection, the stage compares the destructured `timeline` against `SHORT_TIMELINE_BUCKET`. If it matches (`"under 3 years"`), the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
+After timeline collection, the stage compares the destructured `timeline` against `SHORT_TIMELINE_BUCKET`. If it matches (`"under 3 years"`), the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
 
 ### Risk phase — single 1–5 self-rating
 
@@ -244,7 +246,7 @@ The clarify stage output is validated with `UserProfileSchema` before returning.
 
 ### Inline assembly from typed outputs
 
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` and `timeline` from parameters; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `riskTolerance` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` from the amount phase, `timeline` from the timeline phase; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `riskTolerance` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ### Session correlation
 
@@ -252,5 +254,5 @@ Each pipeline run is assigned a `sessionId` (UUID) at its entry point and propag
 
 Concurrent sessions on the same server instance are fully isolated: `AsyncLocalStorage` tracks which async context each continuation belongs to, so interleaved log lines from different sessions each carry only their own `sessionId`. This is a concurrency guarantee, not a parallelism one — Node.js is single-threaded; isolation is achieved by the event loop restoring the correct store on each async resumption.
 
-`runWithSession` is established once in `runPipeline` (the orchestrator) so the context spans all stages. Stages take no `sessionId` parameter — they simply inherit the ambient context from the orchestrator's wrapper.
+`runWithSession` is established once in `runPipelineOrchestrator` so the context spans all stages. Stages take no `sessionId` parameter — they simply inherit the ambient context from the orchestrator's wrapper.
 

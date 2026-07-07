@@ -54,7 +54,6 @@ describe("collectContribution", () => {
         responder,
       );
       lastOutput = output;
-      if (output.status !== "completed") return;
 
       expect(output.plansToContribute).toBe(expectedPlans);
       const agentTurns = responder.transcript.filter((t) => t.role === "agent");
@@ -88,7 +87,6 @@ describe("collectContribution", () => {
         responder,
       );
       lastOutput = output;
-      if (output.status !== "completed") return;
 
       expect(output.plansToContribute).toBe(expectedPlans);
       const agentTurns = responder.transcript.filter((t) => t.role === "agent");
@@ -105,7 +103,6 @@ describe("collectContribution", () => {
 
     const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
-    if (output.status !== "completed") return;
 
     expect(output.plansToContribute).toBe(true);
   });
@@ -117,7 +114,6 @@ describe("collectContribution", () => {
 
     const output = await collectContribution(mockAmount, mockEquityPercentage, responder);
     lastOutput = output;
-    if (output.status !== "completed") return;
 
     expect(output.plansToContribute).toBe(false);
   });

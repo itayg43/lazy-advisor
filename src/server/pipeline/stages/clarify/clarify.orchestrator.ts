@@ -8,23 +8,19 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import { ClarifyHaltReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type {
+  ClarifyOrchestratorResult,
   ClarifyStageResult,
   ClarifyStageTermination,
 } from "#pipeline/stages/clarify/shared/clarify.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
-import type { PipelineStatus, UserProfile } from "#types/pipeline.types";
 
 const logger = createLogger("clarifyOrchestrator");
 
-export type ClarifyResult =
-  | { status: Extract<PipelineStatus, "completed">; profile: UserProfile }
-  | { status: Exclude<PipelineStatus, "completed">; message: string };
-
-export const runClarify = async (
+export const runClarifyOrchestrator = async (
   goal: string,
   responder: Responder,
-): Promise<ClarifyResult> => {
+): Promise<ClarifyOrchestratorResult> => {
   let result: ClarifyStageResult;
 
   // Narrow try: only wraps the stage call so unrelated throws (e.g. from

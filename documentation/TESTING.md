@@ -4,7 +4,7 @@
 
 - Co-located test files (next to source files, not in a separate `tests/` directory)
 - Tests use `describe`/`it` blocks with clear descriptions — `it` block descriptions must start with `should`
-- Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `openaiService`, `collectParameters`, `runPhaseLoop`); place `beforeEach` first, then `afterEach`
+- Wrap each test file in a top-level `describe` block named after the module in camelCase (e.g., `openaiService`, `collectAmount`, `runPhaseLoop`); place `beforeEach` first, then `afterEach`
 - `beforeEach` should call `vi.clearAllMocks()` (resets `vi.fn()` call history). Add `vi.restoreAllMocks()` only when the file uses `vi.spyOn` — it reverts spies to their original implementations and is unnecessary (noise) when no spies are present. When both are needed, call them in that order
 - Use `describe.each` / `it.each` to collapse multiple identical test cases that differ only by input — e.g., when the same flow runs for three goal classification types. Avoid it when the per-case setup differs significantly; flat describe blocks are clearer in that situation
 - Each `it` block creates its own context/options variables — no inline objects
@@ -31,7 +31,7 @@
 
 The external-boundary rule has one exception: when the error under test originates *inside* an internal function (not at the OpenAI boundary), a global `vi.mock` would contaminate all other tests in the file. In that case, use `vi.spyOn` scoped to that specific test — `vi.restoreAllMocks()` in `beforeEach` handles cleanup automatically, so no manual `spy.mockRestore()` is needed.
 
-In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., parameters, risk, contribution) or `runConversation` (allocation) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal. Note that `runConversation` does not throw an exhaustion error; its convergence is handled in-band via the phase's own `unresolved` result variant (see `ARCHITECTURE.md § Pipeline control-flow errors`).
+In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., amount, timeline, risk, contribution) or `runConversation` (allocation) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal. Note that `runConversation` does not throw an exhaustion error; its convergence is handled in-band via the phase's own `unresolved` result variant (see `ARCHITECTURE.md § Pipeline control-flow errors`).
 
 ```ts
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
@@ -43,7 +43,7 @@ it("should handle intake tool-call exhaustion", async () => {
     new PhaseLoopToolCallsExhaustedError("Out-of-scope intake", MAX_INTAKE_TOOL_CALLS),
   );
 
-  await runPipeline(...);
+  await runPipelineOrchestrator(...);
 
   // assertions ...
 });
@@ -115,4 +115,4 @@ Currently a **pilot on the allocation phase** (`clarify.allocation.judge.ts`). T
 - **Code-derived values: assert against an independent oracle.** When a value is precomputed deterministically in code (not present in the input, not model-derived — e.g. an anchor equity percentage from `deriveAnchorEquityPercentage`), assert it with exact equality against a hand-computed expected. Don't recompute the expected by calling the same production helper, which would make the test tautological. The hand-computed oracle is a feature, not duplication: if the precompute logic changes, the test must be updated deliberately.
 - **Scenarios**: come from the `*.rules.md` file co-located with the phase. One or more test cases per rule.
 - **Rule reference in comments**: each eval case is prefixed with a comment pointing at the rule it covers, in the form `// clarify.<phase>.rules.md rule N: <one-line summary>`. Use the filename form (not a macro like `CLARIFY_FIELDS_RULES #N`) so the reference is greppable to the actual file. When a test exercises multiple rules, cite all (`rule 4 + rule 6: ...`).
-- **Test case order mirrors rule order** for phase evals whose rules live in a single co-located file (parameters, contribution, risk): tests are ordered by ascending rule number, with multiple tests for the same rule grouped together. When adding a new rule, insert its test at the matching position — do not append.
+- **Test case order mirrors rule order** for phase evals whose rules live in a single co-located file (amount, timeline, contribution, risk): tests are ordered by ascending rule number, with multiple tests for the same rule grouped together. When adding a new rule, insert its test at the matching position — do not append.
