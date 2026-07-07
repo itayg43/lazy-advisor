@@ -8,16 +8,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
 import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import type { AmountClassify } from "#pipeline/stages/clarify/amount/clarify.amount.types";
 import { runClarifyOrchestrator } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
 import type {
   EmergencyFundClassify,
   DebtClassify,
 } from "#pipeline/stages/clarify/ef-debt/clarify.ef-debt";
-import type {
-  AmountClassify,
-  TimelineClassify,
-} from "#pipeline/stages/clarify/parameters/clarify.parameters.types";
 import type { RiskClassify } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import {
   ALLOCATION_EXIT_MESSAGE,
@@ -32,6 +29,7 @@ import {
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
 import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
+import type { TimelineClassify } from "#pipeline/stages/clarify/timeline/clarify.timeline.types";
 import {
   PipelineStatusEnum,
   RiskToleranceEnum,

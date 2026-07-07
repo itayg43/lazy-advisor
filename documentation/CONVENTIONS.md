@@ -39,7 +39,7 @@
 
 - `src/server/pipeline/data/` — static reference data that doesn't change at runtime (e.g., brokerage tables)
 - Schemas in `src/server/schemas/[domain].schemas.ts`, types in `src/server/types/[domain].types.ts` — or co-located with a phase/module as `[name].schemas.ts` / `[name].types.ts`
-- Phase prompt text (user-facing questions, LLM-facing classify instructions) co-located with the phase as `[phase].prompts.ts` — named-exported as constants, or as builder functions when interpolation requires runtime values. Standard pattern for `askWithClassify` phases (parameters, risk, contribution).
+- Phase prompt text (user-facing questions, LLM-facing classify instructions) co-located with the phase as `[phase].prompts.ts` — named-exported as constants, or as builder functions when interpolation requires runtime values. Standard pattern for `askWithClassify` phases (amount, timeline, risk, contribution).
 
 ## Functions
 
