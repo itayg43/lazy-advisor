@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
 import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import { runClarify } from "#pipeline/stages/clarify/clarify.orchestrator";
+import { runClarifyOrchestrator } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
 import type {
   EmergencyFundClassify,
@@ -49,7 +49,7 @@ vi.mock("#services/openai", () => ({
   callOpenAIParsed: mockedCallOpenAIParsed,
 }));
 
-describe("runClarify", () => {
+describe("runClarifyOrchestrator", () => {
   const mockSendToUser = vi.fn();
   const mockWaitForResponse = vi.fn<() => Promise<string>>();
   const mockResponder = {
@@ -170,7 +170,10 @@ describe("runClarify", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      const result = await runClarify("I want to invest ₪50,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.completed,
@@ -206,7 +209,7 @@ describe("runClarify", () => {
       setupAllocationMocks();
       setupContributionMocks();
 
-      const result = await runClarify(goal, mockResponder);
+      const result = await runClarifyOrchestrator(goal, mockResponder);
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.completed,
@@ -221,7 +224,7 @@ describe("runClarify", () => {
         .mockResolvedValueOnce(createParsedResponse({ accepted: false }));
       mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
 
-      const result = await runClarify(goal, mockResponder);
+      const result = await runClarifyOrchestrator(goal, mockResponder);
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.halted,
@@ -255,7 +258,10 @@ describe("runClarify", () => {
           }),
         );
 
-      const result = await runClarify("I want to invest some money", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest some money",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.unresolved,
@@ -295,7 +301,10 @@ describe("runClarify", () => {
           }),
         );
 
-      const result = await runClarify("I want to invest ₪50,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.unresolved,
@@ -327,7 +336,10 @@ describe("runClarify", () => {
           }),
         );
 
-      const result = await runClarify("I want to invest ₪20,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪20,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.halted,
@@ -355,7 +367,10 @@ describe("runClarify", () => {
         .mockResolvedValueOnce(needs)
         .mockResolvedValueOnce(needs);
 
-      const result = await runClarify("I want to invest ₪50,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.unresolved,
@@ -380,7 +395,10 @@ describe("runClarify", () => {
         ),
       );
 
-      const result = await runClarify("I want to invest ₪50,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.unresolved,
@@ -405,7 +423,10 @@ describe("runClarify", () => {
         }),
       );
 
-      const result = await runClarify("I want to invest ₪50,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.errored,
@@ -428,7 +449,10 @@ describe("runClarify", () => {
         }),
       );
 
-      const result = await runClarify("I want to invest ₪50,000", mockResponder);
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.errored,

@@ -43,7 +43,7 @@ it("should handle allocation tool-call exhaustion", async () => {
     new PhaseLoopToolCallsExhaustedError("Allocation phase", MAX_ALLOCATION_TOOL_CALLS),
   );
 
-  await runPipeline(...);
+  await runPipelineOrchestrator(...);
 
   // assertions ...
 });

@@ -32,3 +32,7 @@ export type ClarifyStageTermination = Exclude<
   ClarifyStageResult,
   { status: Extract<PipelineStatus, "completed"> }
 >;
+
+export type ClarifyOrchestratorResult =
+  | { status: Extract<PipelineStatus, "completed">; profile: UserProfile }
+  | { status: Exclude<PipelineStatus, "completed">; message: string };
