@@ -23,10 +23,11 @@ flowchart TD
     Contra -->|accepted| EfDebt
     Contra -->|rejected| End
 
-    EfDebt --> Parameters[parameters]
-    Parameters -->|amount unresolved| ExitAmount([exit: amount unresolved message])
-    Parameters -->|timeline unresolved| ExitTimeline([exit: timeline unresolved message])
-    Parameters --> ShortHorizon{timeline < 3yr?}
+    EfDebt --> Amount[amount]
+    Amount -->|amount unresolved| ExitAmount([exit: amount unresolved message])
+    Amount --> Timeline[timeline]
+    Timeline -->|timeline unresolved| ExitTimeline([exit: timeline unresolved message])
+    Timeline --> ShortHorizon{timeline < 3yr?}
     ShortHorizon -->|yes| ExitShort([halt: money market fund redirect])
     ShortHorizon -->|no| Risk[risk]
     Risk -->|risk_tolerance unresolved| ExitRisk([exit: risk unresolved message])
@@ -44,7 +45,8 @@ flowchart TD
 | classify | Label the goal: `normal`, `out_of_scope`, `unrealistic`, or `contradictory` (`GoalClassificationEnum`) | `goal` → `GoalClassification` |
 | intake | Redirect misclassified goals; reject if user declines | `goal`, classification → `IntakePhaseOutput` |
 | ef-debt | Educate/warn about emergency fund and high-interest debt; gate before parameter collection | — → (educational gate, no profile output) |
-| parameters | Collect core profile parameters via conversation | — → `ParametersPhaseResult` |
+| amount | Collect the investment amount as an integer in shekels | — → `AmountPhaseResult` |
+| timeline | Collect the investment timeline as one of four horizon buckets | — → `TimelinePhaseResult` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
 | allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | amount, timeline, riskTolerance → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | amount, equityPercentage → `ContributionPhaseResult` |
@@ -77,7 +79,7 @@ Code drives the conversation — decides what question to ask and in what order.
 
 A scoped conversation history is maintained client-side within a single question's retry session — enough for the LLM to understand follow-up clarifying questions in context, but not shared across questions. This is not a substitute for `previous_response_id`; it serves a different, smaller purpose: contextual quality of clarification answers, not state tracking.
 
-Used when questions are fixed and answers need structured extraction: ef-debt, parameters, risk, contribution.
+Used when questions are fixed and answers need structured extraction: ef-debt, amount, timeline, risk, contribution.
 
 **The boundary**
 
@@ -109,7 +111,7 @@ Both conversation patterns share the same error contract: internal primitives th
   - `ClassifyResolvedOutputInvalidError` (extends `SchemaValidationError`, carries `ZodError` cause) when post-convergence resolved-schema validation fails → system-driven; phase returns `errored: "classify_resolved_output_invalid"`
   - `ClassifyMessageMissingError` when the model returns `clarificationNeeded=true` with `clarificationMessage=null` mid-loop → system-driven; phase returns `errored: "classify_message_missing"`
 
-Non-collapsing phases (parameters, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.
+Non-collapsing phases (amount, timeline, risk) translate these errors via the shared `mapClassifyError` helper, which performs the error-to-result mapping (and the corresponding log emission) in one place rather than per-phase. Collapsing phases (ef-debt, contribution) use `isClassifyError` instead to short-circuit all three errors into a single safe default.
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
@@ -152,7 +154,7 @@ The pipeline uses discriminated-union result types and an in-process orchestrato
 
 ### Classify + intake routing
 
-Some goals require handling before parameter collection: stock-picking requests need an ETF redirect, unrealistic return expectations need a reality check. Embedding that branching in the parameters prompt would create a mega-prompt where routing logic competes with parameter-collection instructions, degrading adherence.
+Some goals require handling before parameter collection: stock-picking requests need an ETF redirect, unrealistic return expectations need a reality check. Embedding that branching in a parameter-collection prompt would create a mega-prompt where routing logic competes with collection instructions, degrading adherence.
 
 The solution: move routing into code. A lightweight classifier (`classifyGoal`) makes a single structured LLM call and returns one of four values — `normal`, `out_of_scope`, `unrealistic`, or `contradictory`. Code routes to the appropriate intake phase before parameter collection:
 
@@ -161,7 +163,7 @@ The solution: move routing into code. A lightweight classifier (`classifyGoal`) 
   → classifyGoal()             → out_of_scope
   → handleOutOfScopeRedirect   → IntakePhaseOutput { accepted: true }
   → collectEfDebt()
-  → collectParameters()
+  → collectAmount() → collectTimeline()
   → collectRisk() → collectAllocation(amount, timeline, riskTolerance) → ... → UserProfile
 ```
 
@@ -169,19 +171,19 @@ Each intake handler lives in its own subfolder under `clarify/intake/` alongside
 - `{ accepted: true }` — user accepted the redirect; stage continues to parameter collection
 - `{ accepted: false }` — stage returns `{ status: "halted", reason: "intake_rejected", classification }`; the orchestrator dispatches the per-classification closing message from `INTAKE_REDIRECT_REJECTION_MESSAGES`
 
-The parameters prompt is left with one job: collect required profile parameters.
+The amount and timeline prompts are each left with one job: collect a single required profile parameter.
 
 An alternative considered: skip the classifier and expose handlers as LLM tools, letting a top-level agent route via tool call. This breaks down because the handlers are multi-turn conversations — the outer agent would just wait, making it an expensive classifier with no upside. Explicit code routing after a lightweight classifier is cheaper, independently testable, and observable in isolation.
 
 (The `contradictory` classification is kept despite the risk phase's self-rating resolving the stated contradiction — surfacing the conflict up-front has educational value for beginner users.)
 
-### Parameters — hard exits on missing data
+### Amount & timeline — hard exits on missing data
 
-`collectParameters` returns `{ status: "unresolved", reason: "amount" }` if the user cannot provide a valid investment amount after two attempts, and the stage propagates the result so the orchestrator dispatches the exit message. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectParameters` returns `{ status: "unresolved", reason: "timeline" }`. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split.
+`collectAmount` returns `{ status: "unresolved", reason: "amount" }` if the user cannot provide a valid investment amount after two attempts, and the stage propagates the result so the orchestrator dispatches the exit message. Every downstream phase is shekel-denominated — allocation splits, contribution framing, and equity/buffer amounts all depend on a concrete number. Timeline shares the same hard-fail pattern: if the user cannot provide a specific timeframe after two attempts, `collectTimeline` returns `{ status: "unresolved", reason: "timeline" }`. Timeline is the other axis of the allocation anchor table; a guessed timeline produces a wrong equity/buffer split. Amount and timeline are separate single-value phases collected in sequence (amount first); each carries its own unresolved reason, so the stage propagates the phase result directly without re-deriving which value is missing.
 
 ### Short-horizon early halt (timeline < 3 years)
 
-After parameters collection, the stage compares the destructured `timeline` against `SHORT_TIMELINE_BUCKET`. If it matches (`"under 3 years"`), the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
+After timeline collection, the stage compares the destructured `timeline` against `SHORT_TIMELINE_BUCKET`. If it matches (`"under 3 years"`), the stage returns `{ status: "halted", reason: "short_timeline" }` — the orchestrator dispatches a money market fund redirect. ETFs carry too much timing risk for money needed within 3 years: a market drop right before the funds are needed is hard to recover from in time, and risk tolerance is not a meaningful variable at that horizon (Vanguard, Fidelity, Bogleheads).
 
 ### Risk phase — single 1–5 self-rating
 
@@ -233,7 +235,7 @@ The clarify stage output is validated with `UserProfileSchema` before returning.
 
 ### Inline assembly from typed outputs
 
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` and `timeline` from parameters; `riskTolerance` from risk; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `selfRatingScore` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` from the amount phase, `timeline` from the timeline phase; `riskTolerance` from risk; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `selfRatingScore` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ### Session correlation
 
