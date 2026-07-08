@@ -82,8 +82,8 @@ const handleAcceptTurn = (
       : currentEquityPercentage;
 
   // Inner fail-fast: a bug in the accept path surfaces here, not downstream.
-  // Overlaps the outer result parse on purpose. No logging — the `runClarify`
-  // catch logs `BaseError`s once.
+  // Overlaps the outer result parse on purpose. No logging — the
+  // `runClarifyOrchestrator` catch logs `BaseError`s once.
   const output = parseSchema(
     AllocationPhaseOutputSchema,
     {

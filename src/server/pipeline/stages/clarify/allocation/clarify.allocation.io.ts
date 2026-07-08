@@ -49,7 +49,8 @@ export const classifyTurn = async (
   // "percentage iff counter" invariant. A `counter` with a null percentage
   // throws here — model disobedience (the prompt routes numberless replies to
   // `unknown`), so it's a bad-upstream-response (502), mirroring askWithClassify's
-  // resolved-schema parse. No logging — the `runClarify` catch logs `BaseError`s once.
+  // resolved-schema parse. No logging — the `runClarifyOrchestrator` catch logs
+  // `BaseError`s once.
   const intent = parseSchema(
     AllocationIntentSchema,
     output,
