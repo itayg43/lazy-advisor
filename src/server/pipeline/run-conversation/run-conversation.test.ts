@@ -5,8 +5,6 @@ import { createTrackedResponder } from "#pipeline/eval.transcript";
 import {
   HandlerOutputKind,
   runConversation,
-  RunConversationHardStopError,
-  RunConversationUnhandledOutputKindError,
   type InitHandler,
   type TurnHandler,
 } from "#pipeline/run-conversation";
@@ -197,7 +195,7 @@ describe("runConversation", () => {
     expect(result).toBe("final-counter:1");
   });
 
-  it("should throw RunConversationUnhandledOutputKindError on an unknown HandlerOutputKind", async () => {
+  it("should throw on an unknown HandlerOutputKind", async () => {
     const responder = createTrackedResponder([]);
 
     // Force an invalid kind past the type system to assert the runtime guard.
@@ -209,12 +207,12 @@ describe("runConversation", () => {
 
     await expect(
       runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 }),
-    ).rejects.toThrow(RunConversationUnhandledOutputKindError);
+    ).rejects.toThrow(/unhandled output kind/);
 
     expect(turnHandler).not.toHaveBeenCalled();
   });
 
-  it("should throw RunConversationHardStopError after emitting hardStopTurns asks", async () => {
+  it("should throw after emitting hardStopTurns asks", async () => {
     const responder = createTrackedResponder(["r1", "r2", "r3", "r4"]);
 
     // A handler that never returns Done — the runaway case the backstop exists for.
@@ -231,7 +229,7 @@ describe("runConversation", () => {
 
     await expect(
       runConversation({ initHandler, turnHandler, responder, hardStopTurns: 3 }),
-    ).rejects.toThrow(RunConversationHardStopError);
+    ).rejects.toThrow(/hard-stop reached/);
 
     // Tripped on the would-be 4th ask: exactly hardStopTurns asks reached the user.
     const agentMessages = responder.transcript.filter((m) => m.role === "agent");

@@ -1,10 +1,7 @@
 import type { EasyInputMessage } from "openai/resources/responses/responses";
 
+import { InternalError } from "#errors";
 import { createLogger } from "#lib/logger";
-import {
-  RunConversationHardStopError,
-  RunConversationUnhandledOutputKindError,
-} from "#pipeline/run-conversation/run-conversation.errors";
 import {
   HandlerOutputKind,
   type HandlerOutput,
@@ -49,8 +46,14 @@ export const runConversation = async <TState, TResult>(
         return result;
       }
       case HandlerOutputKind.Ask: {
+        // Guards a runner invariant: under correct self-limiting we never reach
+        // this, so a throw means a buggy handler, not an expected outcome — hence
+        // InternalError (500), which bubbles to the central `runClarifyOrchestrator`
+        // catch that logs it once and maps the stage to errored.
         if (asksEmitted >= hardStopTurns)
-          throw new RunConversationHardStopError(hardStopTurns);
+          throw new InternalError(
+            `runConversation: hard-stop reached after ${hardStopTurns} asks — a handler failed to self-limit`,
+          );
 
         asksEmitted++;
 
@@ -79,7 +82,9 @@ export const runConversation = async <TState, TResult>(
       default: {
         const _exhaustive: never = currentOutput;
 
-        throw new RunConversationUnhandledOutputKindError(JSON.stringify(_exhaustive));
+        throw new InternalError(
+          `runConversation: unhandled output kind: ${JSON.stringify(_exhaustive)}`,
+        );
       }
     }
   }
