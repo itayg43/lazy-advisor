@@ -22,6 +22,13 @@ export const ALLOCATION_RISK_LABEL_EXAMPLES = ["conservative", "moderate", "aggr
 
 export const ALLOCATION_MAX_NEGOTIATION_TURNS = 5;
 
+// Total-turn backstop across *every* reply type (counters, questions, unknowns),
+// sitting above the negotiation cap so a user who mostly asks clarifying questions
+// still exits gracefully as `unresolved` instead of climbing into runConversation's
+// 500-level hard stop. Must stay greater than ALLOCATION_MAX_NEGOTIATION_TURNS — the
+// gap is the room a patient beginner gets for questions.
+export const ALLOCATION_MAX_TOTAL_TURNS = 10;
+
 export const ALLOCATION_UNKNOWN_INTENT_MESSAGE =
   "I didn't catch that. Want the proposed split, more in stocks, or more in buffer?";
 

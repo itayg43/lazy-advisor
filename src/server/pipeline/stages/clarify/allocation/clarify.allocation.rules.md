@@ -66,7 +66,7 @@ Score 3 hits the midpoint because it has its anchor row to itself — unlike the
 
 **Retraction to the original anchor.** After one or more counters, a reply that signals acceptance but explicitly retracts to the *original* proposal — without naming a number (e.g., "actually, never mind — stick with your original suggestion", "let's go back to the first proposal", "I'll trust your original split") — is classified as `kind: "accept-original"`. The handler resolves to `anchorEquityPercentage` (the initial precomputed proposal), not `currentEquityPercentage`. This closes the gap where a verbal retraction would otherwise lock in the abandoned counter. If the retraction-shaped reply *names* a number ("actually, stick with the original 88"), it is a counter (Rule 3) — the named number takes precedence.
 
-**Last-turn behavior.** Both `accept` and `accept-original` win on the `MAX_NEGOTIATION_TURNS`-th turn — see Budget exhaustion. Returning `unresolved` after a clear acceptance would be a UX regression.
+**Last-turn behavior.** Both `accept` and `accept-original` win even when a budget is already exhausted — accept is gated ahead of both budget checks (see Budget exhaustion). Returning `unresolved` after a clear acceptance would be a UX regression.
 
 **Disambiguation:** A response that names a specific percentage or ratio different from the current proposal — even if phrased as acceptance (e.g., "let's do 50/50", "I want 60%") — is a counter-proposal. Apply Rule 3 instead.
 
@@ -122,22 +122,33 @@ Score 3 hits the midpoint because it has its anchor row to itself — unlike the
 
 **Rule:** When the user's reply can't be turned into an accept, counter, or question, the phase stays open. Two shapes, handled at different layers:
 
-- **`unknown` intent → re-ask.** The reply is ambiguous, off-topic, or names no number where one is needed — including a bare directional phrase like "more in stocks" with no figure (the classifier labels these `unknown`, not `counter`, because it cannot guess a number). `resolveAskDecision` re-asks with the fixed `ALLOCATION_UNKNOWN_INTENT_MESSAGE` ("I didn't catch that. Want the proposed split, more in stocks, or more in buffer?"), rendered **in code** (a constant in `clarify.allocation.constants.ts`, not the LLM). The turn still counts against the budget.
+- **`unknown` intent → re-ask.** The reply is ambiguous, off-topic, or names no number where one is needed — including a bare directional phrase like "more in stocks" with no figure (the classifier labels these `unknown`, not `counter`, because it cannot guess a number). `resolveAskDecision` re-asks with the fixed `ALLOCATION_UNKNOWN_INTENT_MESSAGE` ("I didn't catch that. Want the proposed split, more in stocks, or more in buffer?"), rendered **in code** (a constant in `clarify.allocation.constants.ts`, not the LLM). The turn still counts against the total-turn backstop, but not the negotiation budget — only counters advance that.
 - **`counter` intent with no number → throw.** A `counter` with `proposedEquityPercentage === null` is model disobedience: the classifier prompt routes numberless input to `unknown`, so a well-behaved classifier never emits it. `classifyTurn` re-parses the flat classifier output through the resolved `AllocationIntentSchema` (whose `counter` variant requires a number), so this shape fails that parse and throws `BadGatewaySchemaValidationError` (a 502 — bad upstream response) at the io boundary, before the turn handler runs. Because it's unreachable through normal classification it has no eval; it's covered by the resolved-schema parse test in `clarify.allocation.io.test.ts`.
 
 ## Turn budget
 
-`MAX_NEGOTIATION_TURNS = 5` in `clarify.allocation.constants.ts`. Counts user replies (each call to `turnHandler`). Typical paths:
+Two counters in the threaded conversation state, each with its own cap in `clarify.allocation.constants.ts`:
 
-- **Happy path:** initial proposal + user accepts on turn 1 = 1 turn used.
-- **Counter-proposal path:** initial proposal + counter on turn 1 + accept on turn 2 = 2 turns used.
-- **Clarifying question path:** initial proposal + question on turn 1 + accept on turn 2 = 2 turns used.
-- **Sanity-check path:** initial proposal + extreme counter on turn 1 (with sanity check) + accept on turn 2 = 2 turns used.
-- **Worst case in evals** (question + counter + accept) = 3 turns used, well within budget.
+- **Negotiation budget — `MAX_NEGOTIATION_TURNS = 5`.** Counts only counter-proposals (`negotiationTurnsTaken`). Questions and unknown replies don't advance it: they don't move the split, so haggling over the number isn't what's being bounded. A beginner can ask as many clarifying questions as the total budget allows without ever spending a negotiation turn.
+- **Total-turn backstop — `MAX_TOTAL_TURNS = 10`.** Counts every reply type (`totalTurnsTaken`). Bounds a conversation that never converges — e.g. an endless run of questions — so it exits gracefully as `unresolved` instead of climbing into `runConversation`'s 500-level hard stop. Sits above the negotiation cap; the gap is the room a patient user gets for questions.
+
+Both counters read as "turns already served," so a cap of N allows N replies before the gate fires. Typical paths:
+
+- **Happy path:** initial proposal + user accepts on turn 1 = 0 negotiation turns, 1 total.
+- **Counter-proposal path:** initial proposal + counter + accept = 1 negotiation turn, 2 total.
+- **Clarifying question path:** initial proposal + question + accept = 0 negotiation turns, 2 total.
+- **Sanity-check path:** initial proposal + extreme counter (with sanity check) + accept = 1 negotiation turn, 2 total.
+- **Worst case in evals** (question + counter + accept) = 1 negotiation turn, 3 total — well within both budgets.
 
 ## Budget exhaustion
 
-The `runConversation` runner enforces no budget — convergence is the handler's responsibility. The handler increments a `turnsTaken` counter in the threaded state and classifies the user's reply first; if the intent is `accept`, the phase resolves to `completed` even on the `MAX_NEGOTIATION_TURNS`-th turn (closing on the user's "yes" is the right UX — returning `unresolved` after a clear acceptance would feel broken). For any non-accept intent on the `MAX_NEGOTIATION_TURNS`-th turn the handler returns `Done` with `{ status: "unresolved", reason: "allocation" }`, and the orchestrator maps that to `ALLOCATION_EXIT_MESSAGE`. The trade-off is one extra classifier call on the last turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
+The `runConversation` runner enforces no budget — convergence is the handler's responsibility. Each turn the handler classifies the user's reply first, then applies three gates in order:
+
+1. **Accept wins outright.** If the intent is `accept`/`accept-original`, the phase resolves to `completed` even when a budget is already spent — closing on the user's "yes" is the right UX; returning `unresolved` after a clear acceptance would feel broken.
+2. **Total-turn backstop.** If `totalTurnsTaken` has reached `MAX_TOTAL_TURNS`, return `Done` with `{ status: "unresolved", reason: "allocation" }`, regardless of intent.
+3. **Negotiation budget.** If the reply is a `counter` and `negotiationTurnsTaken` has reached `MAX_NEGOTIATION_TURNS`, return the same `unresolved` result. Gated *before* composing, so a refused counter never spends a composer call.
+
+The orchestrator maps `unresolved`/`allocation` to `ALLOCATION_EXIT_MESSAGE` — both caps share the exit message; only the log line differs. The trade-off is one extra classifier call on the exhausting turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
 
 ## Out of scope
 

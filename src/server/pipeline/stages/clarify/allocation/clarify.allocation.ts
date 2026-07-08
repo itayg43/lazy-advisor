@@ -11,6 +11,7 @@ import {
   ALLOCATION_ANCHOR_DATA,
   ALLOCATION_UNKNOWN_INTENT_MESSAGE,
   ALLOCATION_MAX_NEGOTIATION_TURNS,
+  ALLOCATION_MAX_TOTAL_TURNS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   classifyTurn,
@@ -36,6 +37,7 @@ import type {
   AllocationAcceptIntentKind,
   AllocationAskDecision,
   AllocationContinuingIntent,
+  AllocationConversationState,
   AllocationFramingFlags,
   AllocationHandlerOutput,
   AllocationInitHandlerOutput,
@@ -52,7 +54,7 @@ const logger = createLogger("clarifyAllocation");
 
 type ResolveAskDecisionParams = {
   intent: AllocationContinuingIntent;
-  state: Readonly<AllocationNegotiationState>;
+  negotiationState: Readonly<AllocationNegotiationState>;
   proposalContext: AllocationProposalContext;
   lastUserResponse: string;
 };
@@ -108,13 +110,13 @@ const handleAcceptTurn = (
 
 const handleCounterTurn = async (
   proposedEquityPercentage: number,
-  state: Readonly<AllocationNegotiationState>,
+  negotiationState: Readonly<AllocationNegotiationState>,
   proposalContext: AllocationProposalContext,
 ): Promise<AllocationAskDecision> => {
-  const previousEquityPercentage = state.currentEquityPercentage;
+  const previousEquityPercentage = negotiationState.currentEquityPercentage;
   const currentFramingFlags: AllocationFramingFlags = {
-    hasShownExtremeFraming: state.hasShownExtremeFraming,
-    hasShownCompoundImpactFraming: state.hasShownCompoundImpactFraming,
+    hasShownExtremeFraming: negotiationState.hasShownExtremeFraming,
+    hasShownCompoundImpactFraming: negotiationState.hasShownCompoundImpactFraming,
   };
   const counterBranch = selectCounterBranch(
     proposedEquityPercentage,
@@ -143,7 +145,7 @@ const handleCounterTurn = async (
   return {
     kind: HandlerOutputKind.Ask,
     message: reply,
-    statePatch: {
+    negotiationStatePatch: {
       currentEquityPercentage: proposedEquityPercentage,
       ...nextFramingFlags,
     },
@@ -168,14 +170,17 @@ const createInitHandler =
   (
     amount: number,
     anchorEquityPercentage: number,
-  ): InitHandler<AllocationNegotiationState, AllocationPhaseResult> =>
+  ): InitHandler<AllocationConversationState, AllocationPhaseResult> =>
   async (): Promise<AllocationInitHandlerOutput> => ({
     kind: HandlerOutputKind.Ask,
     state: {
-      currentEquityPercentage: anchorEquityPercentage,
-      hasShownExtremeFraming: false,
-      hasShownCompoundImpactFraming: false,
-      turnsTaken: 0,
+      totalTurnsTaken: 0,
+      negotiation: {
+        currentEquityPercentage: anchorEquityPercentage,
+        hasShownExtremeFraming: false,
+        hasShownCompoundImpactFraming: false,
+        negotiationTurnsTaken: 0,
+      },
     },
     message: buildInitialProposal(amount, anchorEquityPercentage),
   });
@@ -186,15 +191,19 @@ const createInitHandler =
 const resolveAskDecision = async (
   params: ResolveAskDecisionParams,
 ): Promise<AllocationAskDecision> => {
-  const { intent, state, proposalContext, lastUserResponse } = params;
+  const { intent, negotiationState, proposalContext, lastUserResponse } = params;
 
   switch (intent.kind) {
     case AllocationIntentKindEnum.enum.counter:
-      return handleCounterTurn(intent.proposedEquityPercentage, state, proposalContext);
+      return handleCounterTurn(
+        intent.proposedEquityPercentage,
+        negotiationState,
+        proposalContext,
+      );
     case AllocationIntentKindEnum.enum.question:
       return handleQuestionTurn(
         lastUserResponse,
-        state.currentEquityPercentage,
+        negotiationState.currentEquityPercentage,
         proposalContext,
       );
     case AllocationIntentKindEnum.enum.unknown: {
@@ -220,23 +229,31 @@ const createTurnHandler =
   (
     proposalContext: AllocationProposalContext,
     anchorEquityPercentage: number,
-  ): TurnHandler<AllocationNegotiationState, AllocationPhaseResult> =>
-  async (state, history, lastUserResponse): Promise<AllocationHandlerOutput> => {
-    const turnsTaken = state.turnsTaken + 1;
+  ): TurnHandler<AllocationConversationState, AllocationPhaseResult> =>
+  async (
+    conversationState,
+    history,
+    lastUserResponse,
+  ): Promise<AllocationHandlerOutput> => {
+    const { totalTurnsTaken, negotiation } = conversationState;
 
     const intent = await classifyTurn(history);
 
-    // Accept is checked before the budget gate on purpose: a user who accepts
+    // Accept is checked before either budget gate on purpose: a user who accepts
     // on the final turn should complete the phase, not be failed as exhausted.
     if (isAcceptIntent(intent)) {
       return handleAcceptTurn(intent.kind, {
-        currentEquityPercentage: state.currentEquityPercentage,
+        currentEquityPercentage: negotiation.currentEquityPercentage,
         anchorEquityPercentage,
       });
     }
 
-    if (turnsTaken >= ALLOCATION_MAX_NEGOTIATION_TURNS) {
-      logger.warn("Allocation phase unresolved — turn budget exhausted");
+    // Total-turn backstop — counts every reply type. A user who mostly asks
+    // clarifying questions exits gracefully here instead of climbing into the
+    // runner's 500-level hard stop. `totalTurnsTaken` counts turns already
+    // served, so `>=` cuts once the budget is spent.
+    if (totalTurnsTaken >= ALLOCATION_MAX_TOTAL_TURNS) {
+      logger.warn("Allocation phase unresolved — total turn budget exhausted");
 
       return {
         kind: HandlerOutputKind.Done,
@@ -247,19 +264,45 @@ const createTurnHandler =
       };
     }
 
-    const { message, statePatch } = await resolveAskDecision({
+    // Negotiation budget — only counter-proposals count, and we gate before
+    // composing so a refused counter never spends a composer call.
+    const isCounterIntent = intent.kind === AllocationIntentKindEnum.enum.counter;
+    if (
+      isCounterIntent &&
+      negotiation.negotiationTurnsTaken >= ALLOCATION_MAX_NEGOTIATION_TURNS
+    ) {
+      logger.warn("Allocation phase unresolved — negotiation budget exhausted");
+
+      return {
+        kind: HandlerOutputKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+        },
+      };
+    }
+
+    const { message, negotiationStatePatch } = await resolveAskDecision({
       intent,
-      state,
+      negotiationState: negotiation,
       proposalContext,
       lastUserResponse,
     });
 
-    // Ask decisions carry only a state patch — this is the single place that
-    // applies the `turnsTaken` increment and lifts that patch into the full
-    // successor state the runner needs.
+    // The single place that commits both turn counters and lifts the negotiation
+    // patch into the full successor state. `totalTurnsTaken` advances every turn;
+    // `negotiationTurnsTaken` advances only on a counter.
     return {
       kind: HandlerOutputKind.Ask,
-      state: { ...state, turnsTaken, ...statePatch },
+      state: {
+        totalTurnsTaken: totalTurnsTaken + 1,
+        negotiation: {
+          ...negotiation,
+          ...negotiationStatePatch,
+          negotiationTurnsTaken:
+            negotiation.negotiationTurnsTaken + (isCounterIntent ? 1 : 0),
+        },
+      },
       message,
     };
   };
@@ -294,11 +337,12 @@ export const collectAllocation = async (
         anchorEquityPercentage,
       ),
       responder,
-      // Backstop only. Legitimate asks max at exactly ALLOCATION_MAX_NEGOTIATION_TURNS (the
-      // init ask offsets the final budget-exhausted Done), so +1 never false-trips
-      // — it absorbs an off-by-one in the handler's turn accounting while still
-      // catching a runaway handler one turn later.
-      hardStopTurns: ALLOCATION_MAX_NEGOTIATION_TURNS + 1,
+      // Backstop only, not the real limit — turn accounting lives in the phase
+      // state (`totalTurnsTaken` / `negotiationTurnsTaken`) and a well-formed handler
+      // returns Done first. The last legitimate ask is emitted while `asksEmitted`
+      // equals ALLOCATION_MAX_TOTAL_TURNS, so +1 clears it; only a handler that keeps
+      // asking past its own total budget trips this.
+      hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
     }),
     (error, value) =>
       new InternalSchemaValidationError(

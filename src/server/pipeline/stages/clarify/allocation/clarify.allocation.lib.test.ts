@@ -270,7 +270,7 @@ describe("clarifyAllocationLib", () => {
         hasShownExtremeFraming: false,
         hasShownCompoundImpactFraming: false,
         currentEquityPercentage: 75,
-        turnsTaken: 2,
+        negotiationTurnsTaken: 2,
       };
       const counterBranch: AllocationCounterBranch = {
         kind: AllocationCounterBranchKindEnum.enum.extreme,

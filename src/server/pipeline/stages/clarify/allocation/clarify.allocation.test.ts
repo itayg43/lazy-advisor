@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
-import { ALLOCATION_UNKNOWN_INTENT_MESSAGE } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
+import {
+  ALLOCATION_MAX_TOTAL_TURNS,
+  ALLOCATION_UNKNOWN_INTENT_MESSAGE,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import * as allocationIO from "#pipeline/stages/clarify/allocation/clarify.allocation.io";
 import {
   AllocationCounterBranchKindEnum,
@@ -130,24 +133,25 @@ describe("collectAllocation", () => {
     });
   });
 
-  // clarify.allocation.rules.md § Budget exhaustion: accept is gated before the
-  // budget check (clarify.allocation.ts:231 vs :238), so a yes on the
-  // MAX_NEGOTIATION_TURNS-th turn completes rather than being discarded as
-  // exhausted. Four counters + accept = 5 turns = the budget.
-  it("should complete on an accept at the turn budget instead of exhausting", async () => {
+  // clarify.allocation.rules.md § Budget exhaustion gate 1: accept is gated ahead of
+  // both budget checks, so a yes still completes even once the negotiation budget is
+  // spent. Five counters bring negotiationTurnsTaken to MAX_NEGOTIATION_TURNS; a
+  // sixth-turn accept resolves to the latest counter (50) rather than exhausting.
+  it("should complete on an accept once the negotiation budget is spent", async () => {
     queueCounterTurn(60);
-    queueCounterTurn(55);
+    queueCounterTurn(58);
+    queueCounterTurn(56);
+    queueCounterTurn(54);
     queueCounterTurn(50);
-    queueCounterTurn(45);
     queueClassify({ kind: accept, proposedEquityPercentage: null });
-    const responder = createTrackedResponder(["60%", "55%", "50%", "45%", "yes"]);
+    const responder = createTrackedResponder(["60%", "58%", "56%", "54%", "50%", "yes"]);
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
     expect(result).toEqual({
       status: PipelineStatusEnum.enum.completed,
-      equityPercentage: 45,
-      bufferPercentage: 55,
+      equityPercentage: 50,
+      bufferPercentage: 50,
     });
   });
 
@@ -208,20 +212,22 @@ describe("collectAllocation", () => {
     expect(composeQuestionSpy).not.toHaveBeenCalled();
   });
 
-  // clarify.allocation.rules.md § Budget exhaustion: a chain of counters with no
-  // accept exhausts the budget. On the MAX_NEGOTIATION_TURNS-th turn the non-accept
-  // intent hits the budget gate, which returns unresolved *before* composing — so
-  // only the first four turns reach the composer.
-  it("should resolve unresolved/allocation when counters exhaust the turn budget", async () => {
+  // clarify.allocation.rules.md § Budget exhaustion gate 3: a chain of counters with
+  // no accept exhausts the negotiation budget. Five counters are served
+  // (negotiationTurnsTaken → MAX_NEGOTIATION_TURNS); the sixth counter hits the
+  // negotiation gate, which returns unresolved *before* composing — so only the
+  // first five turns reach the composer.
+  it("should resolve unresolved/allocation when counters exhaust the negotiation budget", async () => {
     queueCounterTurn(60);
-    queueCounterTurn(55);
-    queueCounterTurn(50);
-    queueCounterTurn(45);
-    // 5th turn: classify only — the budget gate short-circuits before compose.
+    queueCounterTurn(58);
+    queueCounterTurn(56);
+    queueCounterTurn(54);
+    queueCounterTurn(52);
+    // 6th turn: classify only — the negotiation gate short-circuits before compose.
     // The counter still carries a real number so classifyTurn's re-parse passes.
-    queueClassify({ kind: counter, proposedEquityPercentage: 40 });
+    queueClassify({ kind: counter, proposedEquityPercentage: 50 });
     const composeCounterSpy = vi.spyOn(allocationIO, "composeCounterReply");
-    const responder = createTrackedResponder(["60%", "55%", "50%", "45%", "40%"]);
+    const responder = createTrackedResponder(["60%", "58%", "56%", "54%", "52%", "50%"]);
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
@@ -229,36 +235,66 @@ describe("collectAllocation", () => {
       status: PipelineStatusEnum.enum.unresolved,
       reason: ClarifyUnresolvedReasonEnum.enum.allocation,
     });
-    expect(composeCounterSpy).toHaveBeenCalledTimes(4);
+    expect(composeCounterSpy).toHaveBeenCalledTimes(5);
   });
 
-  // clarify.allocation.rules.md § Budget exhaustion: turnsTaken is incremented
-  // centrally by the turn runner (handlers can't write it — AllocationStatePatch
-  // omits the field at the type level), so *every* intent advances it uniformly.
-  // Five straight questions — never an accept or counter — still exhaust the
-  // budget, which they only can if each question turn counts against it.
-  it("should count non-counter intents against the turn budget", async () => {
+  // clarify.allocation.rules.md § Turn budget: only counters advance the negotiation
+  // budget — questions never do. Six clarifying questions (past MAX_NEGOTIATION_TURNS)
+  // keep the phase open; a following accept still completes at the untouched anchor,
+  // which is only possible if the questions didn't spend the negotiation budget.
+  it("should not count questions against the negotiation budget", async () => {
     queueQuestionTurn();
     queueQuestionTurn();
     queueQuestionTurn();
     queueQuestionTurn();
-    // 5th turn: classify only — the budget gate short-circuits before compose.
-    queueClassify({ kind: question, proposedEquityPercentage: null });
+    queueQuestionTurn();
+    queueQuestionTurn();
+    queueClassify({ kind: accept, proposedEquityPercentage: null });
     const composeQuestionSpy = vi.spyOn(allocationIO, "composeQuestionReply");
     const responder = createTrackedResponder([
       "what's a buffer?",
       "and equity?",
-      "why split?",
+      "why split at all?",
       "how did you decide?",
+      "what's a money-market fund?",
       "one more thing",
+      "sounds good",
     ]);
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
     expect(result).toEqual({
+      status: PipelineStatusEnum.enum.completed,
+      equityPercentage: ANCHOR_EQUITY_PERCENTAGE,
+      bufferPercentage: 100 - ANCHOR_EQUITY_PERCENTAGE,
+    });
+    expect(composeQuestionSpy).toHaveBeenCalledTimes(6);
+  });
+
+  // clarify.allocation.rules.md § Budget exhaustion gate 2: the total-turn backstop
+  // bounds a conversation that never converges. MAX_TOTAL_TURNS questions are served
+  // (totalTurnsTaken → MAX_TOTAL_TURNS); the next turn hits the total gate and returns
+  // unresolved before composing — so only the served turns reach the composer. The
+  // classifier is mocked, so the question text is inert — plain placeholders make that
+  // explicit, and binding the counts to the constant keeps them in lockstep with it.
+  it("should resolve unresolved/allocation when total turns are exhausted", async () => {
+    for (let turn = 0; turn < ALLOCATION_MAX_TOTAL_TURNS; turn++) queueQuestionTurn();
+    // One past the cap: classify only — the total gate short-circuits before compose.
+    queueClassify({ kind: question, proposedEquityPercentage: null });
+    const composeQuestionSpy = vi.spyOn(allocationIO, "composeQuestionReply");
+    const responder = createTrackedResponder(
+      Array.from(
+        { length: ALLOCATION_MAX_TOTAL_TURNS + 1 },
+        (_, turn) => `question ${turn + 1}`,
+      ),
+    );
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+
+    expect(result).toEqual({
       status: PipelineStatusEnum.enum.unresolved,
       reason: ClarifyUnresolvedReasonEnum.enum.allocation,
     });
-    expect(composeQuestionSpy).toHaveBeenCalledTimes(4);
+    expect(composeQuestionSpy).toHaveBeenCalledTimes(ALLOCATION_MAX_TOTAL_TURNS);
   });
 });

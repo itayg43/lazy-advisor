@@ -73,17 +73,31 @@ export type AllocationFramingFlags = {
 };
 
 /**
- * Negotiation state threaded across turns. Owned by the runner once
- * `initHandler` returns it; every handler receives it `Readonly` and produces
- * a new value via spread rather than mutating in place.
+ * The negotiation slice of the conversation state — the current equity number,
+ * the sticky framing flags, and the count of counter-turns handled so far. Owned
+ * by the runner once `initHandler` returns it; every handler receives it
+ * `Readonly` and produces a new value via spread rather than mutating in place.
  */
 export type AllocationNegotiationState = AllocationFramingFlags & {
   currentEquityPercentage: number;
-  turnsTaken: number;
+  negotiationTurnsTaken: number;
+};
+
+/**
+ * The full per-phase conversation state threaded across turns. `totalTurnsTaken`
+ * counts *every* reply type (counters, questions, unknowns) as a conversation-level
+ * backstop; the `negotiation` slice holds negotiation-specific state, whose
+ * `negotiationTurnsTaken` counts only counter-proposals. The two counters live at
+ * different altitudes — a runaway question loop is bounded by the total counter
+ * without ever spending the negotiation budget.
+ */
+export type AllocationConversationState = {
+  totalTurnsTaken: number;
+  negotiation: AllocationNegotiationState;
 };
 
 export type AllocationHandlerOutput = HandlerOutput<
-  AllocationNegotiationState,
+  AllocationConversationState,
   AllocationPhaseResult
 >;
 
@@ -109,24 +123,29 @@ export type AllocationInitHandlerOutput = Extract<
   { kind: typeof HandlerOutputKind.Ask }
 >;
 
-// State mutations a turn handler may request. `turnsTaken` is excluded — the
-// turn runner owns that counter and increments it centrally, so a handler can
-// never write it. `createTurnHandler` merges the patch over the prior state.
-type AllocationStatePatch = Partial<Omit<AllocationNegotiationState, "turnsTaken">>;
+// State mutations a turn handler may request against the negotiation slice.
+// `negotiationTurnsTaken` is excluded — `createTurnHandler` owns both turn counters
+// and increments them centrally, so a handler can never write it. `totalTurnsTaken`
+// lives on the conversation state, outside this slice, so it's already out of reach
+// here by construction. `createTurnHandler` merges the patch over the prior
+// negotiation state.
+type AllocationNegotiationStatePatch = Partial<
+  Omit<AllocationNegotiationState, "negotiationTurnsTaken">
+>;
 
 /**
- * What a *continuing* turn handler returns: ask again, carrying only the fields
- * that changed (`statePatch`). Distinct from `AllocationHandlerOutput` — the
- * handler decides *what* changed; `createTurnHandler` applies the `turnsTaken`
- * increment and merges the patch into the full successor state in one place.
- * Terminal turns (accept / budget exhaustion) skip this and return an
- * `AllocationHandlerOutput` Done directly: they end the phase, so there's no
- * successor state to assemble and the patch concept doesn't apply.
+ * What a *continuing* turn handler returns: ask again, carrying only the
+ * negotiation fields that changed (`negotiationStatePatch`). Distinct from
+ * `AllocationHandlerOutput` — the handler decides *what* changed; `createTurnHandler`
+ * applies both turn-counter increments and merges the patch into the full successor
+ * state in one place. Terminal turns (accept / budget exhaustion) skip this and
+ * return an `AllocationHandlerOutput` Done directly: they end the phase, so there's
+ * no successor state to assemble and the patch concept doesn't apply.
  */
 export type AllocationAskDecision = {
   kind: typeof HandlerOutputKind.Ask;
   message: string;
-  statePatch?: AllocationStatePatch;
+  negotiationStatePatch?: AllocationNegotiationStatePatch;
 };
 
 type AllocationCounterBranchKind = z.infer<typeof AllocationCounterBranchKindEnum>;
