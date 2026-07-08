@@ -4,7 +4,6 @@ import { InternalError } from "#errors";
 import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
 import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
-import { ALLOCATION_UNKNOWN_INTENT_MESSAGE } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   AllocationJudgeCriterionEnum,
   judgeAllocationConversation,
@@ -281,22 +280,6 @@ describe("collectAllocation", () => {
     );
   });
 
-  // clarify.allocation.rules.md rule 2 (accept-original): after countering, the
-  // user retracts to the original anchor without naming a number. Classifier
-  // returns `accept-original`; handler resolves to anchorEquityPercentage, not the latest
-  // counter.
-  it("should resolve to the anchor when the user retracts to the original proposal", async () => {
-    const { result } = await runAllocation(longHorizonAggressiveInput, [
-      "Make it 60%",
-      "Actually, never mind — stick with your original suggestion",
-    ]);
-    const output = expectSuccess(result);
-
-    // aggressive + 10+ yr + score 5 → anchor = 90% (cell.max), not 60
-    expect(output.equityPercentage).toBe(90);
-    expect(output.bufferPercentage).toBe(10);
-  });
-
   // clarify.allocation.rules.md rule 3: non-round counter-proposal honored without snapping
   it("should honor a non-round counter-proposal exactly (no snap-to-cell)", async () => {
     const { transcript, result } = await runAllocation(longHorizonAggressiveInput, [
@@ -376,33 +359,6 @@ describe("collectAllocation", () => {
       AllocationJudgeCriterionEnum.enum.naturalness,
       AllocationJudgeCriterionEnum.enum["no-risk-labeling"],
     ]);
-  });
-
-  // clarify.allocation.rules.md rule 3 Branch 3 (repeated counter-proposals):
-  // compound-impact framing lands once per conversation. The first counter
-  // confirmation must reference the user's timeline (Branch 2); the second
-  // counter confirmation must omit the framing and just confirm the new split
-  // (Branch 3). Tight regex on "over your … (year|horizon|timeline)" — looser
-  // matches like "long-run growth" appear in many turns as filler and would
-  // over-trigger.
-  it("should omit compound-impact framing on a repeated counter-proposal", async () => {
-    const { transcript, result } = await runAllocation(longHorizonAggressiveInput, [
-      "Make it 60%",
-      "Actually 55%",
-      "Yes",
-    ]);
-    const output = expectSuccess(result);
-
-    expect(output.equityPercentage).toBe(55);
-    expect(output.bufferPercentage).toBe(45);
-
-    const turns = agentTurns(transcript);
-    const compoundImpactPattern =
-      /(?:over|with|across) your[^.]{0,40}(?:year|horizon|timeline)/i;
-    expect(turns[1].content).toMatch(compoundImpactPattern);
-    expect(turns[2].content).not.toMatch(compoundImpactPattern);
-
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
   });
 
   // clarify.allocation.rules.md rule 4: clarifying question answered + re-ask, then accept
@@ -516,60 +472,5 @@ describe("collectAllocation", () => {
     const counterTurn = agentTurns(transcript)[2].content.toLowerCase();
     expect(counterTurn).toMatch(TIMELINE_REFERENCE_PATTERN);
     expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
-  });
-
-  // clarify.allocation.rules.md rule 5: an unparseable / numberless reply ("more
-  // in stocks" with no number) classifies as `unknown` → the handler re-asks with
-  // the fixed generic prompt and the phase stays open. The constant is rendered in
-  // code (not the LLM), so assert on it exactly. A following accept then closes.
-  it("should re-ask with the generic prompt on an unparseable reply", async () => {
-    const { transcript, result } = await runAllocation(longHorizonAggressiveInput, [
-      "more in stocks",
-      "Sounds good",
-    ]);
-    const output = expectSuccess(result);
-
-    expectEquityInRange(output, 80, 90);
-    expect(agentText(transcript)).toContain(ALLOCATION_UNKNOWN_INTENT_MESSAGE);
-  });
-
-  // clarify.allocation.rules.md "Budget exhaustion": accept on the
-  // ALLOCATION_MAX_NEGOTIATION_TURNS-th turn wins — the handler classifies first and
-  // resolves to `completed` rather than throwing the user's "yes" away. 4
-  // counters + 1 accept = 5 turns total (ALLOCATION_MAX_NEGOTIATION_TURNS). Final equity
-  // is the last counter's value.
-  it("should accept on the ALLOCATION_MAX_NEGOTIATION_TURNS-th turn instead of returning unresolved", async () => {
-    const { result } = await runAllocation(longHorizonAggressiveInput, [
-      "Actually I want 60% stocks",
-      "Wait, let's do 55%",
-      "Sorry, change to 50%",
-      "Actually 45%",
-      "Yes, lock it in",
-    ]);
-    const output = expectSuccess(result);
-
-    expect(output.equityPercentage).toBe(45);
-    expect(output.bufferPercentage).toBe(55);
-  });
-
-  // clarify.allocation.rules.md "Budget exhaustion": a chain of counter-proposals
-  // exhausts the turn budget threaded via state (ALLOCATION_MAX_NEGOTIATION_TURNS = 5 in
-  // clarify.allocation.constants.ts).
-  // On the budget-th turn, the handler returns `Done` with
-  // { status: "unresolved", reason: "allocation" } before composing another reply.
-  it("should return failure when the user keeps counter-proposing past the turn budget", async () => {
-    const { result } = await runAllocation(longHorizonAggressiveInput, [
-      "Actually I want 60% stocks",
-      "Wait, let's do 55%",
-      "Sorry, change to 50%",
-      "Actually 45%",
-      "Make it 40%",
-      "Hmm, 35%",
-      "OK 30%",
-    ]);
-
-    expect(result.status).toBe("unresolved");
-    if (result.status !== "unresolved") return;
-    expect(result.reason).toBe("allocation");
   });
 });

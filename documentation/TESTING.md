@@ -29,9 +29,9 @@
 
 ### Spying on internal functions
 
-The external-boundary rule has one exception: when the error under test originates *inside* an internal function (not at the OpenAI boundary), a global `vi.mock` would contaminate all other tests in the file. In that case, use `vi.spyOn` scoped to that specific test — `vi.restoreAllMocks()` in `beforeEach` handles cleanup automatically, so no manual `spy.mockRestore()` is needed.
+`vi.spyOn` on an internal module — not the OpenAI boundary — has two sanctioned uses. Both revert via `vi.restoreAllMocks()` in `beforeEach` (call it after `clearAllMocks`), so no manual `spy.mockRestore()` is needed.
 
-In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., amount, timeline, risk, contribution) or `runConversation` (allocation) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal. Note that `runConversation` does not throw an exhaustion error; its convergence is handled in-band via the phase's own `unresolved` result variant (see `ARCHITECTURE.md § Pipeline control-flow errors`).
+**1. Stub — the error under test originates *inside* an internal function.** A global `vi.mock` would contaminate every other test in the file, so scope a `vi.spyOn(...).mockRejectedValueOnce(...)` to the one test. In this codebase this arises when testing orchestrator branches triggered by `PhaseLoopToolCallsExhaustedError`, which is thrown by `runPhaseLoop` — not by `callOpenAI`. Mock `runPhaseLoop` via `vi.spyOn` with a rejection for the phase that should exhaust its tool-call budget. Phases that use `askWithClassify` (e.g., amount, timeline, risk, contribution) or `runConversation` (allocation) instead of `runPhaseLoop` are unaffected by the spy — mock those at the OpenAI boundary as normal. Note that `runConversation` does not throw an exhaustion error; its convergence is handled in-band via the phase's own `unresolved` result variant (see `ARCHITECTURE.md § Pipeline control-flow errors`).
 
 ```ts
 import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
@@ -48,6 +48,8 @@ it("should handle intake tool-call exhaustion", async () => {
   // assertions ...
 });
 ```
+
+**2. Observer — you need the typed args an internal collaborator receives, but want it to keep running.** Omit the mock implementation: a bare `vi.spyOn(module, "fn")` calls through to the real function while recording each call, so nothing is faked and the boundary mock still drives behavior. This does *not* break the external-boundary rule — the spy observes, it doesn't replace, so the real code runs. Reach for it over asserting on the boundary mock's raw arguments when a collaborator sits *behind* the boundary and its structured inputs are what you want to check. `clarify.allocation.test.ts` spies on `composeCounterReply` this way: `callOpenAIParsed` stays mocked (it feeds the classifier), the composer runs for real, and `composeCounterReply.mock.calls[i][0]` exposes the selected `AllocationCounterBranch` directly — proving the turn logic threaded the right branch across turns without stubbing the composer's own rendering. Import the module namespace to spy on it (`import * as allocationIO from "…"`).
 
 ### Import ordering with `vi.hoisted`/`vi.mock`
 
