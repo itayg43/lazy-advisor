@@ -10,6 +10,7 @@ import {
   applyBranchFraming,
   computeSplit,
   deriveAnchorEquityPercentage,
+  resolveAllocationAnchor,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
@@ -75,6 +76,43 @@ describe("clarifyAllocationLib", () => {
 
       expect(deriveAnchorEquityPercentage(oddSumRange, 3)).toBe(43);
     });
+  });
+
+  describe("resolveAllocationAnchor", () => {
+    const { "5–10 years": t5to10, "10+ years": t10plus } = TimelineBucketEnum.enum;
+
+    // The wrapper wires the table lookup to the right derivation. Two cells cover
+    // both derivation paths: score 5 takes the cell's high edge, score 3 the
+    // rounded midpoint. Ranges are hand-copied from ALLOCATION_ANCHOR_DATA so the
+    // test fails if a lookup key ever drifts. (The full score→edge/midpoint
+    // mapping is unit-tested above against deriveAnchorEquityPercentage.)
+    it.each<{
+      riskTolerance: RiskTolerance;
+      timeline: AllocationTimeline;
+      expectedRange: AllocationSuggestedEquityRange;
+      expectedAnchor: number;
+    }>([
+      {
+        riskTolerance: 5,
+        timeline: t10plus,
+        expectedRange: { min: 80, max: 90 },
+        expectedAnchor: 90,
+      },
+      {
+        riskTolerance: 3,
+        timeline: t5to10,
+        expectedRange: { min: 50, max: 60 },
+        expectedAnchor: 55,
+      },
+    ])(
+      "should resolve range $expectedRange and anchor $expectedAnchor for score $riskTolerance at $timeline",
+      ({ riskTolerance, timeline, expectedRange, expectedAnchor }) => {
+        expect(resolveAllocationAnchor(riskTolerance, timeline)).toEqual({
+          suggestedEquityRange: expectedRange,
+          anchorEquityPercentage: expectedAnchor,
+        });
+      },
+    );
   });
 
   describe("computeSplit", () => {

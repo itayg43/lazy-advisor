@@ -26,10 +26,7 @@ import {
   SHORT_TIMELINE_EXIT_MESSAGE,
   TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import {
-  ClarifyUnresolvedReasonEnum,
-  GoalClassificationEnum,
-} from "#pipeline/stages/clarify/shared/clarify.schemas";
+import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { TimelineClassify } from "#pipeline/stages/clarify/timeline/clarify.timeline.types";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
@@ -383,13 +380,12 @@ describe("runClarifyOrchestrator", () => {
       setupParametersMocks();
       setupRiskMocks();
 
-      // Spy on collectAllocation directly — the orchestrator's job here is to
-      // map `{ status: "unresolved", reason: "allocation" }` to
-      // ALLOCATION_EXIT_MESSAGE; the inner exhaustion mechanism (turn budget)
-      // is covered by the allocation evals.
+      // Spy on collectAllocation directly — the phase returns bare
+      // `{ status: "unresolved" }`; the stage attaches `reason: "allocation"`
+      // and the orchestrator maps that to ALLOCATION_EXIT_MESSAGE. The inner
+      // exhaustion mechanism (turn budget) is covered by the allocation evals.
       vi.spyOn(allocationModule, "collectAllocation").mockResolvedValueOnce({
         status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.allocation,
       });
 
       const result = await runClarifyOrchestrator(

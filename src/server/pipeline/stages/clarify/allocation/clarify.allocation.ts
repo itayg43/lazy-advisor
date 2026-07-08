@@ -8,7 +8,6 @@ import {
   type TurnHandler,
 } from "#pipeline/run-conversation";
 import {
-  ALLOCATION_ANCHOR_DATA,
   ALLOCATION_UNKNOWN_INTENT_MESSAGE,
   ALLOCATION_MAX_NEGOTIATION_TURNS,
   ALLOCATION_MAX_TOTAL_TURNS,
@@ -22,9 +21,9 @@ import {
   applyBranchFraming,
   calculateBufferPercentage,
   computeSplit,
-  deriveAnchorEquityPercentage,
   formatCurrency,
   isAcceptIntent,
+  resolveAllocationAnchor,
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
@@ -46,7 +45,6 @@ import type {
   AllocationPhaseResult,
   AllocationProposalContext,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
@@ -248,19 +246,15 @@ const createTurnHandler =
       });
     }
 
-    // Total-turn backstop — counts every reply type. A user who mostly asks
+    // Total-turn backstop — counts every reply type, so a user who mostly asks
     // clarifying questions exits gracefully here instead of climbing into the
-    // runner's 500-level hard stop. `totalTurnsTaken` counts turns already
-    // served, so `>=` cuts once the budget is spent.
+    // runner's 500-level hard stop. `>=` cuts once the budget is spent.
     if (totalTurnsTaken >= ALLOCATION_MAX_TOTAL_TURNS) {
       logger.warn("Allocation phase unresolved — total turn budget exhausted");
 
       return {
         kind: HandlerOutputKind.Done,
-        result: {
-          status: PipelineStatusEnum.enum.unresolved,
-          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-        },
+        result: { status: PipelineStatusEnum.enum.unresolved },
       };
     }
 
@@ -275,10 +269,7 @@ const createTurnHandler =
 
       return {
         kind: HandlerOutputKind.Done,
-        result: {
-          status: PipelineStatusEnum.enum.unresolved,
-          reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-        },
+        result: { status: PipelineStatusEnum.enum.unresolved },
       };
     }
 
@@ -289,9 +280,8 @@ const createTurnHandler =
       lastUserResponse,
     });
 
-    // The single place that commits both turn counters and lifts the negotiation
-    // patch into the full successor state. `totalTurnsTaken` advances every turn;
-    // `negotiationTurnsTaken` advances only on a counter.
+    // The single place both turn counters commit and the negotiation patch is
+    // lifted into the full successor state.
     return {
       kind: HandlerOutputKind.Ask,
       state: {
@@ -315,10 +305,9 @@ export const collectAllocation = async (
 
   const { amount, timeline, riskTolerance } = input;
 
-  const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
-  const anchorEquityPercentage = deriveAnchorEquityPercentage(
-    suggestedEquityRange,
+  const { suggestedEquityRange, anchorEquityPercentage } = resolveAllocationAnchor(
     riskTolerance,
+    timeline,
   );
 
   logger.info("Derived allocation anchor", {
@@ -326,24 +315,25 @@ export const collectAllocation = async (
     anchorEquityPercentage,
   });
 
+  const conversationResult = await runConversation({
+    initHandler: createInitHandler(amount, anchorEquityPercentage),
+    turnHandler: createTurnHandler(
+      { amount, timeline, suggestedEquityRange },
+      anchorEquityPercentage,
+    ),
+    responder,
+    // Backstop only, not the real limit — turn accounting lives in the phase
+    // state and a well-formed handler returns Done first. The last legitimate
+    // ask is emitted while `asksEmitted` equals ALLOCATION_MAX_TOTAL_TURNS, so
+    // +1 clears it; only a handler that asks past its own total budget trips this.
+    hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
+  });
+
   // Outer boundary over the whole result — mirrors the inner accept-path parse,
   // but also covers the unresolved arm, which has no upstream fail-fast check.
   const result = parseSchema(
     AllocationPhaseResultSchema,
-    await runConversation({
-      initHandler: createInitHandler(amount, anchorEquityPercentage),
-      turnHandler: createTurnHandler(
-        { amount, timeline, suggestedEquityRange },
-        anchorEquityPercentage,
-      ),
-      responder,
-      // Backstop only, not the real limit — turn accounting lives in the phase
-      // state (`totalTurnsTaken` / `negotiationTurnsTaken`) and a well-formed handler
-      // returns Done first. The last legitimate ask is emitted while `asksEmitted`
-      // equals ALLOCATION_MAX_TOTAL_TURNS, so +1 clears it; only a handler that keeps
-      // asking past its own total budget trips this.
-      hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
-    }),
+    conversationResult,
     (error, value) =>
       new InternalSchemaValidationError(
         "Allocation phase produced a result that failed schema validation",

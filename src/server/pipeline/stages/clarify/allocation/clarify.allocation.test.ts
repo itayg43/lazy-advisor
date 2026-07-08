@@ -16,7 +16,6 @@ import type {
   AllocationClassifierOutput,
   AllocationPhaseInput,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
@@ -231,10 +230,7 @@ describe("collectAllocation", () => {
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.unresolved,
-      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-    });
+    expect(result).toEqual({ status: PipelineStatusEnum.enum.unresolved });
     expect(composeCounterSpy).toHaveBeenCalledTimes(5);
   });
 
@@ -291,10 +287,7 @@ describe("collectAllocation", () => {
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.unresolved,
-      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-    });
+    expect(result).toEqual({ status: PipelineStatusEnum.enum.unresolved });
     expect(composeQuestionSpy).toHaveBeenCalledTimes(ALLOCATION_MAX_TOTAL_TURNS);
   });
 });

@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 // Base object shape — split out so it can be merged into the result schema's
@@ -30,9 +29,11 @@ export const AllocationPhaseResultSchema = z
     z
       .object({ status: PipelineStatusEnum.extract(["completed"]) })
       .merge(AllocationPhaseOutputShape),
+    // Bare unresolved — no `reason`. The phase reports only that it couldn't
+    // resolve; `runClarifyStage` attaches the stage-level reason (`allocation`),
+    // since which phase failed is a stage concern, not a phase-internal one.
     z.object({
       status: PipelineStatusEnum.extract(["unresolved"]),
-      reason: ClarifyUnresolvedReasonEnum.extract(["allocation"]),
     }),
   ])
   .refine((v) => v.status !== "completed" || equityBufferSumsTo100(v), SUM_TO_100_ERROR);

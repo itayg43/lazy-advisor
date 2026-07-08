@@ -1,7 +1,9 @@
 import { InternalError } from "#errors";
 import {
+  ALLOCATION_ANCHOR_DATA,
   ALLOCATION_EXTREME_DEVIATION_PERCENTAGE_POINTS,
   type AllocationSuggestedEquityRange,
+  type AllocationTimeline,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
   AllocationCounterBranchKindEnum,
@@ -56,6 +58,32 @@ export const deriveAnchorEquityPercentage = (
       // and a cell whose bounds sum to an odd number yields a .5 midpoint.
       return Math.round((range.min + range.max) / 2);
   }
+};
+
+/**
+ * Resolves the anchor cell for a `riskTolerance` × `timeline` pair: looks up the
+ * suggested equity range in the anchor table and derives the opening equity
+ * percentage from it. Returns both — the range is also needed downstream (the
+ * counter branch selector reads it), and returning it here keeps the table
+ * lookup to a single site. `deriveAnchorEquityPercentage` stays a pure,
+ * table-agnostic helper so it can be unit-tested against synthetic ranges.
+ */
+export const resolveAllocationAnchor = (
+  riskTolerance: RiskTolerance,
+  timeline: AllocationTimeline,
+): {
+  suggestedEquityRange: AllocationSuggestedEquityRange;
+  anchorEquityPercentage: number;
+} => {
+  const suggestedEquityRange = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
+
+  return {
+    suggestedEquityRange,
+    anchorEquityPercentage: deriveAnchorEquityPercentage(
+      suggestedEquityRange,
+      riskTolerance,
+    ),
+  };
 };
 
 /** Splits an amount into its equity and buffer shekel amounts at the given equity percentage. */
