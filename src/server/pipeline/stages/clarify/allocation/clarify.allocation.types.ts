@@ -8,11 +8,13 @@ import type {
 import type {
   AllocationClassifierOutputSchema,
   AllocationCounterBranchKindEnum,
+  AllocationErroredReasonEnum,
   AllocationExtremeCounterDirectionEnum,
   AllocationIntentKindEnum,
   AllocationIntentSchema,
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
+  AllocationUnresolvedReasonEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type { RiskTolerance } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
@@ -24,6 +26,9 @@ export type AllocationPhaseInput = {
 
 export type AllocationPhaseOutput = z.infer<typeof AllocationPhaseOutputSchema>;
 export type AllocationPhaseResult = z.infer<typeof AllocationPhaseResultSchema>;
+
+export type AllocationUnresolvedReason = z.infer<typeof AllocationUnresolvedReasonEnum>;
+export type AllocationErroredReason = z.infer<typeof AllocationErroredReasonEnum>;
 
 type AllocationIntentKind = z.infer<typeof AllocationIntentKindEnum>;
 export type AllocationAcceptIntentKind = Extract<

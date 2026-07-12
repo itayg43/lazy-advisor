@@ -112,3 +112,22 @@ export class PipelineControlFlowError extends Error {
     this.name = "PipelineControlFlowError";
   }
 }
+
+/**
+ * The "upstream fault" family: an upstream answered badly (502) or is down /
+ * temporarily failing (503). These are *expected* environmental failures, not
+ * our bug — so a phase can catch them at its boundary and translate them to an
+ * in-band `errored` result, while letting our-fault errors (`InternalError`,
+ * `InternalSchemaValidationError`) bubble to the orchestrator's top-level catch.
+ * Both families ultimately exit the session the same way; what differs is *where*
+ * they're handled and *what* they signal (an external hiccup vs. our defect).
+ * Membership is decided by origin, not shape: `InternalSchemaValidationError`
+ * shares `SchemaValidationError` with `BadGatewaySchemaValidationError` but is
+ * excluded, because a value *we* produced failing its schema is our fault.
+ */
+export const isUpstreamError = (
+  error: unknown,
+): error is BadGatewayError | ServiceUnavailableError | BadGatewaySchemaValidationError =>
+  error instanceof BadGatewayError ||
+  error instanceof ServiceUnavailableError ||
+  error instanceof BadGatewaySchemaValidationError;

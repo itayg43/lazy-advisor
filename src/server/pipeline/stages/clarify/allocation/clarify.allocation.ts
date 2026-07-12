@@ -1,4 +1,9 @@
-import { InternalError, InternalSchemaValidationError } from "#errors";
+import {
+  InternalError,
+  InternalSchemaValidationError,
+  isUpstreamError,
+  ServiceUnavailableError,
+} from "#errors";
 import { createLogger } from "#lib/logger";
 import { parseSchema } from "#lib/parse-schema";
 import {
@@ -27,9 +32,11 @@ import {
   selectCounterBranch,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
 import {
+  AllocationErroredReasonEnum,
   AllocationIntentKindEnum,
   AllocationPhaseOutputSchema,
   AllocationPhaseResultSchema,
+  AllocationUnresolvedReasonEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationAcceptDecision,
@@ -254,7 +261,10 @@ const createTurnHandler =
 
       return {
         kind: HandlerOutputKind.Done,
-        result: { status: PipelineStatusEnum.enum.unresolved },
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: AllocationUnresolvedReasonEnum.enum.total_budget_exhausted,
+        },
       };
     }
 
@@ -269,7 +279,10 @@ const createTurnHandler =
 
       return {
         kind: HandlerOutputKind.Done,
-        result: { status: PipelineStatusEnum.enum.unresolved },
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: AllocationUnresolvedReasonEnum.enum.negotiation_budget_exhausted,
+        },
       };
     }
 
@@ -305,44 +318,73 @@ export const collectAllocation = async (
 
   const { amount, timeline, riskTolerance } = input;
 
-  const { suggestedEquityRange, anchorEquityPercentage } = resolveAllocationAnchor(
-    riskTolerance,
-    timeline,
-  );
+  try {
+    const { suggestedEquityRange, anchorEquityPercentage } = resolveAllocationAnchor(
+      riskTolerance,
+      timeline,
+    );
 
-  logger.info("Derived allocation anchor", {
-    suggestedEquityRange,
-    anchorEquityPercentage,
-  });
-
-  const conversationResult = await runConversation({
-    initHandler: createInitHandler(amount, anchorEquityPercentage),
-    turnHandler: createTurnHandler(
-      { amount, timeline, suggestedEquityRange },
+    logger.info("Derived allocation anchor", {
+      suggestedEquityRange,
       anchorEquityPercentage,
-    ),
-    responder,
-    // Backstop only, not the real limit — turn accounting lives in the phase
-    // state and a well-formed handler returns Done first. The last legitimate
-    // ask is emitted while `asksEmitted` equals ALLOCATION_MAX_TOTAL_TURNS, so
-    // +1 clears it; only a handler that asks past its own total budget trips this.
-    hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
-  });
+    });
 
-  // Outer boundary over the whole result — mirrors the inner accept-path parse,
-  // but also covers the unresolved arm, which has no upstream fail-fast check.
-  const result = parseSchema(
-    AllocationPhaseResultSchema,
-    conversationResult,
-    (error, value) =>
-      new InternalSchemaValidationError(
-        "Allocation phase produced a result that failed schema validation",
-        error,
-        value,
+    const conversationResult = await runConversation({
+      initHandler: createInitHandler(amount, anchorEquityPercentage),
+      turnHandler: createTurnHandler(
+        { amount, timeline, suggestedEquityRange },
+        anchorEquityPercentage,
       ),
-  );
+      responder,
+      // Backstop only, not the real limit — turn accounting lives in the phase
+      // state and a well-formed handler returns Done first. The last legitimate
+      // ask is emitted while `asksEmitted` equals ALLOCATION_MAX_TOTAL_TURNS, so
+      // +1 clears it; only a handler that asks past its own total budget trips this.
+      hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
+    });
 
-  logger.info("Completed allocation phase", { result });
+    // Outer boundary over the whole result — mirrors the inner accept-path parse,
+    // but also covers the unresolved arm, which has no upstream fail-fast check.
+    const result = parseSchema(
+      AllocationPhaseResultSchema,
+      conversationResult,
+      (error, value) =>
+        new InternalSchemaValidationError(
+          "Allocation phase produced a result that failed schema validation",
+          error,
+          value,
+        ),
+    );
 
-  return result;
+    logger.info("Completed allocation phase", { result });
+
+    return result;
+  } catch (error) {
+    // The one guard boundary for the whole phase body. An upstream fault can only
+    // originate in the runConversation LLM calls, but wrapping everything keeps a
+    // single, uniform boundary: expected external failure (OpenAI 502/503) → report
+    // it in-band as a bare `errored` result the stage/orch can switch on. Everything
+    // else is our fault — a value we built failing its schema, an exhaustiveness
+    // guard, the runner hard-stop — so rethrow and let it bubble to the
+    // orchestrator's single top-level catch, failing loud rather than shipping as a
+    // graceful errored. (Result::Err for expected failures, panic for bugs.)
+    if (isUpstreamError(error)) {
+      // Split the upstream fault by kind for logs/telemetry. Gate on
+      // ServiceUnavailableError (the sole "dependency down / 503 / rate-limit /
+      // timeout" class) and treat every other upstream error as a bad response —
+      // note BadGatewaySchemaValidationError extends SchemaValidationError, NOT
+      // BadGatewayError, so `instanceof BadGatewayError` would miss it. The stage
+      // attaches which phase; both reasons resolve to the same user message.
+      const reason =
+        error instanceof ServiceUnavailableError
+          ? AllocationErroredReasonEnum.enum.upstream_unavailable
+          : AllocationErroredReasonEnum.enum.upstream_invalid_response;
+
+      logger.error("Allocation phase errored — upstream failure", error, { reason });
+
+      return { status: PipelineStatusEnum.enum.errored, reason };
+    }
+
+    throw error;
+  }
 };

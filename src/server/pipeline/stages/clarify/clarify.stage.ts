@@ -12,7 +12,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
   ClarifyHaltReasonEnum,
-  ClarifyUnresolvedReasonEnum,
+  ClarifyPhaseEnum,
   GoalClassificationEnum,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { ClarifyStageResult } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -82,15 +82,14 @@ export const runClarifyStage = async (
     { amount, timeline, riskTolerance },
     responder,
   );
-  // Allocation reports only that it couldn't resolve; the stage owns the reason,
-  // since which phase failed is a stage-level concern. (The pre-runConversation
-  // phases above still self-report their reason — allocation is the first phase
-  // migrated to bare unresolved.)
+  // Allocation self-reports a granular *reason* — why it couldn't complete: which
+  // budget ran out (unresolved), or which class of upstream fault it caught (errored).
+  // The stage owns only *which* phase, so it spreads the phase result and attaches
+  // `phase` — both terminal statuses are handled identically, so no per-status branch.
+  // (The pre-runConversation phases above still self-report a phase-name reason and
+  // carry no `phase` — allocation is the first migrated to this phase/reason split.)
   if (allocationResult.status !== PipelineStatusEnum.enum.completed) {
-    return {
-      status: allocationResult.status,
-      reason: ClarifyUnresolvedReasonEnum.enum.allocation,
-    };
+    return { ...allocationResult, phase: ClarifyPhaseEnum.enum.allocation };
   }
 
   const { equityPercentage, bufferPercentage } = allocationResult;

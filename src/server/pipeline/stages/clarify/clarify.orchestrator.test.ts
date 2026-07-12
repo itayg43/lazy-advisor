@@ -5,8 +5,15 @@
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
+import {
+  SERVICE_UNAVAILABLE_EXIT_MESSAGE,
+  SYSTEM_ERROR_EXIT_MESSAGE,
+} from "#constants/pipeline.constants";
 import * as allocationModule from "#pipeline/stages/clarify/allocation/clarify.allocation";
+import {
+  AllocationErroredReasonEnum,
+  AllocationUnresolvedReasonEnum,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type { AllocationClassifierOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { AmountClassify } from "#pipeline/stages/clarify/amount/clarify.amount.types";
 import { runClarifyOrchestrator } from "#pipeline/stages/clarify/clarify.orchestrator";
@@ -380,12 +387,13 @@ describe("runClarifyOrchestrator", () => {
       setupParametersMocks();
       setupRiskMocks();
 
-      // Spy on collectAllocation directly — the phase returns bare
-      // `{ status: "unresolved" }`; the stage attaches `reason: "allocation"`
-      // and the orchestrator maps that to ALLOCATION_EXIT_MESSAGE. The inner
-      // exhaustion mechanism (turn budget) is covered by the allocation evals.
+      // Spy on collectAllocation directly — the phase self-reports a granular reason;
+      // the stage attaches `phase: "allocation"`, and the orchestrator keys the message
+      // on that phase (both unresolved reasons → ALLOCATION_EXIT_MESSAGE). Which budget
+      // ran out is covered by the allocation phase tests.
       vi.spyOn(allocationModule, "collectAllocation").mockResolvedValueOnce({
         status: PipelineStatusEnum.enum.unresolved,
+        reason: AllocationUnresolvedReasonEnum.enum.total_budget_exhausted,
       });
 
       const result = await runClarifyOrchestrator(
@@ -399,9 +407,42 @@ describe("runClarifyOrchestrator", () => {
       });
     });
 
-    // System-error resolution wiring — one canonical case (risk) is sufficient at the
-    // orchestrator layer; per-phase errored-result coverage lives in phase tests.
-    it("should return an errored result with SYSTEM_ERROR_EXIT_MESSAGE when risk classify output is invalid", async () => {
+    // Allocation errored wiring: the phase catches an upstream fault and self-reports
+    // an errored result with a granular reason; the stage attaches `phase: "allocation"`
+    // and the orchestrator keys the message on phase — both upstream reasons resolve to
+    // the transient-retry message. This is the migrated (runConversation) path, distinct
+    // from the legacy ask-with-classify errored cases below.
+    it("should return an errored result with SERVICE_UNAVAILABLE_EXIT_MESSAGE when allocation errors", async () => {
+      mockedCallOpenAIParsed.mockResolvedValueOnce(
+        createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
+      );
+      setupEfDebtMocks();
+      setupParametersMocks();
+      setupRiskMocks();
+
+      vi.spyOn(allocationModule, "collectAllocation").mockResolvedValueOnce({
+        status: PipelineStatusEnum.enum.errored,
+        reason: AllocationErroredReasonEnum.enum.upstream_unavailable,
+      });
+
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
+
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.errored,
+        message: SERVICE_UNAVAILABLE_EXIT_MESSAGE,
+      });
+    });
+
+    // Errored message wiring keys on reason, not just status. An *upstream* fault a
+    // phase caught (here: risk classify output failing its resolved schema, a
+    // BadGateway-family error) resolves to the transient-retry message — distinct from
+    // the generic our-fault message the top-level catch returns for a thrown bug, and
+    // from the our-fault errored reason covered below. Per-phase coverage lives in
+    // phase tests.
+    it("should return an errored result with SERVICE_UNAVAILABLE_EXIT_MESSAGE when risk classify output is invalid", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -423,10 +464,15 @@ describe("runClarifyOrchestrator", () => {
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.errored,
-        message: SYSTEM_ERROR_EXIT_MESSAGE,
+        message: SERVICE_UNAVAILABLE_EXIT_MESSAGE,
       });
     });
 
+    // The other errored reason: an *our-fault* bug reported in-band on the legacy
+    // ask-with-classify path (clarificationNeeded=true but message null, a
+    // ClassifyMessageMissingError which extends InternalError). It must resolve to the
+    // generic our-end message, NOT the transient-retry one — the errored status alone
+    // no longer decides the message; the reason does.
     it("should return an errored result with SYSTEM_ERROR_EXIT_MESSAGE when risk classify message is missing mid-loop", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),

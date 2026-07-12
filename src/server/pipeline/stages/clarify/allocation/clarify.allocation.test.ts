@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 
+import {
+  BadGatewaySchemaValidationError,
+  InternalError,
+  ServiceUnavailableError,
+} from "#errors";
 import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
 import {
@@ -9,8 +15,10 @@ import {
 import * as allocationIO from "#pipeline/stages/clarify/allocation/clarify.allocation.io";
 import {
   AllocationCounterBranchKindEnum,
+  AllocationErroredReasonEnum,
   AllocationExtremeCounterDirectionEnum,
   AllocationIntentKindEnum,
+  AllocationUnresolvedReasonEnum,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationClassifierOutput,
@@ -216,7 +224,7 @@ describe("collectAllocation", () => {
   // (negotiationTurnsTaken → MAX_NEGOTIATION_TURNS); the sixth counter hits the
   // negotiation gate, which returns unresolved *before* composing — so only the
   // first five turns reach the composer.
-  it("should resolve unresolved/allocation when counters exhaust the negotiation budget", async () => {
+  it("should resolve unresolved with negotiation_budget_exhausted when counters exhaust the negotiation budget", async () => {
     queueCounterTurn(60);
     queueCounterTurn(58);
     queueCounterTurn(56);
@@ -230,7 +238,10 @@ describe("collectAllocation", () => {
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
-    expect(result).toEqual({ status: PipelineStatusEnum.enum.unresolved });
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.unresolved,
+      reason: AllocationUnresolvedReasonEnum.enum.negotiation_budget_exhausted,
+    });
     expect(composeCounterSpy).toHaveBeenCalledTimes(5);
   });
 
@@ -273,7 +284,7 @@ describe("collectAllocation", () => {
   // unresolved before composing — so only the served turns reach the composer. The
   // classifier is mocked, so the question text is inert — plain placeholders make that
   // explicit, and binding the counts to the constant keeps them in lockstep with it.
-  it("should resolve unresolved/allocation when total turns are exhausted", async () => {
+  it("should resolve unresolved with total_budget_exhausted when total turns are exhausted", async () => {
     for (let turn = 0; turn < ALLOCATION_MAX_TOTAL_TURNS; turn++) queueQuestionTurn();
     // One past the cap: classify only — the total gate short-circuits before compose.
     queueClassify({ kind: question, proposedEquityPercentage: null });
@@ -287,7 +298,61 @@ describe("collectAllocation", () => {
 
     const result = await collectAllocation(longHorizonAggressiveInput, responder);
 
-    expect(result).toEqual({ status: PipelineStatusEnum.enum.unresolved });
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.unresolved,
+      reason: AllocationUnresolvedReasonEnum.enum.total_budget_exhausted,
+    });
     expect(composeQuestionSpy).toHaveBeenCalledTimes(ALLOCATION_MAX_TOTAL_TURNS);
+  });
+
+  // Upstream (OpenAI 502/503) failures are expected environmental faults: the phase
+  // catches them and reports an `errored` result the stage/orch can switch on, rather
+  // than throwing. A 503-class ServiceUnavailableError (down / rate-limit / timeout)
+  // surfaces as errored with the `upstream_unavailable` reason — not propagate, not
+  // complete.
+  it("should resolve errored with upstream_unavailable when a dependency is unavailable", async () => {
+    mockedCallOpenAIParsed.mockRejectedValueOnce(
+      new ServiceUnavailableError("openai unavailable"),
+    );
+    const responder = createTrackedResponder(["make it 60%"]);
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.errored,
+      reason: AllocationErroredReasonEnum.enum.upstream_unavailable,
+    });
+  });
+
+  // The other upstream class: the dependency answered but with a bad payload. Uses
+  // BadGatewaySchemaValidationError specifically — it extends SchemaValidationError,
+  // NOT BadGatewayError, so this locks the catch's `instanceof ServiceUnavailableError`
+  // gate (a naive `instanceof BadGatewayError` branch would misclassify it as
+  // unavailable).
+  it("should resolve errored with upstream_invalid_response when a dependency answers badly", async () => {
+    mockedCallOpenAIParsed.mockRejectedValueOnce(
+      new BadGatewaySchemaValidationError("bad upstream shape", new ZodError([]), null),
+    );
+    const responder = createTrackedResponder(["make it 60%"]);
+
+    const result = await collectAllocation(longHorizonAggressiveInput, responder);
+
+    expect(result).toEqual({
+      status: PipelineStatusEnum.enum.errored,
+      reason: AllocationErroredReasonEnum.enum.upstream_invalid_response,
+    });
+  });
+
+  // The gate is by cause: only upstream faults become in-band `errored`. An
+  // our-fault error is not laundered into a graceful result — it propagates out of
+  // the phase to the orchestrator's top-level catch, preserving the fail-fast signal
+  // for a real bug. (Result::Err for expected failures, panic for bugs.)
+  it("should rethrow a non-upstream error instead of reporting errored", async () => {
+    mockedCallOpenAIParsed.mockRejectedValueOnce(new InternalError("unexpected bug"));
+    const responder = createTrackedResponder(["make it 60%"]);
+
+    await expect(
+      collectAllocation(longHorizonAggressiveInput, responder),
+    ).rejects.toThrow(InternalError);
   });
 });

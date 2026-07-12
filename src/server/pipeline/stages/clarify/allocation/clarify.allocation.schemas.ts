@@ -24,16 +24,38 @@ export const AllocationPhaseOutputSchema = AllocationPhaseOutputShape.refine(
   SUM_TO_100_ERROR,
 );
 
+// Why the phase couldn't reach a split, when it gives up on its own budget rather
+// than an upstream fault: the total-turn backstop tripped, or the negotiation
+// (counter-proposal) budget did. The phase owns this reason; `runClarifyStage`
+// attaches *which* phase (`phase: "allocation"`). Log/telemetry only — both map to
+// the same user-facing exit message, keyed on phase.
+export const AllocationUnresolvedReasonEnum = z.enum([
+  "total_budget_exhausted",
+  "negotiation_budget_exhausted",
+]);
+
+// Why an in-band `errored` occurred — the class of upstream fault the phase caught:
+// the dependency was unavailable (down / 503 / rate-limited / timed out) or it
+// answered badly (502 / a response that failed schema validation). Our-fault errors
+// never reach here — they throw and bubble to the orchestrator's top-level catch.
+// Phase-owned; log/telemetry only, same phase-keyed message as unresolved.
+export const AllocationErroredReasonEnum = z.enum([
+  "upstream_unavailable",
+  "upstream_invalid_response",
+]);
+
 export const AllocationPhaseResultSchema = z
   .discriminatedUnion("status", [
     z
       .object({ status: PipelineStatusEnum.extract(["completed"]) })
       .merge(AllocationPhaseOutputShape),
-    // Bare unresolved — no `reason`. The phase reports only that it couldn't
-    // resolve; `runClarifyStage` attaches the stage-level reason (`allocation`),
-    // since which phase failed is a stage concern, not a phase-internal one.
     z.object({
       status: PipelineStatusEnum.extract(["unresolved"]),
+      reason: AllocationUnresolvedReasonEnum,
+    }),
+    z.object({
+      status: PipelineStatusEnum.extract(["errored"]),
+      reason: AllocationErroredReasonEnum,
     }),
   ])
   .refine((v) => v.status !== "completed" || equityBufferSumsTo100(v), SUM_TO_100_ERROR);
