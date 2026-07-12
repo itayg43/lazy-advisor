@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { InternalError } from "#errors";
 import {
   ALLOCATION_ANCHOR_DATA,
   ALLOCATION_EXTREME_DEVIATION_PERCENTAGE_POINTS,
@@ -75,6 +76,19 @@ describe("clarifyAllocationLib", () => {
       const oddSumRange = { min: 35, max: 50 };
 
       expect(deriveAnchorEquityPercentage(oddSumRange, 3)).toBe(43);
+    });
+
+    // Exercises the dual-guard's runtime half: `RiskTolerance` is 1–5, so an
+    // out-of-union score can only reach here via a runtime lie (unsafe cast /
+    // drifted persisted score). The guard throws InternalError at the anchor
+    // source rather than returning `undefined` → a NaN split that would surface
+    // as a 500 far downstream. The cast reproduces exactly that lie.
+    it("should throw for a score outside the risk-tolerance union", () => {
+      const range = ALLOCATION_ANCHOR_DATA[3][t5to10];
+
+      expect(() => deriveAnchorEquityPercentage(range, 6 as RiskTolerance)).toThrow(
+        InternalError,
+      );
     });
   });
 

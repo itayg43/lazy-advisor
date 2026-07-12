@@ -57,6 +57,19 @@ export const deriveAnchorEquityPercentage = (
       // Round to an integer: the phase result schema requires integer equity,
       // and a cell whose bounds sum to an odd number yields a .5 midpoint.
       return Math.round((range.min + range.max) / 2);
+
+    // Dual-guard, as in applyBranchFraming: the `never` assignment fails
+    // type-check if `RiskTolerance` ever widens, and the throw covers a runtime
+    // lie (an unsafe cast or drifted persisted score). Throwing at the anchor
+    // source fails loud near the cause rather than letting an `undefined` derive
+    // a NaN split that surfaces as a 500 far downstream.
+    default: {
+      const _exhaustive: never = score;
+
+      throw new InternalError(
+        `deriveAnchorEquityPercentage: unhandled risk score: ${JSON.stringify(_exhaustive)}`,
+      );
+    }
   }
 };
 
