@@ -1,14 +1,17 @@
+import type { EasyInputMessage } from "openai/resources/responses/responses";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { InternalError } from "#errors";
 import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
 import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { collectAllocation } from "#pipeline/stages/clarify/allocation/clarify.allocation";
+import { classifyTurn } from "#pipeline/stages/clarify/allocation/clarify.allocation.io";
 import {
   AllocationJudgeCriterionEnum,
   judgeAllocationConversation,
   type AllocationJudgeOutput,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.judge";
+import { AllocationIntentKindEnum } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
 import type {
   AllocationPhaseInput,
   AllocationPhaseOutput,
@@ -99,14 +102,19 @@ describe("collectAllocation", () => {
   // aggressive investor" (a violation) from "a moderate amount in stocks" (fine).
   // See clarify.allocation.rules.md, Anchor Table preamble + rule 4.
 
-  // Asserts the agent's transcript mentions shekel amounts consistent with the final
-  // extracted split — catches model arithmetic drift (e.g., "₪85,000 equity + ₪15,000
-  // buffer" on a ₪50,000 investment). Looks for the expected shekels anywhere in the
-  // combined agent text, since counter-proposal / sanity-check turns may supersede the
-  // initial proposal's numbers. Skips the zero side at 0%/100% boundaries: models phrase
-  // an empty bucket as "0% equity" rather than "₪0", and arithmetic drift can't occur
-  // there anyway.
-  const expectShekelMathConsistent = (
+  // Asserts the agent's transcript states the split consistent with the final
+  // extracted output — both the equity *percentage* (the value the classifier
+  // extracted) and the shekel amounts derived from it. The shekel check catches
+  // model arithmetic drift (e.g., "₪85,000 equity + ₪15,000 buffer" on a ₪50,000
+  // investment); the percent check closes the gap where the composer keeps the
+  // shekels right but restates the split with the wrong percentage (the residual
+  // ALLOCATION_AUDIT.md Finding 2 risk — the number is woven into model-authored
+  // framing, not code-rendered). Looks for each anywhere in the combined agent text,
+  // since counter-proposal / sanity-check turns may supersede the initial proposal's
+  // numbers. Skips the zero side at 0%/100% boundaries for shekels: models phrase an
+  // empty bucket as "0% equity" rather than "₪0", and arithmetic drift can't occur
+  // there anyway — the percent check still runs at the boundaries.
+  const expectSplitConsistent = (
     transcript: TranscriptEntry[],
     amount: number,
     output: AllocationPhaseOutput,
@@ -114,6 +122,14 @@ describe("collectAllocation", () => {
     const expectedEquityAmount = (amount * output.equityPercentage) / 100;
     const expectedBufferAmount = amount - expectedEquityAmount;
     const text = agentText(transcript);
+
+    // The equity percentage must appear as a percent ("77%") or the leading half of
+    // a ratio ("90/10", "50/50") — the forms the composers and the initial proposal
+    // use. A boundary-anchored regex (not toContain) pins the value to a %-or-/
+    // terminator so an incidental digit run inside a shekel amount or a drawdown
+    // range ("30–50%") can't satisfy it.
+    expect(text).toMatch(new RegExp(`\\b${output.equityPercentage}\\s*(?:%|/)`));
+
     if (output.equityPercentage > 0)
       expect(text).toContain(`₪${expectedEquityAmount.toLocaleString("en-US")}`);
 
@@ -207,7 +223,7 @@ describe("collectAllocation", () => {
     // aggressive + 10+ yr cell = 80–90%
     expectEquityInRange(output, 80, 90);
     expect(agentTurns(transcript)).toHaveLength(1);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
     // behavioral framing must use "tends to reduce", never "prevents" or "eliminates"
     const text = agentText(transcript).toLowerCase();
@@ -222,7 +238,7 @@ describe("collectAllocation", () => {
     const output = expectSuccess(result);
 
     expectEquityInRange(output, 50, 60);
-    expectShekelMathConsistent(transcript, midHorizonModerateInput.amount, output);
+    expectSplitConsistent(transcript, midHorizonModerateInput.amount, output);
   });
 
   // clarify.allocation.rules.md rule 1 (within-cell discrimination): verifies the
@@ -261,7 +277,7 @@ describe("collectAllocation", () => {
 
       expect(output.equityPercentage).toBe(equity);
       expect(output.bufferPercentage).toBe(buffer);
-      expectShekelMathConsistent(transcript, input.amount, output);
+      expectSplitConsistent(transcript, input.amount, output);
     },
   );
 
@@ -273,11 +289,7 @@ describe("collectAllocation", () => {
     const output = expectSuccess(result);
 
     expectEquityInRange(output, 10, 20);
-    expectShekelMathConsistent(
-      transcript,
-      shortMidHorizonConservativeInput.amount,
-      output,
-    );
+    expectSplitConsistent(transcript, shortMidHorizonConservativeInput.amount, output);
   });
 
   // clarify.allocation.rules.md rule 3: non-round counter-proposal honored without snapping
@@ -290,7 +302,7 @@ describe("collectAllocation", () => {
 
     expect(output.equityPercentage).toBe(77);
     expect(output.bufferPercentage).toBe(23);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
     expectCounterTurnReferencesTimeline(transcript);
 
     await judgeAndExpectPass(transcript, [
@@ -310,7 +322,7 @@ describe("collectAllocation", () => {
 
     expect(output.equityPercentage).toBe(50);
     expect(output.bufferPercentage).toBe(50);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
     expectCounterTurnReferencesTimeline(transcript);
   });
 
@@ -329,7 +341,7 @@ describe("collectAllocation", () => {
     // Rule 3 Branch 1 (too-high direction): the sanity check must convey seriousness
     // via concrete drawdown numbers. Symmetric to the too-low test's negative guard.
     expectDrawdownFraming(agentTurns(transcript)[1].content.toLowerCase());
-    expectShekelMathConsistent(transcript, longHorizonConservativeInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonConservativeInput.amount, output);
 
     await judgeAndExpectPass(transcript, [
       AllocationJudgeCriterionEnum.enum["framing-plain-language"],
@@ -352,7 +364,7 @@ describe("collectAllocation", () => {
     // Rule 3 Branch 1 (too-low direction): the sanity check should use opportunity-cost
     // framing, not drawdown percentages — that framing belongs to the too-high direction.
     expectNoDrawdownFraming(agentTurns(transcript)[1].content.toLowerCase());
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
     await judgeAndExpectPass(transcript, [
       AllocationJudgeCriterionEnum.enum["framing-plain-language"],
@@ -371,7 +383,7 @@ describe("collectAllocation", () => {
 
     expectEquityInRange(output, 80, 90);
     expectMinAgentTurns(transcript, 2);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
     await judgeAndExpectPass(transcript, [
       AllocationJudgeCriterionEnum.enum["answer-scoping"],
@@ -399,7 +411,7 @@ describe("collectAllocation", () => {
 
     expectEquityInRange(output, 80, 90);
     expectMinAgentTurns(transcript, 2);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
     await judgeAndExpectPass(transcript, [
       AllocationJudgeCriterionEnum.enum["answer-scoping"],
@@ -421,7 +433,7 @@ describe("collectAllocation", () => {
 
     expectEquityInRange(output, 80, 90);
     expectMinAgentTurns(transcript, 2);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
     await judgeAndExpectPass(transcript, [
       AllocationJudgeCriterionEnum.enum["answer-scoping"],
@@ -441,7 +453,7 @@ describe("collectAllocation", () => {
 
     expectEquityInRange(output, 80, 90);
     expectMinAgentTurns(transcript, 2);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
 
     await judgeAndExpectPass(transcript, [
       AllocationJudgeCriterionEnum.enum["answer-scoping"],
@@ -471,6 +483,97 @@ describe("collectAllocation", () => {
     // and Branch 1 too-low's "long-run growth … over many years" patterns.
     const counterTurn = agentTurns(transcript)[2].content.toLowerCase();
     expect(counterTurn).toMatch(TIMELINE_REFERENCE_PATTERN);
-    expectShekelMathConsistent(transcript, longHorizonAggressiveInput.amount, output);
+    expectSplitConsistent(transcript, longHorizonAggressiveInput.amount, output);
   });
+});
+
+// Classifier fidelity (ALLOCATION_AUDIT.md Finding 2). classifyTurn is the
+// intent→data boundary: gpt-5.4-nano at effort:low reads the user's reply and the
+// extracted proposedEquityPercentage becomes the portfolio split verbatim, with no
+// programmatic guard on a *wrong* number (only counter-with-null re-parses). This
+// block measures extraction/label accuracy against the real model, isolated from
+// the composer and the full conversation. Exact-integer assertions are the right
+// strength — the number is present verbatim in the reply (TESTING.md, Authoring).
+// Per-case pass/fail accrues in clarify.allocation.runs.jsonl across manual runs;
+// that trend is what decides whether the classifier needs a stronger model.
+describe("classifyTurn", () => {
+  // Minimal proposal-then-reply history. Extraction depends on the user reply, so
+  // the assistant proposal is fixed context (65/35 on ₪100k) and the reply is the
+  // only variable across cases — mirrors io.test.ts's proposalThenReply.
+  const proposalThenReply = (userReply: string): EasyInputMessage[] => [
+    {
+      role: "assistant",
+      content:
+        "I'd propose ₪65,000 in stock ETFs and ₪35,000 in a buffer — roughly 65/35. Want that split, more in stocks, or more in buffer?",
+    },
+    { role: "user", content: userReply },
+  ];
+
+  // Counter extraction — the core of Finding 2. Assert both the label and the exact
+  // equity integer: the number is verbatim in the reply, so tight equality is
+  // correct. A near-miss (e.g. "make it 55" read as 50) is the silent-wrong-number
+  // failure the audit flags, and it fails here.
+  it.each<{ reply: string; expectedEquity: number }>([
+    { reply: "60/40", expectedEquity: 60 },
+    { reply: "make it 55", expectedEquity: 55 },
+    { reply: "I want 77", expectedEquity: 77 },
+    { reply: "70 stocks 30 buffer", expectedEquity: 70 },
+    { reply: "more in stocks: 90", expectedEquity: 90 },
+    { reply: "I want 0% stocks", expectedEquity: 0 },
+    { reply: "100% stocks", expectedEquity: 100 },
+  ])(
+    'should extract $expectedEquity% equity from the counter reply "$reply"',
+    async ({ reply, expectedEquity }) => {
+      const intent = await classifyTurn(proposalThenReply(reply));
+
+      expect(
+        intent,
+        `expected counter ${expectedEquity} for "${reply}", got ${JSON.stringify(intent)}`,
+      ).toEqual({
+        kind: AllocationIntentKindEnum.enum.counter,
+        proposedEquityPercentage: expectedEquity,
+      });
+    },
+  );
+
+  // Label boundaries that gate whether a number is extracted at all. A number named
+  // in an acceptance- or retraction-shaped reply must still route to counter (the
+  // number wins, per the prompt); a numberless "more in stocks" must route to
+  // unknown, never a guessed counter. Assert the kind, plus the integer where the
+  // counter label carries one.
+  it.each<{ reply: string; expectedKind: string; expectedEquity?: number }>([
+    {
+      reply: "let's do 50/50",
+      expectedKind: AllocationIntentKindEnum.enum.counter,
+      expectedEquity: 50,
+    },
+    {
+      reply: "actually, stick with the original 88",
+      expectedKind: AllocationIntentKindEnum.enum.counter,
+      expectedEquity: 88,
+    },
+    { reply: "more in stocks", expectedKind: AllocationIntentKindEnum.enum.unknown },
+    {
+      reply: "stick with your original suggestion",
+      expectedKind: AllocationIntentKindEnum.enum["accept-original"],
+    },
+    { reply: "ok", expectedKind: AllocationIntentKindEnum.enum.accept },
+    { reply: "what's a buffer?", expectedKind: AllocationIntentKindEnum.enum.question },
+  ])(
+    'should classify "$reply" as $expectedKind',
+    async ({ reply, expectedKind, expectedEquity }) => {
+      const intent = await classifyTurn(proposalThenReply(reply));
+
+      expect(
+        intent.kind,
+        `expected ${expectedKind} for "${reply}", got ${JSON.stringify(intent)}`,
+      ).toBe(expectedKind);
+
+      if (
+        intent.kind === AllocationIntentKindEnum.enum.counter &&
+        expectedEquity !== undefined
+      )
+        expect(intent.proposedEquityPercentage).toBe(expectedEquity);
+    },
+  );
 });

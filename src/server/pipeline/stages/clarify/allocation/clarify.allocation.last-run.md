@@ -1,5 +1,5 @@
 # Eval Last Run
-Timestamp: 2026-07-08T18:34:09.152Z | Commit: 9aafdf2
+Timestamp: 2026-07-12T21:39:15.869Z | Commit: d3dee03
 
 ---
 
@@ -87,7 +87,7 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** 77%
 
-**Agent:** You’re proposing 77% in stock ETFs (₪38,500) and 23% in buffer (₪11,500). Since you’re moving from 90% down to 77%, over your 10+ year horizon you’re giving yourself smaller drops when markets fall, but you’ll also have less money working for long-run growth. Do you want to proceed with 77% equity?
+**Agent:** You’re proposing 77% in stock ETFs (₪38,500) and 23% in buffer (₪11,500). Since this is lower than your previous 90% equity, the swings when markets fall should be smaller, but your long-run growth will be less over your 10+ year horizon. Do you want to proceed with 77% equity?
 
 **User:** yes
 
@@ -95,9 +95,9 @@ Want that split, more in stocks, or more in buffer?
 status: completed | equityPercentage: 77 | bufferPercentage: 23
 
 **Judge:**
-- ✓ framing-plain-language — The trade-off is explained in simple terms and tied to the user's actual move from 90% to 77% over a 10+ year horizon, so it feels concrete rather than formulaic.
+- ✓ framing-plain-language — It explains the trade-off in simple terms and ties it to the user's actual move from 90% to 77% equity and their 10+ year horizon.
 - ✓ conciseness — The turn confirms the new split, gives one brief trade-off explanation, and closes with the expected proceed question without unnecessary repetition.
-- ✓ naturalness — It sounds calm and matter-of-fact, with no filler opener or lecturing tone.
+- ✓ naturalness — It sounds calm and matter-of-fact, with no filler opener, robotic phrasing, or lecturing tone.
 
 
 ---
@@ -111,7 +111,7 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** Let's do 50/50
 
-**Agent:** You’re proposing 50% in stock ETFs and 50% in the buffer, so ₪25,000 in stocks and ₪25,000 in the buffer. Over your 10+ year horizon, moving from 90% down to 50% means you’ll have smaller drops when markets fall, but you’ll participate less in long-run stock growth. Do you want to proceed with 50% equity?
+**Agent:** You’re proposing 50% in stock ETFs (₪25,000) and 50% in buffer (₪25,000). Since you’re moving down from 90% equity to 50% equity, your portfolio would generally have smaller drops when markets fall, but you’ll have less room for long-run stock growth over your 10+ year horizon. Do you want to proceed with 50% equity?
 
 **User:** yes
 
@@ -130,7 +130,7 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** Actually I want 100% stocks
 
-**Agent:** You’re proposing 100% in stock ETFs (₪60,000) and 0% in buffer (₪0). Your earlier answers suggested you’re uncomfortable with big drops—going to 100% stocks could mean watching 30–50% of your portfolio disappear in a bad year. Still want to proceed?
+**Agent:** You’re asking for 100% in stock ETFs (₪60,000) and ₪0 in buffer. Since your earlier answers suggested you’re uncomfortable with big drops, going to 100% stocks could mean watching roughly 30–50% of your portfolio disappear in a bad year. Still want to proceed with 100% equity?
 
 **User:** Yes, I'm sure
 
@@ -138,9 +138,9 @@ Want that split, more in stocks, or more in buffer?
 status: completed | equityPercentage: 100 | bufferPercentage: 0
 
 **Judge:**
-- ✓ framing-plain-language — It gives a concrete sanity-check in simple language, tied to the user's own discomfort with big drops and the actual ₪60,000 all-stock choice.
-- ✓ naturalness — The reply is direct and matter-of-fact without filler or lecturing, and it sounds like a normal human advisor confirming a counter-proposal.
-- ✓ no-risk-labeling — It does not assign the user a risk type or personality, and only restates that they previously said big drops make them uncomfortable.
+- ✓ framing-plain-language — The reply uses a clear, concrete sanity-check tied to the user's actual request and amounts—₪60,000 in stocks and the possibility of a 30–50% drop—without sounding like canned jargon.
+- ✓ naturalness — The tone is calm and matter-of-fact, with no filler opener or lecturing, and it sounds like a natural confirmation plus caution before proceeding.
+- ✓ no-risk-labeling — It does not assign the user a risk persona or tier, and simply restates that their earlier answers indicated discomfort with big drops.
 
 
 ---
@@ -154,7 +154,7 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** I want 0% stocks
 
-**Agent:** You’re proposing 0% in stock ETFs and ₪50,000 in the buffer (100% buffer). Your earlier answers indicated a long horizon and comfort with bigger swings (recommended range 80–90%)—going to 0% stocks means your ₪50,000 stays entirely in the buffer, giving up most of the long-run growth that stock ETFs typically provide over many years. Still want to proceed with 0% equity?
+**Agent:** You’re proposing 0% in stock ETFs (₪0) and 100% in buffer (₪50,000). Your earlier answers indicated a long horizon and comfort with bigger swings (recommended range 80–90%)—going to 0% stocks means your ₪50,000 stays in the buffer and you give up most of the long-run growth that stock ETFs typically provide over many years. Still want to proceed with 0% equity?
 
 **User:** Yes, I'm sure
 
@@ -162,14 +162,14 @@ Want that split, more in stocks, or more in buffer?
 status: completed | equityPercentage: 0 | bufferPercentage: 100
 
 **Judge:**
-- ✓ framing-plain-language — It explains the concrete trade-off in simple terms using the user's actual situation—long horizon and ₪50,000 staying fully in buffer—rather than dropping a generic slogan.
-- ✓ naturalness — The reply is direct and matter-of-fact without filler or preaching, even if it is somewhat formulaic.
-- ✓ no-risk-labeling — It describes the user's earlier answers about time horizon and comfort with swings without assigning them any risk-profile label.
+- ✓ framing-plain-language — It explains the trade-off in simple terms tied to the user's long horizon and actual ₪50,000 amount, rather than using abstract or mechanical phrasing.
+- ✓ naturalness — The reply sounds calm and matter-of-fact without filler openers or a preachy tone, even while warning about the growth trade-off.
+- ✓ no-risk-labeling — It describes the user's earlier answers about timeline and swing tolerance without assigning them any risk-profile label or investor type.
 
 
 ---
 
-## ✓ should answer a clarifying question then return to the anchor proposal
+## ✗ should answer a clarifying question then return to the anchor proposal
 
 **Agent:** Based on your timeline and comfort with drops, I'd propose ₪45,000 in stock ETFs and ₪5,000 in a buffer — roughly 90/10.
 More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.
@@ -178,9 +178,9 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** What's a buffer?
 
-**Agent:** A buffer is the portion of your money set aside to absorb near-term shocks and reduce the need to sell stocks during drawdowns. It helps keep the rest of the portfolio aligned with your long-term plan.
+**Agent:** A buffer is a cash or near-cash portion of your portfolio set aside to absorb shocks and reduce the need to sell investments during downturns. 
 
-Current proposal: ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want that split, more in stocks, or more in the buffer?
+Proposed split: ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want to keep this split, tilt more into stocks, or tilt more into the buffer? (Recommended range: 80–90% equity.)
 
 **User:** Got it, sounds good
 
@@ -188,10 +188,12 @@ Current proposal: ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do
 status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **Judge:**
-- ✓ answer-scoping — It directly defines what a buffer is, stays on that concept, and then gives the required re-ask with the current split.
-- ✓ conciseness — The reply is brief, uses only the explanation needed, and presents the split once in the expected closing question.
-- ✓ naturalness — The tone is plain and matter-of-fact, with no filler opener or lecturing language.
-- ✓ no-risk-labeling — It does not assign the user any risk type or investor personality.
+- ✗ answer-scoping — It answers the buffer question and includes the required re-ask, but adding the unasked '(Recommended range: 80–90% equity.)' goes beyond the asked topic.
+- ✗ conciseness — The turn is otherwise short, but the extra recommended range is unnecessary beyond the concept answer and expected close.
+- ✓ naturalness — The tone is calm and matter-of-fact, with no filler opener or lecturing.
+- ✓ no-risk-labeling — It does not assign the user any risk profile or investor personality.
+
+Error: [answer-scoping] It answers the buffer question and includes the required re-ask, but adding the unasked '(Recommended range: 80–90% equity.)' goes beyond the asked topic.; [conciseness] The turn is otherwise short, but the extra recommended range is unnecessary beyond the concept answer and expected close.: expected [ { …(3) }, …(1) ] to have a length of +0 but got 2
 
 
 ---
@@ -205,7 +207,7 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** What's a קרן כספית?
 
-**Agent:** A קרן כספית (money-market fund) is a low-risk fund that invests mainly in short-term, high-quality instruments and aims to keep a relatively stable value. Do you want to keep the current split of ₪45,000 in stock ETFs and ₪5,000 in buffer, or adjust it to more in stocks or more in the buffer?
+**Agent:** A קרן כספית (money-market fund) is a fund that invests mainly in very short-term, low-risk cash-like instruments, aiming for stability and liquidity. Do you want to go with the ₪45,000 in stock ETFs and ₪5,000 in buffer (90% / 10%), or adjust toward more in stocks or more in buffer?
 
 **User:** Got it, sounds good
 
@@ -213,9 +215,9 @@ Want that split, more in stocks, or more in buffer?
 status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **Judge:**
-- ✓ answer-scoping — It directly answers the instrument-definition question in one short sentence and then properly re-asks about the current ₪45,000/₪5,000 split versus more in stocks or more in buffer.
-- ✓ english-body — The message is written in English, with Hebrew limited to the inline instrument name קרן כספית.
-- ✓ no-risk-labeling — It does not assign the user any risk profile or investor personality label.
+- ✓ answer-scoping — It gives a brief definition of a קרן כספית and then correctly re-presents the current ₪45,000/₪5,000 (90%/10%) split with the required 'more in stocks or more in buffer' re-ask, without drifting into unrelated next-step detail.
+- ✓ english-body — The message is written in English, with Hebrew limited to the inline instrument name קרן כספית, which is allowed.
+- ✓ no-risk-labeling — It does not assign the user any risk persona or investor type, and only describes the instrument and the proposed split.
 
 
 ---
@@ -229,9 +231,9 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** How did you come up with that split?
 
-**Agent:** The split is based on two inputs: your 10+ year timeline, which can generally support a higher equity allocation, and your comfort with drawdowns, which is reflected by keeping a smaller buffer to handle volatility.
+**Agent:** The split reflects two inputs: your 10+ year investment timeline, which generally supports holding more in stock ETFs, and your comfort with drawdowns, which is why we keep a smaller buffer for stability. 
 
-Current proposal: ₪45,000 in stock ETFs (90%) and ₪5,000 in a buffer (10%). Do you want to keep this split, move more into stocks, or move more into the buffer?
+Proposed allocation: ₪45,000 in stock ETFs (90%) and ₪5,000 in a buffer (10%). Would you like to use this split, shift more toward stocks, or shift more toward the buffer?
 
 **User:** Got it, sounds good
 
@@ -239,10 +241,10 @@ Current proposal: ₪45,000 in stock ETFs (90%) and ₪5,000 in a buffer (10%). 
 status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **Judge:**
-- ✓ conciseness — It answers the method question briefly and then gives the required split recap and re-ask without unnecessary repetition.
-- ✓ answer-scoping — It stays on the asked topic by naming the two inputs behind the split and then properly re-asks using the current proposal.
-- ✓ naturalness — The tone is calm and matter-of-fact, with no filler opener or lecturing.
-- ✓ no-risk-labeling — It explains the split using the user's timeline and comfort with drawdowns without assigning the user any risk persona.
+- ✓ conciseness — It answers in two short sentences and gives the required close without unnecessary repetition or extra topics.
+- ✓ answer-scoping — It stays on the asked method question by naming the two inputs behind the split and then re-asks using the current ₪ and % allocation.
+- ✓ naturalness — The tone is calm and matter-of-fact, with no filler opener or lecturing language.
+- ✓ no-risk-labeling — It refers to the user's timeline and comfort with drawdowns without assigning any risk persona or investor type.
 
 
 ---
@@ -256,7 +258,7 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** Which ETF should I buy?
 
-**Agent:** Instrument choice depends on the split being settled. For now, does this split work for you: ₪45,000 in stock ETFs and ₪5,000 in buffer (90% equity/10% buffer)? Or would you prefer more in stocks or more in buffer?
+**Agent:** Instrument choice comes after the equity/buffer split is settled. For your ₪50,000 investment, the proposal is ₪45,000 in stock ETFs and ₪5,000 in buffer (90/10). Do you want to go with this split, more in stocks, or more in buffer?
 
 **User:** Sounds good
 
@@ -264,12 +266,10 @@ Want that split, more in stocks, or more in buffer?
 status: completed | equityPercentage: 90 | bufferPercentage: 10
 
 **Judge:**
-- ✓ conciseness — The advisor defers the ETF question in one short sentence and then immediately gives the required split re-ask without extra explanation or repeated figures.
-- ✓ answer-scoping — It stays on the instrument question by briefly deferring ETF selection until the split is settled, then gives the mandatory current-split re-ask and three-way choice.
-- ✓ naturalness — The wording is calm and matter-of-fact, with no filler opener, lecturing, or robotic phrasing.
-- ✓ framing-plain-language — The message uses straightforward everyday language and presents the split clearly without jargon-heavy framing.
-- ✓ no-risk-labeling — The advisor does not assign the user any risk profile or investor personality label.
-- ✓ english-body — The advisor's response is written in English, with only the currency symbol and standard finance terms included.
+- ✓ answer-scoping — It briefly defers the ETF-selection question until after the split is decided, then gives the required split recap and re-ask without drifting into specific instruments or extra concepts.
+- ✓ conciseness — The reply is short and stops after the one-line deferral, the required ₪/% recap, and the standard follow-up question.
+- ✓ naturalness — It sounds calm and matter-of-fact, with no filler opener or preachy language.
+- ✓ no-risk-labeling — It does not assign the user any risk persona or investor type.
 
 
 ---
@@ -283,13 +283,13 @@ Want that split, more in stocks, or more in buffer?
 
 **User:** What's a buffer?
 
-**Agent:** A buffer is a cash-like portion set aside to absorb volatility and provide liquidity, so you don’t have to sell stock ETFs during downturns to cover near-term needs.
+**Agent:** A buffer is the part of your portfolio kept in lower-volatility assets to absorb short-term market drops and reduce the chance you’ll need to sell stocks at a bad time.
 
-Right now the proposal is ₪45,000 in stock ETFs (90%) and ₪5,000 in a buffer (10%). Do you want this split, more in stocks, or more in the buffer?
+Given the current proposal: ₪45,000 in stock ETFs (90%) and ₪5,000 in buffer (10%). Do you want this split, more in stocks, or more in the buffer?
 
 **User:** Let's do 60/40
 
-**Agent:** You’re proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in buffer. Compared to your previous 90% equity, this means you’ll generally see smaller drops when markets fall, but you’ll have less room for stocks to drive growth over time. Over your 10+ year horizon, does ₪20,000 in buffer and 60% equity work for you, so we can proceed?
+**Agent:** You’re proposing 60% equity: ₪30,000 in stock ETFs and ₪20,000 in buffer. Over your 10+ year horizon, going from 90% down to 60% would generally mean smaller drops in bad markets, but you’d have less money riding the long-run growth of stocks. Do you want to proceed with 60% equity?
 
 **User:** yes
 
