@@ -94,6 +94,10 @@ export const runClarifyStage = async (
 
   const { equityPercentage, bufferPercentage } = allocationResult;
 
+  // No completed-guard here, unlike every phase above: contribution is
+  // non-blocking, so its result carries no `status` (it collapses all failures to
+  // `plansToContribute: false` internally) and can't terminate the stage. The
+  // asymmetry is intentional, not a missing guard.
   const contributionResult = await collectContribution(
     amount,
     equityPercentage,
