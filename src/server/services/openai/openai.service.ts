@@ -16,6 +16,7 @@ import {
   ServiceUnavailableError,
 } from "#errors";
 import { createLogger } from "#lib/logger";
+import { parseSchema } from "#lib/parse-schema";
 
 const logger = createLogger("openaiService");
 
@@ -53,7 +54,11 @@ const toNotCompletedError = (
   return new ServiceUnavailableError(RESPONSE_NOT_COMPLETED_ERROR_MESSAGE);
 };
 
-const toSchemaValidationError = (id: string, cause: ZodError, value: unknown): Error => {
+const toSchemaValidationError = (
+  id: string,
+  cause: ZodError,
+  value: unknown,
+): BadGatewaySchemaValidationError => {
   logger.warn(SCHEMA_VALIDATION_ERROR_MESSAGE, {
     responseId: id,
     issues: cause.issues,
@@ -134,7 +139,7 @@ export const callOpenAIParsed = async <T>(
       status,
       usage,
       id,
-      output_parsed: output,
+      output_parsed: rawOutput,
     } = await openaiClient.responses.parse<ResponseCreateParamsNonStreaming, unknown>({
       ...params,
       text: { format: zodTextFormat(schema, "output") },
@@ -143,10 +148,11 @@ export const callOpenAIParsed = async <T>(
     if (usage) logUsage(usage);
     if (status !== "completed") throw toNotCompletedError(id, status);
 
-    const result = schema.safeParse(output);
-    if (!result.success) throw toSchemaValidationError(id, result.error, output);
+    const output = parseSchema(schema, rawOutput, (error, value) =>
+      toSchemaValidationError(id, error, value),
+    );
 
-    return { id, output: result.data, usage };
+    return { id, output, usage };
   } catch (error) {
     if (isOpenAIError(error)) throw mapOpenAIError(error);
 
