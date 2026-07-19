@@ -19,7 +19,8 @@ import type {
 import type { RiskTolerance } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 
 /** Formats a shekel amount with thousands separators (e.g. `120000` → `₪120,000`). */
-export const formatCurrency = (n: number): string => `₪${n.toLocaleString("en-US")}`;
+export const formatCurrency = (amount: number): string =>
+  `₪${amount.toLocaleString("en-US")}`;
 
 /** The buffer's share of the portfolio — the complement of the equity percentage. */
 export const calculateBufferPercentage = (equityPercentage: number): number =>
