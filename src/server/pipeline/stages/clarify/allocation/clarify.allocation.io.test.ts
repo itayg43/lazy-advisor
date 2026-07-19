@@ -38,9 +38,10 @@ describe("clarifyAllocationIO", () => {
     output,
   });
 
-  // The classifier reads the running conversation; classifyTurn forwards it
-  // verbatim, so the user reply only documents the intent the mocked output
-  // stands in for — the mocked classification, not the history, drives the case.
+  // classifyTurn sends only the trailing adjacency pair (assistant prompt +
+  // latest user reply) to the model, which is exactly this two-message array —
+  // so the user reply only documents the intent the mocked output stands in for;
+  // the mocked classification, not the history, drives the case.
   const proposalThenReply = (userReply: string): EasyInputMessage[] => [
     {
       role: "assistant",

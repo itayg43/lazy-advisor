@@ -31,6 +31,14 @@ import { callOpenAIParsed } from "#services/openai";
 // pure. These functions own their prompts/schemas and log each call.
 const logger = createLogger("clarifyAllocationIO");
 
+// The classifier labels the *latest* user reply, so its context is just that
+// reply and the assistant prompt it answers — the adjacency pair at the tail of
+// the transcript. Sending only this pair (not the whole running `history`) keeps
+// the classifier's context minimal and fixed-size, and stops `history`'s
+// growing-transcript role from bleeding into intent classification. See
+// ALLOCATION_AUDIT.md (Finding 10).
+const CLASSIFIER_CONTEXT_MESSAGES = 2;
+
 export const classifyTurn = async (
   history: ReadonlyArray<EasyInputMessage>,
 ): Promise<AllocationIntent> => {
@@ -38,8 +46,9 @@ export const classifyTurn = async (
     {
       model: "gpt-5.4-nano",
       instructions: ALLOCATION_CLASSIFIER_PROMPT,
-      // Spread to strip readonly — SDK's input field expects a mutable array.
-      input: [...history],
+      // Trailing adjacency pair only; `slice` on the readonly array already
+      // returns a fresh mutable array for the SDK's `input` field.
+      input: history.slice(-CLASSIFIER_CONTEXT_MESSAGES),
       reasoning: { effort: "low" },
     },
     AllocationClassifierOutputSchema,
