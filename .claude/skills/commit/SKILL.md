@@ -40,6 +40,8 @@ Write a commit message:
 
 Stage relevant files by name (never `git add .` or `git add -A`). Commit with the drafted message, then push to the current branch.
 
+If the branch has an upstream, `git push`. If it has none (never pushed — e.g. a branch created in step 2), set one on the first push with `git push -u origin <branch>`.
+
 If a hook fails:
 - **pre-commit** aborts the commit. Fix the reported issue, re-stage, and commit again. If `prettier`/`eslint --fix` modified files, they are already re-staged — just re-run the commit.
 - **pre-push** aborts the push (commit is already made). Fix the `type-check` or `test` failure, commit the fix, and push again. Never bypass with `--no-verify`.
