@@ -39,7 +39,7 @@ describe("runConversation", () => {
     const responder = createTrackedResponder(["yes"]);
 
     const initHandler = vi.fn<InitHandler<void, { ok: boolean }>>().mockResolvedValue({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: undefined,
       message: "ready?",
     });
@@ -72,7 +72,7 @@ describe("runConversation", () => {
     }> = [];
 
     const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: undefined,
       message: "q1",
     });
@@ -83,7 +83,7 @@ describe("runConversation", () => {
         calls.push({ history: [...history], lastUserResponse });
 
         return callIndex === 1
-          ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
+          ? { kind: HandlerOutputKind.Prompt, state: undefined, message: "q2" }
           : { kind: HandlerOutputKind.Done, result: "ok" };
       },
     );
@@ -115,7 +115,7 @@ describe("runConversation", () => {
     const snapshotsOnEntry: EasyInputMessage[][] = [];
 
     const initHandler: InitHandler<void, string> = async () => ({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: undefined,
       message: "q1",
     });
@@ -126,7 +126,7 @@ describe("runConversation", () => {
       (history as EasyInputMessage[]).push({ role: "assistant", content: "INJECTED" });
 
       return snapshotsOnEntry.length === 1
-        ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
+        ? { kind: HandlerOutputKind.Prompt, state: undefined, message: "q2" }
         : { kind: HandlerOutputKind.Done, result: "ok" };
     };
 
@@ -143,7 +143,7 @@ describe("runConversation", () => {
     const responder = createTrackedResponder(["ok"]);
 
     const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: undefined,
       message: "ready?",
     });
@@ -198,7 +198,7 @@ describe("runConversation", () => {
     const statesSeen: State[] = [];
 
     const initHandler = vi.fn<InitHandler<State, string>>().mockResolvedValue({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: { counter: 0 },
       message: "q1",
     });
@@ -207,7 +207,7 @@ describe("runConversation", () => {
 
       return statesSeen.length === 1
         ? {
-            kind: HandlerOutputKind.Ask,
+            kind: HandlerOutputKind.Prompt,
             state: { counter: state.counter + 1 },
             message: "q2",
           }
@@ -242,17 +242,17 @@ describe("runConversation", () => {
     expect(turnHandler).not.toHaveBeenCalled();
   });
 
-  it("should throw after emitting hardStopTurns asks", async () => {
+  it("should throw after emitting hardStopTurns prompts", async () => {
     const responder = createTrackedResponder(["r1", "r2", "r3", "r4"]);
 
     // A handler that never returns Done — the runaway case the backstop exists for.
     const initHandler = vi.fn<InitHandler<void, string>>().mockResolvedValue({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: undefined,
       message: "q",
     });
     const turnHandler = vi.fn<TurnHandler<void, string>>().mockResolvedValue({
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: undefined,
       message: "q",
     });
@@ -261,7 +261,7 @@ describe("runConversation", () => {
       runConversation({ initHandler, turnHandler, responder, hardStopTurns: 3 }),
     ).rejects.toThrow(/hard-stop reached/);
 
-    // Tripped on the would-be 4th ask: exactly hardStopTurns asks reached the user.
+    // Tripped on the would-be 4th prompt: exactly hardStopTurns prompts reached the user.
     const agentMessages = responder.transcript.filter((m) => m.role === "agent");
     expect(agentMessages).toHaveLength(3);
   });

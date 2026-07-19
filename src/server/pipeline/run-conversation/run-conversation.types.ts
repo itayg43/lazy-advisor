@@ -12,7 +12,7 @@ type DeepReadonly<T> = {
 };
 
 export const HandlerOutputKind = {
-  Ask: "ask",
+  Prompt: "prompt",
   Done: "done",
 } as const;
 
@@ -20,7 +20,7 @@ export type HandlerOutputKind =
   (typeof HandlerOutputKind)[keyof typeof HandlerOutputKind];
 
 /**
- * Discriminated on `HandlerOutputKind` so `state` is only required on the Ask
+ * Discriminated on `HandlerOutputKind` so `state` is only required on the Prompt
  * path — a handler returning Done is ending the phase and has no successor
  * state to hand back. The Done arm's `message` is optional: when set, the
  * runner sends it (and pushes it onto history) before returning `result`;
@@ -28,7 +28,7 @@ export type HandlerOutputKind =
  * skip from `initHandler` (T6's `bufferPercentage === 0` case).
  */
 export type HandlerOutput<TState, TResult> =
-  | { kind: typeof HandlerOutputKind.Ask; state: TState; message: string }
+  | { kind: typeof HandlerOutputKind.Prompt; state: TState; message: string }
   | {
       kind: typeof HandlerOutputKind.Done;
       message?: string;
@@ -70,7 +70,7 @@ export type RunConversationParams<TState, TResult> = {
   turnHandler: TurnHandler<TState, TResult>;
   responder: Responder;
   /**
-   * Backstop on the number of asks the runner will emit before it throws —
+   * Backstop on the number of prompts the runner will emit before it throws —
    * defense-in-depth against a handler that never returns Done. Distinct from
    * a phase's own turn budget (e.g. `ALLOCATION_MAX_NEGOTIATION_TURNS`): set it a margin
    * above the real budget — enough slack to absorb an off-by-one in the

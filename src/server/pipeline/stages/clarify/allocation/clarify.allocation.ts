@@ -41,7 +41,7 @@ import {
 import type {
   AllocationAcceptDecision,
   AllocationAcceptIntentKind,
-  AllocationAskDecision,
+  AllocationPromptDecision,
   AllocationContinuingIntent,
   AllocationConversationState,
   AllocationFramingFlags,
@@ -57,7 +57,7 @@ import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
 
-type ResolveAskDecisionParams = {
+type ResolvePromptDecisionParams = {
   intent: AllocationContinuingIntent;
   negotiationState: Readonly<AllocationNegotiationState>;
   proposalContext: AllocationProposalContext;
@@ -117,7 +117,7 @@ const handleCounterTurn = async (
   proposedEquityPercentage: number,
   negotiationState: Readonly<AllocationNegotiationState>,
   proposalContext: AllocationProposalContext,
-): Promise<AllocationAskDecision> => {
+): Promise<AllocationPromptDecision> => {
   const previousEquityPercentage = negotiationState.currentEquityPercentage;
   const currentFramingFlags: AllocationFramingFlags = {
     hasShownExtremeFraming: negotiationState.hasShownExtremeFraming,
@@ -148,7 +148,7 @@ const handleCounterTurn = async (
   // `reply` is sent — so a framing is never marked shown on an undelivered turn.
   // (Atomicity note in run-conversation.ts.)
   return {
-    kind: HandlerOutputKind.Ask,
+    kind: HandlerOutputKind.Prompt,
     message: reply,
     negotiationStatePatch: {
       currentEquityPercentage: proposedEquityPercentage,
@@ -161,14 +161,14 @@ const handleQuestionTurn = async (
   lastUserResponse: string,
   currentEquityPercentage: number,
   proposalContext: AllocationProposalContext,
-): Promise<AllocationAskDecision> => {
+): Promise<AllocationPromptDecision> => {
   const reply = await composeQuestionReply(
     lastUserResponse,
     currentEquityPercentage,
     proposalContext,
   );
 
-  return { kind: HandlerOutputKind.Ask, message: reply };
+  return { kind: HandlerOutputKind.Prompt, message: reply };
 };
 
 const createInitHandler =
@@ -177,7 +177,7 @@ const createInitHandler =
     anchorEquityPercentage: number,
   ): InitHandler<AllocationConversationState, AllocationPhaseResult> =>
   async (): Promise<AllocationInitHandlerOutput> => ({
-    kind: HandlerOutputKind.Ask,
+    kind: HandlerOutputKind.Prompt,
     state: {
       totalTurnsTaken: 0,
       negotiation: {
@@ -190,12 +190,12 @@ const createInitHandler =
     message: buildInitialProposal(amount, anchorEquityPercentage),
   });
 
-// Routes a *continuing* intent to the Ask reply it produces. The terminal
+// Routes a *continuing* intent to the Prompt reply it produces. The terminal
 // intents (accept / budget exhaustion) are resolved in `createTurnHandler`
-// before this runs, so every branch here returns Ask.
-const resolveAskDecision = async (
-  params: ResolveAskDecisionParams,
-): Promise<AllocationAskDecision> => {
+// before this runs, so every branch here returns Prompt.
+const resolvePromptDecision = async (
+  params: ResolvePromptDecisionParams,
+): Promise<AllocationPromptDecision> => {
   const { intent, negotiationState, proposalContext, lastUserResponse } = params;
 
   switch (intent.kind) {
@@ -215,7 +215,7 @@ const resolveAskDecision = async (
       logger.warn("Unknown allocation intent — re-asking with the generic prompt");
 
       return {
-        kind: HandlerOutputKind.Ask,
+        kind: HandlerOutputKind.Prompt,
         message: ALLOCATION_UNKNOWN_INTENT_MESSAGE,
       };
     }
@@ -224,7 +224,7 @@ const resolveAskDecision = async (
       const _exhaustive: never = intent;
 
       throw new InternalError(
-        `resolveAskDecision: unhandled intent: ${JSON.stringify(_exhaustive)}`,
+        `resolvePromptDecision: unhandled intent: ${JSON.stringify(_exhaustive)}`,
       );
     }
   }
@@ -286,7 +286,7 @@ const createTurnHandler =
       };
     }
 
-    const { message, negotiationStatePatch } = await resolveAskDecision({
+    const { message, negotiationStatePatch } = await resolvePromptDecision({
       intent,
       negotiationState: negotiation,
       proposalContext,
@@ -296,7 +296,7 @@ const createTurnHandler =
     // The single place both turn counters commit and the negotiation patch is
     // lifted into the full successor state.
     return {
-      kind: HandlerOutputKind.Ask,
+      kind: HandlerOutputKind.Prompt,
       state: {
         totalTurnsTaken: totalTurnsTaken + 1,
         negotiation: {
@@ -338,8 +338,8 @@ export const collectAllocation = async (
       responder,
       // Backstop only, not the real limit — turn accounting lives in the phase
       // state and a well-formed handler returns Done first. The last legitimate
-      // ask is emitted while `asksEmitted` equals ALLOCATION_MAX_TOTAL_TURNS, so
-      // +1 clears it; only a handler that asks past its own total budget trips this.
+      // prompt is emitted while `promptsEmitted` equals ALLOCATION_MAX_TOTAL_TURNS, so
+      // +1 clears it; only a handler that prompts past its own total budget trips this.
       hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
     });
 

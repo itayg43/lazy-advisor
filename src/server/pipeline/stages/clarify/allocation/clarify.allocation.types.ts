@@ -45,9 +45,9 @@ export type AllocationClassifierOutput = z.infer<typeof AllocationClassifierOutp
 export type AllocationIntent = z.infer<typeof AllocationIntentSchema>;
 
 /**
- * The continuing (non-terminal) intents — what `resolveAskDecision` handles.
+ * The continuing (non-terminal) intents — what `resolvePromptDecision` handles.
  * `createTurnHandler` resolves the accept intents before the continuing path,
- * so they're excluded here; this keeps the Ask-producing switch to the three
+ * so they're excluded here; this keeps the Prompt-producing switch to the three
  * kinds it actually serves.
  */
 export type AllocationContinuingIntent = Exclude<
@@ -108,9 +108,9 @@ export type AllocationHandlerOutput = HandlerOutput<
 
 /**
  * What the accept path returns: Done with a *completed* result only. Narrower
- * than AllocationHandlerOutput — excludes the Ask arm (accept is terminal) and
+ * than AllocationHandlerOutput — excludes the Prompt arm (accept is terminal) and
  * the unresolved result (that's the budget gate's outcome, not accept's).
- * Mirrors AllocationAskDecision on the continuing side.
+ * Mirrors AllocationPromptDecision on the continuing side.
  */
 export type AllocationAcceptDecision = {
   kind: typeof HandlerOutputKind.Done;
@@ -118,14 +118,14 @@ export type AllocationAcceptDecision = {
 };
 
 /**
- * What the init handler returns: the opening Ask only. Narrower than
+ * What the init handler returns: the opening Prompt only. Narrower than
  * AllocationHandlerOutput — the allocation init always opens the negotiation
  * with a proposal, never resolves the phase, so a Done (and with it the
  * unresolved result) is unreachable and excluded here.
  */
 export type AllocationInitHandlerOutput = Extract<
   AllocationHandlerOutput,
-  { kind: typeof HandlerOutputKind.Ask }
+  { kind: typeof HandlerOutputKind.Prompt }
 >;
 
 // State mutations a turn handler may request against the negotiation slice.
@@ -139,7 +139,7 @@ type AllocationNegotiationStatePatch = Partial<
 >;
 
 /**
- * What a *continuing* turn handler returns: ask again, carrying only the
+ * What a *continuing* turn handler returns: prompt again, carrying only the
  * negotiation fields that changed (`negotiationStatePatch`). Distinct from
  * `AllocationHandlerOutput` — the handler decides *what* changed; `createTurnHandler`
  * applies both turn-counter increments and merges the patch into the full successor
@@ -147,8 +147,8 @@ type AllocationNegotiationStatePatch = Partial<
  * return an `AllocationHandlerOutput` Done directly: they end the phase, so there's
  * no successor state to assemble and the patch concept doesn't apply.
  */
-export type AllocationAskDecision = {
-  kind: typeof HandlerOutputKind.Ask;
+export type AllocationPromptDecision = {
+  kind: typeof HandlerOutputKind.Prompt;
   message: string;
   negotiationStatePatch?: AllocationNegotiationStatePatch;
 };

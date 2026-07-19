@@ -121,7 +121,7 @@ export const AllocationClassifierOutputSchema = z.object({
  * kinds into one `exclude(["counter"])` member: a collapsed member fuses the
  * accept kinds with question/unknown under a single `kind` union, and no type
  * operation can separate them again — so `AllocationContinuingIntent` (the
- * accept-free type `resolveAskDecision` consumes) can't be derived via
+ * accept-free type `resolvePromptDecision` consumes) can't be derived via
  * `Exclude`. Listing the variants keeps each kind independently extractable.
  */
 export const AllocationIntentSchema = z.discriminatedUnion("kind", [

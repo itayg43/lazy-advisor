@@ -22,9 +22,9 @@ export const runConversation = async <TState, TResult>(
 
   // Backstop only: real turn accounting lives in the caller's phase state, and a
   // well-formed handler returns Done first. Guards against a handler that always
-  // returns Ask. See ALLOCATION_AUDIT.md (Finding 2) for the coupling with the
+  // returns Prompt. See ALLOCATION_AUDIT.md (Finding 2) for the coupling with the
   // phase budget and why the wait-timeout lives in the Responder, not here.
-  let asksEmitted = 0;
+  let promptsEmitted = 0;
   while (true) {
     switch (currentOutput.kind) {
       case HandlerOutputKind.Done: {
@@ -39,23 +39,23 @@ export const runConversation = async <TState, TResult>(
 
         return result;
       }
-      case HandlerOutputKind.Ask: {
+      case HandlerOutputKind.Prompt: {
         // Guards a runner invariant: under correct self-limiting we never reach
         // this, so a throw means a buggy handler, not an expected outcome — hence
         // InternalError (500), which bubbles to the central `runClarifyOrchestrator`
         // catch that logs it once and maps the stage to errored.
-        if (asksEmitted >= hardStopTurns)
+        if (promptsEmitted >= hardStopTurns)
           throw new InternalError(
-            `runConversation: hard-stop reached after ${hardStopTurns} asks — a handler failed to self-limit`,
+            `runConversation: hard-stop reached after ${hardStopTurns} prompts — a handler failed to self-limit`,
           );
 
-        asksEmitted++;
+        promptsEmitted++;
 
         const { message } = currentOutput;
 
         history.push({ role: "assistant", content: message });
         responder.sendToUser(message);
-        logger.debug("Asked user", { message });
+        logger.debug("Prompted user", { message });
 
         const lastUserResponse = await responder.waitForResponse();
         history.push({ role: "user", content: lastUserResponse });
