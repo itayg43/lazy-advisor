@@ -1,31 +1,22 @@
 ---
 name: commit
-description: Run all checks, draft a commit message, commit, and push to the current branch. Use when implementation and doc updates are complete.
+description: Draft a commit message, commit, and push to the current branch. Use when implementation and doc updates are complete.
 ---
+
+Checks run automatically via git hooks, not in this skill:
+
+- **pre-commit** (`lint-staged`): `secretlint` on all staged files, plus `prettier --write` and `eslint --fix` on staged `src/**/*.ts`. Formatting fixes are re-staged automatically.
+- **pre-push**: `npm run type-check` then `npm test` over the whole repo.
+
+Do not run `format`, `lint`, `type-check`, or `test` manually — let the hooks own them.
 
 ## Steps
 
-### 1. Run checks
-
-Run these four commands, each as its own separate tool call, in this order:
-
-```
-npm run format
-npm run lint
-npm run type-check
-npm test
-```
-
-Hard rules:
-- **Sequential only.** One command per Bash call. Do not run them in parallel and do not chain them with `&&`, `;`, or `|`.
-- **Verbatim.** No appended flags, no `2>&1`, no `| tail`, no redirection. Run each command exactly as written above.
-- **Stop on failure.** If a command fails, stop immediately, report which one and the full error output, and do not proceed to commit.
-
-### 2. Review changes
+### 1. Review changes
 
 Run `git status` and `git diff` to understand what's changing. Note whether eval log files (`*.runs.jsonl`, `*.last-run.md`) are present and need to be staged alongside code.
 
-### 3. Check branch
+### 2. Check branch
 
 ```bash
 git branch --show-current
@@ -37,7 +28,7 @@ If the current branch is `main`, create a branch now — after reviewing the cha
 git checkout -b <branch-name>
 ```
 
-### 4. Draft commit message
+### 3. Draft commit message
 
 Write a commit message:
 - First line: imperative mood, ≤72 chars, describes what changed
@@ -45,6 +36,12 @@ Write a commit message:
 - No `Co-Authored-By` lines
 - No links to external documents or plan files (they can break)
 
-### 5. Commit and push
+### 4. Commit and push
 
-Stage relevant files by name (never `git add .` or `git add -A`). Commit with the drafted message. Push to the current branch.
+Stage relevant files by name (never `git add .` or `git add -A`). Commit with the drafted message, then push to the current branch.
+
+If the branch has an upstream, `git push`. If it has none (never pushed — e.g. a branch created in step 2), set one on the first push with `git push -u origin <branch>`.
+
+If a hook fails:
+- **pre-commit** aborts the commit. Fix the reported issue, re-stage, and commit again. If `prettier`/`eslint --fix` modified files, they are already re-staged — just re-run the commit.
+- **pre-push** aborts the push (commit is already made). Fix the `type-check` or `test` failure, commit the fix, and push again. Never bypass with `--no-verify`.
