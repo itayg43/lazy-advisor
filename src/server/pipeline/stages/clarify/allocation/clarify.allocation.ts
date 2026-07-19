@@ -1,109 +1,390 @@
-import { createLogger } from "#lib/logger";
 import {
-  type AllocationCell,
-  ALLOCATION_ANCHOR_DATA,
-  MAX_ALLOCATION_TOOL_CALLS,
+  InternalError,
+  InternalSchemaValidationError,
+  isUpstreamError,
+  ServiceUnavailableError,
+} from "#errors";
+import { createLogger } from "#lib/logger";
+import { parseSchema } from "#lib/parse-schema";
+import {
+  HandlerOutputKind,
+  runConversation,
+  type InitHandler,
+  type TurnHandler,
+} from "#pipeline/run-conversation";
+import {
+  ALLOCATION_UNKNOWN_INTENT_MESSAGE,
+  ALLOCATION_MAX_NEGOTIATION_TURNS,
+  ALLOCATION_MAX_TOTAL_TURNS,
 } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
 import {
-  ALLOCATION_EXTRACTION_INSTRUCTIONS,
-  ALLOCATION_PROMPT,
-} from "#pipeline/stages/clarify/allocation/clarify.allocation.prompts";
-import { AllocationPhaseOutputSchema } from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
-import type {
-  AllocationPhaseInput,
-  AllocationPhaseOutput,
-  AllocationPhaseResult,
-} from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
-import type { RiskSelfRatingScore } from "#pipeline/stages/clarify/risk/clarify.risk.types";
+  classifyTurn,
+  composeCounterReply,
+  composeQuestionReply,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.io";
 import {
-  isPhaseLoopExhaustedError,
-  runPhaseExtraction,
-  runPhaseLoop,
-} from "#pipeline/stages/clarify/shared/clarify.phase";
-import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
+  applyBranchFraming,
+  calculateBufferPercentage,
+  computeSplit,
+  formatCurrency,
+  isAcceptIntent,
+  resolveAllocationAnchor,
+  selectCounterBranch,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.lib";
+import {
+  AllocationErroredReasonEnum,
+  AllocationIntentKindEnum,
+  AllocationPhaseOutputSchema,
+  AllocationPhaseResultSchema,
+  AllocationUnresolvedReasonEnum,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
+import type {
+  AllocationAcceptDecision,
+  AllocationAcceptIntentKind,
+  AllocationPromptDecision,
+  AllocationContinuingIntent,
+  AllocationConversationState,
+  AllocationFramingFlags,
+  AllocationHandlerOutput,
+  AllocationInitHandlerOutput,
+  AllocationNegotiationState,
+  AllocationPhaseInput,
+  AllocationPhaseResult,
+  AllocationProposalContext,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
 const logger = createLogger("clarifyAllocation");
 
-// +2/-2 insets keep proposals off the cell boundary; score 3 hits the midpoint
-// because it's the only score in the moderate bucket.
-export const pickEquityPercentage = (
-  cell: AllocationCell,
-  score: RiskSelfRatingScore,
-): number => {
-  switch (score) {
-    case 1:
-    case 4:
-      return cell.min + 2;
-    case 2:
-    case 5:
-      return cell.max - 2;
-    case 3:
-      return (cell.min + cell.max) / 2;
+type ResolvePromptDecisionParams = {
+  intent: AllocationContinuingIntent;
+  negotiationState: Readonly<AllocationNegotiationState>;
+  proposalContext: AllocationProposalContext;
+  lastUserResponse: string;
+};
+
+const buildInitialProposal = (amount: number, equityPercentage: number): string => {
+  const { equityAmount, bufferAmount } = computeSplit(amount, equityPercentage);
+  const bufferPercentage = calculateBufferPercentage(equityPercentage);
+
+  return `Based on your timeline and comfort with drops, I'd propose ${formatCurrency(equityAmount)} in stock ETFs and ${formatCurrency(bufferAmount)} in a buffer — roughly ${equityPercentage}/${bufferPercentage}.
+More in stocks means bigger drops in bad years and higher long-run growth; less in stocks means smaller drops and lower growth.
+Sizing to your comfort level tends to reduce the chance of panic-selling when drops happen.
+Want that split, more in stocks, or more in buffer?`;
+};
+
+const handleAcceptTurn = (
+  intentKind: AllocationAcceptIntentKind,
+  equityPercentages: {
+    currentEquityPercentage: number;
+    anchorEquityPercentage: number;
+  },
+): AllocationAcceptDecision => {
+  const { currentEquityPercentage, anchorEquityPercentage } = equityPercentages;
+
+  const finalEquityPercentage =
+    intentKind === AllocationIntentKindEnum.enum["accept-original"]
+      ? anchorEquityPercentage
+      : currentEquityPercentage;
+
+  // Inner fail-fast: a bug in the accept path surfaces here, not downstream.
+  // Overlaps the outer result parse on purpose. No logging — the
+  // `runClarifyOrchestrator` catch logs `BaseError`s once.
+  const output = parseSchema(
+    AllocationPhaseOutputSchema,
+    {
+      equityPercentage: finalEquityPercentage,
+      bufferPercentage: calculateBufferPercentage(finalEquityPercentage),
+    },
+    (error, value) =>
+      new InternalSchemaValidationError(
+        "Allocation phase produced an output that failed schema validation",
+        error,
+        value,
+      ),
+  );
+
+  logger.info("Accepted allocation", { intentKind, ...output });
+
+  return {
+    kind: HandlerOutputKind.Done,
+    result: { status: PipelineStatusEnum.enum.completed, ...output },
+  };
+};
+
+const handleCounterTurn = async (
+  proposedEquityPercentage: number,
+  negotiationState: Readonly<AllocationNegotiationState>,
+  proposalContext: AllocationProposalContext,
+): Promise<AllocationPromptDecision> => {
+  const previousEquityPercentage = negotiationState.currentEquityPercentage;
+  const currentFramingFlags: AllocationFramingFlags = {
+    hasShownExtremeFraming: negotiationState.hasShownExtremeFraming,
+    hasShownCompoundImpactFraming: negotiationState.hasShownCompoundImpactFraming,
+  };
+  const counterBranch = selectCounterBranch(
+    proposedEquityPercentage,
+    proposalContext.suggestedEquityRange,
+    currentFramingFlags,
+  );
+  const nextFramingFlags = applyBranchFraming(currentFramingFlags, counterBranch);
+
+  logger.info("Resolved counter turn", {
+    counterBranch,
+    previousEquityPercentage,
+    proposedEquityPercentage,
+    currentFramingFlags,
+    nextFramingFlags,
+  });
+
+  const reply = await composeCounterReply(
+    counterBranch,
+    { proposedEquityPercentage, previousEquityPercentage },
+    proposalContext,
+  );
+
+  // `nextFramingFlags` rides in the patch, which the runner commits only after
+  // `reply` is sent — so a framing is never marked shown on an undelivered turn.
+  // (Atomicity note in run-conversation.ts.)
+  return {
+    kind: HandlerOutputKind.Prompt,
+    message: reply,
+    negotiationStatePatch: {
+      currentEquityPercentage: proposedEquityPercentage,
+      ...nextFramingFlags,
+    },
+  };
+};
+
+const handleQuestionTurn = async (
+  lastUserResponse: string,
+  currentEquityPercentage: number,
+  proposalContext: AllocationProposalContext,
+): Promise<AllocationPromptDecision> => {
+  const reply = await composeQuestionReply(
+    lastUserResponse,
+    currentEquityPercentage,
+    proposalContext,
+  );
+
+  return { kind: HandlerOutputKind.Prompt, message: reply };
+};
+
+const createInitHandler =
+  (
+    amount: number,
+    anchorEquityPercentage: number,
+  ): InitHandler<AllocationConversationState, AllocationPhaseResult> =>
+  async (): Promise<AllocationInitHandlerOutput> => ({
+    kind: HandlerOutputKind.Prompt,
+    state: {
+      totalTurnsTaken: 0,
+      negotiation: {
+        currentEquityPercentage: anchorEquityPercentage,
+        hasShownExtremeFraming: false,
+        hasShownCompoundImpactFraming: false,
+        negotiationTurnsTaken: 0,
+      },
+    },
+    message: buildInitialProposal(amount, anchorEquityPercentage),
+  });
+
+// Routes a *continuing* intent to the Prompt reply it produces. The terminal
+// intents (accept / budget exhaustion) are resolved in `createTurnHandler`
+// before this runs, so every branch here returns Prompt.
+const resolvePromptDecision = async (
+  params: ResolvePromptDecisionParams,
+): Promise<AllocationPromptDecision> => {
+  const { intent, negotiationState, proposalContext, lastUserResponse } = params;
+
+  switch (intent.kind) {
+    case AllocationIntentKindEnum.enum.counter:
+      return handleCounterTurn(
+        intent.proposedEquityPercentage,
+        negotiationState,
+        proposalContext,
+      );
+    case AllocationIntentKindEnum.enum.question:
+      return handleQuestionTurn(
+        lastUserResponse,
+        negotiationState.currentEquityPercentage,
+        proposalContext,
+      );
+    case AllocationIntentKindEnum.enum.unknown: {
+      logger.warn("Unknown allocation intent — re-asking with the generic prompt");
+
+      return {
+        kind: HandlerOutputKind.Prompt,
+        message: ALLOCATION_UNKNOWN_INTENT_MESSAGE,
+      };
+    }
+
+    default: {
+      const _exhaustive: never = intent;
+
+      throw new InternalError(
+        `resolvePromptDecision: unhandled intent: ${JSON.stringify(_exhaustive)}`,
+      );
+    }
   }
 };
 
-const formatShekels = (n: number): string => `₪${n.toLocaleString("en-US")}`;
+const createTurnHandler =
+  (
+    proposalContext: AllocationProposalContext,
+    anchorEquityPercentage: number,
+  ): TurnHandler<AllocationConversationState, AllocationPhaseResult> =>
+  async (
+    conversationState,
+    history,
+    lastUserResponse,
+  ): Promise<AllocationHandlerOutput> => {
+    const { totalTurnsTaken, negotiation } = conversationState;
 
-export const collectAllocation = async (
-  { amount, timeline, riskTolerance, riskSelfRatingScore }: AllocationPhaseInput,
-  responder: Responder,
-): Promise<AllocationPhaseResult> => {
-  logger.info("Starting allocation phase", {
-    amount,
-    timeline,
-    riskTolerance,
-    riskSelfRatingScore,
-  });
+    const intent = await classifyTurn(history);
 
-  const cell = ALLOCATION_ANCHOR_DATA[riskTolerance][timeline];
-  const equityPercentage = pickEquityPercentage(cell, riskSelfRatingScore);
-  const bufferPercentage = 100 - equityPercentage;
-  const equityShekels = (amount * equityPercentage) / 100;
-  const bufferShekels = amount - equityShekels;
+    // Accept is checked before either budget gate on purpose: a user who accepts
+    // on the final turn should complete the phase, not be failed as exhausted.
+    if (isAcceptIntent(intent)) {
+      return handleAcceptTurn(intent.kind, {
+        currentEquityPercentage: negotiation.currentEquityPercentage,
+        anchorEquityPercentage,
+      });
+    }
 
-  const context = [
-    `Investment amount: ${formatShekels(amount)}`,
-    `Investment timeline: ${timeline}`,
-    `Recommended range: ${cell.min}–${cell.max}% equity`,
-    `Proposed split: ${formatShekels(equityShekels)} in stock ETFs, ${formatShekels(bufferShekels)} in a buffer (${equityPercentage}% / ${bufferPercentage}%)`,
-  ].join("\n");
-
-  let responseId: string;
-  try {
-    ({ responseId } = await runPhaseLoop({
-      model: "gpt-5.4-nano",
-      effort: "low",
-      instructions: ALLOCATION_PROMPT,
-      input: context,
-      maxToolCalls: MAX_ALLOCATION_TOOL_CALLS,
-      phaseName: "Allocation phase",
-      responder,
-    }));
-  } catch (error) {
-    if (isPhaseLoopExhaustedError(error)) {
-      logger.info("Allocation phase unresolved — tool calls exhausted");
+    // Total-turn backstop — counts every reply type, so a user who mostly asks
+    // clarifying questions exits gracefully here instead of climbing into the
+    // runner's 500-level hard stop. `>=` cuts once the budget is spent.
+    if (totalTurnsTaken >= ALLOCATION_MAX_TOTAL_TURNS) {
+      logger.warn("Allocation phase unresolved — total turn budget exhausted");
 
       return {
-        status: PipelineStatusEnum.enum.unresolved,
-        reason: ClarifyUnresolvedReasonEnum.enum.allocation,
+        kind: HandlerOutputKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: AllocationUnresolvedReasonEnum.enum.total_budget_exhausted,
+        },
       };
+    }
+
+    // Negotiation budget — only counter-proposals count, and we gate before
+    // composing so a refused counter never spends a composer call.
+    const isCounterIntent = intent.kind === AllocationIntentKindEnum.enum.counter;
+    if (
+      isCounterIntent &&
+      negotiation.negotiationTurnsTaken >= ALLOCATION_MAX_NEGOTIATION_TURNS
+    ) {
+      logger.warn("Allocation phase unresolved — negotiation budget exhausted");
+
+      return {
+        kind: HandlerOutputKind.Done,
+        result: {
+          status: PipelineStatusEnum.enum.unresolved,
+          reason: AllocationUnresolvedReasonEnum.enum.negotiation_budget_exhausted,
+        },
+      };
+    }
+
+    const { message, negotiationStatePatch } = await resolvePromptDecision({
+      intent,
+      negotiationState: negotiation,
+      proposalContext,
+      lastUserResponse,
+    });
+
+    // The single place both turn counters commit and the negotiation patch is
+    // lifted into the full successor state.
+    return {
+      kind: HandlerOutputKind.Prompt,
+      state: {
+        totalTurnsTaken: totalTurnsTaken + 1,
+        negotiation: {
+          ...negotiation,
+          ...negotiationStatePatch,
+          negotiationTurnsTaken:
+            negotiation.negotiationTurnsTaken + (isCounterIntent ? 1 : 0),
+        },
+      },
+      message,
+    };
+  };
+
+export const collectAllocation = async (
+  input: AllocationPhaseInput,
+  responder: Responder,
+): Promise<AllocationPhaseResult> => {
+  logger.info("Starting allocation phase", { input });
+
+  const { amount, timeline, riskTolerance } = input;
+
+  try {
+    const { suggestedEquityRange, anchorEquityPercentage } = resolveAllocationAnchor(
+      riskTolerance,
+      timeline,
+    );
+
+    logger.info("Derived allocation anchor", {
+      suggestedEquityRange,
+      anchorEquityPercentage,
+    });
+
+    const conversationResult = await runConversation({
+      initHandler: createInitHandler(amount, anchorEquityPercentage),
+      turnHandler: createTurnHandler(
+        { amount, timeline, suggestedEquityRange },
+        anchorEquityPercentage,
+      ),
+      responder,
+      // Backstop only, not the real limit — turn accounting lives in the phase
+      // state and a well-formed handler returns Done first. The last legitimate
+      // prompt is emitted while `promptsEmitted` equals ALLOCATION_MAX_TOTAL_TURNS, so
+      // +1 clears it; only a handler that prompts past its own total budget trips this.
+      hardStopTurns: ALLOCATION_MAX_TOTAL_TURNS + 1,
+    });
+
+    // Outer boundary over the whole result — mirrors the inner accept-path parse,
+    // but also covers the unresolved arm, which has no upstream fail-fast check.
+    const result = parseSchema(
+      AllocationPhaseResultSchema,
+      conversationResult,
+      (error, value) =>
+        new InternalSchemaValidationError(
+          "Allocation phase produced a result that failed schema validation",
+          error,
+          value,
+        ),
+    );
+
+    logger.info("Completed allocation phase", { result });
+
+    return result;
+  } catch (error) {
+    // The one guard boundary for the whole phase body. An upstream fault can only
+    // originate in the runConversation LLM calls, but wrapping everything keeps a
+    // single, uniform boundary: expected external failure (OpenAI 502/503) → report
+    // it in-band as a bare `errored` result the stage/orch can switch on. Everything
+    // else is our fault — a value we built failing its schema, an exhaustiveness
+    // guard, the runner hard-stop — so rethrow and let it bubble to the
+    // orchestrator's single top-level catch, failing loud rather than shipping as a
+    // graceful errored. (Result::Err for expected failures, panic for bugs.)
+    if (isUpstreamError(error)) {
+      // Split the upstream fault by kind for logs/telemetry. Gate on
+      // ServiceUnavailableError (the sole "dependency down / 503 / rate-limit /
+      // timeout" class) and treat every other upstream error as a bad response —
+      // note BadGatewaySchemaValidationError extends SchemaValidationError, NOT
+      // BadGatewayError, so `instanceof BadGatewayError` would miss it. The stage
+      // attaches which phase; both reasons resolve to the same user message.
+      const reason =
+        error instanceof ServiceUnavailableError
+          ? AllocationErroredReasonEnum.enum.upstream_unavailable
+          : AllocationErroredReasonEnum.enum.upstream_invalid_response;
+
+      logger.error("Allocation phase errored — upstream failure", error, { reason });
+
+      return { status: PipelineStatusEnum.enum.errored, reason };
     }
 
     throw error;
   }
-
-  const { id, usage, output } = await runPhaseExtraction<AllocationPhaseOutput>({
-    model: "gpt-5.4-nano",
-    effort: "low",
-    instructions: ALLOCATION_EXTRACTION_INSTRUCTIONS,
-    lastResponseId: responseId,
-    schema: AllocationPhaseOutputSchema,
-  });
-
-  logger.info("Allocation extraction complete", { responseId: id, usage });
-  logger.debug("Allocation output", { output });
-
-  return { status: PipelineStatusEnum.enum.completed, ...output };
 };

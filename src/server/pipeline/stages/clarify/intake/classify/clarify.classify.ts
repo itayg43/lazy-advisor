@@ -1,5 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
-
 import { createLogger } from "#lib/logger";
 import { GOAL_CLASSIFICATIONS } from "#pipeline/stages/clarify/intake/clarify.intake.constants";
 import {
@@ -31,9 +29,6 @@ export const classifyGoal = async (goal: string): Promise<GoalClassification> =>
       model: "gpt-5.4-nano",
       instructions: CLASSIFY_SYSTEM_PROMPT,
       input: goal,
-      text: {
-        format: zodTextFormat(GoalClassificationSchema, "GoalClassificationSchema"),
-      },
       reasoning: { effort: "low" },
     },
     GoalClassificationSchema,

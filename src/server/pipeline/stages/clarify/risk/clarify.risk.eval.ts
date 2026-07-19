@@ -1,18 +1,11 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  appendLastRunEntry,
-  createTrackedResponder,
-  initLastRun,
-  type TranscriptEntry,
-} from "#pipeline/eval.transcript";
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
+import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type { RiskPhaseResult } from "#pipeline/stages/clarify/risk/clarify.risk.types";
-import { RiskToleranceEnum } from "#schemas/pipeline.schemas";
 
 const LAST_RUN_PATH = new URL("clarify.risk.last-run.md", import.meta.url).pathname;
-
-const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
 
 describe("collectRisk", () => {
   let lastTranscript: TranscriptEntry[] | undefined;
@@ -46,14 +39,14 @@ describe("collectRisk", () => {
     expect(agentText).not.toContain("markets have");
   };
 
-  // clarify.risk.rules.md rule 1: digit → bucket map (one case per bucket)
+  // clarify.risk.rules.md rule 1: digit → score (one case spanning the range)
   it.each([
-    { input: "1", expectedScore: 1, expectedBucket: conservative },
-    { input: "3", expectedScore: 3, expectedBucket: moderate },
-    { input: "5", expectedScore: 5, expectedBucket: aggressive },
+    { input: "1", expectedScore: 1 },
+    { input: "3", expectedScore: 3 },
+    { input: "5", expectedScore: 5 },
   ])(
-    "should map digit $input to $expectedBucket",
-    async ({ input, expectedScore, expectedBucket }) => {
+    "should map digit $input to score $expectedScore",
+    async ({ input, expectedScore }) => {
       const responder = createTrackedResponder([input]);
       lastTranscript = responder.transcript;
 
@@ -61,14 +54,13 @@ describe("collectRisk", () => {
       lastOutput = output;
       if (output.status !== "completed") return;
 
-      expect(output.riskSelfRatingScore).toBe(expectedScore);
-      expect(output.riskTolerance).toBe(expectedBucket);
+      expect(output.riskTolerance).toBe(expectedScore);
       expectNoNeutralityViolation(responder.transcript);
     },
   );
 
   // clarify.risk.rules.md rule 1: spelled-out English word → accepted
-  it("should accept spelled-out 'three' as score 3 (moderate)", async () => {
+  it("should accept spelled-out 'three' as score 3", async () => {
     const responder = createTrackedResponder(["three"]);
     lastTranscript = responder.transcript;
 
@@ -76,8 +68,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
-    expect(output.riskTolerance).toBe(moderate);
+    expect(output.riskTolerance).toBe(3);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
     expectNoNeutralityViolation(responder.transcript);
   });
@@ -91,8 +82,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(4);
-    expect(output.riskTolerance).toBe(aggressive);
+    expect(output.riskTolerance).toBe(4);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(1);
   });
 
@@ -108,8 +98,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
-    expect(output.riskTolerance).toBe(moderate);
+    expect(output.riskTolerance).toBe(3);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     expect(agentTurns[1].content).toContain("1 = very uncomfortable");
@@ -125,8 +114,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(4);
-    expect(output.riskTolerance).toBe(aggressive);
+    expect(output.riskTolerance).toBe(4);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     // re-ask must instruct the user to pick within 1–5
@@ -144,8 +132,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(1);
-    expect(output.riskTolerance).toBe(conservative);
+    expect(output.riskTolerance).toBe(1);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     // re-ask must acknowledge the emotional content — not a bare scale re-presentation
@@ -162,8 +149,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
-    expect(output.riskTolerance).toBe(moderate);
+    expect(output.riskTolerance).toBe(3);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(2);
   });
 
@@ -176,8 +162,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(2);
-    expect(output.riskTolerance).toBe(conservative);
+    expect(output.riskTolerance).toBe(2);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     // re-ask must explain the scale needs a single number, not just re-present it
@@ -196,8 +181,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(3);
-    expect(output.riskTolerance).toBe(moderate);
+    expect(output.riskTolerance).toBe(3);
     const agentTurns = responder.transcript.filter((t) => t.role === "agent");
     expect(agentTurns).toHaveLength(2);
     expect(agentTurns[1].content).toContain("1 = very uncomfortable");
@@ -221,8 +205,7 @@ describe("collectRisk", () => {
     lastOutput = output;
     if (output.status !== "completed") return;
 
-    expect(output.riskSelfRatingScore).toBe(2);
-    expect(output.riskTolerance).toBe(conservative);
+    expect(output.riskTolerance).toBe(2);
     expect(responder.transcript.filter((t) => t.role === "agent")).toHaveLength(3);
   });
 

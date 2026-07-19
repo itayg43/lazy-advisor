@@ -1,4 +1,3 @@
-import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseFunctionToolCall,
   ResponseInputItem,
@@ -87,15 +86,11 @@ export const collectToolOutputs = async (
   return toolOutputs;
 };
 
-export const runPhaseLoop = async ({
-  model,
-  effort,
-  instructions,
-  input,
-  maxToolCalls,
-  phaseName,
-  responder,
-}: PhaseLoopParams): Promise<{ responseId: string }> => {
+export const runPhaseLoop = async (
+  params: PhaseLoopParams,
+): Promise<{ responseId: string }> => {
+  const { model, effort, instructions, input, maxToolCalls, phaseName, responder } =
+    params;
   const tools = getStageTools();
 
   let response = await callOpenAI({
@@ -153,20 +148,17 @@ export const runPhaseLoop = async ({
   return { responseId: response.id };
 };
 
-export const runPhaseExtraction = async <T>({
-  model,
-  effort,
-  instructions,
-  lastResponseId,
-  schema,
-}: PhaseExtractionParams<T>): Promise<OpenAIResponse<T>> => {
+export const runPhaseExtraction = async <T>(
+  params: PhaseExtractionParams<T>,
+): Promise<OpenAIResponse<T>> => {
+  const { model, effort, instructions, lastResponseId, schema } = params;
+
   return await callOpenAIParsed(
     {
       model,
       instructions,
       input: [],
       previous_response_id: lastResponseId,
-      text: { format: zodTextFormat(schema, "output") },
       reasoning: { effort },
     },
     schema,

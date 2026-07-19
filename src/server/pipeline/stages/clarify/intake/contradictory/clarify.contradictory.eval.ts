@@ -1,11 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  appendLastRunEntry,
-  createTrackedResponder,
-  initLastRun,
-  type TranscriptEntry,
-} from "#pipeline/eval.transcript";
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
+import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { handleContradictoryRisk } from "#pipeline/stages/clarify/intake/contradictory/clarify.contradictory";
 
 const LAST_RUN_PATH = new URL("clarify.contradictory.last-run.md", import.meta.url)

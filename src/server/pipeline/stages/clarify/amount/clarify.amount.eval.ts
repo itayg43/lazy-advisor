@@ -1,11 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  appendLastRunEntry,
-  createTrackedResponder,
-  initLastRun,
-  type TranscriptEntry,
-} from "#pipeline/eval.transcript";
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
+import { createTrackedResponder, type TranscriptEntry } from "#pipeline/eval.transcript";
 import { collectAmount } from "#pipeline/stages/clarify/amount/clarify.amount";
 import type { AmountPhaseResult } from "#pipeline/stages/clarify/amount/clarify.amount.types";
 

@@ -1,6 +1,10 @@
 import type { ZodError } from "zod";
 
-import { InternalError, PipelineControlFlowError, SchemaValidationError } from "#errors";
+import {
+  BadGatewaySchemaValidationError,
+  InternalError,
+  PipelineControlFlowError,
+} from "#errors";
 import { createLogger } from "#lib/logger";
 import { ClassifyErroredReasonEnum } from "#pipeline/ask-with-classify/ask-with-classify.schemas";
 import type {
@@ -27,9 +31,13 @@ export class ClassifyMessageMissingError extends InternalError {
   }
 }
 
-export class ClassifyResolvedOutputInvalidError extends SchemaValidationError {
-  constructor(cause: ZodError) {
-    super("askWithClassify: classify output failed resolved-schema validation", cause);
+export class ClassifyResolvedOutputInvalidError extends BadGatewaySchemaValidationError {
+  constructor(cause: ZodError, value: unknown) {
+    super(
+      "askWithClassify: classify output failed resolved-schema validation",
+      cause,
+      value,
+    );
     this.name = "ClassifyResolvedOutputInvalidError";
   }
 }
@@ -57,7 +65,10 @@ export const mapClassifyError = <TReason extends string>(
     return { status: PipelineStatusEnum.enum.unresolved, reason: unresolvedReason };
   }
   if (error instanceof ClassifyResolvedOutputInvalidError) {
-    logger.error(`${caller} — classify output invalid`, error, { cause: error.cause });
+    logger.error(`${caller} — classify output invalid`, error, {
+      cause: error.cause,
+      value: error.value,
+    });
 
     return {
       status: PipelineStatusEnum.enum.errored,

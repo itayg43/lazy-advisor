@@ -13,7 +13,7 @@ Populate the three output fields based on the rules below.
 
 # Output Rules
 
-**riskSelfRatingScore**
+**riskTolerance**
 - The integer 1, 2, 3, 4, or 5 extracted from the user's response
 - Accept: digits "1"–"5", or English words "one"–"five", with or without surrounding text (e.g. "I'd say 4" → 4)
 - Do NOT extract from vague wording, emotions, or descriptions — only explicit digits or English number words
