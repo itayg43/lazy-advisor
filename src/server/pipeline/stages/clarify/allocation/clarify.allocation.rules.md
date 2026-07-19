@@ -129,8 +129,8 @@ Score 3 hits the midpoint because it has its anchor row to itself — unlike the
 
 Two counters in the threaded conversation state, each with its own cap in `clarify.allocation.constants.ts`:
 
-- **Negotiation budget — `MAX_NEGOTIATION_TURNS = 5`.** Counts only counter-proposals (`negotiationTurnsTaken`). Questions and unknown replies don't advance it: they don't move the split, so haggling over the number isn't what's being bounded. A beginner can ask as many clarifying questions as the total budget allows without ever spending a negotiation turn.
-- **Total-turn backstop — `MAX_TOTAL_TURNS = 10`.** Counts every reply type (`totalTurnsTaken`). Bounds a conversation that never converges — e.g. an endless run of questions — so it exits gracefully as `unresolved` instead of climbing into `runConversation`'s 500-level hard stop. Sits above the negotiation cap; the gap is the room a patient user gets for questions.
+- **Negotiation budget — `ALLOCATION_MAX_NEGOTIATION_TURNS = 5`.** Counts only counter-proposals (`negotiationTurnsTaken`). Questions and unknown replies don't advance it: they don't move the split, so haggling over the number isn't what's being bounded. A beginner can ask as many clarifying questions as the total budget allows without ever spending a negotiation turn.
+- **Total-turn backstop — `ALLOCATION_MAX_TOTAL_TURNS = 10`.** Counts every reply type (`totalTurnsTaken`). Bounds a conversation that never converges — e.g. an endless run of questions — so it exits gracefully as `unresolved` instead of climbing into `runConversation`'s 500-level hard stop. Sits above the negotiation cap; the gap is the room a patient user gets for questions.
 
 Both counters read as "turns already served," so a cap of N allows N replies before the gate fires. Typical paths:
 
@@ -145,10 +145,10 @@ Both counters read as "turns already served," so a cap of N allows N replies bef
 The `runConversation` runner enforces no budget — convergence is the handler's responsibility. Each turn the handler classifies the user's reply first, then applies three gates in order:
 
 1. **Accept wins outright.** If the intent is `accept`/`accept-original`, the phase resolves to `completed` even when a budget is already spent — closing on the user's "yes" is the right UX; returning `unresolved` after a clear acceptance would feel broken.
-2. **Total-turn backstop.** If `totalTurnsTaken` has reached `MAX_TOTAL_TURNS`, return `Done` with `{ status: "unresolved", reason: "allocation" }`, regardless of intent.
-3. **Negotiation budget.** If the reply is a `counter` and `negotiationTurnsTaken` has reached `MAX_NEGOTIATION_TURNS`, return the same `unresolved` result. Gated *before* composing, so a refused counter never spends a composer call.
+2. **Total-turn backstop.** If `totalTurnsTaken` has reached `ALLOCATION_MAX_TOTAL_TURNS`, return `Done` with `{ status: "unresolved", reason: "total_budget_exhausted" }`, regardless of intent.
+3. **Negotiation budget.** If the reply is a `counter` and `negotiationTurnsTaken` has reached `ALLOCATION_MAX_NEGOTIATION_TURNS`, return `Done` with `{ status: "unresolved", reason: "negotiation_budget_exhausted" }` — same `unresolved` status and exit path, distinct granular reason. Gated *before* composing, so a refused counter never spends a composer call.
 
-The orchestrator maps `unresolved`/`allocation` to `ALLOCATION_EXIT_MESSAGE` — both caps share the exit message; only the log line differs. The trade-off is one extra classifier call on the exhausting turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
+The phase reports only *which* budget ran out via the granular `reason`; the **stage** (`runClarifyStage`) spreads that result and attaches `phase: "allocation"`. The orchestrator keys the exit message on `phase` — both reasons resolve to `ALLOCATION_EXIT_MESSAGE`, with the granular `reason` carried to the log line only. The trade-off is one extra classifier call on the exhausting turn (cheap, low-effort `nano` call) in exchange for not throwing away a final acceptance.
 
 ## Out of scope
 
