@@ -12,7 +12,7 @@ git fetch origin main
 git status
 ```
 
-If the current branch has no upstream (never been pushed), push it first:
+If the branch has no upstream (never pushed), set one on the first push:
 
 ```bash
 git push -u origin <branch>
