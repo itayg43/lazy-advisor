@@ -1,16 +1,74 @@
 # Tasks
 
-**Current task:** T5
-**Next task:** T6
+**Current task:** T4.5
+**Next task:** T5
 
 ## Task Queue
 
-| #   | Task   |
-| --- | ------ |
-| T5  | Equity |
-| T6  | Buffer |
+| #    | Task                                       |
+| ---- | ------------------------------------------ |
+| T4.5 | Migrate remaining ask-with-classify phases |
+| T5   | Equity                                     |
+| T6   | Buffer                                     |
 
 ## Task Notes
+
+### T4.5 — Migrate remaining ask-with-classify phases to runConversation
+
+Consolidation follow-on to T4 (allocation) — the first phase moved to the
+`runConversation` shape. Converts the five clarify phases still on
+`ask-with-classify` so the whole stage shares one conversation pattern and one
+error contract: our-faults throw and bubble to the orchestrator's top-level
+catch; expected upstream faults surface in-band. Retires the dual dispatch style
+the orchestrator carries today.
+
+**Sequencing:** before T5/T6. T4 (allocation) already proved `runConversation`
+in production, so the pattern needn't wait on more greenfield builds;
+consolidating the older phases onto it first keeps fewer phase shapes in flight
+than migrating them after two more new phases land. Numbered T4.5 to mark lineage
+with T4's migration. Each phase migrates **in isolation, one PR per phase**, so a
+regression bisects to a single phase.
+
+**Two groups, by whether the phase can terminate the stage:**
+
+_Blocking classify phases — these gate the orchestrator cleanup:_
+
+- **T4.5.1 — amount**
+- **T4.5.2 — timeline**
+- **T4.5.3 — risk**
+
+Each returns `unresolved`/`errored` results the stage propagates, and the
+orchestrator resolves their messages through the legacy reason-keyed maps
+(`CLARIFY_UNRESOLVED_MESSAGES`, `ClassifyErroredReasonEnum`) in
+`resolveErroredMessage`/`resolveUnresolvedMessage`. Once all three adopt the
+phase/reason split (like allocation), the legacy fall-through arms are dead code
+and get deleted — this is the orchestrator cleanup (was ALLOCATION_AUDIT
+finding 4: the two parallel dispatch styles nothing was tracking).
+
+_Non-blocking collapsing phases — uniformity only:_
+
+- **T4.5.4 — ef-debt**
+- **T4.5.5 — contribution**
+
+Both collapse every classify failure to a safe default internally and never
+terminate the stage (contribution → `plansToContribute: false`; ef-debt → its
+educational-gate default), so they carry no `status` and don't feed the
+orchestrator's termination dispatch. Migrating them doesn't gate the cleanup
+above — it's purely for one uniform phase shape. **Open question:** whether they
+stay collapsing (no `status`, as today) or the migration is the moment to drop
+the unresolved/errored concern for them explicitly. Decide per-phase here; don't
+pre-commit.
+
+**Exit criteria:**
+
+- All five phases run on `runConversation`.
+- `resolveErroredMessage`/`resolveUnresolvedMessage` carry a single phase-keyed
+  dispatch; the legacy reason-keyed maps and `ClassifyErroredReasonEnum`
+  fall-through are deleted.
+- `ask-with-classify` has no remaining callers in the clarify stage — retire it
+  if nothing else uses it.
+
+**Verify:** `npm run type-check`, `npm test`, plus each migrated phase's eval.
 
 ### T5 — Equity
 
