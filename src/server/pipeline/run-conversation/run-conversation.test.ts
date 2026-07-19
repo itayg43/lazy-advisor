@@ -109,6 +109,36 @@ describe("runConversation", () => {
     });
   });
 
+  it("should deep-clone history so handler mutations don't leak into later turns", async () => {
+    const responder = createTrackedResponder(["r1", "r2"]);
+    // Snapshot on entry before mutating, otherwise the recorded array IS the mutated one.
+    const snapshotsOnEntry: EasyInputMessage[][] = [];
+
+    const initHandler: InitHandler<void, string> = async () => ({
+      kind: HandlerOutputKind.Ask,
+      state: undefined,
+      message: "q1",
+    });
+    const turnHandler: TurnHandler<void, string> = async (_state, history) => {
+      snapshotsOnEntry.push([...history]);
+      // Cast away readonly to simulate a misbehaving handler that mutates its
+      // argument; the runner's clone must keep this out of the canonical history.
+      (history as EasyInputMessage[]).push({ role: "assistant", content: "INJECTED" });
+
+      return snapshotsOnEntry.length === 1
+        ? { kind: HandlerOutputKind.Ask, state: undefined, message: "q2" }
+        : { kind: HandlerOutputKind.Done, result: "ok" };
+    };
+
+    await runConversation({ initHandler, turnHandler, responder, hardStopTurns: 10 });
+
+    // The second turn's history must not carry the first turn's injection.
+    expect(snapshotsOnEntry[1]).not.toContainEqual({
+      role: "assistant",
+      content: "INJECTED",
+    });
+  });
+
   it("should send Done.message to the user before returning", async () => {
     const responder = createTrackedResponder(["ok"]);
 

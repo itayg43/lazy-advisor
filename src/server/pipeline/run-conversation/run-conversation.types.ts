@@ -2,6 +2,15 @@ import type { EasyInputMessage } from "openai/resources/responses/responses";
 
 import type { Responder } from "#pipeline/tools/ask-user.tool";
 
+/**
+ * Recursively marks every property readonly, unlike the built-in `Readonly`
+ * which is shallow. Used to model an owned borrow: a handler receives state it
+ * may read but not mutate at any depth, and must return a new object instead.
+ */
+type DeepReadonly<T> = {
+  readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
+
 export const HandlerOutputKind = {
   Ask: "ask",
   Done: "done",
@@ -35,15 +44,23 @@ export type InitHandler<TState, TResult> = () => Promise<HandlerOutput<TState, T
 
 /**
  * Called after each user reply. A handler returns its next state instead of
- * changing the state it was given. The `Readonly`/`ReadonlyArray` types are a
- * reminder to follow that rule, not a real guarantee: `Readonly` is shallow,
- * gone at runtime, and TypeScript still lets you pass a readonly object where a
- * mutable one is expected. It works here because `TState` is flat primitives and
- * handlers build a new object via spread; nested or shared state would slip past
- * it and need a deeper readonly type.
+ * changing the state it was given. Both arguments are borrows, but the runner
+ * enforces them differently because it holds them differently:
+ *
+ * `state` is owned-and-returned: the runner hands it off, expects a new state
+ * back, and never reads the old object again. There's no retained alias to
+ * corrupt, so a compile-time `DeepReadonly` reminder is enough — it's erased at
+ * runtime, but the runner doesn't need a runtime guarantee here.
+ *
+ * `history` is retained-and-shared: the runner keeps one canonical array and
+ * appends to it every turn. A type can't protect that — `ReadonlyArray` is
+ * compile-time and castable — so the runner passes a `structuredClone` each
+ * turn. That runtime copy, not the type, is what stops a handler that mutates
+ * its `history` argument (e.g. a future equity/buffer RAG loop) from corrupting
+ * the conversation.
  */
 export type TurnHandler<TState, TResult> = (
-  state: Readonly<TState>,
+  state: DeepReadonly<TState>,
   history: ReadonlyArray<EasyInputMessage>,
   lastUserResponse: string,
 ) => Promise<HandlerOutput<TState, TResult>>;

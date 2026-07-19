@@ -20,16 +20,10 @@ export const runConversation = async <TState, TResult>(
   let currentOutput: HandlerOutput<TState, TResult> = await initHandler();
   const history: EasyInputMessage[] = [];
 
-  // `hardStopTurns` is a backstop, not the real limit: turn accounting lives in
-  // the caller's phase state (e.g. `turnsTaken`), and a well-formed handler
-  // returns Done before this trips. It exists so a buggy handler that always
-  // returns Ask can't loop forever. The companion hang-exposure control — a wait
-  // timeout — belongs inside `Responder.waitForResponse`, not here, since the
-  // runner has no view into the underlying transport.
-  //
-  // We count asks emitted: when the cap is hit, the handler's preceding call
-  // (e.g. the LLM turn that produced this Ask) is already spent and discarded.
-  // That waste is acceptable — under correct self-limiting we never reach it.
+  // Backstop only: real turn accounting lives in the caller's phase state, and a
+  // well-formed handler returns Done first. Guards against a handler that always
+  // returns Ask. See ALLOCATION_AUDIT.md (Finding 2) for the coupling with the
+  // phase budget and why the wait-timeout lives in the Responder, not here.
   let asksEmitted = 0;
   while (true) {
     switch (currentOutput.kind) {
@@ -67,13 +61,17 @@ export const runConversation = async <TState, TResult>(
         history.push({ role: "user", content: lastUserResponse });
         logger.debug("User responded", { lastUserResponse });
 
-        // State and the next directive are replaced together here: if the
-        // following iteration's `sendToUser` throws, the closure unwinds and both
-        // are discarded — no halfway-committed phase state. Fine for now: with no
-        // session persistence, an unrecoverable error ends the conversation at the
-        // stage boundary and the user restarts from scratch, so there's nothing to
-        // resume to. Revisit when session state is persisted.
-        currentOutput = await turnHandler(currentOutput.state, history, lastUserResponse);
+        // structuredClone isolates the runner's canonical `history` from the
+        // handler, so a handler that mutates its argument (e.g. a future
+        // equity/buffer RAG loop) can't corrupt the conversation. State + next
+        // directive are replaced together, so a throw on the next iteration
+        // discards both — no halfway-committed state. (No session persistence yet;
+        // revisit when there is.)
+        currentOutput = await turnHandler(
+          currentOutput.state,
+          structuredClone(history),
+          lastUserResponse,
+        );
         logger.debug("Turn handler returned", { ...currentOutput });
 
         break;
