@@ -28,11 +28,13 @@ export const RISK_EXIT_MESSAGE =
 export const ALLOCATION_EXIT_MESSAGE =
   "We couldn't settle on an equity/buffer split that fits — feel free to come back when you've had time to think it over.";
 
+// Legacy (phase-name) unresolved reasons only. Allocation is absent — it carries a
+// `phase`, so the orchestrator resolves its message by phase, reading
+// ALLOCATION_EXIT_MESSAGE directly rather than through this reason-keyed map.
 export const CLARIFY_UNRESOLVED_MESSAGES: Record<ClarifyUnresolvedReason, string> = {
   amount: AMOUNT_EXIT_MESSAGE,
   timeline: TIMELINE_EXIT_MESSAGE,
   risk_tolerance: RISK_EXIT_MESSAGE,
-  allocation: ALLOCATION_EXIT_MESSAGE,
 };
 
 // `intake_rejected` is intentionally absent — its message depends on the carried

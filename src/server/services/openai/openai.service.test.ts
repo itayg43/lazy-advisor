@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { APIConnectionError, APIError } from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ParsedResponse,
   Response,
@@ -10,11 +11,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InternalError, SchemaValidationError, ServiceUnavailableError } from "#errors";
-import {
-  RiskToleranceEnum,
-  TimelineBucketEnum,
-  UserProfileSchema,
-} from "#schemas/pipeline.schemas";
+import { TimelineBucketEnum, UserProfileSchema } from "#schemas/pipeline.schemas";
 import { callOpenAI, callOpenAIParsed } from "#services/openai/openai.service";
 import type { UserProfile } from "#types/pipeline.types";
 
@@ -137,7 +134,6 @@ describe("openaiService", () => {
     const mockParsedOutput: UserProfile = {
       amount: 10000,
       timeline: TimelineBucketEnum.enum["10+ years"],
-      riskTolerance: RiskToleranceEnum.enum.moderate,
       equityPercentage: 60,
       bufferPercentage: 40,
       plansToContribute: true,
@@ -161,7 +157,11 @@ describe("openaiService", () => {
 
       const result = await callOpenAIParsed(mockParams, UserProfileSchema);
 
-      expect(mockedParse).toHaveBeenCalledWith(mockParams);
+      // callOpenAIParsed injects text.format from the passed schema (name "output").
+      expect(mockedParse).toHaveBeenCalledWith({
+        ...mockParams,
+        text: { format: zodTextFormat(UserProfileSchema, "output") },
+      });
       expect(result).toStrictEqual({
         id: mockResponse.id,
         output: mockParsedOutput,

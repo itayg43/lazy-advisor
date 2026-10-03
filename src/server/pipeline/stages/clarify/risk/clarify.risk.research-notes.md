@@ -3,6 +3,8 @@
 **Date:** 2026-04-21
 **Status:** Reference. Records the design decision and the research behind it.
 
+> **Update (2026-06-13):** The score→bucket mapping described below no longer exists. There is no `conservative`/`moderate`/`aggressive` bucket anywhere — the allocation phase keys its anchor table on the 1–5 score directly. The score itself is now the field named `riskTolerance` (the phase's only output). The `RiskPhaseOutput` snippet below is historical: its `riskTolerance` field held the now-removed bucket label, and its `riskSelfRatingScore` is what is today simply called `riskTolerance`. The research rationale (a coarse willingness signal feeding a behavioral anchor) still holds. See `clarify.risk.rules.md` and ARCHITECTURE.md § "Risk phase" for current behavior.
+
 ## Decision
 
 Phase 4 uses a **single 1–5 self-rating** to measure risk willingness. Deterministic mapping:

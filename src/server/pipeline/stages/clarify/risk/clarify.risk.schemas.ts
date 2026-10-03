@@ -5,9 +5,9 @@ import {
   ClassifyErroredReasonEnum,
 } from "#pipeline/ask-with-classify";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 
-export const RiskSelfRatingScoreSchema = z.union([
+export const RiskToleranceSchema = z.union([
   z.literal(1),
   z.literal(2),
   z.literal(3),
@@ -16,17 +16,15 @@ export const RiskSelfRatingScoreSchema = z.union([
 ]);
 
 export const RiskClassifySchema = AskWithClassifyBaseSchema.extend({
-  riskSelfRatingScore: RiskSelfRatingScoreSchema.nullable(),
+  riskTolerance: RiskToleranceSchema.nullable(),
 });
 
 export const RiskClassifyResolvedSchema = RiskClassifySchema.extend({
-  riskSelfRatingScore: RiskSelfRatingScoreSchema,
+  riskTolerance: RiskToleranceSchema,
 });
 
-// riskTolerance is derived from riskSelfRatingScore in TypeScript, not by the model.
 export const RiskPhaseOutputSchema = z.object({
-  riskSelfRatingScore: RiskSelfRatingScoreSchema,
-  riskTolerance: RiskToleranceEnum,
+  riskTolerance: RiskToleranceSchema,
 });
 
 export const RiskPhaseResultSchema = z.discriminatedUnion("status", [

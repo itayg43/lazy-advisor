@@ -79,11 +79,11 @@ export const handleUnrealisticExpectations = async (
   goal: string,
   responder: Responder,
 ): Promise<IntakePhaseOutput> => {
-  return runIntakePhase(
-    UNREALISTIC_PROMPT,
-    "Unrealistic expectations redirect phase",
+  return runIntakePhase({
+    instructions: UNREALISTIC_PROMPT,
+    phaseName: "Unrealistic expectations redirect phase",
     goal,
     responder,
-    UNREALISTIC_EXTRACTION_INSTRUCTIONS,
-  );
+    extractionInstructions: UNREALISTIC_EXTRACTION_INSTRUCTIONS,
+  });
 };

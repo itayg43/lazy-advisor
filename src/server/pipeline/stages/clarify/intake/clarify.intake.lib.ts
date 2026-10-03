@@ -10,13 +10,19 @@ import type { Responder } from "#pipeline/tools/ask-user.tool";
 
 const logger = createLogger("clarifyIntake");
 
+type RunIntakePhaseParams = {
+  instructions: string;
+  phaseName: string;
+  goal: string;
+  responder: Responder;
+  extractionInstructions: string;
+};
+
 export const runIntakePhase = async (
-  instructions: string,
-  phaseName: string,
-  goal: string,
-  responder: Responder,
-  extractionInstructions: string,
+  params: RunIntakePhaseParams,
 ): Promise<IntakePhaseOutput> => {
+  const { instructions, phaseName, goal, responder, extractionInstructions } = params;
+
   logger.info(`Starting ${phaseName}`);
 
   const { responseId } = await runPhaseLoop({

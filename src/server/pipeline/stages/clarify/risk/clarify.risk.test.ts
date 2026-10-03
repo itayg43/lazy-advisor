@@ -4,12 +4,11 @@ import { createTrackedResponder } from "#pipeline/eval.transcript";
 import { collectRisk } from "#pipeline/stages/clarify/risk/clarify.risk";
 import type {
   RiskClassify,
-  RiskSelfRatingScore,
+  RiskTolerance,
 } from "#pipeline/stages/clarify/risk/clarify.risk.types";
 import { ClarifyUnresolvedReasonEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
-import { PipelineStatusEnum, RiskToleranceEnum } from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
-import type { RiskTolerance } from "#types/pipeline.types";
 
 const { mockedCallOpenAIParsed } = vi.hoisted(() => ({
   mockedCallOpenAIParsed: vi.fn(),
@@ -24,47 +23,42 @@ describe("collectRisk", () => {
     vi.clearAllMocks();
   });
 
-  const { conservative, moderate, aggressive } = RiskToleranceEnum.enum;
-
   const createParsedResponse = <T>(output: T): OpenAIResponse<T> => ({
     id: "resp_test",
     usage: undefined,
     output,
   });
 
-  const converged = (
-    riskSelfRatingScore: RiskSelfRatingScore | null,
-  ): OpenAIResponse<RiskClassify> =>
+  const converged = (riskTolerance: RiskTolerance | null): OpenAIResponse<RiskClassify> =>
     createParsedResponse({
       clarificationNeeded: false,
       clarificationMessage: null,
-      riskSelfRatingScore,
-    });
-
-  // One case per mapScoreToBucket branch: ≤2 → conservative, =3 → moderate, >3 → aggressive
-  it.each<{ score: RiskSelfRatingScore; riskTolerance: RiskTolerance }>([
-    { score: 2, riskTolerance: conservative },
-    { score: 3, riskTolerance: moderate },
-    { score: 4, riskTolerance: aggressive },
-  ])("should map score $score to $riskTolerance", async ({ score, riskTolerance }) => {
-    mockedCallOpenAIParsed.mockResolvedValueOnce(converged(score));
-    const responder = createTrackedResponder([String(score)]);
-
-    const result = await collectRisk(responder);
-
-    expect(result).toEqual({
-      status: PipelineStatusEnum.enum.completed,
-      riskSelfRatingScore: score,
       riskTolerance,
     });
-  });
+
+  // The phase emits the raw 1–5 score; allocation keys its anchor table on that
+  // score directly (no tolerance bucketing), covered by its lib tests.
+  it.each<{ score: RiskTolerance }>([{ score: 1 }, { score: 3 }, { score: 5 }])(
+    "should return the converged self-rating score $score",
+    async ({ score }) => {
+      mockedCallOpenAIParsed.mockResolvedValueOnce(converged(score));
+      const responder = createTrackedResponder([String(score)]);
+
+      const result = await collectRisk(responder);
+
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.completed,
+        riskTolerance: score,
+      });
+    },
+  );
 
   it("should return unresolved/risk_tolerance when follow-up budget is exhausted", async () => {
     // followUps: 2 → 3 total classification attempts (loop × 2 + final)
     const needsClarification: OpenAIResponse<RiskClassify> = createParsedResponse({
       clarificationNeeded: true,
       clarificationMessage: "Please pick a whole number between 1 and 5.",
-      riskSelfRatingScore: null,
+      riskTolerance: null,
     });
     mockedCallOpenAIParsed
       .mockResolvedValueOnce(needsClarification)

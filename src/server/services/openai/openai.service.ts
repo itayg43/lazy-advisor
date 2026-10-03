@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { APIConnectionError, APIError } from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
 import type {
   ResponseCreateParamsNonStreaming,
   ResponseOutputItem,
@@ -9,8 +10,13 @@ import type {
 import type { ZodError, ZodType } from "zod";
 
 import { openaiClient } from "#clients/openai.client";
-import { InternalError, SchemaValidationError, ServiceUnavailableError } from "#errors";
+import {
+  BadGatewaySchemaValidationError,
+  InternalError,
+  ServiceUnavailableError,
+} from "#errors";
 import { createLogger } from "#lib/logger";
+import { parseSchema } from "#lib/parse-schema";
 
 const logger = createLogger("openaiService");
 
@@ -48,13 +54,22 @@ const toNotCompletedError = (
   return new ServiceUnavailableError(RESPONSE_NOT_COMPLETED_ERROR_MESSAGE);
 };
 
-const toSchemaValidationError = (id: string, cause: ZodError): Error => {
+const toSchemaValidationError = (
+  id: string,
+  cause: ZodError,
+  value: unknown,
+): BadGatewaySchemaValidationError => {
   logger.warn(SCHEMA_VALIDATION_ERROR_MESSAGE, {
     responseId: id,
     issues: cause.issues,
+    value,
   });
 
-  return new SchemaValidationError(SCHEMA_VALIDATION_ERROR_MESSAGE, cause);
+  return new BadGatewaySchemaValidationError(
+    SCHEMA_VALIDATION_ERROR_MESSAGE,
+    cause,
+    value,
+  );
 };
 
 // Errors reaching this handler are post-retry — the SDK retries 408/409/429/5xx
@@ -106,8 +121,17 @@ export const callOpenAI = async (
   }
 };
 
+// `text` is owned here, not by callers: we derive the structured-output format
+// from the same `schema` we validate against, so the two can never drift. Callers
+// pass everything except `text`.
+//
+// The schema name passed to zodTextFormat is hardcoded to "output". It's a
+// required-but-cosmetic label on the response_format — the model is constrained by
+// the schema itself, not its name, and any semantic hint to the model belongs in
+// the schema's field descriptions. A single constant keeps call sites clean; revisit
+// only if a per-schema name turns out to matter (e.g. for response-log readability).
 export const callOpenAIParsed = async <T>(
-  params: ResponseCreateParamsNonStreaming,
+  params: Omit<ResponseCreateParamsNonStreaming, "text">,
   schema: ZodType<T>,
 ): Promise<OpenAIResponse<T>> => {
   try {
@@ -115,18 +139,20 @@ export const callOpenAIParsed = async <T>(
       status,
       usage,
       id,
-      output_parsed: output,
-    } = await openaiClient.responses.parse<ResponseCreateParamsNonStreaming, unknown>(
-      params,
-    );
+      output_parsed: rawOutput,
+    } = await openaiClient.responses.parse<ResponseCreateParamsNonStreaming, unknown>({
+      ...params,
+      text: { format: zodTextFormat(schema, "output") },
+    });
 
     if (usage) logUsage(usage);
     if (status !== "completed") throw toNotCompletedError(id, status);
 
-    const result = schema.safeParse(output);
-    if (!result.success) throw toSchemaValidationError(id, result.error);
+    const output = parseSchema(schema, rawOutput, (error, value) =>
+      toSchemaValidationError(id, error, value),
+    );
 
-    return { id, output: result.data, usage };
+    return { id, output, usage };
   } catch (error) {
     if (isOpenAIError(error)) throw mapOpenAIError(error);
 

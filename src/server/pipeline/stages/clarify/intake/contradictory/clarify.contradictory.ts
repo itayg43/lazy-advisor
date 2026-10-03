@@ -66,11 +66,11 @@ export const handleContradictoryRisk = async (
   goal: string,
   responder: Responder,
 ): Promise<IntakePhaseOutput> => {
-  return runIntakePhase(
-    CONTRADICTORY_PROMPT,
-    "Contradictory risk resolution phase",
+  return runIntakePhase({
+    instructions: CONTRADICTORY_PROMPT,
+    phaseName: "Contradictory risk resolution phase",
     goal,
     responder,
-    CONTRADICTORY_EXTRACTION_INSTRUCTIONS,
-  );
+    extractionInstructions: CONTRADICTORY_EXTRACTION_INSTRUCTIONS,
+  });
 };

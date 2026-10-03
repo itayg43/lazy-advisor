@@ -48,12 +48,12 @@ flowchart TD
 | amount | Collect the investment amount as an integer in shekels | — → `AmountPhaseResult` |
 | timeline | Collect the investment timeline as one of four horizon buckets | — → `TimelinePhaseResult` |
 | risk | Elicit a 1–5 self-rating of comfort with temporary drops; map deterministically to `conservative`/`moderate`/`aggressive` | — → `RiskPhaseResult` |
-| allocation | Size the total-portfolio equity/buffer split from a 2-axis (risk tolerance × timeline) anchor table | amount, timeline, riskTolerance → `AllocationPhaseResult` |
+| allocation | Size the total-portfolio equity/buffer split from a 2-axis (riskTolerance × timeline) anchor table keyed on the 1–5 score directly | amount, timeline, riskTolerance → `AllocationPhaseResult` |
 | contribution | Establish one-time vs. periodic intent | amount, equityPercentage → `ContributionPhaseResult` |
 | equity | *(planned)* Resolve which equity instruments fill the equity bucket + within-equity split | amount, timeline, riskTolerance, equityPercentage, plansToContribute → `EquityPhaseOutput` |
 | buffer | *(planned)* Resolve which buffer instrument fills the buffer bucket | amount, timeline, riskTolerance, bufferPercentage, equity allocations → `BufferPhaseOutput` |
 
-Phases use one of two conversation patterns depending on whether the LLM needs to drive the conversation or just classify a fixed question — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Per-phase schemas, types, and constants are co-located with each phase (e.g., `allocation/clarify.allocation.schemas.ts`). Cross-phase shared primitives (goal classification, halt/unresolved enums, `ClarifyStageResult`, shared phase helpers) live under `clarify/shared/`.
+Phases use one of three conversation patterns depending on how code and the LLM divide control of the flow — see [Phase conversation patterns](#phase-conversation-patterns) below. A `*.rules.md` file is co-located with each phase as the behavior spec that drives prompts and evals. Per-phase schemas, types, and constants are co-located with each phase (e.g., `allocation/clarify.allocation.schemas.ts`). Cross-phase shared primitives (goal classification, halt/unresolved enums, `ClarifyStageResult`, shared phase helpers) live under `clarify/shared/`.
 
 ---
 
@@ -61,19 +61,19 @@ Phases use one of two conversation patterns depending on whether the LLM needs t
 
 ### Multi-phase split
 
-Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate.
+Splitting by responsibility keeps each prompt short and focused, improving instruction-following. Phases are decoupled: they receive plain typed inputs from the orchestrator rather than accumulating conversation state across boundaries. Evals are more targeted — each phase is tested independently, assertions are tighter, and failures are easier to isolate. Evals run in two layers: schema/behavior assertions (every phase) plus an optional dev-only LLM-as-judge that scores prose quality against a rubric (a pilot on allocation — see [TESTING § Quality judging](TESTING.md#quality-judging-llm-as-judge)).
 
 ### Phase conversation patterns
 
-Two patterns are used depending on whether the LLM needs to drive the conversation or just classify a response to a fixed question.
+Three patterns are used depending on how code and the LLM divide control of the conversation flow.
 
 **`runPhaseLoop` — LLM as orchestrator**
 
 The LLM reads a full system prompt describing the conversation flow and calls the `ask_user` tool to send messages and collect responses. Full conversation history is maintained server-side via `previous_response_id` — the LLM needs to remember what it has already asked and what the user said to know what step it is on. History is state.
 
-Used when the LLM needs to generate dynamic content, negotiate, or navigate multi-step flows where the next action depends on nuanced judgment: allocation and intake handlers.
+Used when the LLM needs to generate dynamic content and navigate multi-step flows where the next action depends on nuanced judgment that does not benefit from being auditable in code: intake handlers.
 
-**`askWithClassify` — code as orchestrator**
+**`askWithClassify` — code as orchestrator, single fixed question**
 
 Code drives the conversation — decides what question to ask and in what order. The LLM does one narrow job per call: classify a single user response into a typed schema. Code calls `sendToUser`/`waitForResponse` directly (the same primitives `ask_user` is built on). State lives in TypeScript variables, not conversation history.
 
@@ -81,18 +81,29 @@ A scoped conversation history is maintained client-side within a single question
 
 Used when questions are fixed and answers need structured extraction: ef-debt, amount, timeline, risk, contribution.
 
+**`runConversation` — code as orchestrator, multi-turn negotiation**
+
+Code drives a multi-turn loop where the next action depends on classifying each user reply. Per turn, the handler runs a classification LLM call against the conversation history, branches on the classified intent in code, and may run additional LLM calls (e.g., to compose a free-text reply).
+
+Two handler slots are exposed. `initHandler` runs once before any user input — it produces the opening Prompt or, when the phase has nothing to do (e.g., T6's `bufferPercentage === 0` early-skip), returns Done immediately, with or without a closing message. `turnHandler` runs after each user reply and receives the threaded state. Splitting the two means the turn signature doesn't have to model "no reply yet."
+
+State is threaded through handler return values: each turn the handler receives `DeepReadonly<TState>`, derives a new state via spread, and returns `{ kind: Prompt, state, message }` or `{ kind: Done, result, message? }` (message optional on Done so phases can terminate silently or with a closing line). Ownership is split deliberately: the runner owns `history` because it's coupled to user I/O (and hands the handler a `structuredClone` each turn, so a handler that mutates its argument can't corrupt the canonical conversation — this matters for the equity/buffer RAG loops); the caller owns `TState` because it's coupled to phase domain logic, including turn accounting and convergence. The enforcement levels differ by lifetime — compile-time `DeepReadonly` for owned-and-returned `state`, runtime `structuredClone` for retained-and-shared `history` — see [CONVENTIONS § State & Ownership](CONVENTIONS.md#state--ownership).
+
+The per-turn branching logic (e.g., "first counter-proposal vs. Nth", "extreme deviation triggers sanity check") lives in TypeScript, not in the prompt. This extends the `askWithClassify` principle — use control flow for control flow, prompts for what code cannot do (free-text classification + free-text generation) — to multi-turn flows. Convergence is the handler's responsibility: handlers self-limit via turn counters in the threaded state.
+
+Used for multi-turn negotiation with deterministic per-turn branching: allocation.
+
 **The boundary**
 
 | Need | Pattern |
 |------|---------|
-| LLM generates the question content dynamically | `runPhaseLoop` |
-| LLM decides what question to ask next | `runPhaseLoop` |
 | Questions are fixed; answers need classification | `askWithClassify` |
-| Multi-turn negotiation or complex branching | `runPhaseLoop` |
+| Code drives multi-turn flow; LLM classifies + composes per turn | `runConversation` |
+| LLM decides what question to ask next or generates the flow dynamically | `runPhaseLoop` |
 
 ### Phase error contract
 
-Both conversation patterns share the same error contract: internal primitives throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
+Both conversation patterns share the same error contract: internal runners throw typed errors; phases catch them narrowly and translate to an in-band result; the stage reads a typed `reason` field — it never handles raw exceptions for expected outcomes.
 
 **Why in-band results at the phase boundary.** Errors-as-values pattern (Rust/Go heritage, idiomatic in modern TypeScript): expected outcomes are values you branch on, exceptions are reserved for genuinely unexpected failures. The stage branches on each result's status and reason (`amount` unresolved exits differently from `timeline` unresolved) — using exceptions would force try-catch-rethrow at every phase call.
 
@@ -100,8 +111,8 @@ Both conversation patterns share the same error contract: internal primitives th
 
 - `completed` — contract honored, pipeline continues.
 - `halted` — contract honored, pipeline stops *by design* (today: `short_timeline`, `intake_rejected`).
-- `unresolved` — phase couldn't gather required data, user-driven (today: missing amount/timeline/risk_tolerance, allocation didn't converge).
-- `errored` — system-driven failure where our code/model misbehaved (today: classify output failed resolved-schema validation, classify message was missing mid-loop).
+- `unresolved` — phase couldn't gather required data, user-driven (today: missing amount/timeline/risk_tolerance; allocation didn't converge — `total_budget_exhausted` or `negotiation_budget_exhausted`).
+- `errored` — a system- or upstream-driven failure the phase caught and surfaced in-band (today: classify output failed resolved-schema validation, classify message was missing mid-loop; allocation caught an upstream OpenAI fault — `upstream_unavailable` or `upstream_invalid_response`).
 
 **Primitive → phase result mapping.**
 
@@ -115,11 +126,11 @@ Non-collapsing phases (amount, timeline, risk) translate these errors via the sh
 
 The two-schema pattern (loose `XClassifySchema` for the model, strict `XClassifyResolvedSchema` for post-convergence) lives inside `askWithClassify`; phases supply both and consume a non-null domain field.
 
-Uncaught exceptions from either primitive — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarifyOrchestrator`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
+Uncaught exceptions from either runner — unexpected errors, OpenAI failures — propagate up to the clarify orchestrator (`runClarifyOrchestrator`), which catches them at the stage boundary, logs the error, and converts them into a `{ status: "errored", message: SYSTEM_ERROR_EXIT_MESSAGE }` result. The pipeline orchestrator then delivers the message via `responder.sendToUser`. Only expected, graceful UX outcomes are surfaced as result variants from phase functions.
 
-**Pipeline control-flow errors — `PipelineControlFlowError`.** The exhaustion errors thrown by pipeline primitives — `PhaseLoopToolCallsExhaustedError` (`runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (`askWithClassify`) — share a common base class, `PipelineControlFlowError`. It is a sibling to `BaseError` and carries no HTTP `status`: these errors are caught at the phase boundary and translated to in-band results, so they never reach the HTTP layer. The base captures the semantic distinction from genuine system failures (`InternalError` for code/model bugs; `SchemaValidationError` for schema breaches like `ClassifyResolvedOutputInvalidError`), which continue to propagate as exceptions and convert to `SYSTEM_ERROR_EXIT_MESSAGE` at the stage boundary. Phases catch the specific subclass via its predicate (`isPhaseLoopExhaustedError`, `isClassifyError`) rather than the base — each subclass is independently mapped to its own `unresolved` reason or, where the phase opts in, a `completed` default.
+**Pipeline control-flow errors — `PipelineControlFlowError`.** The exhaustion errors thrown by pipeline runners — `PhaseLoopToolCallsExhaustedError` (`runPhaseLoop`) and `ClassifyFollowUpsExhaustedError` (`askWithClassify`) — share a common base class, `PipelineControlFlowError`. It is a sibling to `BaseError` and carries no HTTP `status`: these errors are caught at the phase boundary and translated to in-band results, so they never reach the HTTP layer. The base captures the semantic distinction from genuine system failures (`InternalError` for code/model bugs; `SchemaValidationError` for schema breaches like `ClassifyResolvedOutputInvalidError`), which continue to propagate as exceptions and convert to `SYSTEM_ERROR_EXIT_MESSAGE` at the stage boundary. Phases catch the specific subclass via its predicate (`isPhaseLoopExhaustedError`, `isClassifyError`) rather than the base — each subclass is independently mapped to its own `unresolved` reason or, where the phase opts in, a `completed` default.
 
-`runConversation` is intentionally an outlier here: it has no exhaustion error of its own. Convergence is the handler's responsibility — handlers self-limit (e.g., via a closure-owned turn counter) and return `Done` with the appropriate phase-result variant (`completed` or `unresolved`) on their own terms. The primitive has no notion of a turn budget. See `RUN_CONVERSATION_DESIGN.md` for the rationale.
+`runConversation` is intentionally an outlier here: it has no *control-flow* exhaustion error. Convergence is the handler's responsibility — handlers self-limit via turn counters in the threaded state and return `Done` with the appropriate phase-result variant (`completed` or `unresolved`) on their own terms; the runner has no notion of the real turn budget. It does carry a required `hardStopTurns` backstop — a generous ceiling on prompts emitted (allocation passes `ALLOCATION_MAX_TOTAL_TURNS + 1`: the last legitimate prompt is emitted while the runner's prompt count equals `ALLOCATION_MAX_TOTAL_TURNS`, so the `+ 1` clears it yet still catches a handler that keeps prompting past its own budget) — but breaching it means a handler stopped self-limiting, i.e. a bug. So it throws `RunConversationHardStopError` (an `InternalError`, *not* a `PipelineControlFlowError`): it propagates to the orchestrator and converts to `errored`, rather than being mapped to a soft `unresolved`. The same applies to `RunConversationUnhandledOutputKindError` (the exhaustive-guard `InternalError`). A `runConversation` phase (e.g. `collectAllocation`) wraps its whole body in a single guard boundary, but that boundary splits on fault ownership rather than swallowing everything. An **upstream** fault that survives SDK retries (`isUpstreamError` — a post-retry OpenAI 502/503 mid-negotiation) is an expected external failure: the phase reports it in-band as a bare `errored` result carrying a granular reason (`upstream_unavailable` when it's a `ServiceUnavailableError`, else `upstream_invalid_response` — note `BadGatewaySchemaValidationError` extends `SchemaValidationError`, *not* `BadGatewayError`, so the gate is on `ServiceUnavailableError`), both of which resolve to the retry-inviting `SERVICE_UNAVAILABLE_EXIT_MESSAGE`. Everything else — a value we built failing its schema (`InternalSchemaValidationError`), an exhaustiveness guard, the runner hard-stop — is our fault, so the catch rethrows and lets it bubble to the orchestrator's single top-level catch, failing loud as `SYSTEM_ERROR_EXIT_MESSAGE` rather than shipping as a graceful `errored`. (Result::Err for expected failures, panic for bugs.)
 
 #### Next-tier — error contract
 
@@ -130,7 +141,7 @@ Uncaught exceptions from either primitive — unexpected errors, OpenAI failures
 `runClarifyStage` (`clarify.stage.ts`) is pure: it returns a `ClarifyStageResult` discriminated union and never sends user-facing messages or handles unexpected errors. `runClarifyOrchestrator` (`clarify.orchestrator.ts`) wraps it with two responsibilities and emits no user-facing I/O of its own:
 
 1. **Stage error boundary** — any thrown exception is caught, logged, and converted to an errored result carrying `SYSTEM_ERROR_EXIT_MESSAGE`. The stage stays exception-free in its return contract.
-2. **Termination resolution** — `halted` / `unresolved` / `errored` results map to user-facing strings via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`, then wrapped as `{ status, message }` preserving the original status. The `completed` arm returns `{ status: "completed", profile }`.
+2. **Termination resolution** — `halted` / `unresolved` / `errored` results map to user-facing strings, then wrapped as `{ status, message }` preserving the original status; the `completed` arm returns `{ status: "completed", profile }`. Legacy arms key the message on their reason via `CLARIFY_HALT_MESSAGES`, `CLARIFY_UNRESOLVED_MESSAGES`, and `INTAKE_REDIRECT_REJECTION_MESSAGES`; the migrated allocation arm (marked by `phase`) keys on `phase` instead — `ALLOCATION_EXIT_MESSAGE` when unresolved, `SERVICE_UNAVAILABLE_EXIT_MESSAGE` when errored — with its granular `reason` logged, not shown.
 
 `ClarifyOrchestratorResult` is the boundary contract: non-completed variants collapse into a single `{ status, message }` shape, hiding stage-internal reason vocabulary (halt reasons, unresolved reasons, etc.) from the pipeline orchestrator so termination dispatch can't accidentally couple to inner variants.
 
@@ -187,13 +198,13 @@ After timeline collection, the stage compares the destructured `timeline` agains
 
 ### Risk phase — single 1–5 self-rating
 
-The risk phase asks one question: a 1–5 self-rating of comfort with seeing investments drop temporarily, with behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The integer maps deterministically in code: 1–2 → `conservative`, 3 → `moderate`, 4–5 → `aggressive`. The classify call returns only `selfRatingScore`; `riskTolerance` is computed deterministically in TypeScript, not by the LLM.
+The risk phase asks one question: a 1–5 self-rating of comfort with seeing investments drop temporarily, with behavioral anchors at 1 ("very uncomfortable — I'd want to sell immediately"), 3 ("neutral — I'd be uneasy but try to hold"), and 5 ("completely comfortable — I'd see it as a buying opportunity"). The phase emits only `riskTolerance` — the raw 1–5 integer, nothing else. The downstream allocation phase keys its anchor table on that score directly; there is no `conservative`/`moderate`/`aggressive` bucket. `riskTolerance` is consumed only by allocation and is never persisted on the profile.
 
 **Why direct self-rating, not hypothetical drop scenarios.** Risk-tolerance research (Statman, Kitces, CFA Institute *Psychometric Review*) shows direct self-rating has higher predictive validity than hypothetical scenarios, and historical-recovery framing is a documented priming bias. An earlier two-turn A/B design also exhibited an intermittent adherence flake (~1 in 3–4 runs); the single-question shape removes the multi-step flow structurally. Full trade-offs and rejected alternatives in [`clarify.risk.research-notes.md`](../src/server/pipeline/stages/clarify/risk/clarify.risk.research-notes.md).
 
 **Hard-fail on unresolved.** If the retry budget is exhausted without a valid 1–5 score — whether from invalid answers or from a clarifying question consuming turns — `collectRisk` returns `{ status: "unresolved", reason: "risk_tolerance" }`. The orchestrator dispatches a closing message rather than the stage defaulting to an assumed risk tolerance — risk tolerance is the other axis of the allocation anchor table, so an assumed value produces a misleading allocation. Mirrors the `timeline` hard-fail pattern.
 
-**`selfRatingScore` is preserved on the output** so the allocation phase can calibrate within a bucket if needed (e.g., distinguishing a "5" aggressive from a "4" aggressive). Mapping inside risk stays coarse on purpose — granularity belongs to allocation, not classification.
+**`riskTolerance` is the phase's only output** and the allocation phase consumes it directly: it both selects the anchor row and calibrates the landing point within the row's range (e.g., a "5" anchors to the high edge, a "4" to the low edge of the same range). Keeping all anchor logic in allocation means granularity belongs there, not in classification.
 
 **Willingness-only, no external context.** No timeline, age, or amount is passed to the phase. When users ask capacity questions ("does my timeline change what score I should give?"), the correct behavior is to deflect — acknowledge that capacity and willingness are distinct, then re-present the scale. Surfacing the timeline would reintroduce the framing bias the design avoids.
 
@@ -203,13 +214,15 @@ The allocation phase resolves the total-portfolio split between equity (stocks /
 
 **Why a separate phase.** Risk classification is only half the behavioral protection — sizing the equity bucket to tolerance is what makes the classification actionable. A conservative user at 40% equity experiences a 20% stock drop as an 8% total-portfolio drop, which contains the panic-sell behavior they self-reported.
 
-The model locates the user's cell from `riskTolerance` × `timeline` and picks a specific integer inside the cell's range. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
+Code locates the user's cell from `riskTolerance` × `timeline` (the anchor table is keyed on the 1–5 score directly, with rows 1≡2 and 4≡5 duplicated), then picks a specific integer inside the cell's range via `deriveAnchorEquityPercentage` — all deterministically, no LLM call. The anchor table covers three timelines: `3–5 years`, `5–10 years`, `10+ years` (users with `"under 3 years"` exit before reaching this phase). Rules and anchor table live in [`clarify.allocation.rules.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.rules.md); research basis in [`clarify.allocation.research-notes.md`](../src/server/pipeline/stages/clarify/allocation/clarify.allocation.research-notes.md).
 
 **Shekel math discipline.** The prompt includes explicit arithmetic instructions (`equity = amount × equityPercentage ÷ 100`; `buffer = amount − equity`; verify sum before sending) with a worked example. An earlier eval run surfaced a bug where the model stated "₪85,000 + ₪15,000" for a ₪50,000 investment; every eval case now asserts the transcript contains correct shekel amounts.
 
 **What's not consumed by this phase.** Emergency fund and debt status are addressed in the ef-debt phase and are not passed to this phase.
 
-**Unresolved-split exit.** `collectAllocation` returns `{ status: "unresolved", reason: "allocation" }` if the user keeps counter-proposing past `MAX_ALLOCATION_TOOL_CALLS` without converging. The orchestrator dispatches a closing message rather than locking the user into a split they were still negotiating.
+**Unresolved-split exit.** `collectAllocation` returns `{ status: "unresolved", reason }` when the negotiation doesn't converge — `negotiation_budget_exhausted` when the user keeps counter-proposing past `ALLOCATION_MAX_NEGOTIATION_TURNS`, or `total_budget_exhausted` when the conversation runs past `ALLOCATION_MAX_TOTAL_TURNS` total turns (a separate backstop that also counts clarifying questions, which the negotiation budget deliberately does not). The orchestrator dispatches a closing message rather than locking the user into a split they were still negotiating.
+
+**Phase reports *why*, stage attaches *which*.** Allocation is the first phase migrated to the runConversation shape, where the result carries a granular, phase-owned `reason` — the two unresolved budgets above, or the two errored upstream faults (`upstream_unavailable` / `upstream_invalid_response`) — but *not* which phase produced it. `clarify.stage.ts` attaches that: on any non-`completed` allocation result it spreads the result and adds `phase: "allocation"` (`ClarifyPhaseEnum`), handling both terminal statuses in one branch. The orchestrator keys the user message on `phase` (allocation-unresolved → `ALLOCATION_EXIT_MESSAGE`; allocation-errored → `SERVICE_UNAVAILABLE_EXIT_MESSAGE`) and treats the granular `reason` as log/telemetry only. Legacy ask-with-classify phases still self-report a phase-name `reason` and carry no `phase`; they retire onto this split as they migrate.
 
 ### Contribution phase — `plansToContribute: boolean`
 
@@ -235,7 +248,7 @@ The clarify stage output is validated with `UserProfileSchema` before returning.
 
 ### Inline assembly from typed outputs
 
-An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` from the amount phase, `timeline` from the timeline phase; `riskTolerance` from risk; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `selfRatingScore` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
+An earlier design used a final LLM extraction call across the full conversation to assemble `UserProfile`. Replaced by inline assembly in `clarify.stage.ts`: phase results are now flat, so the stage destructures the primitives it needs from each (`amount` from the amount phase, `timeline` from the timeline phase; `equityPercentage` and `bufferPercentage` from allocation; `plansToContribute` from contribution) and passes them as named fields into `UserProfileSchema.parse()`. `riskTolerance` is kept on `RiskPhaseResult` for use by the allocation phase and is intentionally not propagated into the profile. With typed phase outputs, there is no summation or inference step — just field mapping.
 
 ### Session correlation
 

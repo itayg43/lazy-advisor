@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { appendLastRunEntry, initLastRun } from "#pipeline/eval.transcript";
+import { appendLastRunEntry, initLastRun } from "#pipeline/eval.last-run";
 import { classifyGoal } from "#pipeline/stages/clarify/intake/classify/clarify.classify";
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 

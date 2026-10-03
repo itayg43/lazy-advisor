@@ -1,60 +1,74 @@
 # Tasks
 
-**Current task:** T4
+**Current task:** T4.5
 **Next task:** T5
 
 ## Task Queue
 
-| # | Task |
-|---|------|
-| T4 | Allocation refactor — move state from prompt to code |
-| T5 | Equity |
-| T6 | Buffer |
+| #    | Task                                       |
+| ---- | ------------------------------------------ |
+| T4.5 | Migrate remaining ask-with-classify phases |
+| T5   | Equity                                     |
+| T6   | Buffer                                     |
 
 ## Task Notes
 
-### T4 — Allocation refactor: move state from prompt to code
+### T4.5 — Migrate remaining ask-with-classify phases to runConversation
 
-Move the allocation phase's branching state-tracking (1st vs Nth counter, 40-pp extreme threshold, framing-delivery flag) from the LLM prompt to deterministic code. Current implementation uses a single `runPhaseLoop` with one large prompt; the model handles the state-tracking unreliably at `effort: "low"`, producing CX inconsistencies (Branch 1 firing on non-extreme counters, framing repeating on subsequent counters, drawdown numbers omitted, etc.).
+Consolidation follow-on to T4 (allocation) — the first phase moved to the
+`runConversation` shape. Converts the five clarify phases still on
+`ask-with-classify` so the whole stage shares one conversation pattern and one
+error contract: our-faults throw and bubble to the orchestrator's top-level
+catch; expected upstream faults surface in-band. Retires the dual dispatch style
+the orchestrator carries today.
 
-#### Why
+**Sequencing:** before T5/T6. T4 (allocation) already proved `runConversation`
+in production, so the pattern needn't wait on more greenfield builds;
+consolidating the older phases onto it first keeps fewer phase shapes in flight
+than migrating them after two more new phases land. Numbered T4.5 to mark lineage
+with T4's migration. Each phase migrates **in isolation, one PR per phase**, so a
+regression bisects to a single phase.
 
-After the prompt restructure in `refactor/allocation-precomputed-proposal` (Rule 3 decision tree, Branches 1/2/3, restored CX wins on Tests 8/9/14), residual inconsistencies all trace to the same root: the model is being asked to track state it can't reliably hold at low effort. Bumping effort to medium would help but is paying compute to compensate for a structural issue. The right fix is code-owned state.
+**Two groups, by whether the phase can terminate the stage:**
 
-Aligned with notebook guidance from Research-Plan-Implement: "use control flow for control flow"; classifier-as-router pattern; micro-prompts per branch; vertical-slice refactoring.
+_Blocking classify phases — these gate the orchestrator cleanup:_
 
-#### Implementation
+- **T4.5.1 — amount**
+- **T4.5.2 — timeline**
+- **T4.5.3 — risk**
 
-Research and design are settled — see `RUN_CONVERSATION_DESIGN.md` and the working demo at `T4_allocation_demo.ts`. What remains is porting the design into the real phase:
+Each returns `unresolved`/`errored` results the stage propagates, and the
+orchestrator resolves their messages through the legacy reason-keyed maps
+(`CLARIFY_UNRESOLVED_MESSAGES`, `ClassifyErroredReasonEnum`) in
+`resolveErroredMessage`/`resolveUnresolvedMessage`. Once all three adopt the
+phase/reason split (like allocation), the legacy fall-through arms are dead code
+and get deleted — this is the orchestrator cleanup (was ALLOCATION_AUDIT
+finding 4: the two parallel dispatch styles nothing was tracking).
 
-1. **Replace `runPhaseLoop` + `runPhaseExtraction` with `runConversation`** in `clarify.allocation.ts`. Phase function signature (`AllocationPhaseInput → AllocationPhaseResult`) and the `completed | unresolved` mapping at the call site stay identical; only the internals change.
-2. **Implement real `classifyIntent` and `composeCounterResponse`** to replace the regex/template stubs in the demo. Classifier returns `{ kind: "accept" } | { kind: "counter"; proposedEquity: number } | { kind: "unknown" }`. Composer takes `{ counters, hasShownDrawdownFraming }` and emits the next-turn message.
-3. **Closure state**: `counters: number[]`, `hasShownDrawdownFraming: boolean`. Plain locals in the phase function, per the design.
-4. **Drop the legacy single-big-prompt**. `ALLOCATION_PROMPT` and `ALLOCATION_EXTRACTION_INSTRUCTIONS` are replaced by two focused per-call prompts (classifier + counter composer) in `clarify.allocation.prompts.ts`.
-5. **Delete `T4_allocation_demo.ts`** once the real port passes type-check + evals.
-6. **Fold in the two prompt simplifications below** (drop shekel formatting from prompt context, snap equity to round anchors) — same files, no reason to ship separately.
+_Non-blocking collapsing phases — uniformity only:_
 
-Vertical-slice order: counter branch (incl. framing-toggle) → accept branch → unknown branch. Evals after each slice; don't move on until the current slice passes.
+- **T4.5.4 — ef-debt**
+- **T4.5.5 — contribution**
 
-#### Additional prompt simplifications
+Both collapse every classify failure to a safe default internally and never
+terminate the stage (contribution → `plansToContribute: false`; ef-debt → its
+educational-gate default), so they carry no `status` and don't feed the
+orchestrator's termination dispatch. Migrating them doesn't gate the cleanup
+above — it's purely for one uniform phase shape. **Open question:** whether they
+stay collapsing (no `status`, as today) or the migration is the moment to drop
+the unresolved/errored concern for them explicitly. Decide per-phase here; don't
+pre-commit.
 
-Fold these into T4 alongside the state-from-prompt-to-code move — both reduce prompt complexity and overlap with the same files.
+**Exit criteria:**
 
-1. **Drop shekel formatting/refs from prompt context.** Every user is Israeli, so explicit `₪` symbols and shekel framing in system prompt and grounding context strings are token noise without comprehension benefit. Scope is **prompt context only** — the LLM continues to emit `₪` in user-facing replies (Hebrew/Israeli framing remains in the system prompt). Do not change user-facing output format.
-2. **Round equity percentages to anchor values.** `pickEquityPercentage` currently produces non-anchor outputs (e.g., 72/28, 65/35) that are harder to mentally rebalance and don't match how lazy-portfolio guidance is conventionally framed. Snap to round anchors (70/30, 80/20, 90/10, etc.). Reduces prompt-side complexity for Rule 3 counter-proposal math. Verify current `pickEquityPercentage` output during the research step — if it already snaps to round numbers, this item folds away.
+- All five phases run on `runConversation`.
+- `resolveErroredMessage`/`resolveUnresolvedMessage` carry a single phase-keyed
+  dispatch; the legacy reason-keyed maps and `ClassifyErroredReasonEnum`
+  fall-through are deleted.
+- `ask-with-classify` has no remaining callers in the clarify stage — retire it
+  if nothing else uses it.
 
-#### Sequencing
-
-Unblocked: `refactor/allocation-precomputed-proposal` merged to main. T4 lands as its own branch (name when scoped).
-
-#### Out of scope (carry-overs to verify, not to touch in T4)
-
-- Allocation's precomputed-proposal architecture (`pickEquityPercentage`, shekel math in code) — just landed, stable, don't touch.
-- Other phases that use `runPhaseLoop` — verify scope during research; do not retire the helper as part of T4.
-
-**Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.allocation.eval.ts`
-
----
+**Verify:** `npm run type-check`, `npm test`, plus each migrated phase's eval.
 
 ### T5 — Equity
 
@@ -100,9 +114,10 @@ Three satellites (typically a small allocation alongside a core; user can pick a
 
 #### Conversation pattern — classifier-first + agentic RAG over the knowledge file
 
-T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifier-first dispatch and an inner agentic RAG loop for educational Q&A. The CX-level conversation flow below stays the same; what changes is how it's wired underneath.
+T5 lands on `runConversation` (see `ARCHITECTURE.md § Phase conversation patterns`), with classifier-first dispatch and an inner agentic RAG loop for educational Q&A. The CX-level conversation flow below stays the same; what changes is how it's wired underneath.
 
 **CX flow (unchanged from prior pass):**
+
 - **Cold-open:** present the two cores (single global fund vs S&P 500) with one-line descriptions and the tradeoff between them (global diversification vs US-only with pension-overlap caveat). Do not lead with a strong default. The three satellites and Holy Trinity are not in the cold-open.
 - **After the user picks a core:** offer the tilt question — "want to add a small satellite (NASDAQ-100 / TLV-125 / Russell 2000), or keep it as a single core holding?" Most users will keep it single; the tilt offer is one explicit branch rather than overwhelming the cold-open.
 - **Directional signals mid-conversation** (e.g., user names "tech" or "Israeli market" up front): handle inline by jumping to the named satellite as the primary answer, with the appropriate sanity-check on concentration.
@@ -111,19 +126,22 @@ T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifie
 - **Resolution:** confirm the final `EquityAllocation[]` (instruments + within-equity split) before returning.
 
 **Architectural mapping (new):**
+
 - `initHandler` produces the cold-open message.
 - `turnHandler` runs an upstream classifier LLM call → dispatches by intent.
 - Intent space (to finalize): `commit` (pick / accept / lock-in) · `discuss` (content Q&A — runs inner tool loop) · `counter` (alternative split / different instrument) · `unknown` (re-prompt).
-- Discuss intent invokes the inner Q&A tool loop over `clarify.equity.knowledge.md` (see *Knowledge tool surface* below). Output is structured `{ answer, citations: { section, quote }[] }`.
+- Discuss intent invokes the inner Q&A tool loop over `clarify.equity.knowledge.md` (see _Knowledge tool surface_ below). Output is structured `{ answer, citations: { section, quote }[] }`.
 - Closure state holds the running candidate `EquityAllocation[]`, plus surface-once flags (`pensionOverlapShown`, `usListedWarningShown`, per-instrument sanity-check flags).
 
-**Knowledge tool surface (new — per `RUN_CONVERSATION_DESIGN.md`):**
+**Knowledge tool surface (new):**
+
 - Knowledge file is loaded at boot but **not** appended to every prompt.
 - TOC (heading + one-line description per `##` section) lives in the inner Q&A system prompt (~150 tokens).
 - Two tools, scoped to equity: `grep_equity(pattern)` and `read_equity_section(name)`. Errors as human-readable strings, not exceptions.
 
 **To finalize during T5 design pass (before implementation):**
-- Final intent enum and classifier schema (including the `extractedCandidate` field for compound replies like *"can I do NASDAQ-100? what's the drawdown like?"*).
+
+- Final intent enum and classifier schema (including the `extractedCandidate` field for compound replies like _"can I do NASDAQ-100? what's the drawdown like?"_).
 - Per-intent dispatch bodies and exact state mutations.
 - Whether the sanity-check, four-factor warning, and pension-overlap caveats live in the composer prompt or are surfaced via separate `Ask` turns from code.
 - Tool-call budget per turn for the inner Q&A loop.
@@ -136,7 +154,7 @@ T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifie
 
 #### Design decisions
 
-1. **Classifier-first dispatch + agentic RAG over the knowledge file.** Reverses the earlier "no classifier — single flow" plan, which was tied to the `runPhaseLoop` pattern where the LLM owned the whole conversation. With `runConversation` in place after T4, classifier-first is strictly better at this scope: control flow stays in code (matching T4's core principle), the ~170-LOC knowledge file stays out of every prompt (retrieved via `grep_equity` / `read_equity_section` tools only on `discuss` intent), and classifier accuracy + Q&A composition become independently evaluable. See `RUN_CONVERSATION_DESIGN.md § T5/T6 knowledge access — agentic RAG`.
+1. **Classifier-first dispatch + agentic RAG over the knowledge file.** Reverses the earlier "no classifier — single flow" plan, which was tied to the `runPhaseLoop` pattern where the LLM owned the whole conversation. With `runConversation` in place after T4, classifier-first is strictly better at this scope: control flow stays in code (matching T4's core principle), the ~170-LOC knowledge file stays out of every prompt (retrieved via `grep_equity` / `read_equity_section` tools only on `discuss` intent), and classifier accuracy + Q&A composition become independently evaluable.
 2. **No goal pass-through.** Aligned with the rest of the pipeline. If T5 evals later show meaningful UX cost from losing the goal's equity hints, revisit with goal as ambient context (not for routing — just for the LLM to reference).
 3. **Cold-open is 2 cores, not all 5.** Presenting all five anchors upfront is too much for a beginner. The 2-cores-then-tilt-offer pattern keeps the initial decision tractable while still exposing satellites for users who want them.
 4. **Holy Trinity not in the cold-open.** A single global fund delivers very similar exposure with much less operational overhead. The Holy Trinity is in the knowledge file for users who specifically ask, but the phase does not propose it.
@@ -149,7 +167,6 @@ T5 lands on `runConversation` (per `RUN_CONVERSATION_DESIGN.md`), with classifie
 ```
 Investment amount: ₪<amount>
 Investment timeline: <timeline>
-Risk tolerance: <riskTolerance>
 Equity portion of portfolio: <equityPercentage>% (buffer is <bufferPercentage>%)
 Plans to contribute periodically: yes | no (lump-sum investment)
 ```
@@ -192,11 +209,11 @@ A fourth path: user may decline a buffer instrument entirely ("no buffer — eme
 
 ```ts
 type BufferChoice =
-  | { kind: "money_market" }                  // קרן כספית
-  | { kind: "short_gov_bond" }                // אג"ח ממשלתי קצר
-  | { kind: "general_gov_bond" }              // אג"ח ממשלתי כללי
-  | { kind: "none"; reason: string }          // emergency fund external, or 100% equity
-  | { kind: "other"; description: string };   // user-named alternative
+  | { kind: "money_market" } // קרן כספית
+  | { kind: "short_gov_bond" } // אג"ח ממשלתי קצר
+  | { kind: "general_gov_bond" } // אג"ח ממשלתי כללי
+  | { kind: "none"; reason: string } // emergency fund external, or 100% equity
+  | { kind: "other"; description: string }; // user-named alternative
 
 type BufferPhaseOutput = {
   buffer: BufferChoice;
@@ -228,7 +245,6 @@ Educational Q&A is supported during the loop — the user may ask clarifying que
 User goal: <goal>
 Investment amount: ₪<amount>
 Investment timeline: <timeline>
-Risk tolerance: <riskTolerance>
 Buffer portion of portfolio: <bufferPercentage>% (₪<amount × bufferPercentage / 100>)
 Equity allocation (the other <equityPercentage>%): <equity.allocations formatted as "70% FTSE All-World, 30% TLV-125">
 ```
@@ -248,8 +264,8 @@ Equity allocation (the other <equityPercentage>%): <equity.allocations formatted
 #### Design decisions
 
 1. **Skip T6 when `bufferPercentage === 0`.** The allocation anchor table caps at 90% equity, but allocation Rule 3 explicitly allows the user to override to 100/0 via counter-proposal (with a sanity-check turn) — the rules file even has a worked 100/0 example. When `bufferPercentage === 0`, T6 returns `{ buffer: { kind: "none", reason: "100% equity allocation" } }` directly with no LLM call. No anchor-table change needed.
-2. **"No buffer" mid-phase opt-out — MVP default = Option A (external).** When the user opts out of all three instruments mid-phase ("I have an emergency fund elsewhere"), the buffer money stays outside the plan and the allocation is unchanged. Plan output documents this explicitly (e.g., "plan: ₪21,000 in stock ETFs; remaining ₪9,000 stays in your bank as your external emergency cushion"). Why this default: silently giving the user *less* market exposure than expected is recoverable; silently giving them *more* is a behavioral failure mode. Adding disambiguation later is non-breaking (`BufferChoice` already supports both via the `reason` field).
-3. **Disambiguate "no buffer" opt-out path (folded in from Backlog).** A second valid sub-case exists for the "no buffer" opt-out: the user wants the buffer money rolled into equity, with allocation updated to 100/0. Real eval data will tell us how often each path is meant. If non-trivial, add a disambiguating rule to T6: when the user signals "no buffer instrument," ask one question to choose between *external* and *roll into equity*. Schema change is non-breaking — `BufferChoice` already supports both via the `reason` field (`"external emergency fund"` vs `"rolled into equity"`). Possibly mirror allocation's sanity-check language for extreme roll-ins (e.g., conservative user opting to roll 85% buffer into equity). Decide during T6 evals whether this lands inside T6 or as a follow-up.
+2. **"No buffer" mid-phase opt-out — MVP default = Option A (external).** When the user opts out of all three instruments mid-phase ("I have an emergency fund elsewhere"), the buffer money stays outside the plan and the allocation is unchanged. Plan output documents this explicitly (e.g., "plan: ₪21,000 in stock ETFs; remaining ₪9,000 stays in your bank as your external emergency cushion"). Why this default: silently giving the user _less_ market exposure than expected is recoverable; silently giving them _more_ is a behavioral failure mode. Adding disambiguation later is non-breaking (`BufferChoice` already supports both via the `reason` field).
+3. **Disambiguate "no buffer" opt-out path (folded in from Backlog).** A second valid sub-case exists for the "no buffer" opt-out: the user wants the buffer money rolled into equity, with allocation updated to 100/0. Real eval data will tell us how often each path is meant. If non-trivial, add a disambiguating rule to T6: when the user signals "no buffer instrument," ask one question to choose between _external_ and _roll into equity_. Schema change is non-breaking — `BufferChoice` already supports both via the `reason` field (`"external emergency fund"` vs `"rolled into equity"`). Possibly mirror allocation's sanity-check language for extreme roll-ins (e.g., conservative user opting to roll 85% buffer into equity). Decide during T6 evals whether this lands inside T6 or as a follow-up.
 
 **Verify:** `npm run type-check`, `npm test`, `npm run test:evals -- clarify.buffer.eval.ts`
 

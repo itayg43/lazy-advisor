@@ -1,7 +1,7 @@
 export { runConversation } from "#pipeline/run-conversation/run-conversation";
-export { DirectiveKind } from "#pipeline/run-conversation/run-conversation.types";
+export { HandlerOutputKind } from "#pipeline/run-conversation/run-conversation.types";
 export type {
-  Directive,
+  HandlerOutput,
   InitHandler,
   RunConversationParams,
   TurnHandler,

@@ -12,6 +12,7 @@ import {
 } from "#pipeline/stages/clarify/shared/clarify.constants";
 import {
   ClarifyHaltReasonEnum,
+  ClarifyPhaseEnum,
   GoalClassificationEnum,
 } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { ClarifyStageResult } from "#pipeline/stages/clarify/shared/clarify.types";
@@ -75,18 +76,28 @@ export const runClarifyStage = async (
     return riskResult;
   }
 
-  const { riskTolerance, riskSelfRatingScore } = riskResult;
+  const { riskTolerance } = riskResult;
 
   const allocationResult = await collectAllocation(
-    { amount, timeline, riskTolerance, riskSelfRatingScore },
+    { amount, timeline, riskTolerance },
     responder,
   );
+  // Allocation self-reports a granular *reason* — why it couldn't complete: which
+  // budget ran out (unresolved), or which class of upstream fault it caught (errored).
+  // The stage owns only *which* phase, so it spreads the phase result and attaches
+  // `phase` — both terminal statuses are handled identically, so no per-status branch.
+  // (The pre-runConversation phases above still self-report a phase-name reason and
+  // carry no `phase` — allocation is the first migrated to this phase/reason split.)
   if (allocationResult.status !== PipelineStatusEnum.enum.completed) {
-    return allocationResult;
+    return { ...allocationResult, phase: ClarifyPhaseEnum.enum.allocation };
   }
 
   const { equityPercentage, bufferPercentage } = allocationResult;
 
+  // No completed-guard here, unlike every phase above: contribution is
+  // non-blocking, so its result carries no `status` (it collapses all failures to
+  // `plansToContribute: false` internally) and can't terminate the stage. The
+  // asymmetry is intentional, not a missing guard.
   const contributionResult = await collectContribution(
     amount,
     equityPercentage,
@@ -98,7 +109,6 @@ export const runClarifyStage = async (
   const profile = UserProfileSchema.parse({
     amount,
     timeline,
-    riskTolerance,
     equityPercentage,
     bufferPercentage,
     plansToContribute,

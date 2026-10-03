@@ -5,9 +5,16 @@
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ERROR_EXIT_MESSAGE } from "#constants/pipeline.constants";
-import { MAX_ALLOCATION_TOOL_CALLS } from "#pipeline/stages/clarify/allocation/clarify.allocation.constants";
-import type { AllocationPhaseOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
+import {
+  SERVICE_UNAVAILABLE_EXIT_MESSAGE,
+  SYSTEM_ERROR_EXIT_MESSAGE,
+} from "#constants/pipeline.constants";
+import * as allocationModule from "#pipeline/stages/clarify/allocation/clarify.allocation";
+import {
+  AllocationErroredReasonEnum,
+  AllocationUnresolvedReasonEnum,
+} from "#pipeline/stages/clarify/allocation/clarify.allocation.schemas";
+import type { AllocationClassifierOutput } from "#pipeline/stages/clarify/allocation/clarify.allocation.types";
 import type { AmountClassify } from "#pipeline/stages/clarify/amount/clarify.amount.types";
 import { runClarifyOrchestrator } from "#pipeline/stages/clarify/clarify.orchestrator";
 import type { ContributionClassify } from "#pipeline/stages/clarify/contribution/clarify.contribution.types";
@@ -26,15 +33,9 @@ import {
   SHORT_TIMELINE_EXIT_MESSAGE,
   TIMELINE_EXIT_MESSAGE,
 } from "#pipeline/stages/clarify/shared/clarify.constants";
-import * as clarifyPhase from "#pipeline/stages/clarify/shared/clarify.phase";
-import { PhaseLoopToolCallsExhaustedError } from "#pipeline/stages/clarify/shared/clarify.phase";
 import { GoalClassificationEnum } from "#pipeline/stages/clarify/shared/clarify.schemas";
 import type { TimelineClassify } from "#pipeline/stages/clarify/timeline/clarify.timeline.types";
-import {
-  PipelineStatusEnum,
-  RiskToleranceEnum,
-  TimelineBucketEnum,
-} from "#schemas/pipeline.schemas";
+import { PipelineStatusEnum, TimelineBucketEnum } from "#schemas/pipeline.schemas";
 import type { OpenAIResponse } from "#services/openai";
 
 const { mockedCallOpenAI, mockedCallOpenAIParsed } = vi.hoisted(() => ({
@@ -120,20 +121,23 @@ describe("runClarifyOrchestrator", () => {
     const mockRiskClassify: RiskClassify = {
       clarificationNeeded: false,
       clarificationMessage: null,
-      riskSelfRatingScore: 3,
+      riskTolerance: 3,
     };
     mockWaitForResponse.mockResolvedValueOnce("3");
     mockedCallOpenAIParsed.mockResolvedValueOnce(createParsedResponse(mockRiskClassify));
   };
 
+  // Allocation now uses runConversation: one classifier LLM call per user turn,
+  // no extraction call. Happy-path = single "accept" classification on the
+  // first user reply. equityPercentage is computed in code (moderate + 10+yr +
+  // score 3 → midpoint 65), not returned by the LLM.
   const setupAllocationMocks = () => {
-    const mockAllocationOutput: AllocationPhaseOutput = {
-      equityPercentage: 60,
-      bufferPercentage: 40,
-    };
-    mockedCallOpenAI.mockResolvedValueOnce(createLoopResponse());
+    mockWaitForResponse.mockResolvedValueOnce("ok");
     mockedCallOpenAIParsed.mockResolvedValueOnce(
-      createParsedResponse(mockAllocationOutput),
+      createParsedResponse<AllocationClassifierOutput>({
+        kind: "accept",
+        proposedEquityPercentage: null,
+      }),
     );
   };
 
@@ -151,9 +155,8 @@ describe("runClarifyOrchestrator", () => {
   const expectedHappyPathProfile = {
     amount: 50000,
     timeline: TimelineBucketEnum.enum["10+ years"],
-    riskTolerance: RiskToleranceEnum.enum.moderate,
-    equityPercentage: 60,
-    bufferPercentage: 40,
+    equityPercentage: 65,
+    bufferPercentage: 35,
     plansToContribute: true,
   };
 
@@ -354,7 +357,7 @@ describe("runClarifyOrchestrator", () => {
       const needs: OpenAIResponse<RiskClassify> = createParsedResponse({
         clarificationNeeded: true,
         clarificationMessage: "Please pick a whole number between 1 and 5.",
-        riskSelfRatingScore: null,
+        riskTolerance: null,
       });
       mockWaitForResponse
         .mockResolvedValueOnce("hmm")
@@ -376,7 +379,7 @@ describe("runClarifyOrchestrator", () => {
       });
     });
 
-    it("should return an unresolved result with ALLOCATION_EXIT_MESSAGE when allocation tool calls are exhausted", async () => {
+    it("should return an unresolved result with ALLOCATION_EXIT_MESSAGE when allocation is unresolved", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -384,14 +387,14 @@ describe("runClarifyOrchestrator", () => {
       setupParametersMocks();
       setupRiskMocks();
 
-      // Spy on runPhaseLoop so allocation throws PhaseLoopToolCallsExhaustedError,
-      // which collectAllocation converts to { status: "unresolved", reason: "allocation" }.
-      vi.spyOn(clarifyPhase, "runPhaseLoop").mockRejectedValueOnce(
-        new PhaseLoopToolCallsExhaustedError(
-          "Allocation phase",
-          MAX_ALLOCATION_TOOL_CALLS,
-        ),
-      );
+      // Spy on collectAllocation directly — the phase self-reports a granular reason;
+      // the stage attaches `phase: "allocation"`, and the orchestrator keys the message
+      // on that phase (both unresolved reasons → ALLOCATION_EXIT_MESSAGE). Which budget
+      // ran out is covered by the allocation phase tests.
+      vi.spyOn(allocationModule, "collectAllocation").mockResolvedValueOnce({
+        status: PipelineStatusEnum.enum.unresolved,
+        reason: AllocationUnresolvedReasonEnum.enum.total_budget_exhausted,
+      });
 
       const result = await runClarifyOrchestrator(
         "I want to invest ₪50,000",
@@ -404,9 +407,42 @@ describe("runClarifyOrchestrator", () => {
       });
     });
 
-    // System-error resolution wiring — one canonical case (risk) is sufficient at the
-    // orchestrator layer; per-phase errored-result coverage lives in phase tests.
-    it("should return an errored result with SYSTEM_ERROR_EXIT_MESSAGE when risk classify output is invalid", async () => {
+    // Allocation errored wiring: the phase catches an upstream fault and self-reports
+    // an errored result with a granular reason; the stage attaches `phase: "allocation"`
+    // and the orchestrator keys the message on phase — both upstream reasons resolve to
+    // the transient-retry message. This is the migrated (runConversation) path, distinct
+    // from the legacy ask-with-classify errored cases below.
+    it("should return an errored result with SERVICE_UNAVAILABLE_EXIT_MESSAGE when allocation errors", async () => {
+      mockedCallOpenAIParsed.mockResolvedValueOnce(
+        createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
+      );
+      setupEfDebtMocks();
+      setupParametersMocks();
+      setupRiskMocks();
+
+      vi.spyOn(allocationModule, "collectAllocation").mockResolvedValueOnce({
+        status: PipelineStatusEnum.enum.errored,
+        reason: AllocationErroredReasonEnum.enum.upstream_unavailable,
+      });
+
+      const result = await runClarifyOrchestrator(
+        "I want to invest ₪50,000",
+        mockResponder,
+      );
+
+      expect(result).toEqual({
+        status: PipelineStatusEnum.enum.errored,
+        message: SERVICE_UNAVAILABLE_EXIT_MESSAGE,
+      });
+    });
+
+    // Errored message wiring keys on reason, not just status. An *upstream* fault a
+    // phase caught (here: risk classify output failing its resolved schema, a
+    // BadGateway-family error) resolves to the transient-retry message — distinct from
+    // the generic our-fault message the top-level catch returns for a thrown bug, and
+    // from the our-fault errored reason covered below. Per-phase coverage lives in
+    // phase tests.
+    it("should return an errored result with SERVICE_UNAVAILABLE_EXIT_MESSAGE when risk classify output is invalid", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
       );
@@ -417,7 +453,7 @@ describe("runClarifyOrchestrator", () => {
         createParsedResponse<RiskClassify>({
           clarificationNeeded: false,
           clarificationMessage: null,
-          riskSelfRatingScore: null,
+          riskTolerance: null,
         }),
       );
 
@@ -428,10 +464,15 @@ describe("runClarifyOrchestrator", () => {
 
       expect(result).toEqual({
         status: PipelineStatusEnum.enum.errored,
-        message: SYSTEM_ERROR_EXIT_MESSAGE,
+        message: SERVICE_UNAVAILABLE_EXIT_MESSAGE,
       });
     });
 
+    // The other errored reason: an *our-fault* bug reported in-band on the legacy
+    // ask-with-classify path (clarificationNeeded=true but message null, a
+    // ClassifyMessageMissingError which extends InternalError). It must resolve to the
+    // generic our-end message, NOT the transient-retry one — the errored status alone
+    // no longer decides the message; the reason does.
     it("should return an errored result with SYSTEM_ERROR_EXIT_MESSAGE when risk classify message is missing mid-loop", async () => {
       mockedCallOpenAIParsed.mockResolvedValueOnce(
         createParsedResponse({ type: GoalClassificationEnum.enum.normal }),
@@ -443,7 +484,7 @@ describe("runClarifyOrchestrator", () => {
         createParsedResponse<RiskClassify>({
           clarificationNeeded: true,
           clarificationMessage: null,
-          riskSelfRatingScore: null,
+          riskTolerance: null,
         }),
       );
 
